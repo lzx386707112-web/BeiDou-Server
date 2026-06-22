@@ -1,0 +1,701 @@
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font: 13px/1.45 -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: #1e1f22;
+  color: #d6d6d6;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+header {
+  padding: 10px 16px;
+  background: #2b2d31;
+  border-bottom: 1px solid #1a1b1d;
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+}
+header h1 { margin: 0; font-size: 16px; color: #e8b96b; }
+header .meta { display: flex; gap: 8px; align-items: center; color: #999; font-size: 12px; }
+header .badge {
+  background: #3a3d44; padding: 2px 7px; border-radius: 3px;
+  font-family: ui-monospace, "Cascadia Mono", Menlo, monospace;
+}
+header .path { font-family: ui-monospace, "Cascadia Mono", Menlo, monospace; color: #aaa; }
+#save-slot { margin-left: auto; }
+header .open-link {
+  margin-left: auto;
+  color: #d6d6d6;
+  text-decoration: none;
+  font-size: 12px;
+  border: 1px solid #1a1b1d;
+  padding: 4px 10px;
+  border-radius: 3px;
+  background: #2b2d31;
+}
+header .open-link:hover { background: #3a3d44; }
+header .open-link + .char-link { margin-left: 8px; }
+header .char-link {
+  color: #e8b96b;
+  text-decoration: none;
+  font-size: 12px;
+  border: 1px solid #4a3d20;
+  padding: 4px 10px;
+  border-radius: 3px;
+  background: #2b2620;
+}
+header .char-link:hover { background: #3a3026; }
+header .char-link + #save-slot,
+header .open-link + #save-slot { margin-left: 8px; }
+.save-btn {
+  background: #3a4d6f;
+  color: #d6d6d6;
+  border: 1px solid #1a1b1d;
+  border-radius: 3px;
+  padding: 4px 14px;
+  font: inherit;
+  cursor: pointer;
+}
+.save-btn:hover:not(:disabled) { background: #4d6592; }
+.save-btn:disabled { opacity: 0.45; cursor: default; }
+.save-as-btn {
+  margin-left: 6px;
+  background: #2c4a32;
+  color: #d6d6d6;
+  border: 1px solid #1a2a1d;
+  border-radius: 3px;
+  padding: 4px 14px;
+  font: inherit;
+  cursor: pointer;
+}
+.save-as-btn:hover:not(:disabled) { background: #3a5e42; }
+.save-as-btn:disabled { opacity: 0.45; cursor: default; }
+.save-as-btn.dirty {
+  background: #6a4a1a;
+  border-color: #3a2c10;
+}
+.save-as-btn.dirty:hover:not(:disabled) { background: #8a6428; }
+
+/* ── animation player ─────────────────────────────────────────────── */
+.animation-slot { margin-top: 12px; }
+.animation-offer {
+  border: 1px solid #1a1b1d;
+  background: #232428;
+  border-radius: 4px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 720px;
+}
+.animation-summary {
+  color: #999;
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 12px;
+}
+.animation-play-btn {
+  align-self: flex-start;
+  background: #2c4a32;
+  color: #d6d6d6;
+  border: 1px solid #1a2a1d;
+  border-radius: 3px;
+  padding: 4px 12px;
+  font: inherit;
+  cursor: pointer;
+}
+.animation-play-btn:hover { background: #3a5e42; }
+
+.animation-player {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.animation-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.animation-btn {
+  background: #3a3d44;
+  color: #d6d6d6;
+  border: 1px solid #1a1b1d;
+  border-radius: 3px;
+  padding: 2px 8px;
+  font: inherit;
+  cursor: pointer;
+  min-width: 28px;
+}
+.animation-btn:hover { background: #494d56; }
+.animation-speed {
+  background: #3a3d44;
+  color: #d6d6d6;
+  border: 1px solid #1a1b1d;
+  border-radius: 3px;
+  padding: 2px 4px;
+  font: inherit;
+}
+.animation-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: #aaa;
+  cursor: pointer;
+  user-select: none;
+}
+.animation-toggle input { margin: 0; }
+.animation-counter {
+  margin-left: auto;
+  color: #888;
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 11px;
+}
+
+/* Scroller is the size-bounded container that the page reserves
+   space for. When the stage is bigger than this in 1:1 mode the
+   user gets scrollbars; in fit mode the stage is scaled down so
+   nothing scrolls. */
+.animation-stage-scroller {
+  align-self: flex-start;
+  max-width: 100%;
+  max-height: 70vh;
+  overflow: auto;
+  border-radius: 4px;
+  background: #1a1b1d;
+}
+/* Stage holds the (possibly-scaled) viewport at its rendered size
+   so siblings reflow correctly. */
+.animation-stage {
+  position: relative;
+}
+.animation-viewport {
+  position: relative;
+  /* unscaled coordinate space; scaling is applied via JS on transform */
+  border-radius: 4px;
+  background:
+    repeating-conic-gradient(#2a2b2e 0% 25%, #34363a 0% 50%) 0 0 / 16px 16px;
+  overflow: hidden;
+}
+.animation-frame {
+  position: absolute;
+  display: block;
+  image-rendering: crisp-edges;
+  image-rendering: pixelated;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.animation-scrubber {
+  width: 100%;
+  max-width: 720px;
+}
+.value-input {
+  background: #1a1b1d;
+  color: #d6d6d6;
+  border: 1px solid #3a3d44;
+  border-radius: 3px;
+  padding: 2px 6px;
+  font: inherit;
+  font-family: ui-monospace, Menlo, monospace;
+  width: 240px;
+  max-width: 100%;
+}
+.value-input:focus { outline: none; border-color: #5a7fb0; }
+.value-input.dirty {
+  border-color: #e8b96b;
+  background: #2a261d;
+}
+.value-editor { display: inline-flex; align-items: center; gap: 8px; }
+.budget {
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 11px;
+  color: #6fa86f;
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: #243024;
+}
+.budget.over { color: #e08585; background: #3a2424; }
+.budget.warn { color: #e8b96b; background: #2a261d; }
+
+.viewer-toolbar .replace-btn {
+  margin-left: 4px;
+  background: #2c4a32;
+  border-color: #1a2a1d;
+}
+.viewer-toolbar .replace-btn:hover { background: #3a5e42; }
+.viewer-toolbar .replace-btn:disabled { opacity: 0.5; cursor: default; }
+
+main { display: flex; flex: 1; overflow: hidden; }
+
+#tree-panel {
+  width: 380px;
+  min-width: 200px;
+  max-width: 80vw;
+  flex: 0 0 auto;
+  overflow: auto;
+  background: #232428;
+  border-right: 1px solid #1a1b1d;
+  padding: 8px 6px;
+  /* Stops the browser from "anchoring" scroll position when an item above
+     the viewport changes height — every fold/expand otherwise causes a tiny
+     scroll-correction jank pass. */
+  overflow-anchor: none;
+}
+
+/* Vertical drag handle between #tree-panel and #detail-panel. JS in
+ * app.js wires mousedown → mousemove → mouseup to update the panel's
+ * width and persists the value to localStorage so it survives reloads. */
+.resize-handle {
+  flex: 0 0 5px;
+  background: #1a1b1d;
+  cursor: col-resize;
+  position: relative;
+  user-select: none;
+}
+.resize-handle:hover,
+.resize-handle.dragging {
+  background: #e8b96b;
+}
+.resize-handle:focus-visible {
+  outline: 2px solid #e8b96b;
+  outline-offset: -2px;
+}
+/* Widen the hit area without making the visual bar wider — a 9px-wide
+ * invisible pseudo-element overlays each side of the 5px bar. */
+.resize-handle::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -2px;
+  right: -2px;
+}
+body.resizing-tree {
+  cursor: col-resize;
+  user-select: none;
+}
+body.resizing-tree iframe,
+body.resizing-tree #detail img,
+body.resizing-tree #detail canvas {
+  /* While dragging, mouse events that would otherwise hit child iframes
+     or media tags steal focus from the listener; pointer-events:none
+     keeps the drag stream flowing into the document handler. */
+  pointer-events: none;
+}
+
+/* Search box pinned above the tree. Server-side ``/api/search``
+ * walks directories + .img names; results render here as a
+ * clickable list. Clicking a result loads its detail panel without
+ * touching the tree below — handy for jumping straight to a deep
+ * .img by ID without expanding ten directories first. */
+.tree-search {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: #232428;
+  padding-bottom: 6px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid #1a1b1d;
+}
+.tree-search > input[type="search"],
+#tree-search-input {
+  width: 100%;
+  box-sizing: border-box;
+  background: #2b2d31;
+  color: #d6d6d6;
+  border: 1px solid #1a1b1d;
+  border-radius: 3px;
+  padding: 4px 8px;
+  font: inherit;
+  font-size: 12px;
+}
+.tree-search-deep {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  font-size: 11px;
+  color: #888;
+  cursor: pointer;
+  user-select: none;
+}
+.tree-search-deep input { margin: 0; cursor: pointer; }
+.tree-search-deep:hover { color: #c5c5c5; }
+#tree-search-input:focus {
+  outline: none;
+  border-color: #e8b96b;
+}
+#tree-search-input::placeholder { color: #777; }
+
+.tree-search-results {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  max-height: 280px;
+  overflow-y: auto;
+  background: #1e1f22;
+  border: 1px solid #1a1b1d;
+  border-radius: 3px;
+  font-size: 12px;
+}
+.tree-search-results li {
+  padding: 3px 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  border-bottom: 1px solid #2b2d31;
+  font-family: ui-monospace, "Cascadia Mono", Menlo, monospace;
+}
+.tree-search-results li:last-child { border-bottom: none; }
+.tree-search-results li:hover { background: #2b2d31; }
+.tree-search-results li.selected { background: #3a4d6f; }
+.tree-search-results .ts-kind {
+  flex: 0 0 auto;
+  font-size: 10px;
+  color: #888;
+  text-transform: lowercase;
+  background: #2b2d31;
+  padding: 1px 5px;
+  border-radius: 2px;
+}
+.tree-search-results .ts-path {
+  flex: 1;
+  color: #c5c5c5;
+  word-break: break-all;
+}
+.tree-search-results .ts-empty,
+.tree-search-results .ts-truncated {
+  padding: 6px 8px;
+  color: #777;
+  font-style: italic;
+  font-family: inherit;
+}
+
+#detail-panel {
+  flex: 1;
+  overflow: auto;
+  padding: 14px 18px;
+}
+
+ul.tree, ul.tree ul {
+  list-style: none;
+  margin: 0;
+  padding-left: 14px;
+  /* Helps the browser skip layout cost for items the user can't see. */
+  contain: layout style;
+}
+ul.tree { padding-left: 0; }
+ul.tree li {
+  margin: 1px 0;
+  /* The big perf win: with 1500+ siblings, off-screen items skip layout
+     and paint entirely. Each LI advertises a ~22px intrinsic height so the
+     scrollbar still sizes correctly; "auto" caches the actual height after
+     first measurement so subsequent scrolls don't jump. */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 22px;
+  /* Belt and suspenders — prevent paint of one LI from invalidating its
+     siblings' paint regions. */
+  contain: layout paint;
+}
+
+/* Virtualized lists keep all item LIs in normal flow (so the existing
+   ``ul.tree ul { padding-left: 14px }`` indents them automatically and
+   click handling / nested expansion just work). The two spacer LIs at
+   the top and bottom take up the height of the unrendered items.
+   These selectors deliberately don't require ``ul.tree`` because nested
+   virtual ULs (added at runtime) don't carry that class — only the root
+   ``<ul id="tree" class="tree">`` does. Without these overrides the
+   default ``ul.tree li { content-visibility: auto }`` rule would clamp
+   the spacers to a fake 22px intrinsic height when they're off-screen,
+   silently breaking the virtual scroll positions. */
+ul.virtual-list > .v-spacer {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  pointer-events: none;
+  content-visibility: visible;
+  contain: none;
+  contain-intrinsic-size: auto;
+}
+ul.virtual-list > li:not(.v-spacer) {
+  content-visibility: visible;
+  contain: layout paint;
+  contain-intrinsic-size: auto;
+}
+
+.node {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 1px 4px;
+  border-radius: 3px;
+  cursor: pointer;
+  user-select: none;
+}
+.node:hover { background: #2f3137; }
+.node.selected { background: #3a4d6f; color: #fff; }
+.node .twisty {
+  display: inline-block;
+  width: 10px;
+  text-align: center;
+  color: #888;
+}
+.node .icon { width: 14px; text-align: center; }
+.node .name { color: #d6d6d6; }
+.node .preview {
+  color: #7a9bd1; margin-left: 6px;
+  font-family: ui-monospace, Menlo, monospace; font-size: 11px;
+}
+.node[data-kind="Directory"] .icon,
+.node[data-kind="directory"] .icon { color: #e8b96b; }
+.node[data-kind="image"] .icon,
+.node[data-kind="Image"] .icon { color: #5fb7c0; }
+.node[data-kind="Canvas"] .icon { color: #b07acb; }
+.node[data-kind="Sound"] .icon { color: #c47878; }
+
+.breadcrumbs {
+  font-family: ui-monospace, Menlo, monospace;
+  color: #999;
+  margin-bottom: 12px;
+  word-break: break-all;
+}
+.breadcrumbs a { color: #7a9bd1; text-decoration: none; }
+.breadcrumbs a:hover { text-decoration: underline; }
+
+#detail h2 {
+  margin: 0 0 6px 0; font-size: 15px; color: #e8b96b;
+  font-family: ui-monospace, Menlo, monospace;
+}
+#detail .kind {
+  display: inline-block;
+  background: #3a3d44; padding: 2px 7px; border-radius: 3px;
+  font-size: 11px; color: #9bd1bd; margin-bottom: 12px;
+  font-family: ui-monospace, Menlo, monospace;
+}
+
+table.props {
+  border-collapse: collapse;
+  width: 100%;
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 12px;
+}
+table.props td { padding: 3px 10px 3px 0; vertical-align: top; }
+table.props td:first-child { color: #888; width: 130px; }
+table.props td:last-child { color: #d6d6d6; word-break: break-all; }
+table.props a.uol-target-link { color: #6ab7ff; text-decoration: none; }
+table.props a.uol-target-link:hover { text-decoration: underline; }
+
+.canvas-viewer {
+  margin: 12px 0;
+  background: #2b2d31;
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 1200px;
+  outline: none;
+}
+.canvas-viewer:focus-within { box-shadow: 0 0 0 1px #5a7fb0 inset; }
+
+.viewer-toolbar {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  padding: 6px 8px;
+  border-bottom: 1px solid #1a1b1d;
+}
+.viewer-toolbar button {
+  background: #3a3d44;
+  color: #d6d6d6;
+  border: 1px solid #1a1b1d;
+  border-radius: 3px;
+  padding: 3px 9px;
+  font: inherit;
+  cursor: pointer;
+}
+.viewer-toolbar button:hover { background: #494d56; }
+.viewer-toolbar button:active { background: #2f3137; }
+.viewer-toolbar .zoom-label {
+  margin-left: auto;
+  color: #999;
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 12px;
+}
+
+.viewer-viewport {
+  position: relative;
+  height: 60vh;
+  min-height: 320px;
+  overflow: hidden;
+  cursor: grab;
+  background:
+    repeating-conic-gradient(#2a2b2e 0% 25%, #34363a 0% 50%) 0 0 / 20px 20px;
+  border-radius: 0 0 4px 4px;
+}
+.viewer-viewport.grabbing { cursor: grabbing; }
+
+.viewer-layer {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform-origin: center center;
+  /* Translate by half the image size so the layer's own center sits on the
+     viewport's center; then the JS-driven translate moves from there. */
+  margin: 0;
+  will-change: transform;
+}
+.viewer-layer img {
+  display: block;
+  /* Crisp pixels at any scale. Pixelated last so Chrome (which honors both
+     but treats crisp-edges more loosely) lands on nearest-neighbor. */
+  image-rendering: crisp-edges;
+  image-rendering: pixelated;
+  /* Center the image inside the layer. */
+  transform: translate(-50%, -50%);
+  user-select: none;
+  -webkit-user-drag: none;
+}
+.hint { color: #777; }
+audio { margin-top: 12px; }
+
+/* Right-click export menu. Positioned at the cursor by JS. */
+.context-menu {
+  position: fixed;
+  z-index: 1000;
+  min-width: 220px;
+  background: #2b2d31;
+  border: 1px solid #1a1b1d;
+  border-radius: 4px;
+  padding: 4px 0;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+  font-size: 12px;
+}
+.context-menu[hidden] { display: none !important; }
+.context-menu .menu-label {
+  padding: 4px 12px 6px;
+  color: #888;
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 11px;
+  border-bottom: 1px solid #1a1b1d;
+  margin-bottom: 4px;
+  word-break: break-all;
+}
+.context-menu .menu-item {
+  padding: 6px 14px;
+  cursor: pointer;
+  user-select: none;
+  color: #d6d6d6;
+}
+.context-menu .menu-item:hover { background: #3a4d6f; color: #fff; }
+.context-menu .menu-item.destructive { color: #e08585; }
+.context-menu .menu-item.destructive:hover { background: #6a2424; color: #fff; }
+
+/* Hover-triggered submenu (used by Add ▸). The submenu sits to the
+   right of its trigger and inherits the same styling as the parent
+   menu so it visually feels like one unit. */
+.context-menu .menu-item.has-submenu { position: relative; }
+.context-menu .menu-item.has-submenu > .submenu {
+  display: none;
+  position: absolute;
+  left: 100%;
+  top: -5px;
+  min-width: 140px;
+  background: #2b2d31;
+  border: 1px solid #1a1b1d;
+  border-radius: 4px;
+  padding: 4px 0;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+}
+.context-menu .menu-item.has-submenu:hover > .submenu { display: block; }
+.context-menu .submenu .menu-item { padding: 6px 14px; }
+.context-menu .menu-sep {
+  height: 1px;
+  background: #1a1b1d;
+  margin: 4px 0;
+}
+
+/* Progress modal for the per-image JSON bundle export. */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.modal-card {
+  background: #2b2d31;
+  border: 1px solid #1a1b1d;
+  border-radius: 6px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
+  padding: 18px 20px 14px;
+  width: 460px;
+  max-width: calc(100vw - 32px);
+}
+.modal-title {
+  color: #e8b96b;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.modal-sub {
+  color: #aaa;
+  font-family: ui-monospace, "Cascadia Mono", Menlo, monospace;
+  font-size: 12px;
+  word-break: break-all;
+  margin-bottom: 12px;
+}
+.progress-bar {
+  height: 10px;
+  background: #1a1b1d;
+  border-radius: 5px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+.progress-fill {
+  width: 0%;
+  height: 100%;
+  background: linear-gradient(90deg, #5a7fb0, #7a9bd1);
+  transition: width 120ms linear;
+}
+.progress-fill.done { background: linear-gradient(90deg, #4d8a5e, #6cb37e); }
+.progress-fill.error { background: linear-gradient(90deg, #8a4d4d, #b36c6c); }
+.modal-stats {
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 12px;
+  color: #d6d6d6;
+}
+.modal-current {
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 11px;
+  color: #888;
+  margin-top: 4px;
+  min-height: 14px;
+  word-break: break-all;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.modal-buttons {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 14px;
+}
+.modal-buttons button {
+  background: #3a3d44;
+  color: #d6d6d6;
+  border: 1px solid #1a1b1d;
+  border-radius: 3px;
+  padding: 4px 12px;
+  font: inherit;
+  cursor: pointer;
+}
+.modal-buttons button:hover:not(:disabled) { background: #494d56; }
+.modal-buttons button:disabled { opacity: 0.6; cursor: default; }

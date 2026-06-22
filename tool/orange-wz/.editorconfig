@@ -1,0 +1,21 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.{java,xml,properties,yml,yaml,md,txt,json,js,ts,tsx,vue,css,scss,html,svg}]
+end_of_line = lf
+
+[*.java]
+indent_style = space
+indent_size = 4
+
+[*.{js,jsx,mjs,cjs,ts,tsx,mts,cts,vue,css,scss,sass,less,styl}]
+indent_style = space
+indent_size = 2
+
+[*.{cmd,bat,ps1}]
+end_of_line = crlf

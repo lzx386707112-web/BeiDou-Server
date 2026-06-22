@@ -1,0 +1,42 @@
+package orange.wz.gui.component.form.impl;
+
+import orange.wz.gui.MainFrame;
+import orange.wz.gui.component.form.data.DoubleFormData;
+import orange.wz.gui.component.panel.EditPane;
+import orange.wz.gui.filter.DecimalFilter;
+import orange.wz.provider.WzObject;
+
+import javax.swing.*;
+import javax.swing.text.AbstractDocument;
+
+public class DoubleForm extends AbstractValueForm {
+    private final JTextField valueInput = new JTextField(defaultColumns);
+
+    public DoubleForm() {
+        super();
+        ((AbstractDocument) valueInput.getDocument()).setDocumentFilter(new DecimalFilter());
+        addRow(MainFrame.i18n.get("form.value"), valueInput);
+    }
+
+    public void setData(String name, String type, double value, WzObject wzObject, EditPane editPane) {
+        super.setData(name, type, wzObject, editPane);
+        valueInput.setText(String.valueOf(value));
+    }
+
+    @Override
+    public DoubleFormData getData() {
+        double value;
+        try {
+            value = Double.parseDouble(valueInput.getText());
+        } catch (NumberFormatException e) {
+            value = 0;
+        }
+
+        return new DoubleFormData(
+                nameInput.getText(),
+                typeInput.getText(),
+                value
+        );
+    }
+}
+

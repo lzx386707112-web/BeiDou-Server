@@ -1,0 +1,353 @@
+package orange.wz.provider;
+
+import lombok.Getter;
+import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
+import orange.wz.manager.ServerManager;
+import orange.wz.model.Pair;
+import orange.wz.provider.tools.*;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+@Getter
+@Slf4j
+public final class WzFile extends WzObject implements WzSavableFile {
+    @Setter
+    private String filePath;
+    private final WzDirectory wzDirectory;
+    private WzHeader header;
+    private String keyBoxName;
+    private byte[] iv;
+    private byte[] key;
+    private BinaryReader reader;
+    private WzFileStatus status = WzFileStatus.UNPARSE;
+
+    private boolean withEncVerHeader = true;  // KMS update after Q4 2021, ver 1.2.357 does not contain any wz enc header information
+    public static final short verHeader64BitStart = 770;
+
+    @Setter
+    private boolean newFile = false;
+
+    // 初始化 -----------------------------------------------------------------------------------------------------------
+    public WzFile(String filePath, short fileVersion, String keyBoxName, byte[] iv, byte[] key) {
+        super(Path.of(filePath).getFileName().toString(), WzType.WZ_FILE, null);
+        this.filePath = filePath;
+        this.header = new WzHeader(fileVersion);
+        this.keyBoxName = keyBoxName;
+        this.iv = Arrays.copyOf(iv, iv.length);
+        this.key = Arrays.copyOf(key, key.length);
+        this.wzDirectory = new WzDirectory(name, this, this);
+    }
+
+    public static WzFile createNewFile(String filePath, short fileVersion, String keyBoxName, byte[] iv, byte[] key) {
+        WzFile wzFile = new WzFile(filePath, fileVersion, keyBoxName, iv, key);
+
+        wzFile.header = WzHeader.getDefault(fileVersion);
+        wzFile.reader = new BinaryReader(iv, key);
+        wzFile.status = WzFileStatus.PARSE_SUCCESS;
+        return wzFile;
+    }
+
+    public boolean isErrorStatus() {
+        return status != WzFileStatus.UNPARSE && status != WzFileStatus.PARSE_SUCCESS;
+    }
+
+    public boolean is64BitWzFile() {
+        return !withEncVerHeader;
+    }
+
+    public WzMutableKey getWzMutableKey() {
+        return reader.getWzMutableKey();
+    }
+
+    public boolean parse() {
+        if (status == WzFileStatus.PARSE_SUCCESS) return true;
+
+        if (filePath == null || !filePath.endsWith(".wz")) {
+            log.error("路径为空或者不是wz文件");
+            status = WzFileStatus.ERROR_PATH;
+            return false;
+        }
+
+        Path wzPath = Path.of(filePath);
+
+        if (!Files.exists(wzPath) || !Files.isRegularFile(wzPath)) {
+            log.error("wz 文件不存在: {}", wzPath);
+            status = WzFileStatus.ERROR_PATH;
+            return false;
+        }
+
+        reader = new BinaryReader(wzPath.toString(), iv, key);
+        header.setSignature(reader.readString(4));
+        if (!header.getSignature().equals("PKG1") && !header.getSignature().equals("PKG2")) {
+            log.error("{} 错误的包头 {}", name, header.getSignature());
+            return false;
+        }
+        header.setFileSize(reader.getLong());
+        header.setHeaderSize(reader.getInt());
+        header.setCopyright(reader.readString(header.getDataStartPos() - reader.getPosition()));
+
+        withEncVerHeader = check64BitClient();
+        reader.setPosition(header.getDataStartPos());
+
+        // the value of wzVersionHeader is less important. It is used for reading/writing from/to WzFile Header, and calculating the versionHash.
+        // it can be any number if the client is 64-bit. Assigning 777 is just for convenience when calculating the versionHash.
+        short encVersion = withEncVerHeader ? reader.getShort() : verHeader64BitStart;
+        header.setEncVersion(encVersion);
+
+        if (header.getFileVersion() == -1) {
+            if (is64BitWzFile()) {
+                for (short testVersion = verHeader64BitStart; testVersion < verHeader64BitStart + 10; testVersion++) { // 770 ~ 780
+                    if (tryDecode(encVersion, testVersion)) {
+                        header.setFileVersion(testVersion);
+                        wzDirectory.parse(reader);
+                        status = WzFileStatus.PARSE_SUCCESS;
+                        return true;
+                    }
+                }
+            }
+
+            short TEST_VERSION_MAX = 2000;
+            for (short testVersion = 0; testVersion < TEST_VERSION_MAX; testVersion++) {
+                if (tryDecode(encVersion, testVersion)) {
+                    // tryDecode 只会设置 versionHash 用于解密，这里的 wzDir 对象已经绑定到 JTree 里，不能在 tryDecode 重设，只能在这重解析
+                    header.setFileVersion(testVersion);
+                    if (reader.hasRemaining()) { // 可能是个空文件，要加判断
+                        wzDirectory.parse(reader);
+                    }
+                    status = WzFileStatus.PARSE_SUCCESS;
+                    return true;
+                }
+            }
+
+            status = WzFileStatus.ERROR_FILE_VERSION;
+            log.error(status.getMessage());
+            return false;
+        } else {
+            int versionHash = header.checkAndGetVersionHash(encVersion, header.getFileVersion());
+            if (versionHash == 0) {
+                status = WzFileStatus.ERROR_FILE_VERSION;
+                log.error(status.getMessage());
+                return false;
+            }
+            header.setVersionHash(versionHash);
+            wzDirectory.parse(reader);
+            status = WzFileStatus.PARSE_SUCCESS;
+            return true;
+        }
+    }
+
+    private boolean check64BitClient() {
+        boolean withEncVerHeader = true;
+        if (header.getFileSize() >= 2) {
+            reader.setPosition(header.getDataStartPos());
+            int encVersion = reader.getShort();
+            if (Integer.compareUnsigned(encVersion, 0xff) > 0) {  // encVersion 永远低于 256
+                withEncVerHeader = false;
+            } else if (encVersion == 0x80) {
+                // there's an exceptional case that the first field of data part is a compressed int which determined property count,
+                // if the value greater than 127 and also to be a multiple of 256, the first 5 bytes will become to
+                //   80 00 xx xx xx
+                // so we additional check the int value, at most time the child node count in a wz won't greater than 65536.
+                if (header.getFileSize() >= 5) {
+                    reader.setPosition(header.getDataStartPos());
+                    int propCount = reader.getInt();
+                    if (propCount > 0 && (propCount & 0xff) == 0 && propCount <= 0xffff) {
+                        withEncVerHeader = false;
+                    }
+                }
+            }
+            // old wz file with header version
+        } else {
+            // Obviously, if data part have only 1 byte, encVersion must be deleted.
+            withEncVerHeader = false;
+        }
+
+        return withEncVerHeader;
+    }
+
+    @Override
+    public boolean save() {
+        Path savePath = Path.of(filePath + ".bak");
+        try {
+            if (status != WzFileStatus.PARSE_SUCCESS) return false;
+            log.info("保存 {} 开始", getName());
+            Map<String, Integer> tempStringCache = new HashMap<>();
+            BinaryWriter tempWriter = new BinaryWriter();
+            log.info("保存 {} Generate Data File 1/4", getName());
+            wzDirectory.generateDataFile(tempWriter, tempStringCache);
+            tempStringCache.clear();
+            int totalLen = wzDirectory.getImgOffsets(wzDirectory.getOffsets(header.getDataStartPos() + (is64BitWzFile() ? 0 : 2)));
+            log.debug("totalLen : {}", totalLen);
+            BinaryWriter writer = new BinaryWriter(true);
+            writer.setWzMutableKey(getWzMutableKey());
+            header.setFileSize(totalLen - header.getHeaderSize());
+            for (int i = 0; i < 4; i++) {
+                writer.putByte((byte) header.getSignature().charAt(i));
+            }
+            writer.putLong(header.getFileSize());
+            writer.putInt(header.getHeaderSize());
+            writer.putAsciiString(header.getCopyright());
+            if (!is64BitWzFile()) {
+                writer.putShort(header.getEncVersion());
+            }
+            log.info("保存 {} Wz Dirs 2/4", getName());
+            wzDirectory.saveDirectory(writer);
+            writer.getStringCache().clear();
+            log.info("保存 {} Wz Images 3/4", getName());
+            wzDirectory.saveImages(writer, tempWriter);
+            writer.getStringCache().clear();
+            log.info("保存 {} Wz 写入文件 4/4", getName());
+            byte[] context = writer.output();
+            reader = null;
+            clear();
+            if (FileTool.saveFile(savePath, context)) {
+                setNewFile(false);
+                for (int i = 0; i < 10; i++) {
+                    try {
+                        FileTool.moveAndReplace(savePath, Path.of(filePath));
+                        log.info("{} 已保存", getName());
+                        return true;
+                    } catch (IOException e) {
+                        if (i == 0) {
+                            System.gc();
+                        } else if (i == 9) {
+                            log.error("{} 替换 {} 失败: {}", savePath, Path.of(filePath), e.getMessage());
+                        } else {
+                            log.warn("{} 处于被占用的状态，如果你运行的游戏客户端在使用该文件，请立刻关闭。第 {}/10 次尝试", getName(), i + 1);
+                        }
+                    }
+                    Thread.sleep(500);
+                }
+
+                log.warn("由于文件处于占用状态，已经尝试了10次均无法写入，已将 {} 保存为 {}.bak", getName(), getName());
+                return true;
+            }
+            return false;
+        } catch (Exception e) {
+            log.error("保存出错 Wz: {} 错误消息: {}", getName(), e.getMessage());
+            return false;
+        }
+    }
+
+    public void clear() {
+        wzDirectory.getDirectories().forEach(WzDirectory::clear);
+        wzDirectory.getImages().forEach(WzImage::clear);
+        reader = null;
+    }
+
+    /**
+     * 导出Img
+     *
+     * @param basePath  上级路径
+     * @param collector 只收集需要导出的WzImage 存入 collector
+     */
+    public void exportFileToImg(Path basePath, List<Pair<WzImage, Path>> collector) {
+        wzDirectory.exportDirectory(basePath, collector);
+    }
+
+    /**
+     * 导出XML
+     *
+     * @param basePath  上级路径
+     * @param collector 只收集需要导出的WzImage 存入 collector
+     */
+    public void exportFileToXml(Path basePath, List<Pair<WzImage, Path>> collector) {
+        wzDirectory.exportToXml(basePath, collector);
+    }
+
+    public void changeKey(short gameVersion, String keyBoxName, byte[] iv, byte[] key) {
+        // 先解析把原有内容解码出来缓存在内存里
+        if (!parse()) return;
+
+        iv = Arrays.copyOf(iv, iv.length);
+        key = Arrays.copyOf(key, key.length);
+        WzMutableKey wzMutableKey = new WzMutableKey(iv, key);
+
+        wzDirectory.parseAllImagesForChangeKey(wzMutableKey);
+
+        this.keyBoxName = keyBoxName;
+        this.iv = iv;
+        this.key = key;
+        reader.setWzMutableKey(wzMutableKey);
+        header.setFileVersion(gameVersion);
+    }
+
+    private boolean tryDecode(short encVersion, short fileVersion) {
+        int versionHash = header.checkAndGetVersionHash(encVersion, fileVersion);
+        if (versionHash == 0) return false;
+
+        /*
+        Hash 计算通过也不代表版本号是对的，还要靠计算出来的Hash去解码文件才能确认
+        比如 95 计算出来的 encVer 和 16 计算出来的是一样的，但是 Hash 依然对不上，导致无法解码文件内容
+        因此有了下面的二次确认
+         */
+
+        int originalHash = header.getVersionHash();
+        int originalPosition = reader.getPosition();
+        WzDirectory testDirectory = new WzDirectory(name, this, this);
+
+        header.setVersionHash(versionHash);
+
+        if (!reader.hasRemaining()) {
+            return true; // 文件没有内容，是个空的wz，没有测试的必要了，fileVer 可能因此变低，不过无所谓了
+        }
+
+        try {
+            testDirectory.parse(reader);
+        } catch (Exception e) {
+            // log.error(e.getMessage());
+            header.setVersionHash(originalHash);
+            reader.setPosition(originalPosition);
+            return false;
+        }
+
+        if (testDirectory.getImages().isEmpty()) {
+            if (is64BitWzFile() && fileVersion == 113) {
+                header.setVersionHash(originalHash);
+                reader.setPosition(originalPosition);
+                return false;
+            } else {
+                reader.setPosition(originalPosition);
+                return true;
+            }
+        }
+        WzImage testImage = testDirectory.getImages().getFirst();
+        try {
+            reader.setPosition(testImage.getOffset());
+            byte checkByte = reader.getByte();
+            reader.setPosition(originalPosition);
+
+            switch (checkByte) {
+                case (byte) 0x73:
+                case (byte) 0x1B:
+                    reader.setPosition(originalPosition);
+                    return true;
+                case (byte) 0x30:
+                case (byte) 0x6C:
+                case (byte) 0xBC:
+                default:
+                    log.warn("发现新的 image 类型. checkByte = {}. 文件名 = {}", checkByte, name);
+            }
+        } catch (Exception e) {
+            header.setVersionHash(originalHash);
+            reader.setPosition(originalPosition);
+            return false;
+        }
+
+        reader.setPosition(originalPosition);
+        return false;
+    }
+
+    @Override
+    public WzFile deepClone(WzObject parent) {
+        log.error("WzFolder 暂不支持 DeepCone 方法");
+        throw new UnsupportedOperationException();
+    }
+}

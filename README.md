@@ -64,6 +64,27 @@ web中所有的图片均需要联网获取，感谢 https://maplestory.io 提供
 服务端和客户端已经打包好了在[Release](https://github.com/BeiDouMS/BeiDou-Server/releases)中，大家直接下载即可。  
 如果想下载北斗客户端的**早期Beta的版本**，可以[点击这里了解更多](https://github.com/BeiDouMS/BeiDou-Server/wiki/%E5%8C%97%E6%96%97%E5%AE%A2%E6%88%B7%E7%AB%AF%E5%8F%91%E5%B8%83) 
 
+## 客户端 WZ 打包注意事项
+
+如果把客户端 `Data` 目录下的散 `.img` 重新打包成根目录下的 `*.wz`，不能只把每个子目录分别打成 `Character.wz`、`Skill.wz` 等文件，还需要特别处理 `Base.wz`。
+
+`Base.wz` 必须同时包含两类内容：
+
+- `Data` 根目录下的 `.img` 文件，例如 `StandardPDD.img`、`smap.img`、`zmap.img`
+- `Data` 下一级目录的空目录索引，例如 `Character`、`Effect`、`Item`、`Map`、`Mob`、`Skill`、`UI` 等
+
+如果 `Base.wz` 只包含根目录 `.img`，缺少这些一级目录索引，客户端可能在启动早期报错，例如 `0x80030002`。
+
+推荐使用脚本：
+
+```shell
+rtk tool/scripts/pack_img_wz_wizard.sh
+```
+
+选择“全部目录”时，脚本会自动生成正确结构的 `Base.wz`，并把各一级目录分别打包成对应的 `*.wz`。
+
+另外，根目录运行库 `ijl15.dll` 和 `2ijl15.dll` 需要成套匹配。`ijl15.dll` 是客户端加载的 JPEG 库代理/补丁 DLL，`2ijl15.dll` 是实际的 Intel JPEG Library。如果这两个 DLL 版本不匹配，客户端可能在启动或加载资源阶段直接报错。遇到启动期资源错误时，除了检查 WZ，也要确认这两个 DLL 来自同一套可运行客户端。
+
 # docker
 原服务端中docker相关配置已移除，配置已独立到[新的仓库](https://github.com/BeiDouMS/BeiDou-docker)，且支持[镜像拉取](https://github.com/BeiDouMS/BeiDou-docker/pkgs/container/beidou-server-all)。想参加docker开发，欢迎在新仓库进行pr。  
 [了解更多](https://github.com/BeiDouMS/BeiDou-docker)

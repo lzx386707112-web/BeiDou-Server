@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json.schemastore.org/prettierrc",
+  "semi": true,
+  "singleQuote": true,
+  "printWidth": 100,
+  "htmlWhitespaceSensitivity": "ignore",
+  "tabWidth": 2,
+  "quoteProps": "consistent",
+  "vueIndentScriptAndStyle": true,
+  "organizeImports": true,
+  "plugins": ["prettier-plugin-organize-imports"]
+}

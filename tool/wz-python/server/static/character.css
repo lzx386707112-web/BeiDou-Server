@@ -1,0 +1,714 @@
+/* ── character builder layout ─────────────────────────────────────── */
+
+.character-page header h1 .sub {
+  color: #999;
+  font-weight: normal;
+  margin-left: 4px;
+}
+/* The Character Builder header packs more controls (import/export +
+ * switch-file + back-link) than the tree browser. Wrap them in a
+ * flex group pushed to the right edge with a single ``margin-left:
+ * auto`` so the individual links don't fight over auto margins. */
+.character-page .header-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.character-page .header-actions .open-link,
+.character-page .header-actions .back-link {
+  margin-left: 0;
+}
+
+.character-page .back-link {
+  color: #8ab4ff;
+  text-decoration: none;
+  font-size: 12px;
+}
+.character-page .back-link:hover { text-decoration: underline; }
+
+/* Import / Export character JSON. Same shape as the existing
+ * .open-link header button so the row reads as one group. */
+.character-page .header-btn {
+  background: #2b2d31;
+  color: #d6d6d6;
+  border: 1px solid #1a1b1d;
+  border-radius: 3px;
+  padding: 4px 10px;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.character-page .header-btn:hover { background: #3a3d44; }
+.character-page .header-btn:disabled { opacity: 0.5; cursor: progress; }
+
+/* Inherit display:flex from the base ``main`` rule in style.css instead
+ * of overriding it to grid — grid's implicit row track was sizing to
+ * content, growing the panel to ~1500 tiles tall and defeating the
+ * inner ``overflow-y``. Pure flex propagates the viewport-bounded
+ * height through to the scrollable grid reliably. */
+.char-main {
+  min-height: 0;
+}
+
+.char-stage {
+  flex: 0 0 320px;
+  min-width: 0;
+  background: #232428;
+  border-right: 1px solid #1a1b1d;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+}
+
+.char-preview {
+  background:
+    repeating-conic-gradient(#3a3d44 0deg 90deg, #2b2d31 90deg 180deg) 0 0 / 20px 20px;
+  border: 1px solid #1a1b1d;
+  border-radius: 4px;
+  min-height: 220px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+}
+.char-preview img {
+  image-rendering: pixelated;
+  max-width: 100%;
+  height: auto;
+}
+
+.char-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  /* Allow Scale / Pose / Ear / Face to wrap to a second line when
+   * a 320px panel can't fit them all on one row (happens when the
+   * equipped weapon supports both 1H and 2H — the Pose radio adds
+   * enough width to push Face off-panel without wrapping). */
+  flex-wrap: wrap;
+  row-gap: 6px;
+}
+.char-controls label {
+  color: #aaa;
+  font-size: 12px;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.char-controls select {
+  background: #2b2d31;
+  color: #d6d6d6;
+  border: 1px solid #1a1b1d;
+  padding: 3px 6px;
+  border-radius: 3px;
+  font: inherit;
+}
+.char-controls button {
+  margin-left: auto;
+  background: #3a4d6f;
+  color: #d6d6d6;
+  border: 1px solid #1a1b1d;
+  border-radius: 3px;
+  padding: 4px 12px;
+  font: inherit;
+  cursor: pointer;
+}
+.char-controls button:hover { background: #4d6592; }
+
+/* Export action row (Save PNG / Save Frames / Save GIF). Sits on
+ * its own row beneath Scale / Pose / Ear and spans the full width
+ * of the controls panel. ``flex: 1`` overrides the default
+ * ``margin-left: auto`` from ``.char-controls button`` so the
+ * buttons fill the row evenly. */
+.char-controls-actions {
+  align-items: stretch;
+  gap: 8px;
+}
+.char-controls-actions button {
+  flex: 1;
+  margin-left: 0;
+  padding: 9px 10px;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #4a5f8c 0%, #364866 100%);
+  border: 1px solid #1a1b1d;
+  color: #f0f3f7;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  transition: background 0.15s ease, box-shadow 0.15s ease,
+              transform 0.05s ease;
+}
+.char-controls-actions button:hover {
+  background: linear-gradient(180deg, #5a73a4 0%, #44587a 100%);
+  box-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+.char-controls-actions button:active {
+  transform: translateY(1px);
+  background: linear-gradient(180deg, #364866 0%, #2c3a52 100%);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.3),
+    inset 0 2px 3px rgba(0, 0, 0, 0.25);
+}
+.char-controls-actions button:focus-visible {
+  outline: 2px solid #7aa3d8;
+  outline-offset: 1px;
+}
+
+/* Pose dropdown — lists every pose the equipped Body authors,
+ * narrowed to the equipped weapon's supported subset when one is
+ * equipped. Hidden only if the body ships zero supported poses
+ * (which never happens with stock data). */
+.char-pose {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #aaa;
+}
+.char-pose .pose-label { color: #aaa; margin-right: 2px; }
+.char-pose select {
+  background: #2b2d31;
+  color: #d6d6d6;
+  border: 1px solid #1a1b1d;
+  padding: 3px 6px;
+  border-radius: 3px;
+  font: inherit;
+}
+
+/* Facing toggle — same shape as the pose toggle. Always visible
+ * (no equipment dependency); just a server-side horizontal flip
+ * of the final composite. */
+.char-facing {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #aaa;
+}
+.char-facing .facing-label { color: #aaa; margin-right: 2px; }
+.char-facing label {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  cursor: pointer;
+  color: #c5c5c5;
+}
+.char-facing input[type="radio"] { margin: 0; cursor: pointer; }
+
+/* Ear-type selector — only shown when the equipped Head ships more than
+ * one ear canvas under ``front/`` (humanEar / lefEar / highlefEar). */
+.char-ear {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #aaa;
+}
+.char-ear .ear-label { color: #aaa; margin-right: 2px; }
+.char-ear select {
+  background: #2b2d31;
+  color: #d6d6d6;
+  border: 1px solid #1a1b1d;
+  padding: 3px 6px;
+  border-radius: 3px;
+  font: inherit;
+}
+
+.char-stage h3 {
+  margin: 8px 0 4px;
+  font-size: 12px;
+  color: #999;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.equipped-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.equipped-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #2b2d31;
+  border: 1px solid #1a1b1d;
+  padding: 4px 8px;
+  border-radius: 3px;
+  font-family: ui-monospace, "Cascadia Mono", Menlo, monospace;
+  font-size: 12px;
+}
+.equipped-list li.hint {
+  color: #777;
+  font-style: italic;
+  font-family: inherit;
+  background: transparent;
+  border: 1px dashed #2e2f33;
+}
+.equipped-list .eq-thumb {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  background: #1e1f22;
+  border: 1px solid #1a1b1d;
+  border-radius: 2px;
+}
+.equipped-list .eq-thumb-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.equipped-list .eq-cat {
+  background: #3a3d44;
+  color: #c5c5c5;
+  padding: 1px 6px;
+  border-radius: 2px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-family: inherit;
+}
+.equipped-list .eq-id {
+  color: #d6d6d6;
+  flex: 1;
+  /* Long item names ("Easter Egg Cushion Bandana") would otherwise
+   * push the × button off-screen — clip with ellipsis instead. The
+   * full name is on the element's ``title`` for hover. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.equipped-list .eq-remove {
+  background: transparent;
+  color: #c25555;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  padding: 0 4px;
+}
+.equipped-list .eq-remove:hover { color: #ff7777; }
+
+/* Horizontal strip of character thumbnails. Each card is the
+ * compose-preview frame 0 of that character's equipped set; the
+ * active card is highlighted, and the right-most tile is a "+"
+ * that adds a fresh default character to the list. Scrolls
+ * horizontally when the strip overflows the panel width. */
+.char-cards {
+  display: flex;
+  flex-direction: row;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 4px 2px 8px;
+  margin: 0;
+}
+.char-card {
+  flex: 0 0 64px;
+  width: 64px;
+  height: 80px;
+  background: #2b2d31;
+  border: 1px solid #1a1b1d;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+.char-card:hover { border-color: #e8b96b; }
+.char-card.active { border-color: #5e8a3a; }
+.char-card img {
+  max-width: 56px;
+  max-height: 72px;
+  image-rendering: pixelated;
+}
+.char-card .char-card-placeholder {
+  color: #777;
+  font-size: 11px;
+  font-family: ui-monospace, "Cascadia Mono", Menlo, monospace;
+}
+.char-card.add {
+  font-size: 28px;
+  color: #888;
+  font-weight: 200;
+  line-height: 1;
+}
+.char-card.add:hover { color: #e8b96b; }
+.char-card-remove {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  background: rgba(30, 31, 34, 0.7);
+  border: none;
+  color: #c25555;
+  font-size: 14px;
+  line-height: 1;
+  padding: 0 4px;
+  cursor: pointer;
+  border-radius: 2px;
+  display: none;
+}
+.char-card:hover .char-card-remove { display: block; }
+.char-card-remove:hover { color: #ff7777; }
+
+.char-pickers {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.char-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 8px 8px 0;
+  background: #2b2d31;
+  border-bottom: 1px solid #1a1b1d;
+}
+.char-tabs button {
+  background: #3a3d44;
+  color: #c5c5c5;
+  border: 1px solid #1a1b1d;
+  border-bottom: none;
+  border-radius: 3px 3px 0 0;
+  padding: 4px 12px;
+  font: inherit;
+  cursor: pointer;
+}
+.char-tabs button.active {
+  background: #1e1f22;
+  color: #e8b96b;
+  border-color: #1a1b1d;
+}
+.char-tabs button:hover:not(.active) { background: #4a4d54; }
+
+/* Row that holds the sub-tab strip on the left and a search input
+ * on the right. Always visible — for Body / Head (no sub-tabs) the
+ * left-hand ``.char-subtabs`` is just empty and the search input
+ * is the only content. */
+.char-subtabs-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: #232428;
+  border-bottom: 1px solid #1a1b1d;
+  font-size: 12px;
+  min-height: 32px;
+}
+
+/* Cash / Non-Cash filter strip — only populated for categories where
+ * ``info/cash`` produces a meaningful split (everything except
+ * Body / Head). Hair / Face populate it with color swatches instead. */
+.char-subtabs {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* Search input — always placed on the right edge of the sub-tab row
+ * (``margin-left: auto`` floats it past whatever the sub-tab strip
+ * filled in to its left). */
+.char-search {
+  margin-left: auto;
+  flex: 0 0 auto;
+  min-width: 160px;
+  background: #2b2d31;
+  color: #d6d6d6;
+  border: 1px solid #1a1b1d;
+  border-radius: 3px;
+  padding: 3px 8px;
+  font: inherit;
+}
+.char-search:focus {
+  outline: none;
+  border-color: #e8b96b;
+}
+.char-search::placeholder { color: #777; }
+.char-subtabs .subtab-label {
+  color: #888;
+  margin-right: 4px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.char-subtabs button {
+  background: #2b2d31;
+  color: #c5c5c5;
+  border: 1px solid #1a1b1d;
+  border-radius: 3px;
+  padding: 3px 10px;
+  font: inherit;
+  cursor: pointer;
+}
+.char-subtabs button.active {
+  background: #1e1f22;
+  color: #e8b96b;
+  border-color: #e8b96b;
+}
+.char-subtabs button:hover:not(.active) { background: #3a3d44; }
+.char-subtabs .subtab-count {
+  color: #777;
+  margin-left: 2px;
+  font-size: 10px;
+}
+
+/* Hair-color sub-tab. Each button shows a color swatch + label so the
+ * mapping (0=black, 1=red, …, 7=brown) doesn't have to be memorized. */
+.char-subtabs button.color-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px 3px 6px;
+}
+.char-subtabs .color-swatch {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1px solid #1a1b1d;
+  flex: 0 0 12px;
+}
+.char-subtabs button.custom-btn .color-swatch {
+  background-image: conic-gradient(red, orange, yellow, lime, cyan, blue, magenta, red);
+}
+
+/* ── custom-hair HSV popup ── */
+.hair-custom-popup {
+  position: fixed;
+  z-index: 250;
+  width: 246px;
+  background: #232428;
+  border: 1px solid #1a1b1d;
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .5);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  color: #d6d6d6;
+  font-size: 12px;
+}
+.hair-custom-popup[hidden] { display: none; }
+.hcp-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 500;
+  color: #e8b96b;
+}
+.hcp-close {
+  background: transparent;
+  border: none;
+  color: #999;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 2px;
+}
+.hcp-close:hover { color: #ff7777; }
+.hcp-row {
+  display: grid;
+  grid-template-columns: 30px 1fr 42px;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+.hcp-name { color: #aaa; }
+.hcp-row input[type="range"] {
+  width: 100%;
+  margin: 0;
+  accent-color: #e8b96b;
+  cursor: pointer;
+}
+.hcp-num {
+  color: #c5c5c5;
+  font-family: ui-monospace, "Cascadia Mono", Menlo, monospace;
+  text-align: right;
+}
+.hcp-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-top: 1px solid #2e2f33;
+  padding-top: 8px;
+}
+.hcp-preview-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid #1a1b1d;
+  flex: 0 0 18px;
+}
+.hcp-hint { color: #777; font-size: 11px; line-height: 1.35; }
+
+.char-grid {
+  flex: 1;
+  /* Flex children default to ``min-height: auto``, which makes them grow
+   * to fit content — that defeats the ``overflow-y: auto`` and hides the
+   * scrollbar. Setting it to 0 lets the grid shrink to its flex track
+   * size and scroll the overflow. */
+  min-height: 0;
+  overflow-y: auto;
+  padding: 12px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+  gap: 6px;
+  align-content: start;
+  background: #1e1f22;
+}
+.char-grid .hint {
+  grid-column: 1 / -1;
+  color: #777;
+  font-style: italic;
+}
+.char-grid .part-tile {
+  background: #2b2d31;
+  border: 1px solid #1a1b1d;
+  border-radius: 3px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 4px;
+  cursor: pointer;
+  position: relative;
+}
+.char-grid .part-tile:hover { border-color: #e8b96b; }
+.char-grid .part-tile.equipped { border-color: #5e8a3a; }
+.char-grid .part-tile img {
+  image-rendering: pixelated;
+  max-width: 48px;
+  max-height: 48px;
+  height: auto;
+  width: auto;
+}
+.char-grid .part-tile .pid {
+  font-family: ui-monospace, "Cascadia Mono", Menlo, monospace;
+  font-size: 10px;
+  color: #777;
+  margin-top: 4px;
+  word-break: break-all;
+  text-align: center;
+}
+.char-grid .part-tile .placeholder {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #555;
+  font-size: 10px;
+  background: #1e1f22;
+}
+
+.char-grid.loading { opacity: 0.5; }
+/* Sentinel for IntersectionObserver-driven progressive batching of part
+ * tiles — invisible but takes up a row so the observer fires before the
+ * user actually reaches the end of the rendered tiles. */
+.char-grid-sentinel {
+  grid-column: 1 / -1;
+  height: 1px;
+}
+
+/* Indeterminate progress bar pinned to the bottom of the page. Shown
+ * while any tracked fetch (parts list, compose, ear types, weapon
+ * poses) is in flight. Animation is purely CSS so we don't need to
+ * estimate progress server-side — the bar just slides until the
+ * inflight counter hits zero. */
+.char-progress {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: #1a1b1d;
+  z-index: 100;
+  overflow: hidden;
+  pointer-events: none;
+}
+.char-progress-bar {
+  width: 30%;
+  height: 100%;
+  background: linear-gradient(
+    90deg, transparent 0%, #e8b96b 20%, #e8b96b 80%, transparent 100%
+  );
+  animation: char-progress-slide 1.2s linear infinite;
+}
+@keyframes char-progress-slide {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(450%); }
+}
+
+/* Hover tooltip card for equipment tiles. Positioned by JS relative
+ * to the hovered tile (right-aligned by default; flips to the left
+ * when there's no room). Shows reqs / stat bumps / weapon type /
+ * price — same data the in-game tooltip surfaces. */
+.char-tooltip {
+  position: fixed;
+  z-index: 200;
+  min-width: 180px;
+  max-width: 260px;
+  background: #232428;
+  border: 1px solid #1a1b1d;
+  border-radius: 4px;
+  padding: 10px 12px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+  color: #d6d6d6;
+  font-size: 12px;
+  line-height: 1.5;
+  pointer-events: none;
+}
+.char-tooltip h4 {
+  margin: 0 0 4px;
+  font-size: 12px;
+  font-family: ui-monospace, "Cascadia Mono", Menlo, monospace;
+  color: #e8b96b;
+  letter-spacing: 0.02em;
+}
+.char-tooltip .tt-section {
+  border-top: 1px solid #2e2f33;
+  margin-top: 6px;
+  padding-top: 5px;
+}
+.char-tooltip .tt-section:first-of-type {
+  border-top: none;
+  margin-top: 0;
+  padding-top: 0;
+}
+.char-tooltip .tt-label {
+  color: #888;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 2px;
+}
+.char-tooltip .tt-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+.char-tooltip .tt-key { color: #aaa; }
+.char-tooltip .tt-val { color: #d6d6d6; font-family: ui-monospace, "Cascadia Mono", Menlo, monospace; }
+.char-tooltip .tt-val.pos { color: #7bbf5b; }   /* stat increases */
+.char-tooltip .tt-val.req { color: #c5c5c5; }
+.char-tooltip .tt-empty { color: #777; font-style: italic; }
+.char-tooltip .tt-meta { color: #777; font-size: 10px; margin-top: 4px; }

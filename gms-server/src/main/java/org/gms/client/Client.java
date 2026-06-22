@@ -103,7 +103,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 public class Client extends ChannelInboundHandlerAdapter {
     private static final Logger log = LoggerFactory.getLogger(Client.class);
     /** 空闲检测发出 ping 后，等待客户端 pong 的秒数（原 15 秒） */
-    private static final int IDLE_PONG_WAIT_SECONDS = 30;
+    private static final int IDLE_PONG_WAIT_SECONDS = 120;
 
     public static final int LOGIN_NOTLOGGEDIN = 0;
     public static final int LOGIN_SERVER_TRANSITION = 1;

@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>{{ wz_name }} — wzpy</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body data-wz-name="{{ wz_name }}"{% if tree_flat_root %} data-tree-flat-root="1"{% endif %}>
+  <header>
+    <h1>wzpy</h1>
+    <div class="meta">
+      <span class="badge">{{ wz_region }}</span>
+      <span class="badge">v{{ wz_version }}</span>
+      <span class="path">{{ wz_name }}</span>
+    </div>
+    <a class="open-link" href="{{ url_for('open_file_page') }}" title="Open a different .wz file or pack folder">Switch file…</a>
+    {% if has_character %}
+    <a class="char-link" href="{{ url_for('character_builder') }}">Character Builder →</a>
+    {% endif %}
+    <div id="save-slot"></div>
+  </header>
+
+  <main>
+    <aside id="tree-panel">
+      <div class="tree-search">
+        <input
+          type="search"
+          id="tree-search-input"
+          placeholder="Search by name or img ID…"
+          autocomplete="off"
+          spellcheck="false"
+        >
+        <label class="tree-search-deep" title="Also match property names and string values inside each img. Slow on the first search — every img is parsed.">
+          <input type="checkbox" id="tree-search-deep">
+          deep
+        </label>
+        <ul id="tree-search-results" class="tree-search-results" hidden></ul>
+      </div>
+      <ul id="tree" class="tree"></ul>
+    </aside>
+    <div id="tree-resize-handle" class="resize-handle"
+         role="separator" aria-orientation="vertical"
+         tabindex="0" title="Drag to resize the tree panel"></div>
+    <section id="detail-panel">
+      <div id="breadcrumbs" class="breadcrumbs"></div>
+      <div id="detail">
+        <p class="hint">Click a node on the left to inspect it.</p>
+      </div>
+    </section>
+  </main>
+
+  <div id="context-menu" class="context-menu" hidden></div>
+
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,66 @@
+package orange.wz.gui.utils;
+
+import orange.wz.gui.MainFrame;
+import orange.wz.provider.WzDirectory;
+import orange.wz.provider.WzImage;
+import orange.wz.provider.WzImageProperty;
+import orange.wz.provider.WzObject;
+import orange.wz.provider.properties.WzCanvasProperty;
+import orange.wz.provider.properties.WzPngFormat;
+
+import java.util.List;
+
+public final class CanvasUtil {
+    public static void search(List<CanvasUtilData> result, List<? extends WzObject> wzObjects) {
+        for (WzObject wzObject : wzObjects) {
+            if (wzObject instanceof WzCanvasProperty canvas) {
+                result.add(new CanvasUtilData(
+                        canvas.getPath(),
+                        canvas.getPngImage(false),
+                        canvas.getWidth(),
+                        canvas.getHeight(),
+                        canvas.getFormat()
+                ));
+            } else if (wzObject instanceof WzImageProperty prop && prop.isListProperty()) {
+                search(result, prop.getChildren());
+            } else if (wzObject instanceof WzDirectory wzDir) {
+                if (wzDir.isWzFile() && !wzDir.getWzFile().parse()) {
+                    MainFrame.getInstance().setStatusTextWithErrLog(MainFrame.i18n.get("error.parse", wzDir.getName(), wzDir.getWzFile().getStatus().getMessage()));
+                    throw new RuntimeException();
+                }
+                search(result, wzDir.getChildren());
+            } else if (wzObject instanceof WzImage wzImg) {
+                if (!wzImg.parse()) {
+                    MainFrame.getInstance().setStatusTextWithErrLog(MainFrame.i18n.get("error.parse", wzImg.getName(), wzImg.getStatus().getMessage()));
+                    throw new RuntimeException();
+                }
+                search(result, wzImg.getChildren());
+            }
+        }
+    }
+
+    public static void changeFormat(List<WzImageProperty> properties, WzPngFormat format) {
+        for (WzImageProperty prop : properties) {
+            if (prop instanceof WzCanvasProperty canvas) {
+                if (canvas.getFormat() == format) continue;
+                canvas.setPng(canvas.getPngImage(false), format, 0);
+                MainFrame.getInstance().setStatusText(MainFrame.i18n.get("status.success", canvas.getPath()));
+            } else if (prop.isListProperty()) {
+                changeFormat(prop.getChildren(), format);
+            }
+        }
+    }
+
+    public static void scaleImage(List<WzImageProperty> properties, String nodeName, double scale) {
+        for (WzImageProperty prop : properties) {
+            if (prop instanceof WzCanvasProperty canvas) {
+                if (nodeName.isEmpty() || prop.getName().equals(nodeName)) {
+                    canvas.scale(scale);
+                    MainFrame.getInstance().setStatusText(MainFrame.i18n.get("status.success", canvas.getPath()));
+                }
+            } else if (prop.isListProperty()) {
+                scaleImage(prop.getChildren(), nodeName, scale);
+            }
+        }
+    }
+}

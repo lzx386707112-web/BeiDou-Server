@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Character Builder — wzpy</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='character.css') }}">
+</head>
+<body data-wz-name="{{ wz_name }}" class="character-page">
+  <header>
+    <h1>wzpy <span class="sub">— Character Builder</span></h1>
+    <div class="meta">
+      <span class="badge">{{ wz_region }}</span>
+      <span class="badge">v{{ wz_version }}</span>
+      <span class="path">{{ wz_name }}</span>
+    </div>
+    <div class="header-actions">
+      <button id="char-import-btn" type="button" class="header-btn"
+              title="Load a previously exported character JSON">Import</button>
+      <button id="char-export-btn" type="button" class="header-btn"
+              title="Save the currently equipped items, pose, and facing as JSON">Export</button>
+      <a class="open-link" href="{{ url_for('open_file_page') }}" title="Open a different .wz file or pack folder">Switch file…</a>
+      <a class="back-link" href="{{ url_for('tree_browser') }}">← Tree browser</a>
+    </div>
+    <input type="file" id="char-import-file" accept=".json,application/json" hidden>
+  </header>
+
+  <main class="char-main">
+    <section class="char-stage">
+      <div class="char-preview">
+        <img id="char-img" alt="character preview">
+      </div>
+      <div class="char-controls">
+        <label>Scale
+          <select id="char-scale">
+            <option value="1">×1</option>
+            <option value="2" selected>×2</option>
+            <option value="4">×4</option>
+            <option value="8">×8</option>
+          </select>
+        </label>
+        <div id="char-pose" class="char-pose" hidden></div>
+        <div id="char-ear" class="char-ear" hidden></div>
+        <div id="char-facing" class="char-facing">
+          <span class="facing-label">Face</span>
+          <label><input type="radio" name="char-facing" value="left" checked>L</label>
+          <label><input type="radio" name="char-facing" value="right">R</label>
+        </div>
+      </div>
+      <div class="char-controls char-controls-actions">
+        <button id="char-export" type="button" title="Export the current frame as a single PNG">PNG</button>
+        <button id="char-export-frames" type="button" title="Export every animation frame as numbered PNGs in a ZIP">Frames</button>
+        <button id="char-export-gif" type="button" title="Export the animation as an animated GIF">GIF</button>
+      </div>
+      <h3>Equipped</h3>
+      <ul id="char-equipped" class="equipped-list">
+        <li class="hint">No items yet — pick parts from the right.</li>
+      </ul>
+      <h3>Characters</h3>
+      <div id="char-cards" class="char-cards"></div>
+    </section>
+
+    <section class="char-pickers">
+      <nav class="char-tabs" id="char-tabs"></nav>
+      <div class="char-subtabs-row" id="char-subtabs-row">
+        <nav class="char-subtabs" id="char-subtabs"></nav>
+        <input
+          type="search"
+          class="char-search"
+          id="char-search"
+          placeholder="Search by name or ID…"
+          autocomplete="off"
+          spellcheck="false"
+        >
+      </div>
+      <div class="char-grid" id="char-grid">
+        <p class="hint">Pick a category to load parts.</p>
+      </div>
+    </section>
+  </main>
+
+  <div id="char-progress" class="char-progress" hidden>
+    <div class="char-progress-bar"></div>
+  </div>
+
+  <div id="char-tooltip" class="char-tooltip" role="tooltip" hidden></div>
+
+  <div id="hair-custom-popup" class="hair-custom-popup" role="dialog" aria-label="Custom hair color" hidden>
+    <div class="hcp-head"><span>Custom Hair Color</span><button id="hcp-close" type="button" class="hcp-close" title="Close">×</button></div>
+    <label class="hcp-row"><span class="hcp-name">Hue</span><input type="range" id="hcp-hue" min="0" max="360" step="1"><span class="hcp-num" id="hcp-hue-val">0°</span></label>
+    <label class="hcp-row"><span class="hcp-name">Sat</span><input type="range" id="hcp-sat" min="0" max="200" step="1"><span class="hcp-num" id="hcp-sat-val">100%</span></label>
+    <label class="hcp-row"><span class="hcp-name">Val</span><input type="range" id="hcp-val" min="0" max="200" step="1"><span class="hcp-num" id="hcp-val-val">100%</span></label>
+    <div class="hcp-foot"><span class="hcp-preview-dot" id="hcp-preview"></span><span class="hcp-hint">Recolors the red hair to your custom HSV — applies to every pose.</span></div>
+  </div>
+
+  <script src="{{ url_for('static', filename='character.js') }}"></script>
+</body>
+</html>
