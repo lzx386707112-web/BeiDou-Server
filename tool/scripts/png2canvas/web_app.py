@@ -442,6 +442,28 @@ def sync_xml_subtree_from_client(xml_root: ET.Element, client_root: WzSubPropert
     xml_append_from_client(parent, source, name)
 
 
+def add_client_node(root: WzSubProperty, target_path: str, kind: str, value: Any) -> Any:
+    parent, name = replace.img_parent_and_name(root, target_path, create=False)
+    if parent.child(name) is not None:
+        raise TypeError(f"Target path {target_path!r} already exists")
+    if kind == "imgdir":
+        node = WzSubProperty(name, parent)
+    elif kind == "int":
+        node = WzIntProperty(name, int(value or 0), parent)
+    elif kind == "string":
+        node = WzStringProperty(name, "" if value is None else str(value), parent)
+    elif kind == "uol":
+        node = WzUolProperty(name, "" if value is None else str(value), parent)
+    elif kind == "vector":
+        if not isinstance(value, dict):
+            raise ValueError("vector value must include x and y")
+        node = WzVectorProperty(name, int(value.get("x", 0)), int(value.get("y", 0)), parent)
+    else:
+        raise ValueError(f"Unsupported node type: {kind!r}")
+    parent.add(node)
+    return node
+
+
 def build_tree(
     client_node: Any,
     reference_node: Any,
@@ -680,6 +702,96 @@ def api_delete_node():
             replace.write_xml(xml_path, xml_tree, backup=backup)
 
     return jsonify({"ok": True, "dryRun": dry_run, "path": path, "clientRemoved": client_removed, "xmlRemoved": xml_removed})
+
+
+@app.post("/api/add_node")
+def api_add_node():
+    body = request.get_json(silent=True) or {}
+    img_path = root_path(body.get("img_path", ""))
+    xml_path = root_path(body.get("xml_path", ""))
+    parent_path = str(body.get("parent_path", "")).strip("/")
+    name = str(body.get("name", "")).strip()
+    kind = str(body.get("type", "")).strip()
+    backup = bool(body.get("backup", True))
+    dry_run = bool(body.get("dry_run", False))
+    if not parent_path:
+        return jsonify({"ok": False, "reason": "parent_path is required"}), 400
+    if not name or "/" in name or "\\" in name:
+        return jsonify({"ok": False, "reason": "node name is required and cannot include / or \\"}), 400
+
+    target_path = join_img_path(parent_path, name)
+    image = load_client_image(img_path)
+    try:
+        node = add_client_node(image.root, target_path, kind, body.get("value"))
+        xml_tree = ET.parse(xml_path) if xml_path.exists() else None
+        if xml_tree is not None:
+            sync_xml_subtree_from_client(xml_tree.getroot(), image.root, target_path, replace_existing=False)
+
+        if not dry_run:
+            out = encode_image_body(image, image.wz_file.reader)
+            replace.write_img(img_path, out, backup=backup)
+            if xml_tree is not None:
+                replace.write_xml(xml_path, xml_tree, backup=backup)
+    except Exception as exc:
+        return jsonify({"ok": False, "reason": str(exc)}), 400
+
+    return jsonify({
+        "ok": True,
+        "dryRun": dry_run,
+        "path": target_path,
+        "client": client_meta(node),
+        "xmlSynced": xml_tree is not None,
+    })
+
+
+@app.post("/api/copy_node")
+def api_copy_node():
+    body = request.get_json(silent=True) or {}
+    img_path = root_path(body.get("img_path", ""))
+    xml_path = root_path(body.get("xml_path", ""))
+    source_path = str(body.get("source_path", "")).strip("/")
+    parent_path = str(body.get("parent_path", "")).strip("/")
+    name = str(body.get("name", "")).strip()
+    backup = bool(body.get("backup", True))
+    dry_run = bool(body.get("dry_run", False))
+    if not source_path:
+        return jsonify({"ok": False, "reason": "source_path is required"}), 400
+    if not parent_path:
+        return jsonify({"ok": False, "reason": "parent_path is required"}), 400
+    if name and ("/" in name or "\\" in name):
+        return jsonify({"ok": False, "reason": "node name cannot include / or \\"}), 400
+
+    image = load_client_image(img_path)
+    source_path = normalized_img_path(image.root, source_path)
+    parent_path = normalized_img_path(image.root, parent_path)
+    if not source_path:
+        return jsonify({"ok": False, "reason": "cannot copy IMG root node"}), 400
+    if parent_path == source_path or parent_path.startswith(f"{source_path}/"):
+        return jsonify({"ok": False, "reason": "cannot copy a node into itself or its child"}), 400
+
+    target_name = name or source_path.split("/")[-1]
+    target_path = join_img_path(parent_path, target_name)
+    try:
+        replace.copy_img_subtree(image.root, image.root, source_path, target_path, replace_existing=False)
+        xml_tree = ET.parse(xml_path) if xml_path.exists() else None
+        if xml_tree is not None:
+            sync_xml_subtree_from_client(xml_tree.getroot(), image.root, target_path, replace_existing=False)
+
+        if not dry_run:
+            out = encode_image_body(image, image.wz_file.reader)
+            replace.write_img(img_path, out, backup=backup)
+            if xml_tree is not None:
+                replace.write_xml(xml_path, xml_tree, backup=backup)
+    except Exception as exc:
+        return jsonify({"ok": False, "reason": str(exc)}), 400
+
+    return jsonify({
+        "ok": True,
+        "dryRun": dry_run,
+        "sourcePath": source_path,
+        "path": target_path,
+        "xmlSynced": xml_tree is not None,
+    })
 
 
 @app.post("/api/update_node_value")
@@ -1050,9 +1162,19 @@ HTML = r"""<!doctype html>
     .raw { margin-top:10px; }
     .raw summary { color:var(--muted); cursor:pointer; }
     pre { margin:8px 0 0; white-space:pre-wrap; color:#cbd5e1; font-size:11px; }
-    .replace-panel { display:grid; grid-template-columns:minmax(170px, 1fr) minmax(150px, 1fr) 100px 110px auto auto minmax(180px, 1fr); gap:8px; padding:8px 10px; background:#090d14; border-top:1px solid var(--line); align-items:end; }
+    .replace-panel { display:grid; grid-template-columns:1fr; gap:8px; padding:8px 10px; background:#090d14; border-top:1px solid var(--line); }
+    .replace-row { min-width:0; display:grid; gap:8px; align-items:end; }
+    .replace-row-primary { grid-template-columns:minmax(170px, 1fr) minmax(150px, .85fr) 96px 112px auto auto minmax(220px, 1fr); }
+    .replace-row-node { grid-template-columns:minmax(420px, 1.2fr) minmax(420px, 1fr); }
     .drop input { height:30px; padding:4px 6px; }
-    .result { color:var(--muted); white-space:pre-wrap; overflow:hidden; text-overflow:ellipsis; }
+    .result { min-height:30px; max-height:70px; color:var(--muted); white-space:pre-wrap; overflow:auto; text-overflow:ellipsis; align-self:end; }
+    .add-node-panel { display:grid; grid-template-columns:minmax(82px, 1fr) 96px minmax(86px, 1fr) minmax(86px, 1fr) auto; gap:6px; align-items:end; }
+    .add-node-panel .vector-only { display:none; }
+    .add-node-panel.vector-mode { grid-template-columns:minmax(82px, 1fr) 96px 70px 70px auto; }
+    .add-node-panel.vector-mode .value-only { display:none; }
+    .add-node-panel.vector-mode .vector-only { display:block; }
+    .copy-node-panel { display:grid; grid-template-columns:auto minmax(120px, 1fr) auto; gap:6px; align-items:end; }
+    .copy-node-panel label { grid-column:1 / -1; }
     .modal { position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.62); z-index:10; }
     .modal.open { display:flex; }
     .picker { width:min(840px, calc(100vw - 40px)); height:min(620px, calc(100vh - 40px)); display:grid; grid-template-rows:auto auto minmax(0, 1fr); background:#0c121b; border:1px solid var(--line); border-radius:8px; box-shadow:0 18px 60px rgba(0,0,0,.45); overflow:hidden; }
@@ -1066,6 +1188,9 @@ HTML = r"""<!doctype html>
     @media (max-width: 1180px) {
       .topbar { grid-template-columns:70px 120px 1fr 1fr; }
       .actions { grid-column:auto; }
+      .replace-row-primary { grid-template-columns:1fr 1fr auto auto; }
+      .replace-row-primary .result { grid-column:1 / -1; }
+      .replace-row-node { grid-template-columns:1fr; }
       main { grid-template-columns:1fr; grid-template-rows:minmax(300px, 38%) minmax(480px, 62%); }
       section.inspector { border-top:1px solid var(--line); grid-template-columns:1fr; grid-template-rows:auto minmax(280px, 1fr); }
     }
@@ -1138,20 +1263,37 @@ HTML = r"""<!doctype html>
     </section>
   </main>
   <div class="replace-panel">
-    <div class="field drop"><label>批量替换 PNG</label><input id="files" type="file" accept="image/png" multiple /></div>
-    <div class="field drop"><label>单图 PNG</label><input id="singleFile" type="file" accept="image/png" /></div>
-    <div class="field"><label>命名</label><select id="nameMode"><option value="index">按序号</option><option value="stem">使用文件名</option></select></div>
-    <div class="field"><label>原点</label><select id="origin"><option value="keep">保持</option><option value="center">居中</option><option value="bottom-left">左下</option><option value="bottom-center">底中</option></select></div>
-    <div class="actions">
-      <button id="dryReplaceBtn" disabled>预览替换</button>
-      <button class="primary" id="replaceBtn" disabled>写入同步</button>
+    <div class="replace-row replace-row-primary">
+      <div class="field drop"><label>批量替换 PNG</label><input id="files" type="file" accept="image/png" multiple /></div>
+      <div class="field drop"><label>单图 PNG</label><input id="singleFile" type="file" accept="image/png" /></div>
+      <div class="field"><label>命名</label><select id="nameMode"><option value="index">按序号</option><option value="stem">使用文件名</option></select></div>
+      <div class="field"><label>原点</label><select id="origin"><option value="keep">保持</option><option value="center">居中</option><option value="bottom-left">左下</option><option value="bottom-center">底中</option></select></div>
+      <div class="actions">
+        <button id="dryReplaceBtn" disabled>预览替换</button>
+        <button class="primary" id="replaceBtn" disabled>写入同步</button>
+      </div>
+      <div class="actions">
+        <button id="deleteNodeBtn" disabled>删除节点</button>
+        <button id="replaceNodeBtn" disabled>替换选中</button>
+      </div>
+      <div class="result" id="result"></div>
     </div>
-    <div class="actions">
-      <button id="deleteNodeBtn" disabled>删除节点</button>
-      <button id="replaceNodeBtn" disabled>替换选中</button>
+    <div class="replace-row replace-row-node">
+      <div class="add-node-panel" id="addNodePanel">
+        <div class="field"><label>节点名</label><input id="newNodeName" placeholder="如 z 或 0" /></div>
+        <div class="field"><label>类型</label><select id="newNodeType"><option value="int">整数</option><option value="imgdir">目录</option><option value="string">字符串</option><option value="vector">坐标</option><option value="uol">引用</option></select></div>
+        <div class="field value-only"><label>值</label><input id="newNodeValue" placeholder="默认空/0" /></div>
+        <div class="field vector-only"><label>x</label><input id="newNodeX" type="number" value="0" /></div>
+        <div class="field vector-only"><label>y</label><input id="newNodeY" type="number" value="0" /></div>
+        <button id="addNodeBtn" disabled>添加节点</button>
+      </div>
+      <div class="copy-node-panel">
+        <label id="copyNodeLabel">未复制节点</label>
+        <button id="copyNodeBtn" disabled>复制节点</button>
+        <input id="copyNodeName" placeholder="粘贴名，默认原名" />
+        <button id="pasteNodeBtn" disabled>粘贴到当前</button>
+      </div>
     </div>
-    <div class="path-field"><input id="newNodeName" placeholder="新节点名" /><button id="addNodeBtn" disabled>添加图片节点</button></div>
-    <div class="result" id="result"></div>
   </div>
   <div class="modal" id="pickerModal">
     <div class="picker">
@@ -1180,6 +1322,7 @@ HTML = r"""<!doctype html>
     let pickerTarget = null;
     let pickerKind = "img";
     let pickerRoots = [];
+    let copiedNodePath = "";
 
     const $ = id => document.getElementById(id);
     const textMeta = m => {
@@ -1479,6 +1622,7 @@ HTML = r"""<!doctype html>
       renderTree();
       renderRows();
       updateActionButtons(node.client.type);
+      refreshCopyNodeFields();
       renderDetails(node);
       renderPreview(node);
     }
@@ -1624,7 +1768,9 @@ HTML = r"""<!doctype html>
       $("replaceBtn").disabled = clientType !== "imgdir" || !selectedPath;
       $("deleteNodeBtn").disabled = !selectedPath;
       $("replaceNodeBtn").disabled = !selectedPath;
-      $("addNodeBtn").disabled = clientType !== "imgdir" || !selectedPath;
+      $("addNodeBtn").disabled = !["imgdir", "canvas"].includes(clientType) || !selectedPath;
+      $("copyNodeBtn").disabled = !selectedPath;
+      $("pasteNodeBtn").disabled = !copiedNodePath || !["imgdir", "canvas"].includes(clientType) || !selectedPath;
     }
 
     async function syncSelected() {
@@ -1701,11 +1847,83 @@ HTML = r"""<!doctype html>
       await upsertCanvas(selectedPath, true);
     }
 
-    async function addCanvasNode() {
+    function newNodePayload(type) {
+      if (type === "vector") {
+        return {
+          x: $("newNodeX").value,
+          y: $("newNodeY").value,
+        };
+      }
+      if (type === "int") return $("newNodeValue").value || "0";
+      if (["string", "uol"].includes(type)) return $("newNodeValue").value;
+      return null;
+    }
+
+    async function addNode() {
       if (!selectedPath) throw new Error("请选择父目录节点");
       const name = $("newNodeName").value.trim();
       if (!name) throw new Error("请输入新节点名");
-      await upsertCanvas(childPath(selectedPath, name), false);
+      const type = $("newNodeType").value;
+      const targetPath = childPath(selectedPath, name);
+      const res = await fetch("/api/add_node", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+          img_path: state.imgPath,
+          xml_path: state.xmlPath,
+          parent_path: selectedPath,
+          name,
+          type,
+          value: newNodePayload(type),
+          backup: true,
+          dry_run: false,
+        })
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.reason);
+      setResult(`已添加并同步: ${data.path}`);
+      await load(targetPath);
+    }
+
+    function refreshCopyNodeFields() {
+      $("copyNodeLabel").textContent = copiedNodePath ? `已复制: ${copiedNodePath}` : "未复制节点";
+      const targetNode = state ? findTreeNode(state.tree, selectedPath) : null;
+      const targetType = targetNode?.client?.type || "";
+      $("pasteNodeBtn").disabled = !copiedNodePath || !["imgdir", "canvas"].includes(targetType) || !selectedPath;
+    }
+
+    function copySelectedNode() {
+      if (!selectedPath) throw new Error("请选择要复制的节点");
+      copiedNodePath = selectedPath;
+      $("copyNodeName").value = pathName(selectedPath);
+      refreshCopyNodeFields();
+      setResult(`已复制节点: ${copiedNodePath}`);
+    }
+
+    async function pasteCopiedNode() {
+      if (!copiedNodePath) throw new Error("请先复制节点");
+      if (!selectedPath) throw new Error("请选择目标父节点");
+      const name = $("copyNodeName").value.trim();
+      const targetName = name || pathName(copiedNodePath);
+      const targetPath = childPath(selectedPath, targetName);
+      if (!confirm(`复制 ${copiedNodePath} 到 ${targetPath}？同名节点存在时不会覆盖。`)) return;
+      const res = await fetch("/api/copy_node", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+          img_path: state.imgPath,
+          xml_path: state.xmlPath,
+          source_path: copiedNodePath,
+          parent_path: selectedPath,
+          name,
+          backup: true,
+          dry_run: false,
+        })
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.reason);
+      setResult(`已复制并同步:\n${data.sourcePath} -> ${data.path}`);
+      await load(data.path);
     }
 
     async function deleteSelectedNode() {
@@ -1856,13 +2074,24 @@ HTML = r"""<!doctype html>
       await load(selectedPath);
     }
 
+    function refreshAddNodeFields() {
+      const type = $("newNodeType").value;
+      $("addNodePanel").classList.toggle("vector-mode", type === "vector");
+      if (type === "imgdir") $("newNodeValue").placeholder = "无需填写";
+      else if (type === "int") $("newNodeValue").placeholder = "默认 0";
+      else if (type === "uol") $("newNodeValue").placeholder = "引用路径";
+      else $("newNodeValue").placeholder = "默认空";
+    }
+
     $("loadBtn").onclick = () => load().catch(e => setResult(e.message));
     $("syncBtn").onclick = () => syncSelected().catch(e => setResult(e.message));
     $("dryReplaceBtn").onclick = () => replaceFrames(true).catch(e => setResult(e.message));
     $("replaceBtn").onclick = () => replaceFrames(false).catch(e => setResult(e.message));
     $("deleteNodeBtn").onclick = () => deleteSelectedNode().catch(e => setResult(e.message));
     $("replaceNodeBtn").onclick = () => replaceSelectedNode().catch(e => setResult(e.message));
-    $("addNodeBtn").onclick = () => addCanvasNode().catch(e => setResult(e.message));
+    $("addNodeBtn").onclick = () => addNode().catch(e => setResult(e.message));
+    $("copyNodeBtn").onclick = () => copySelectedNode().catch(e => setResult(e.message));
+    $("pasteNodeBtn").onclick = () => pasteCopiedNode().catch(e => setResult(e.message));
     $("dryReplaceSourceBtn").onclick = () => copySourceToSelected(true, "replace").catch(e => setResult(e.message));
     $("replaceSourceBtn").onclick = () => copySourceToSelected(false, "replace").catch(e => setResult(e.message));
     $("dryAppendSourceBtn").onclick = () => copySourceToSelected(true, "append").catch(e => setResult(e.message));
@@ -1870,6 +2099,7 @@ HTML = r"""<!doctype html>
     $("analyzePlanBtn").onclick = () => analyzePlan().catch(e => setResult(e.message));
     $("dryApplyPlanBtn").onclick = () => applyPlan(true).catch(e => setResult(e.message));
     $("applyPlanBtn").onclick = () => applyPlan(false).catch(e => setResult(e.message));
+    $("newNodeType").onchange = refreshAddNodeFields;
     $("planSourcePath").addEventListener("input", () => {
       if (!state) return;
       selectedReferencePath = $("planSourcePath").value.trim();
@@ -1906,6 +2136,7 @@ HTML = r"""<!doctype html>
         }
       });
     }
+    refreshAddNodeFields();
     load().catch(e => setResult(e.message));
   </script>
 </body>
