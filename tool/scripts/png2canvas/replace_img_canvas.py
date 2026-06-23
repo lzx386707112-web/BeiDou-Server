@@ -9,6 +9,7 @@ import re
 import shutil
 import sys
 import tempfile
+import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
@@ -21,7 +22,14 @@ if str(_WZPY) not in sys.path:
 from PIL import Image  # noqa: E402
 from wzpy import WzImage, WzKey  # noqa: E402
 from wzpy.canvas import _ZLIB_HEADERS, _read_canvas_bytes, encode_canvas_payload  # noqa: E402
-from wzpy.properties import WzCanvasProperty, WzIntProperty, WzSubProperty, WzVectorProperty  # noqa: E402
+from wzpy.properties import (  # noqa: E402
+    WzCanvasProperty,
+    WzIntProperty,
+    WzStringProperty,
+    WzSubProperty,
+    WzUolProperty,
+    WzVectorProperty,
+)
 from wzpy.writer import encode_image_body  # noqa: E402
 
 
@@ -32,6 +40,18 @@ PNG_SUFFIX = ".png"
 class CanvasJob:
     png: Path
     canvas_path: str
+
+
+@dataclass(frozen=True)
+class CanvasUpdate:
+    canvas_path: str
+    old_width: int
+    old_height: int
+    width: int
+    height: int
+    origin_x: int
+    origin_y: int
+    ints: tuple[tuple[str, str], ...]
 
 
 def natural_key(value: str) -> list[object]:
@@ -90,6 +110,19 @@ def ensure_sub(parent: WzSubProperty, name: str, create: bool) -> WzSubProperty:
     return node
 
 
+def ensure_container(parent: WzSubProperty, name: str, create: bool) -> WzSubProperty:
+    existing = child_by_name(parent, name)
+    if isinstance(existing, WzSubProperty):
+        return existing
+    if existing is not None:
+        raise TypeError(f"Path segment {name!r} already exists as {type(existing).__name__}, not a container")
+    if not create:
+        raise KeyError(f"Missing container {name!r}")
+    node = WzSubProperty(name, parent)
+    parent.add(node)
+    return node
+
+
 def ensure_canvas(root: WzSubProperty, canvas_path: str, create: bool) -> WzCanvasProperty:
     parts = split_canvas_path(canvas_path)
     if root.name == parts[0]:
@@ -114,6 +147,101 @@ def ensure_canvas(root: WzSubProperty, canvas_path: str, create: bool) -> WzCanv
     canvas.format2 = 0
     parent.add(canvas)
     return canvas
+
+
+def img_parent_and_name(root: WzSubProperty, raw_path: str, create: bool) -> tuple[WzSubProperty, str]:
+    parts = split_canvas_path(raw_path)
+    if root.name == parts[0]:
+        parts = parts[1:]
+    if not parts:
+        raise ValueError("Cannot operate on the IMG root node")
+
+    parent = root
+    for part in parts[:-1]:
+        parent = ensure_container(parent, part, create)
+    return parent, parts[-1]
+
+
+def delete_img_node(root: WzSubProperty, raw_path: str) -> bool:
+    parent, name = img_parent_and_name(root, raw_path, create=False)
+    if parent.child(name) is None:
+        return False
+    del parent._children[name]
+    return True
+
+
+def replace_existing_with_canvas(root: WzSubProperty, canvas_path: str) -> None:
+    parent, name = img_parent_and_name(root, canvas_path, create=True)
+    existing = parent.child(name)
+    if existing is not None and not isinstance(existing, WzCanvasProperty):
+        del parent._children[name]
+
+
+def ensure_imgdir(root: WzSubProperty, raw_path: str, replace_existing: bool) -> WzSubProperty:
+    parent, name = img_parent_and_name(root, raw_path, create=True)
+    existing = parent.child(name)
+    if existing is not None and replace_existing:
+        del parent._children[name]
+        existing = None
+    if isinstance(existing, WzSubProperty) and not isinstance(existing, WzCanvasProperty):
+        return existing
+    if existing is not None:
+        raise TypeError(f"Path {raw_path!r} already exists as {type(existing).__name__}, not imgdir")
+    node = WzSubProperty(name, parent)
+    parent.add(node)
+    return node
+
+
+def add_cloned_property(parent: WzSubProperty, source, name: str | None = None):
+    out_name = name if name is not None else source.name
+    if isinstance(source, WzCanvasProperty):
+        clone = WzCanvasProperty(out_name, parent)
+        clone.width = int(source.width)
+        clone.height = int(source.height)
+        clone.format = int(source.format)
+        clone.format2 = int(source.format2)
+        clone._png_data = _read_canvas_bytes(source)
+        clone._png_length = len(clone._png_data)
+        parent.add(clone)
+        for child in source.children():
+            add_cloned_property(clone, child)
+        return clone
+    if isinstance(source, WzSubProperty):
+        clone = WzSubProperty(out_name, parent)
+        parent.add(clone)
+        for child in source.children():
+            add_cloned_property(clone, child)
+        return clone
+    if isinstance(source, WzVectorProperty):
+        clone = WzVectorProperty(out_name, int(source.x), int(source.y), parent)
+        parent.add(clone)
+        return clone
+    if isinstance(source, WzIntProperty):
+        clone = WzIntProperty(out_name, int(source.value), parent)
+        parent.add(clone)
+        return clone
+    if isinstance(source, WzStringProperty):
+        clone = WzStringProperty(out_name, str(source.value), parent)
+        parent.add(clone)
+        return clone
+    if isinstance(source, WzUolProperty):
+        clone = WzUolProperty(out_name, str(source.value), parent)
+        parent.add(clone)
+        return clone
+    raise TypeError(f"Unsupported property type for clone: {type(source).__name__}")
+
+
+def copy_img_subtree(source_root: WzSubProperty, target_root: WzSubProperty, source_path: str, target_path: str, replace_existing: bool) -> None:
+    source = source_root.get(source_path)
+    if source is None:
+        raise KeyError(f"Missing source node {source_path!r}")
+    parent, name = img_parent_and_name(target_root, target_path, create=True)
+    existing = parent.child(name)
+    if existing is not None:
+        if not replace_existing:
+            raise TypeError(f"Target path {target_path!r} already exists")
+        del parent._children[name]
+    add_cloned_property(parent, source, name)
 
 
 def set_int_child(parent: WzSubProperty, name: str, value: str) -> None:
@@ -189,6 +317,121 @@ def original_is_listwz(canvas: WzCanvasProperty) -> bool:
     return len(raw) >= 2 and (raw[0] | (raw[1] << 8)) not in _ZLIB_HEADERS
 
 
+def xml_child_by_name(parent: ET.Element, tag: str, name: str) -> ET.Element | None:
+    for child in parent:
+        if child.tag == tag and child.get("name") == name:
+            return child
+    return None
+
+
+def ensure_xml_imgdir(parent: ET.Element, name: str, create: bool) -> ET.Element:
+    existing = xml_child_by_name(parent, "imgdir", name)
+    if existing is not None:
+        return existing
+    if not create:
+        raise KeyError(f"Missing XML imgdir {name!r}")
+    return ET.SubElement(parent, "imgdir", {"name": name})
+
+
+def ensure_xml_container(parent: ET.Element, name: str, create: bool) -> ET.Element:
+    for tag in ("imgdir", "canvas"):
+        existing = xml_child_by_name(parent, tag, name)
+        if existing is not None:
+            return existing
+    if not create:
+        raise KeyError(f"Missing XML container {name!r}")
+    return ET.SubElement(parent, "imgdir", {"name": name})
+
+
+def ensure_xml_canvas(root: ET.Element, canvas_path: str, create: bool) -> ET.Element:
+    parts = split_canvas_path(canvas_path)
+    if root.get("name") == parts[0]:
+        parts = parts[1:]
+    if not parts:
+        raise ValueError(f"Canvas path {canvas_path!r} points to the XML root")
+
+    parent = root
+    for part in parts[:-1]:
+        parent = ensure_xml_imgdir(parent, part, create)
+
+    name = parts[-1]
+    existing = xml_child_by_name(parent, "canvas", name)
+    if existing is not None:
+        return existing
+    non_canvas = xml_child_by_name(parent, "imgdir", name)
+    if non_canvas is not None:
+        raise TypeError(f"XML path {canvas_path!r} already exists as imgdir, not canvas")
+    if not create:
+        raise KeyError(f"Missing XML canvas {canvas_path!r}")
+    return ET.SubElement(parent, "canvas", {"name": name})
+
+
+def xml_parent_and_name(root: ET.Element, raw_path: str, create: bool) -> tuple[ET.Element, str]:
+    parts = split_canvas_path(raw_path)
+    if root.get("name") == parts[0]:
+        parts = parts[1:]
+    if not parts:
+        raise ValueError("Cannot operate on the XML root node")
+
+    parent = root
+    for part in parts[:-1]:
+        parent = ensure_xml_container(parent, part, create)
+    return parent, parts[-1]
+
+
+def delete_xml_node(root: ET.Element, raw_path: str) -> bool:
+    parent, name = xml_parent_and_name(root, raw_path, create=False)
+    removed = False
+    for child in list(parent):
+        if child.get("name") == name:
+            parent.remove(child)
+            removed = True
+    return removed
+
+
+def replace_existing_xml_with_canvas(root: ET.Element, canvas_path: str) -> None:
+    parent, name = xml_parent_and_name(root, canvas_path, create=True)
+    for child in list(parent):
+        if child.get("name") == name and child.tag != "canvas":
+            parent.remove(child)
+
+
+def set_xml_int_child(parent: ET.Element, name: str, value: str) -> None:
+    node = xml_child_by_name(parent, "int", name)
+    if node is None:
+        node = ET.SubElement(parent, "int", {"name": name})
+    node.set("value", value)
+
+
+def set_xml_vector_child(parent: ET.Element, name: str, x: int, y: int) -> None:
+    node = xml_child_by_name(parent, "vector", name)
+    if node is None:
+        node = ET.SubElement(parent, "vector", {"name": name})
+    node.set("x", str(x))
+    node.set("y", str(y))
+
+
+def update_xml_canvas(
+    root: ET.Element,
+    update: CanvasUpdate,
+    create: bool,
+) -> None:
+    canvas = ensure_xml_canvas(root, update.canvas_path, create)
+    canvas.set("width", str(update.width))
+    canvas.set("height", str(update.height))
+    set_xml_vector_child(canvas, "origin", update.origin_x, update.origin_y)
+    for name, value in update.ints:
+        set_xml_int_child(canvas, name, value)
+
+
+def canvas_int_children(canvas: WzCanvasProperty) -> tuple[tuple[str, str], ...]:
+    values: list[tuple[str, str]] = []
+    for child in canvas.children():
+        if isinstance(child, WzIntProperty):
+            values.append((child.name, str(int(child.value))))
+    return tuple(values)
+
+
 def update_canvas(
     root: WzSubProperty,
     job: CanvasJob,
@@ -196,8 +439,11 @@ def update_canvas(
     ints: Iterable[tuple[str, str]],
     create: bool,
     key: WzKey,
-) -> str:
+    replace_existing: bool = False,
+) -> CanvasUpdate:
     image = read_png(job.png)
+    if replace_existing:
+        replace_existing_with_canvas(root, job.canvas_path)
     canvas = ensure_canvas(root, job.canvas_path, create)
     old_size = (int(canvas.width), int(canvas.height))
     width, height = image.size
@@ -223,7 +469,16 @@ def update_canvas(
     for name, value in ints:
         set_int_child(canvas, name, value)
 
-    return f"{job.canvas_path}: {old_size[0]}x{old_size[1]} -> {width}x{height}"
+    return CanvasUpdate(
+        canvas_path=job.canvas_path,
+        old_width=old_size[0],
+        old_height=old_size[1],
+        width=width,
+        height=height,
+        origin_x=origin_x,
+        origin_y=origin_y,
+        ints=canvas_int_children(canvas),
+    )
 
 
 def write_img(path: Path, data: bytes, backup: bool) -> None:
@@ -236,6 +491,22 @@ def write_img(path: Path, data: bytes, backup: bool) -> None:
     try:
         with os.fdopen(fd, "wb") as tmp:
             tmp.write(data)
+        os.replace(tmp_name, path)
+    finally:
+        if os.path.exists(tmp_name):
+            os.unlink(tmp_name)
+
+
+def write_xml(path: Path, tree: ET.ElementTree, backup: bool) -> None:
+    if backup:
+        backup_path = path.with_suffix(path.suffix + ".bak")
+        shutil.copy2(path, backup_path)
+        print(f"backup: {backup_path}")
+
+    fd, tmp_name = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=str(path.parent))
+    try:
+        with os.fdopen(fd, "wb") as tmp:
+            tree.write(tmp, encoding="UTF-8", xml_declaration=True, short_empty_elements=True)
         os.replace(tmp_name, path)
     finally:
         if os.path.exists(tmp_name):
@@ -272,6 +543,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         help="Canvas names for --png-dir. index creates 0,1,2...; stem uses file names.",
     )
     parser.add_argument("--no-create", action="store_true", help="Fail if imgdirs/canvases are missing.")
+    parser.add_argument("--sync-xml", help="Also sync server-side .img.xml metadata for the same canvas paths.")
     parser.add_argument("--backup", action="store_true", help="Create a .bak copy before writing .img.")
     parser.add_argument("--dry-run", action="store_true", help="Print actions without writing files.")
     return parser.parse_args(argv)
@@ -287,7 +559,7 @@ def main(argv: list[str]) -> int:
     image = WzImage.from_bytes(data, key=key, name=img_path.name)
     root = image.parse()
 
-    summaries = [
+    updates = [
         update_canvas(
             root=root,
             job=job,
@@ -299,16 +571,37 @@ def main(argv: list[str]) -> int:
         for job in jobs
     ]
 
-    for summary in summaries:
-        print(summary)
+    xml_tree = None
+    xml_path = Path(args.sync_xml) if args.sync_xml else None
+    if xml_path is not None:
+        xml_tree = ET.parse(xml_path)
+        xml_root = xml_tree.getroot()
+        for update in updates:
+            update_xml_canvas(
+                root=xml_root,
+                update=update,
+                create=not args.no_create,
+            )
+
+    for update in updates:
+        print(
+            f"{update.canvas_path}: {update.old_width}x{update.old_height} "
+            f"-> {update.width}x{update.height}, origin={update.origin_x},{update.origin_y}"
+        )
 
     if args.dry_run:
         print(f"[dry-run] would update client IMG: {img_path}")
+        if xml_path is not None:
+            print(f"[dry-run] would sync server XML: {xml_path}")
         return 0
 
     out = encode_image_body(image, image.wz_file.reader)
     write_img(img_path, out, args.backup)
+    if xml_path is not None and xml_tree is not None:
+        write_xml(xml_path, xml_tree, args.backup)
     print(f"updated {len(jobs)} canvas node(s) in {img_path}")
+    if xml_path is not None:
+        print(f"synced server XML: {xml_path}")
     return 0
 
 

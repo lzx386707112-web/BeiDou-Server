@@ -24,7 +24,18 @@ JAVA_HOME_21=/path/to/jdk21 rtk tool/scripts/package_server_jar.sh
 mvn -version
 ```
 
-### 3. OrzRepacker / orange-wz
+### 3. Node.js / npm
+
+`package_server_jar.sh` 默认会构建并内置 `gms-ui` 后台管理页面，因此需要 Node.js / npm。
+
+```sh
+node -v
+npm -v
+```
+
+如果只想打包服务端，可以加 `--skip-ui`。
+
+### 4. OrzRepacker / orange-wz
 
 客户端 `.img -> .wz` 打包依赖 OrzRepacker 的 `lib` 目录。
 
@@ -48,7 +59,7 @@ ORZ_REPACKER_HOME=/你的/OrzRepacker路径 rtk tool/scripts/pack_img_wz.sh ...
 
 或者直接让 AI 根据你的实际目录修改脚本里的 `DEFAULT_ORZ_HOME`。
 
-### 4. wz-python
+### 5. wz-python
 
 `wzpy.sh` 和部分辅助检查依赖 `wz-python`。
 
@@ -129,7 +140,7 @@ rtk tool/scripts/pack_img_wz.sh --input clien/Data/Skill --output "$HOME/Downloa
 
 服务端打包脚本。
 
-会把 `gms-server` 打包成：
+会先构建 `gms-ui`，把后台管理页面内置到服务端静态资源里，然后把 `gms-server` 打包成：
 
 ```text
 gms-server/BeiDou.jar
@@ -139,6 +150,7 @@ gms-server/BeiDou.jar
 
 ```sh
 rtk tool/scripts/package_server_jar.sh
+rtk tool/scripts/package_server_jar.sh --skip-ui
 ```
 
 ### `start_server.sh`
@@ -157,6 +169,12 @@ gms-server/BeiDou.jar
 rtk tool/scripts/start_server.sh
 ```
 
+启动后可以打开后台管理：
+
+```text
+http://localhost:8686/
+```
+
 后台启动：
 
 ```sh
@@ -165,23 +183,37 @@ rtk tool/scripts/start_server.sh --background
 
 ### `png2canvas.sh`
 
-交互式 PNG 写入 Canvas 工具。
+PNG 写入客户端 `.img` Canvas 的网页工具。
 
-只保留交互式操作。直接运行后按提示选择单张 PNG 或 PNG 帧目录。
-如果要替换 `Skill.wz/122.img.xml` 里 `1221009/effect` 的一组帧，通常选择：
+直接运行后打开浏览器访问 `http://127.0.0.1:8765`。页面会并排读取客户端
+`.img` 和服务端 `.img.xml`，用树形结构对照节点关系，并在右侧显示客户端预览、
+服务端同步状态、元数据差异和常见节点含义。
+项目 `.img`、其他服 `.img`、服务端 `.img.xml` 路径可以手动填写，也可以点输入框旁边
+的“选择”按钮从本机目录里浏览选择。
+
+如果要替换游戏端 `clien/Data/Skill/122.img` 里 `1221009/effect` 的一组帧，通常选择：
 
 ```text
-目标 XML: Skill.wz 技能节点
 Skill img ID: 122
 技能节点 ID: 1221009
 图片节点名: effect
-PNG 来源: PNG 帧目录
 图片分组: 0
-帧画布命名方式: 按序号
 ```
 
-这样会把排序后的 PNG 写到 XML 内部路径 `skill/1221009/effect/0/0`,
+这样会把排序后的 PNG 写到客户端 `.img` 内部路径 `skill/1221009/effect/0/0`,
 `skill/1221009/effect/0/1`, `skill/1221009/effect/0/2` ...。
+替换时可以先点“预览替换”，确认映射无误后再“写入并同步”。服务端 XML 会同步
+`width`、`height`、`origin`、`delay`、`z` 等元数据。
+
+如果某个节点结构需要从目录改成单张图片，例如把 `skill/1221009/effect/0`
+这个帧组目录换成普通 canvas，可以在树里选中该节点，选择“单图 PNG”，再点
+“替换选中”。也可以用“删除节点”移除当前节点，或在当前目录下输入“新节点名”
+后点“添加图片节点”。
+
+如果已经加载了其他服 `.img`，可以选中一个节点后点“分析选中”，工具会生成一份
+可编辑的计划 JSON。JSON 里的 `operations` 可以调整 `sourcePath`、`targetPath`、
+`replace` 和 `syncXml`，改好后先点“预览 JSON”，确认无误再点“应用 JSON”批量更新
+客户端 `.img` 并同步服务端 XML。
 
 示例：
 
@@ -189,9 +221,9 @@ PNG 来源: PNG 帧目录
 rtk tool/scripts/png2canvas.sh
 ```
 
-### `png2canvas/png_to_img_canvas.py`
+### `png2canvas/web_app.py` / `png2canvas/replace_img_canvas.py`
 
-`png2canvas.sh` 调用的底层 Python 实现，单独放在 `png2canvas/` 目录里，一般不用直接运行。
+`png2canvas.sh` 调用的网页和底层 Python 实现，单独放在 `png2canvas/` 目录里，一般不用直接运行。
 
 ### `wzpy.sh`
 

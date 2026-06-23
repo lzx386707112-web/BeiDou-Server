@@ -3,6 +3,8 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 SERVER_DIR="$ROOT/gms-server"
+UI_DIR="$ROOT/gms-ui"
+STATIC_DIR="$SERVER_DIR/src/main/resources/static"
 DEFAULT_OUTPUT="$SERVER_DIR/BeiDou.jar"
 
 usage() {
@@ -12,10 +14,11 @@ usage() {
   rtk tool/scripts/package_server_jar.sh --output "$HOME/Downloads/BeiDou.jar"
   rtk tool/scripts/package_server_jar.sh --with-tests
 
-将 gms-server 打包成 BeiDou.jar。
+构建 gms-ui 后，将后台管理页面和 gms-server 一起打包成 BeiDou.jar。
 
 选项:
   -o, --output   输出 jar 路径，默认: gms-server/BeiDou.jar
+  --skip-ui      不构建/内置 gms-ui，仅打包服务端
   --with-tests   打包时运行测试，默认跳过测试
   -h, --help     显示帮助
 
@@ -90,6 +93,7 @@ find_jdk21() {
 
 output="$DEFAULT_OUTPUT"
 skip_tests=1
+build_ui=1
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -103,6 +107,9 @@ while [[ $# -gt 0 ]]; do
       ;;
     --with-tests)
       skip_tests=0
+      ;;
+    --skip-ui)
+      build_ui=0
       ;;
     -h|--help)
       usage
@@ -138,6 +145,39 @@ EOF
 fi
 
 mkdir -p "$(dirname "$output")"
+
+if [[ "$build_ui" -eq 1 ]]; then
+  if ! command -v npm >/dev/null 2>&1; then
+    echo "找不到 npm，无法构建 gms-ui。请先安装 Node.js/npm，或使用 --skip-ui 仅打包服务端。" >&2
+    exit 2
+  fi
+  if [[ ! -f "$UI_DIR/package.json" ]]; then
+    echo "找不到前端 package.json: $UI_DIR/package.json" >&2
+    exit 2
+  fi
+
+  echo "开始构建后台管理前端..."
+  (
+    cd "$UI_DIR"
+    if [[ ! -d node_modules ]]; then
+      echo "未找到 gms-ui/node_modules，先执行 npm install..."
+      npm install --no-package-lock --legacy-peer-deps
+    fi
+    npm run build
+  )
+
+  if [[ ! -f "$UI_DIR/dist/index.html" ]]; then
+    echo "前端构建完成但找不到产物: $UI_DIR/dist/index.html" >&2
+    exit 1
+  fi
+
+  rm -rf "$STATIC_DIR"
+  mkdir -p "$STATIC_DIR"
+  cp -R "$UI_DIR/dist/." "$STATIC_DIR/"
+  echo "已内置后台管理页面: $STATIC_DIR"
+else
+  echo "跳过 gms-ui 构建，仅打包服务端。"
+fi
 
 args=(-pl gms-server -am clean package)
 if [[ "$skip_tests" -eq 1 ]]; then
