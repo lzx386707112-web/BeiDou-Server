@@ -19,7 +19,7 @@ package org.gms.server.life;
 
 public class OverrideMonsterStats {
 
-    public int hp;
+    public long hp;
     public int exp, mp;
 
     public OverrideMonsterStats() {
@@ -29,6 +29,10 @@ public class OverrideMonsterStats {
     }
 
     public OverrideMonsterStats(int hp, int mp, int exp, boolean change) {
+        this((long) hp, mp, exp, change);
+    }
+
+    public OverrideMonsterStats(long hp, int mp, int exp, boolean change) {
         this.hp = /*change ? (hp * 3L / 2L) : */ hp;
         this.mp = mp;
         this.exp = exp;
@@ -46,11 +50,11 @@ public class OverrideMonsterStats {
         this.exp = exp;
     }
 
-    public int getHp() {
+    public long getHp() {
         return hp;
     }
 
-    public void setOHp(int hp) {
+    public void setOHp(long hp) {
         this.hp = hp;
     }
 

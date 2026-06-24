@@ -321,7 +321,7 @@ public abstract class AbstractDealDamageHandler extends AbstractPacketHandler {
 
                     if (MobId.isDojoBoss(monster.getId())) {
                         if (attack.skill == 1009 || attack.skill == 10001009 || attack.skill == 20001009) {
-                            int dmgLimit = (int) Math.ceil(0.3 * monster.getMaxHp());
+                            int dmgLimit = (int) Math.min(Integer.MAX_VALUE, Math.ceil(0.3 * monster.getMaxHp()));
                             List<Integer> _onedList = new LinkedList<>();
                             for (Integer i : onedList) {
                                 _onedList.add(i < dmgLimit ? i : dmgLimit);
@@ -362,7 +362,7 @@ public abstract class AbstractDealDamageHandler extends AbstractPacketHandler {
                             }
                         }
                     } else if (attack.skill == Marauder.ENERGY_DRAIN || attack.skill == ThunderBreaker.ENERGY_DRAIN || attack.skill == NightWalker.VAMPIRE || attack.skill == Assassin.DRAIN) {
-                        player.addHP(Math.min(monster.getMaxHp(), Math.min((int) ((double) totDamage * (double) SkillFactory.getSkill(attack.skill).getEffect(player.getSkillLevel(SkillFactory.getSkill(attack.skill))).getX() / 100.0), player.getCurrentMaxHp() / 2)));
+                        player.addHP((int) Math.min(monster.getMaxHp(), Math.min((int) ((double) totDamage * (double) SkillFactory.getSkill(attack.skill).getEffect(player.getSkillLevel(SkillFactory.getSkill(attack.skill))).getX() / 100.0), player.getCurrentMaxHp() / 2)));
                     } else if (attack.skill == Bandit.STEAL) {
                         // BOSS不能偷
                         if (monster.isBoss()) {
@@ -561,14 +561,14 @@ public abstract class AbstractDealDamageHandler extends AbstractPacketHandler {
                     }
                     if (attack.skill == Paladin.HEAVENS_HAMMER) {
                         if (!monster.isBoss()) {
-                            damageMonsterWithSkill(player, map, monster, monster.getHp() - 1, attack.skill, 1777);
+                            damageMonsterWithSkill(player, map, monster, (int) Math.min(Integer.MAX_VALUE, monster.getHp() - 1), attack.skill, 1777);
                         } else {
                             int HHDmg = (player.calculateMaxBaseDamage(player.getTotalWatk()) * (SkillFactory.getSkill(Paladin.HEAVENS_HAMMER).getEffect(player.getSkillLevel(SkillFactory.getSkill(Paladin.HEAVENS_HAMMER))).getDamage() / 100));
                             damageMonsterWithSkill(player, map, monster, (int) (Math.floor(Math.random() * (HHDmg / 5) + HHDmg * .8)), attack.skill, 1777);
                         }
                     } else if (attack.skill == Aran.COMBO_TEMPEST) {
                         if (!monster.isBoss()) {
-                            damageMonsterWithSkill(player, map, monster, monster.getHp(), attack.skill, 0);
+                            damageMonsterWithSkill(player, map, monster, (int) Math.min(Integer.MAX_VALUE, monster.getHp()), attack.skill, 0);
                         } else {
                             int TmpDmg = (player.calculateMaxBaseDamage(player.getTotalWatk()) * (SkillFactory.getSkill(Aran.COMBO_TEMPEST).getEffect(player.getSkillLevel(SkillFactory.getSkill(Aran.COMBO_TEMPEST))).getDamage() / 100));
                             damageMonsterWithSkill(player, map, monster, (int) (Math.floor(Math.random() * (TmpDmg / 5) + TmpDmg * .8)), attack.skill, 0);
@@ -953,7 +953,7 @@ public abstract class AbstractDealDamageHandler extends AbstractPacketHandler {
                     }
                 } else if (ret.skill == Aran.BODY_PRESSURE) {
                     if (monster != null) {
-                        int bodyPressureDmg = (int) Math.ceil(monster.getMaxHp() * SkillFactory.getSkill(Aran.BODY_PRESSURE).getEffect(ret.skilllevel).getDamage() / 100.0);
+                        int bodyPressureDmg = (int) Math.min(Integer.MAX_VALUE, Math.ceil(monster.getMaxHp() * SkillFactory.getSkill(Aran.BODY_PRESSURE).getEffect(ret.skilllevel).getDamage() / 100.0));
                         if (bodyPressureDmg > calcDmgMax) {
                             calcDmgMax = bodyPressureDmg;
                         }

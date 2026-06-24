@@ -3678,35 +3678,67 @@ public class PacketCreator {
         return p;
     }
 
-    public static Packet showBossHP(int oid, int currHP, int maxHP, byte tagColor, byte tagBgColor) {
+    public static Packet showBossHP(int oid, long currHP, long maxHP, byte tagColor, byte tagBgColor) {
+        Pair<Integer, Integer> customHP = clientVisibleMonsterHP(currHP, maxHP);
+
         final OutPacket p = OutPacket.create(SendOpcode.FIELD_EFFECT);
         p.writeByte(5);
         p.writeInt(oid);
-        p.writeInt(currHP);
-        p.writeInt(maxHP);
+        p.writeInt(customHP.left);
+        p.writeInt(customHP.right);
         p.writeByte(tagColor);
         p.writeByte(tagBgColor);
         return p;
     }
 
-    private static Pair<Integer, Integer> normalizedCustomMaxHP(long currHP, long maxHP) {
+    private static int clampToClientInt(long value) {
+        if (value > Integer.MAX_VALUE) {
+            return Integer.MAX_VALUE;
+        } else if (value < Integer.MIN_VALUE) {
+            return Integer.MIN_VALUE;
+        }
+        return (int) value;
+    }
+
+    private static Pair<Integer, Integer> clientVisibleMonsterHP(long currHP, long maxHP) {
         int sendHP, sendMaxHP;
 
-        if (maxHP <= Integer.MAX_VALUE) {
-            sendHP = (int) currHP;
+        if (maxHP <= 0) {
+            sendHP = clampToClientInt(currHP);
+            sendMaxHP = clampToClientInt(maxHP);
+        } else if (maxHP <= Integer.MAX_VALUE) {
+            sendHP = clampToClientInt(currHP);
             sendMaxHP = (int) maxHP;
         } else {
-            float f = ((float) currHP) / maxHP;
+            long barSize = Integer.MAX_VALUE;
+            long topBarSize = maxHP % barSize;
+            if (topBarSize == 0) {
+                topBarSize = barSize;
+            }
 
-            sendHP = (int) (Integer.MAX_VALUE * f);
-            sendMaxHP = Integer.MAX_VALUE;
+            long fullBarsHp = maxHP - topBarSize;
+            long visibleHP;
+            long visibleMaxHP;
+            if (currHP > fullBarsHp) {
+                visibleHP = currHP - fullBarsHp;
+                visibleMaxHP = topBarSize;
+            } else {
+                visibleHP = currHP % barSize;
+                if (visibleHP == 0 && currHP > 0) {
+                    visibleHP = barSize;
+                }
+                visibleMaxHP = barSize;
+            }
+
+            sendHP = clampToClientInt(Math.max(0, visibleHP));
+            sendMaxHP = clampToClientInt(visibleMaxHP);
         }
 
         return new Pair<>(sendHP, sendMaxHP);
     }
 
     public static Packet customShowBossHP(byte call, int oid, long currHP, long maxHP, byte tagColor, byte tagBgColor) {
-        Pair<Integer, Integer> customHP = normalizedCustomMaxHP(currHP, maxHP);
+        Pair<Integer, Integer> customHP = clientVisibleMonsterHP(currHP, maxHP);
 
         final OutPacket p = OutPacket.create(SendOpcode.FIELD_EFFECT);
         p.writeByte(call);
@@ -4093,17 +4125,19 @@ public class PacketCreator {
         return damageMonster(oid, damage, 0, 0);
     }
 
-    public static Packet healMonster(int oid, int heal, int curhp, int maxhp) {
+    public static Packet healMonster(int oid, int heal, long curhp, long maxhp) {
         return damageMonster(oid, -heal, curhp, maxhp);
     }
 
-    private static Packet damageMonster(int oid, int damage, int curhp, int maxhp) {
+    private static Packet damageMonster(int oid, int damage, long curhp, long maxhp) {
+        Pair<Integer, Integer> customHP = clientVisibleMonsterHP(curhp, maxhp);
+
         final OutPacket p = OutPacket.create(SendOpcode.DAMAGE_MONSTER);
         p.writeInt(oid);
         p.writeByte(0);
         p.writeInt(damage);
-        p.writeInt(curhp);
-        p.writeInt(maxhp);
+        p.writeInt(customHP.left);
+        p.writeInt(customHP.right);
         return p;
     }
 
@@ -6752,13 +6786,15 @@ public class PacketCreator {
         return builder.toString();
     }
 
-    public static Packet MobDamageMobFriendly(Monster mob, int damage, int remainingHp) {
+    public static Packet MobDamageMobFriendly(Monster mob, int damage, long remainingHp) {
+        Pair<Integer, Integer> customHP = clientVisibleMonsterHP(remainingHp, mob.getMaxHp());
+
         final OutPacket p = OutPacket.create(SendOpcode.DAMAGE_MONSTER);
         p.writeInt(mob.getObjectId());
         p.writeByte(1); // direction ?
         p.writeInt(damage);
-        p.writeInt(remainingHp);
-        p.writeInt(mob.getMaxHp());
+        p.writeInt(customHP.left);
+        p.writeInt(customHP.right);
         return p;
     }
 

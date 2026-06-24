@@ -40,7 +40,8 @@ import java.util.Set;
  */
 public class MonsterStats {
     public boolean changeable;
-    public int exp, hp, mp, level, PADamage, PDDamage, MADamage, MDDamage, dropPeriod, cp, buffToGive = -1, removeAfter, acc, eva;
+    public int exp, mp, level, PADamage, PDDamage, MADamage, MDDamage, dropPeriod, cp, buffToGive = -1, removeAfter, acc, eva;
+    public long hp;
     public boolean boss, undead, ffaLoot, isExplosiveReward, firstAttack, removeOnMiss;
     public String name;
     public Map<String, Integer> animationTimes = new HashMap<>();
@@ -79,11 +80,11 @@ public class MonsterStats {
         this.exp = exp;
     }
 
-    public int getHp() {
+    public long getHp() {
         return hp;
     }
 
-    public void setHp(int hp) {
+    public void setHp(long hp) {
         this.hp = hp;
     }
 

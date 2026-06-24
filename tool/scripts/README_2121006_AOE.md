@@ -815,7 +815,216 @@ p.writeInt(projectile);
 - 原地周围 AoE 判定：中等到偏难，通常要 exe patch。
 - 真改 close-range 包：难，不建议作为第一方案。
 
-## 十三、以后修改其它技能的参考流程
+## 十三、怪物 HP 超过 21 亿的服务端 long 方案
+
+当前已经采用“服务端真实 long HP + 客户端 int 多管血显示”的方案。也就是说，不改 exe 封包长度，
+不让客户端读取 8 字节 HP；服务端内部可以存、扣、统计超过 `2,147,483,647` 的怪物血量，发给旧客户端
+时仍然压成 int 范围内的当前管血条。
+
+### 已改动的服务端结构
+
+怪物基础最大 HP 改为 long：
+
+```java
+// gms-server/src/main/java/org/gms/server/life/MonsterStats.java
+public long hp;
+
+public long getHp() {
+    return hp;
+}
+
+public void setHp(long hp) {
+    this.hp = hp;
+}
+```
+
+运行时当前 HP 改为 `AtomicLong`：
+
+```java
+// gms-server/src/main/java/org/gms/server/life/Monster.java
+private final AtomicLong hp = new AtomicLong(1);
+
+public long getHp() {
+    return hp.get();
+}
+
+public long getMaxHp() {
+    return stats.getHp();
+}
+```
+
+覆盖属性和动态等级怪也跟着支持 long：
+
+```java
+// OverrideMonsterStats.java
+public long hp;
+
+// ChangeableStats.java
+hp = Math.max(1L, Math.round(...));
+```
+
+WZ/XML 加载从 int 改为 long：
+
+```java
+// LifeFactory.java
+stats.setHp(DataTool.getLong("maxHP", monsterInfoData, 0));
+```
+
+伤害协议仍然保持 int。客户端发来的每段伤害、服务端广播的伤害数字，都还是 4 字节 int：
+
+```java
+// AbstractDealDamageHandler.parseDamage
+int damage = p.readInt();
+```
+
+所以这个方案支持“怪物总 HP 超过 21 亿”，但不支持“单段伤害超过 int 并让旧客户端原生显示”。
+
+### 客户端多管血显示算法
+
+Boss 血条包仍然写两个 int：
+
+```java
+// PacketCreator.showBossHP
+p.writeInt(visibleCurrentHp);
+p.writeInt(visibleMaxHp);
+```
+
+但是 `visibleCurrentHp/visibleMaxHp` 不再直接等于真实 HP，而是由 `clientVisibleMonsterHP(currHP, maxHP)`
+计算出来：
+
+```text
+每管大小 = Integer.MAX_VALUE
+真实 maxHP <= Integer.MAX_VALUE:
+  正常发送 currHP/maxHP
+
+真实 maxHP > Integer.MAX_VALUE:
+  顶部第一管可能是不满 21 亿的余数
+  之后每管都是 Integer.MAX_VALUE
+  当前真实 HP 落在哪一管，就只发送这一管的 current/max
+```
+
+例子：
+
+```text
+maxHP = 5,000,000,000
+每管 = 2,147,483,647
+
+总共约 3 管：
+第 1 管顶部余数 = 705,032,706
+第 2 管 = 2,147,483,647
+第 3 管 = 2,147,483,647
+```
+
+当 boss 从满血开始时，客户端先看到 `705,032,706 / 705,032,706`。打掉这一管后，下一次血条会显示
+`2,147,483,647 / 2,147,483,647`，相当于自动换到下一管。客户端不知道真实总血量，只负责显示当前管。
+
+普通怪物 HP 条本来就只发百分比：
+
+```java
+// PacketCreator.showMonsterHP
+p.writeByte(remhppercentage);
+```
+
+所以普通怪也可以用 long HP；客户端看到的是百分比。
+
+### 如何定义超过 21 亿的怪物 HP
+
+服务端 XML 里继续使用原来的 `maxHP` 节点名，但超过 int 的值建议写成 string：
+
+```xml
+<imgdir name="info">
+  <string name="maxHP" value="5000000000"/>
+  <int name="maxMP" value="100000"/>
+  <int name="boss" value="1"/>
+  <int name="hpTagColor" value="1"/>
+  <int name="hpTagBgcolor" value="5"/>
+</imgdir>
+```
+
+原因是 XML provider 支持 `DataTool.getLong(...)` 从 string 解析 long；而 `<int value="5000000000"/>`
+很可能在 XML 解析阶段就已经超出 int 范围。
+
+推荐只改服务端 XML：
+
+```text
+gms-server/wz/Mob.wz/<怪物ID>.img.xml
+```
+
+客户端 `clien/Data/Mob/...` 不建议直接写超过 int 的 `maxHP`。旧客户端 WZ 读取和 exe 内部结构大概率仍按
+int 处理；真实 HP 由服务端控制，客户端只需要接收血条封包即可。
+
+### 50 亿血怪物的具体操作步骤
+
+1. 找到服务端怪物 XML：
+
+   ```text
+   gms-server/wz/Mob.wz/<怪物ID>.img.xml
+   ```
+
+2. 找到 `info` 下的 `maxHP`。
+
+   如果原来是：
+
+   ```xml
+   <int name="maxHP" value="2147483647"/>
+   ```
+
+   改成：
+
+   ```xml
+   <string name="maxHP" value="5000000000"/>
+   ```
+
+   超过 21 亿时重点是用 `<string>`，不要继续用 `<int>`。
+
+3. 如果要显示顶部 boss 血条，确认 `info` 下有：
+
+   ```xml
+   <int name="boss" value="1"/>
+   <int name="hpTagColor" value="1"/>
+   <int name="hpTagBgcolor" value="5"/>
+   ```
+
+   没有 `hpTagColor/hpTagBgcolor` 的怪物，即使服务端真实 HP 是 long，也可能不会走顶部 boss 血条，
+   只会按普通怪百分比血条显示。
+
+4. 重启服务端。
+
+   `LifeFactory` 会重新加载 `gms-server/wz/Mob.wz/<怪物ID>.img.xml`，然后真实 HP 就会按 long 生效。
+
+不需要改：
+
+```text
+clien/Data/Mob/...
+clien/BeiDou.exe
+```
+
+完整例子：
+
+```xml
+<imgdir name="info">
+  <string name="maxHP" value="5000000000"/>
+  <int name="maxMP" value="100000"/>
+  <int name="boss" value="1"/>
+  <int name="hpTagColor" value="1"/>
+  <int name="hpTagBgcolor" value="5"/>
+</imgdir>
+```
+
+客户端看到的是多管血，不知道真实总血量是 50 亿；服务端真实扣的是 50 亿。
+
+### 当前限制
+
+- 真实 HP、最大 HP、经验分配伤害统计可以超过 int。
+- 单段伤害仍然是 int，因为客户端攻击封包就是 int。
+- `DAMAGE_MONSTER`、boss 血条包仍然写 int，只是写入当前管血条。
+- 秒杀/按最大 HP 百分比扣血的技能在必要处 clamp 到 int，避免封包和计算溢出。
+- 客户端不会显示“第几管/总共几管”，只会看到当前管血条重新变满。
+
+如果以后想显示管数，需要另做提示封包、顶端公告、怪物名字后缀，或 exe/UI patch；这不属于当前 long HP
+兼容层。
+
+## 十四、以后修改其它技能的参考流程
 
 1. 确认技能 ID：
 
@@ -857,7 +1066,7 @@ p.writeInt(projectile);
    - 服务端不会因为 `mobCount` 判超目标。
    - 游戏内实际封包/表现命中多只怪。
 
-## 十四、这次踩过的坑
+## 十五、这次踩过的坑
 
 1. 一开始误把技能看成 `2121001`，实际目标是 `2121006`。
 2. `2121001` 的问题点和 `2121006` 不一样，不能套同一个 exe patch。
