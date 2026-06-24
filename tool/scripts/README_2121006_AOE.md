@@ -569,6 +569,18 @@ effect3 = 3 个技能使用
 
 ### `effect` 和 `effect0` 同时存在时怎么选
 
+先明确一点：`effect` 和 `effect0` 不是简单的“有 `effect0` 就替换 `effect`”。在一些技能里，
+它们更可能是并行存在的两个视觉入口：
+
+```text
+effect  = 主释放效果
+effect0 = 额外层、额外阶段、特殊 effectId，或某条技能专用逻辑读取的效果
+```
+
+如果客户端分支本来会同时创建两个 effect 对象，那么这两个动画可能是同一时刻播放，也可能各自带
+独立的坐标、z 层、delay、alpha、翻转方向和结束时机。把 `effect0` 的帧硬合并进 `effect`，
+只能得到“主 effect 播放了一串更多的帧”，不等于还原了客户端同时播放两层效果。
+
 服务端发送 buff/特殊效果时，有一个 `effectId` 字段：
 
 ```java
@@ -595,7 +607,8 @@ p.writeInt(skillId);
 - 命中怪物身上的状态/受击表现可能走 `affected`、`mob` 或 `hit`，取决于技能类型。
 
 所以如果看到一个技能同时有 `effect` 和 `effect0`，不能简单认为客户端会随机或自动播放两个。
-通常是不同路径或不同 effectId 触发。
+通常是不同路径、不同 effectId，或技能专用代码同时触发。判断时要进游戏看释放瞬间、自己视角、
+他人视角、怪物身上命中特效是否分别出现，而不是只看 WZ 节点是否存在。
 
 ### 是否可以自定义新节点名
 
@@ -656,10 +669,20 @@ skill/<skillId>/effect0
 
 让客户端识别新 `effect0` 有几种可行路线，难度从低到高：
 
-1. 直接把想播放的动画合并到 `effect`。
+1. 只做资源复用或降级显示：把想播放的动画合并到 `effect`。
 
-   这是最稳的方式。客户端已经会读 `effect`，不需要 exe patch。缺点是它不再是独立阶段效果，
-   而是主效果动画的一部分。
+   这是“不改 exe 也能让画面出现”的低风险方案，因为客户端已经会读 `effect`。但它只适合简单
+   视觉复用，不适合还原真正的 `effect + effect0` 同时播放。
+
+   不适合合并的情况：
+
+   - `effect` 和 `effect0` 原本应当同一时刻叠加。
+   - 两个效果需要不同 origin、z 层、alpha、delay 或翻转规则。
+   - `effect0` 要被封包里的某个 `effectId` 单独触发。
+   - `effect0` 是蓄力、爆发、持续循环、命中附着等独立阶段。
+
+   另外服务端 `SkillFactory` 当前只用 `effect` 计算 `animationTime`。把额外帧合并进 `effect`
+   可能会改变服务端认为的技能动画时间；而单独新增 `effect0` 通常不会影响这个时间。
 
 2. 用 `effect` 做 UOL/引用跳到 `effect0`。
 
@@ -681,10 +704,25 @@ skill/<skillId>/effect0
 
 经验判断：
 
-- 想让画面多一段效果：优先改 `effect` 或 `hit`，别先碰 exe。
+- 只想让素材显示出来、能接受时序变化：可以改 `effect` 或 `hit`，先别碰 exe。
+- 想要 `effect` 和 `effect0` 同一时刻双层叠加：需要找到/接入会创建双 effect 的客户端分支，
+  或 patch exe 让目标技能额外创建并播放 `effect0`。
 - 想让服务器主动触发额外 buff/特殊效果：先看现有 `showOwnBuffEffect/showBuffEffect` 的 `effectId`
   是否已经能触发你要的节点。
 - 想让攻击释放时自动多播一个 `effect0`：大概率需要 exe patch，或找一个已经有同类行为的技能复制。
+
+可以按这个表判断方案：
+
+```text
+目标                                         建议
+------------------------------------------   --------------------------------------
+只是复用素材                                 effect/UOL 可以
+只是多一段连续动画                           合并进 effect 可以，但要看 animationTime
+要同一时刻双层叠加                           需要客户端双播放分支或 exe patch
+要被 effectId 单独触发                       查 show...Effect 和客户端 effectId 映射
+要攻击释放时自动播放额外 effect0             对比同类技能，hook 到 effect0 分支
+要自定义 myEffect 这种新名字                 基本需要 exe 资源读取逻辑 patch
+```
 
 ## 十二、远程技能不丢东西，改成原地周围攻击
 
