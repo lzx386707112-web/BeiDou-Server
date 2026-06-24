@@ -408,7 +408,242 @@ cp gms-server/wz/Skill.wz/212.img.xml.bak-2121006-aoe gms-server/wz/Skill.wz/212
 
 或者使用版本控制还原对应文件。
 
-## 九、以后修改其它技能的参考流程
+## 九、技能在 exe 中是如何“编码”的
+
+这里的“编码”不是一个统一的技能表，而是几层东西叠在一起：
+
+1. WZ 数据树决定技能有哪些资源和数值：
+
+   ```text
+   Skill.wz/212.img/skill/2121006/...
+   ```
+
+2. 技能 ID 本身是 32 位整数，exe 中常以 little-endian 立即数出现：
+
+   ```text
+   2121006 = 0x205d2e
+   exe 字节 = 2e 5d 20 00
+   ```
+
+3. 服务端也按整数 ID 识别技能：
+
+   ```java
+   public static final int PARALYZE = 2121006;
+   ```
+
+4. exe 里有大量硬编码分支，用 `cmp eax, skillId` 或 `sub eax, skillId` 判断特殊技能：
+
+   ```asm
+   cmp eax, 0x205d2e
+   je  some_branch
+   ```
+
+5. 不同功能点会有不同硬编码列表，不是某个地方加一次就全局生效：
+
+   - 技能动作/分类。
+   - 是否进入矩形 AoE 选怪。
+   - 是否使用特殊弹道、链式目标、召唤物、全屏技能逻辑。
+   - 特定技能的屏幕震动、延迟、特效播放。
+   - 部分 buff/特殊状态表现。
+
+`2121006` 这次的关键就是：它在动作/分类处被识别了，但没有在矩形 AoE 选怪列表里。
+所以补 WZ 后服务端知道它最多可以打多只，客户端仍只选 1 只。
+
+## 十、新加一个全新的技能是否可能
+
+结论：有可能，但难度取决于“新技能”想做到什么程度。
+
+### 1. 最容易：复制/改造已有技能 ID
+
+如果只是把某个已有技能改成新的效果、范围、伤害、段数，成功率最高。
+
+需要改：
+
+- 客户端 Skill `.img`
+- 服务端 `.img.xml`
+- 必要时改服务端常量和处理逻辑
+- 如果客户端选怪/动作被硬编码限制，再 patch exe
+
+`2121006` 属于这一类：技能 ID 已存在，只是把单体行为改成群攻。
+
+### 2. 中等：在已有职业 WZ 里新增一个同职业技能 ID
+
+例如在 `212.img` 里新增 `2121010`。理论上服务端 `SkillFactory` 会遍历 XML 里的 `skill`
+子节点，能把它作为一个技能加载出来。
+
+但客户端是否能正常使用，还取决于：
+
+- 客户端 `clien/Data/Skill/212.img` 是否也有同一个技能节点。
+- String.wz/技能名/技能描述是否补齐，否则 UI 可能显示异常。
+- 技能窗口是否会展示这个技能，技能点和前置条件是否能处理。
+- 快捷键能不能把这个技能放上去。
+- 角色职业是否允许学习/使用这个 ID。
+- 使用技能时客户端是否能走到一个通用逻辑，或必须在 exe 硬编码列表里加入它。
+
+如果是简单 buff 或被动，成功率比攻击技能高。攻击技能通常还要解决客户端如何选怪、如何发攻击包、
+如何播放 hit/ball/effect。
+
+### 3. 最难：完全新类型技能
+
+如果新技能不是复制现有行为，而是要全新的目标选择、全新的封包结构、全新的资源节点规则，
+那就需要同时改：
+
+- 客户端 WZ 数据。
+- 服务端 WZ/XML 数据。
+- 服务端技能逻辑和包解析/广播。
+- `BeiDou.exe` 的技能分类、选怪、动画、封包生成。
+- 可能还要改 UI、技能学习、快捷键、冷却、状态图标等路径。
+
+这种不是“不可能”，但工作量接近给客户端加一个新技能引擎。比较稳的做法是：先找一个行为最接近的
+原技能，把新技能伪装成它的同类，再逐步 patch 差异。
+
+## 十一、技能资源节点是如何识别的
+
+### 服务端目前识别哪些节点
+
+服务端 `gms-server/src/main/java/org/gms/client/SkillFactory.java` 里，加载技能时明确读取：
+
+```java
+Data effect = data.getChildByPath("effect");
+Data hit = data.getChildByPath("hit");
+Data ball = data.getChildByPath("ball");
+Data action_ = data.getChildByPath("action");
+```
+
+其中 `effect` 还会用于计算动画时间：
+
+```java
+if (effect != null) {
+    for (Data effectEntry : effect) {
+        ret.incAnimationTime(DataTool.getIntConvert("delay", effectEntry, 0));
+    }
+}
+```
+
+也就是说，服务端这套代码只把名字叫 `effect` 的节点当成主 effect。`effect0/effect1`
+不会自动参与 `animationTime`，也不会因为你新建一个 `myEffect` 就被服务端理解。
+
+### 客户端如何识别节点
+
+客户端识别节点主要靠 exe 中的固定读取逻辑和 WZ 约定。常见节点名包括：
+
+- `action`
+- `effect`
+- `effect0`
+- `effect1`
+- `hit`
+- `ball`
+- `keydown`
+- `prepare`
+- `affected`
+- `tile`
+- `mob`
+- `summon`
+
+并不是所有技能都会读所有节点。客户端会先根据技能 ID、技能类型、动作分类、封包里的 effectId
+进入某条固定逻辑，然后那条逻辑再去读固定名字的节点。
+
+这次统计服务端 WZ，可见：
+
+```text
+effect  = 大量技能使用
+effect0 = 56 个技能使用
+effect1 = 5 个技能使用
+effect2 = 3 个技能使用
+effect3 = 3 个技能使用
+```
+
+而且样本里 `effect0` 都是和 `effect` 同时存在的。例如：
+
+```text
+4211001: effect,effect0
+1121006: effect,effect0
+5221003: effect,effect0,effect1
+1311001: effect,effect0,effect1,effect2,effect3
+15111003: effect,effect0,effect1,effect2,effect3
+2321004: effect,effect0
+2221004: effect,effect0
+```
+
+这说明 `effect0` 更像“某些客户端逻辑会额外读取的编号效果”，不是 `effect` 的替代品。
+
+### `effect` 和 `effect0` 同时存在时怎么选
+
+服务端发送 buff/特殊效果时，有一个 `effectId` 字段：
+
+```java
+PacketCreator.showOwnBuffEffect(skillId, effectId)
+PacketCreator.showBuffEffect(chrId, skillId, effectId)
+```
+
+包里会写：
+
+```java
+p.writeByte(effectId);
+p.writeInt(skillId);
+```
+
+客户端收到后会根据 `skillId + effectId` 选择对应表现。具体映射在 exe 内部，不能只靠 WZ
+任意猜。常见经验是：
+
+- `effect` 是默认主效果。
+- `effect0/effect1/...` 是某些技能的附加或阶段效果。
+- hit 类表现通常走 `hit`。
+- 弹道类表现通常走 `ball`。
+- 蓄力/按住类表现常见 `keydown`。
+- 准备动作常见 `prepare`。
+- 命中怪物身上的状态/受击表现可能走 `affected`、`mob` 或 `hit`，取决于技能类型。
+
+所以如果看到一个技能同时有 `effect` 和 `effect0`，不能简单认为客户端会随机或自动播放两个。
+通常是不同路径或不同 effectId 触发。
+
+### 是否可以自定义新节点名
+
+通常不行，至少不能只改 WZ。
+
+例如新增：
+
+```text
+skill/2121006/myCustomEffect
+```
+
+如果 exe 没有代码去找 `myCustomEffect`，客户端就不会播放它。服务端也不会理解它，除非你改
+服务端代码显式读取这个节点。
+
+比较现实的自定义方式有三种：
+
+1. 复用客户端已认识的节点名：
+
+   ```text
+   effect
+   effect0
+   hit
+   ball
+   keydown
+   prepare
+   ```
+
+2. 找一个同类技能，复制它的资源结构和 exe 分支。
+
+3. exe patch：让某个技能在某条逻辑里读取你想要的节点名。这个难度明显更高，因为要找到
+   具体字符串/路径构造和资源读取函数。
+
+### 给技能加新视觉资源的建议顺序
+
+1. 先复制同类技能的节点结构，不要自己发明名字。
+2. 确认客户端能播放默认 `effect/hit/ball`。
+3. 如果要多阶段效果，优先参考已有 `effect0/effect1` 技能。
+4. 如果需要服务端主动触发某个效果，查对应 `PacketCreator.show...Effect` 是否有 effectId。
+5. 游戏内测试时区分：
+
+   - 技能释放者自己看到的效果。
+   - 其他玩家看到的效果。
+   - 怪物身上的命中特效。
+   - 伤害数字和实际命中目标。
+
+这些常常是不同封包和不同 WZ 节点。
+
+## 十二、以后修改其它技能的参考流程
 
 1. 确认技能 ID：
 
@@ -450,7 +685,7 @@ cp gms-server/wz/Skill.wz/212.img.xml.bak-2121006-aoe gms-server/wz/Skill.wz/212
    - 服务端不会因为 `mobCount` 判超目标。
    - 游戏内实际封包/表现命中多只怪。
 
-## 十、这次踩过的坑
+## 十三、这次踩过的坑
 
 1. 一开始误把技能看成 `2121001`，实际目标是 `2121006`。
 2. `2121001` 的问题点和 `2121006` 不一样，不能套同一个 exe patch。
