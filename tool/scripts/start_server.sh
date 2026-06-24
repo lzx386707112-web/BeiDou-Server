@@ -15,7 +15,7 @@ usage() {
   rtk tool/scripts/start_server.sh --config gms-server/application.yml
   rtk tool/scripts/start_server.sh -- --server.port=8687
 
-启动当前服务端 BeiDou.jar。默认前台运行，工作目录为 gms-server。
+启动当前服务端。优先运行 BeiDou.jar；如果 jar 不存在，则用 Spring Boot Maven 插件从源码启动。
 
 选项:
   --jar PATH       指定 jar，默认: gms-server/BeiDou.jar
@@ -102,6 +102,7 @@ background=0
 pid_file="$DEFAULT_PID_FILE"
 log_file="$DEFAULT_LOG_FILE"
 has_app_args=0
+app_args=()
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -182,23 +183,40 @@ EOF
   exit 2
 fi
 
-if [[ ! -f "$jar" ]]; then
-  echo "找不到 jar: $jar" >&2
-  echo "请先执行: rtk tool/scripts/package_server_jar.sh" >&2
-  exit 2
-fi
-
-java_args=()
 if [[ -n "$config" ]]; then
   if [[ ! -f "$config" ]]; then
     echo "找不到配置文件: $config" >&2
     exit 2
   fi
+fi
+
+run_mode="jar"
+if [[ ! -f "$jar" ]]; then
+  run_mode="spring_boot"
+  echo "找不到 jar: $jar"
+  echo "改用 Spring Boot Maven 插件从源码启动。"
+  if ! command -v mvn >/dev/null 2>&1; then
+    echo "找不到 mvn，无法从源码启动。请先安装 Maven 或执行打包脚本生成 jar。" >&2
+    exit 2
+  fi
+fi
+
+java_args=()
+if [[ -n "$config" ]]; then
   java_args+=("-Dspring.config.location=$config")
 fi
 java_args+=(-jar "$jar")
 if [[ "$has_app_args" -eq 1 ]]; then
   java_args+=("${app_args[@]}")
+fi
+
+mvn_args=(org.springframework.boot:spring-boot-maven-plugin:run -Dmaven.test.skip=true)
+if [[ -n "$config" ]]; then
+  mvn_args+=("-Dspring-boot.run.jvmArguments=-Dspring.config.location=$config")
+fi
+if [[ "$has_app_args" -eq 1 ]]; then
+  app_arg_value="$(IFS=,; printf '%s' "${app_args[*]}")"
+  mvn_args+=("-Dspring-boot.run.arguments=$app_arg_value")
 fi
 
 if [[ "$background" -eq 1 ]]; then
@@ -213,7 +231,11 @@ if [[ "$background" -eq 1 ]]; then
   mkdir -p "$(dirname "$pid_file")" "$(dirname "$log_file")"
   (
     cd "$SERVER_DIR"
-    nohup "$jdk_home/bin/java" "${java_args[@]}" > "$log_file" 2>&1 &
+    if [[ "$run_mode" == "jar" ]]; then
+      nohup "$jdk_home/bin/java" "${java_args[@]}" > "$log_file" 2>&1 &
+    else
+      JAVA_HOME="$jdk_home" PATH="$jdk_home/bin:$PATH" nohup mvn "${mvn_args[@]}" > "$log_file" 2>&1 &
+    fi
     echo $! > "$pid_file"
   )
   echo "服务端已后台启动，PID: $(cat "$pid_file")"
@@ -221,7 +243,12 @@ if [[ "$background" -eq 1 ]]; then
   exit 0
 fi
 
-echo "启动服务端: $jar"
 echo "工作目录: $SERVER_DIR"
 cd "$SERVER_DIR"
-exec "$jdk_home/bin/java" "${java_args[@]}"
+if [[ "$run_mode" == "jar" ]]; then
+  echo "启动服务端: $jar"
+  exec "$jdk_home/bin/java" "${java_args[@]}"
+fi
+
+echo "启动服务端: mvn org.springframework.boot:spring-boot-maven-plugin:run"
+exec env JAVA_HOME="$jdk_home" PATH="$jdk_home/bin:$PATH" mvn "${mvn_args[@]}"

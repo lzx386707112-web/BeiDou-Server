@@ -155,12 +155,12 @@ rtk tool/scripts/package_server_jar.sh --skip-ui
 
 ### `start_server.sh`
 
-启动当前服务端。
+启动当前服务端。优先运行 `gms-server/BeiDou.jar`；如果 jar 不存在，则改用 Spring Boot Maven 插件从源码启动。
 
 默认启动：
 
 ```text
-gms-server/BeiDou.jar
+gms-server/BeiDou.jar 或 mvn spring-boot:run
 ```
 
 示例：
