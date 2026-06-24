@@ -2,13 +2,13 @@ package org.gms;
 
 import com.alibaba.fastjson2.JSONObject;
 import lombok.extern.slf4j.Slf4j;
-import org.gms.util.RequireUtil;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.yaml.snakeyaml.Yaml;
 
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.Connection;
@@ -52,8 +52,17 @@ public class ServerApplication {
             resource = ServerApplication.class.getClassLoader().getResourceAsStream("application.yml");
         }
 
+        if (resource == null) {
+            return;
+        }
+
+        String yamlText;
+        try (InputStream inputStream = resource) {
+            yamlText = new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
+        }
+
         Yaml yaml = new Yaml();
-        LinkedHashMap<String, Object> property = yaml.load(resource);
+        LinkedHashMap<String, Object> property = yaml.load(yamlText);
         JSONObject mybatisFlex = JSONObject.parse(JSONObject.toJSONString(property.get("mybatis-flex")));
         JSONObject datasource = mybatisFlex.getJSONObject("datasource").getJSONObject("mysql");
         String driver = getStartParam(args, "mybatis-flex.datasource.mysql.driver-class-name");

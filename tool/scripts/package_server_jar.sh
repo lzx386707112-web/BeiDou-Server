@@ -181,7 +181,7 @@ fi
 
 args=(-pl gms-server -am clean package)
 if [[ "$skip_tests" -eq 1 ]]; then
-  args+=(-DskipTests)
+  args+=(-Dmaven.test.skip=true)
 fi
 
 echo "开始打包服务端..."
