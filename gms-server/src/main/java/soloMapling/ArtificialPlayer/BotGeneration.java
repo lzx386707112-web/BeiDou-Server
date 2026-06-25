@@ -147,7 +147,7 @@ public class BotGeneration {
 
     private static Character setConsoleBot(Character baseChr, int botId) {
         Character onDemandBot = baseChr; // Character.getDefault(c)
-        onDemandBot.setClient(getBotClient());
+        attachMockClient(onDemandBot);
         onDemandBot.setName("Console");
 
         onDemandBot.setID(botId);
@@ -160,11 +160,22 @@ public class BotGeneration {
 
     private static Character setBotStats(Character baseChr, int botId) {
         Character onDemandBot = baseChr; // Character.getDefault(c)
-        onDemandBot.setClient(getBotClient());
+        attachMockClient(onDemandBot);
         onDemandBot.setName(getRandomChineseBotName());
         onDemandBot.setID(botId);
         onDemandBot.setFame(botId); // debug purposes
         return onDemandBot;
+    }
+
+    private static void attachMockClient(Character bot) {
+        Client source = getBotClient();
+        Client mock = Client.createMock();
+        mock.setWorld(source.getWorld());
+        mock.setChannel(source.getChannel());
+        mock.setAccID(source.getAccID());
+        mock.setGMLevel(source.getGMLevel());
+        mock.setPlayer(bot);
+        bot.setClient(mock);
     }
 
     private static String getRandomChineseBotName() {

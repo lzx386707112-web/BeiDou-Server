@@ -196,5 +196,32 @@ if [[ ! -f "$built_jar" ]]; then
   exit 1
 fi
 
+resource_overlay=""
+cleanup_resource_overlay() {
+  if [[ -n "$resource_overlay" && -d "$resource_overlay" ]]; then
+    rm -rf "$resource_overlay"
+  fi
+}
+trap cleanup_resource_overlay EXIT
+
+resource_overlay="$(mktemp -d)"
+mkdir -p "$resource_overlay/BOOT-INF/classes"
+(
+  cd "$SERVER_DIR/target/classes"
+  while IFS= read -r resource; do
+    mkdir -p "$resource_overlay/BOOT-INF/classes/$(dirname "$resource")"
+    cp "$resource" "$resource_overlay/BOOT-INF/classes/$resource"
+  done < <(find . -type f ! -name '*.class' ! -name '.DS_Store')
+)
+(
+  cd "$resource_overlay"
+  "$jdk_home/bin/jar" uf "$built_jar" BOOT-INF/classes
+)
+
+if ! "$jdk_home/bin/jar" tf "$built_jar" | grep -q '^BOOT-INF/classes/application.yml$'; then
+  echo "打包后的 jar 缺少 BOOT-INF/classes/application.yml" >&2
+  exit 1
+fi
+
 cp "$built_jar" "$output"
 echo "已输出: $output"

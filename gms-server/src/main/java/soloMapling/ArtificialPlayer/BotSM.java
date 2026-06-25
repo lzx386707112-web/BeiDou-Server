@@ -19,8 +19,6 @@ import soloMapling.server.EventMessageSystem.GameEvent;
 
 import java.util.Collection;
 import java.util.List;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -32,6 +30,7 @@ import static soloMapling.ArtificialPlayer.BotMovementSystem.MovementCommands.Bo
 import static soloMapling.ArtificialPlayer.BotTradeSystem.BotTradeLogic.clearTradeRequest;
 import static soloMapling.BotLogger.log;
 import static soloMapling.DebugUtilities.debugprint;
+import static soloMapling.server.ExecutorServiceManager.getScheduledExecutorService;
 import static soloMapling.server.SoloMaplingUtilities.random;
 
 
@@ -67,7 +66,6 @@ public abstract class BotSM implements EventSubscriber {
 
     private static MessageQueue messageQueue = MessageQueue.getInstance();
 
-    private ScheduledExecutorService scheduler;
     private ScheduledFuture<?> scheduledTask;
 
     private BotDialogueHandler dialogueHandler;
@@ -241,12 +239,9 @@ public abstract class BotSM implements EventSubscriber {
     }
 
     public synchronized void startScheduledTask(long initialDelayMs) {
-        if (scheduler == null || scheduler.isShutdown() || scheduler.isTerminated()) {
-            scheduler = Executors.newScheduledThreadPool(1);
-        }
-        if (scheduledTask == null || scheduledTask.isCancelled() || scheduler.isShutdown() || scheduler.isTerminated()) {
+        if (scheduledTask == null || scheduledTask.isCancelled()) {
             // Using FixedDelay instead of FixedRate - // SM NOTE this should prevent "piling up", and only allow 1 at a time
-            scheduledTask = scheduler.scheduleWithFixedDelay(new Runnable() {
+            scheduledTask = getScheduledExecutorService().scheduleWithFixedDelay(new Runnable() {
                 @Override
                 public void run() {
                     try {
@@ -271,18 +266,16 @@ public abstract class BotSM implements EventSubscriber {
             scheduledTask.cancel(false);
         }
 
-        if (scheduler != null && !scheduler.isShutdown()) {
-            scheduledTask = scheduler.scheduleWithFixedDelay(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        updateState();
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
+        scheduledTask = getScheduledExecutorService().scheduleWithFixedDelay(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    updateState();
+                } catch (Exception e) {
+                    e.printStackTrace();
                 }
-            }, currentDelay, currentDelay, TimeUnit.MILLISECONDS);
-        }
+            }
+        }, currentDelay, currentDelay, TimeUnit.MILLISECONDS);
     }
 
     public void checkPrioritySpeed() {
@@ -318,9 +311,6 @@ public abstract class BotSM implements EventSubscriber {
         botClearChalkboard(this.getChr());
         if (scheduledTask != null && !scheduledTask.isCancelled()) {
             scheduledTask.cancel(true);
-        }
-        if (scheduler != null && !scheduler.isShutdown()) {
-            scheduler.shutdown();
         }
     }
 

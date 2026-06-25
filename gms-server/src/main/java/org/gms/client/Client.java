@@ -1503,6 +1503,9 @@ public class Client extends ChannelInboundHandlerAdapter {
     }
 
     public void sendPacket(Packet packet) {
+        if (ioChannel == null) {
+            return;
+        }
         announcerLock.lock();
         try {
             ioChannel.writeAndFlush(packet);

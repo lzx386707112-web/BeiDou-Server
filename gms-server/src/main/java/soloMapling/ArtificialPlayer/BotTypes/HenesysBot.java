@@ -1,6 +1,7 @@
 package soloMapling.ArtificialPlayer.BotTypes;
 
 import org.gms.client.Character;
+import org.gms.config.GameConfig;
 import org.gms.server.maps.MapleMap;
 import soloMapling.ArtificialPlayer.BotCommandsPack.SocialCommands;
 import soloMapling.ArtificialPlayer.BotMessagingSystem.ChatMessage;
@@ -155,7 +156,7 @@ public class HenesysBot extends BotSM {
 
         boolean mapChangeCooledDown = (System.currentTimeMillis() - lastMapChangeTime) > MAP_CHANGE_COOLDOWN_MS;
 
-        if (mapChangeCooledDown && rollChanceInverse(10)) {
+        if (isMapRoamingEnabled() && mapChangeCooledDown && rollChanceInverse(10)) {
             setHenesysBotState(HenesysBotState.CHANGE_MAP);
             return;
         }
@@ -173,6 +174,10 @@ public class HenesysBot extends BotSM {
         }
 
         // Otherwise stay idle - do nothing this tick
+    }
+
+    private boolean isMapRoamingEnabled() {
+        return GameConfig.getServerBoolean("solo_mapling_henesys_bots_change_maps");
     }
 
     /**

@@ -76,6 +76,7 @@ import org.gms.util.PacketCreator;
 import org.gms.util.Pair;
 import org.gms.util.Randomizer;
 import soloMapling.ArtificialPlayer.BotAutoSpawner;
+import soloMapling.ArtificialPlayer.BotHelpers;
 
 import java.awt.*;
 import java.lang.ref.WeakReference;
@@ -2547,6 +2548,7 @@ public class MapleMap {
             getWorldServer().removePlayerHpDecrease(chr);
         }
 
+        boolean realPlayer = !BotHelpers.isBot(chr);
         MapScriptManager msm = MapScriptManager.getInstance();
         if (chrSize == 1) {
             if (!hasItemMonitor()) {
@@ -2554,11 +2556,11 @@ public class MapleMap {
                 aggroMonitor.startAggroCoordinator();
             }
 
-            if (onFirstUserEnter.length() != 0) {
+            if (realPlayer && onFirstUserEnter.length() != 0) {
                 msm.runMapScript(chr.getClient(), "onFirstUserEnter/" + onFirstUserEnter, true);
             }
         }
-        if (onUserEnter.length() != 0) {
+        if (realPlayer && onUserEnter.length() != 0) {
             if (onUserEnter.equals("cygnusTest") && !MapId.isCygnusIntro(mapid)) {
                 chr.saveLocation("INTRO");
             }
