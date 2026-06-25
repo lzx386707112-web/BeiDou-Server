@@ -37,7 +37,7 @@ public class MapItem extends AbstractMapObject {
     protected MapObject dropper;
     protected int character_ownerid, party_ownerid, meso, questid = -1;
     protected byte type;
-    protected boolean pickedUp = false, playerDrop, partyDrop;
+    protected boolean pickedUp = false, playerDrop, partyDrop, permanentOwner;
     protected long dropTime;
     private final Lock itemLock = new ReentrantLock();
 
@@ -153,7 +153,11 @@ public class MapItem extends AbstractMapObject {
             }
         }
 
-        return hasExpiredOwnershipTime();
+        return !permanentOwner && hasExpiredOwnershipTime();
+    }
+
+    public void setPermanentOwner(boolean permanentOwner) {
+        this.permanentOwner = permanentOwner;
     }
 
     public final Client getOwnerClient() {

@@ -3,6 +3,7 @@ package org.gms.net.packet;
 import java.awt.*;
 
 public interface InPacket extends Packet {
+    InPacket copy();
     byte readByte();
     short readUnsignedByte();
     short readShort();

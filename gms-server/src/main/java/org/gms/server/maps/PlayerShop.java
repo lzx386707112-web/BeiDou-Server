@@ -328,6 +328,52 @@ public class PlayerShop extends AbstractMapObject {
         }
     }
 
+    public boolean botBuy(Character fakechar, PlayerShopItem pItem, int itemPosition, short quantity) {
+        synchronized (items) {
+            Item newItem = pItem.getItem().copy();
+            newItem.setQuantity((short) (pItem.getItem().getQuantity() * quantity));
+            if (quantity < 1 || !pItem.isExist() || pItem.getBundles() < quantity) {
+                return false;
+            } else if (newItem.getInventoryType().equals(InventoryType.EQUIP) && newItem.getQuantity() > 1) {
+                return false;
+            }
+
+            visitorLock.lock();
+            try {
+                int price = (int) Math.min((float) pItem.getPrice() * quantity, Integer.MAX_VALUE);
+
+                if (!owner.canHoldMeso(price)) {
+                    fakechar.dropMessage(1, "Transaction failed since the shop owner can't hold any more mesos.");
+                    return false;
+                }
+
+                price -= Trade.getFee(price);
+                owner.gainMeso(price, true);
+
+                SoldItem soldItem = new SoldItem(fakechar.getName(), pItem.getItem().getItemId(), quantity, price);
+                owner.sendPacket(PacketCreator.getPlayerShopOwnerUpdate(soldItem, itemPosition));
+
+                synchronized (sold) {
+                    sold.add(soldItem);
+                }
+
+                pItem.setBundles((short) (pItem.getBundles() - quantity));
+                if (pItem.getBundles() < 1) {
+                    pItem.setDoesExist(false);
+                    if (++boughtnumber == items.size()) {
+                        owner.setPlayerShop(null);
+                        this.setOpen(false);
+                        this.closeShop();
+                        owner.dropMessage(1, "Your items are sold out, and therefore your shop is closed.");
+                    }
+                }
+                return true;
+            } finally {
+                visitorLock.unlock();
+            }
+        }
+    }
+
     public void broadcastToVisitors(Packet packet) {
         visitorLock.lock();
         try {
@@ -427,6 +473,20 @@ public class PlayerShop extends AbstractMapObject {
         broadcast(PacketCreator.getPlayerShopChat(c.getPlayer(), chat, s));
     }
 
+    public void chat(Character chr, String chat) {
+        byte s = getVisitorSlot(chr);
+
+        synchronized (chatLog) {
+            chatLog.add(new Pair<>(chr, chat));
+            if (chatLog.size() > 25) {
+                chatLog.remove(0);
+            }
+            chatSlot.put(chr.getId(), s);
+        }
+
+        broadcast(PacketCreator.getPlayerShopChat(chr, chat, s));
+    }
+
     private void recoverChatLog() {
         synchronized (chatLog) {
             for (Pair<Character, String> it : chatLog) {
@@ -480,6 +540,13 @@ public class PlayerShop extends AbstractMapObject {
     public List<PlayerShopItem> getItems() {
         synchronized (items) {
             return Collections.unmodifiableList(items);
+        }
+    }
+
+    public void setItems(List<PlayerShopItem> newItems) {
+        synchronized (items) {
+            items.clear();
+            items.addAll(newItems);
         }
     }
 

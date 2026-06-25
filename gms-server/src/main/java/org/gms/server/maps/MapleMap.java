@@ -75,6 +75,7 @@ import org.gms.server.partyquest.GuardianSpawnPoint;
 import org.gms.util.PacketCreator;
 import org.gms.util.Pair;
 import org.gms.util.Randomizer;
+import soloMapling.ArtificialPlayer.BotAutoSpawner;
 
 import java.awt.*;
 import java.lang.ref.WeakReference;
@@ -860,6 +861,10 @@ public class MapleMap {
         spawnDrop(drop, this.calcDropPos(dropPos, reactor.getPosition()), reactor, chr, (byte) (chr.getParty() != null ? 1 : 0), questid);
     }
 
+    public void dropFromReactor(final Character chr, final Reactor reactor, Item drop, Point dropPos, short questid, short delay) {
+        dropFromReactor(chr, reactor, drop, dropPos, questid);
+    }
+
     private void stopItemMonitor() {
         itemMonitor.cancel(false);
         itemMonitor = null;
@@ -1230,6 +1235,10 @@ public class MapleMap {
         instantiateItemDrop(mdrop);
     }
 
+    public final void spawnMesoDrop(final int meso, final Point position, final MapObject dropper, final Character owner, final boolean playerDrop, final byte droptype, short delay) {
+        spawnMesoDrop(meso, position, dropper, owner, playerDrop, droptype);
+    }
+
     public final void disappearingItemDrop(final MapObject dropper, final Character owner, final Item item, final Point pos) {
         final Point droppos = calcDropPos(pos, pos);
         final MapItem mdrop = new MapItem(item, droppos, dropper, owner, owner.getClient(), (byte) 1, false);
@@ -1299,6 +1308,32 @@ public class MapleMap {
 
     public final List<MapObject> getMonsters() {
         return getMapObjectsInRange(new Point(0, 0), Double.POSITIVE_INFINITY, Arrays.asList(MapObjectType.MONSTER));
+    }
+
+    public final List<MapObject> getHiredMerchants() {
+        return getMapObjectsInRange(new Point(0, 0), Double.POSITIVE_INFINITY, Arrays.asList(MapObjectType.HIRED_MERCHANT));
+    }
+
+    public final List<MapObject> getPlayerStores() {
+        return getMapObjectsInRange(new Point(0, 0), Double.POSITIVE_INFINITY, Arrays.asList(MapObjectType.SHOP));
+    }
+
+    public final List<PlayerShop> getAllPlayerShops() {
+        List<PlayerShop> list = new LinkedList<>();
+        for (MapObject mmo : getPlayerStores()) {
+            list.add((PlayerShop) mmo);
+        }
+
+        return list;
+    }
+
+    public final List<HiredMerchant> getAllHiredMerchants() {
+        List<HiredMerchant> list = new LinkedList<>();
+        for (MapObject mmo : getHiredMerchants()) {
+            list.add((HiredMerchant) mmo);
+        }
+
+        return list;
     }
 
     public final List<Reactor> getAllReactors() {
@@ -2263,6 +2298,37 @@ public class MapleMap {
         activateItemReactors(mdrop, owner.getClient());
     }
 
+    public final MapItem spawnItemDropNoExpire(final MapObject dropper, final Character owner, final Item item, Point pos,
+                                               final boolean ffaDrop, final boolean playerDrop) {
+        if (FieldLimit.DROP_LIMIT.check(this.getFieldLimit())) {
+            this.disappearingItemDrop(dropper, owner, item, pos);
+            return null;
+        }
+
+        final Point droppos = calcDropPos(pos, pos);
+        final MapItem mdrop = new MapItem(item, droppos, dropper, owner, owner.getClient(), (byte) (ffaDrop ? 2 : 0), playerDrop);
+        mdrop.setDropTime(Server.getInstance().getCurrentTime());
+
+        spawnAndAddRangedMapObject(mdrop, c -> {
+            mdrop.lockItem();
+            try {
+                c.sendPacket(PacketCreator.dropItemFromMapObject(c.getPlayer(), mdrop, dropper.getPosition(), droppos, (byte) 1));
+            } finally {
+                mdrop.unlockItem();
+            }
+        }, null);
+
+        mdrop.lockItem();
+        try {
+            broadcastItemDropMessage(mdrop, dropper.getPosition(), droppos, (byte) 0);
+        } finally {
+            mdrop.unlockItem();
+        }
+
+        activateItemReactors(mdrop, owner.getClient());
+        return mdrop;
+    }
+
     public final void spawnItemDropList(List<Integer> list, final MapObject dropper, final Character owner, Point pos) {
         spawnItemDropList(list, 1, 1, dropper, owner, pos, true, false);
     }
@@ -2503,6 +2569,8 @@ public class MapleMap {
             chr.cancelEffectFromBuffStat(BuffStat.MONSTER_RIDING);
             chr.cancelBuffStats(BuffStat.MONSTER_RIDING);
         }
+
+        BotAutoSpawner.onPlayerEnterMap(chr);
 
         if (mapid == MapId.FROM_LITH_TO_RIEN) { // To Rien
             int travelTime = getWorldServer().getTransportationTime((int) MINUTES.toMillis(1));
@@ -3399,6 +3467,10 @@ public class MapleMap {
                 player.addVisibleMapObject(mo);
             }
         }
+    }
+
+    public void moveBot(Character player, Point newPosition) {
+        movePlayer(player, newPosition);
     }
 
     public final void toggleEnvironment(final String ms) {

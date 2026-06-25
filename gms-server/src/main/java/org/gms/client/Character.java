@@ -97,6 +97,7 @@ public class Character extends AbstractCharacterObject {
     @Getter
     @Setter
     private int id;
+    private soloMapling.ArtificialPlayer.BotTier botTier;
     @Getter
     @Setter
     private int accountId;
@@ -595,6 +596,34 @@ public class Character extends AbstractCharacterObject {
 
     public boolean isLoggedInWorld() {
         return this.isLoggedIn() && !this.isAwayFromWorld();
+    }
+
+    public boolean isLoggedIn() {
+        return loggedIn;
+    }
+
+    public boolean isLoggedinWorld() {
+        return isLoggedInWorld();
+    }
+
+    public boolean isLoggedin() {
+        return isLoggedIn();
+    }
+
+    public void setID(int id) {
+        this.id = id;
+    }
+
+    public void setId(Integer id) {
+        this.id = id;
+    }
+
+    public void setTier(soloMapling.ArtificialPlayer.BotTier newTier) {
+        this.botTier = soloMapling.ArtificialPlayer.BotTier.TierManager.safeTierSet(this.botTier, newTier);
+    }
+
+    public soloMapling.ArtificialPlayer.BotTier getTier() {
+        return soloMapling.ArtificialPlayer.BotTier.TierManager.getSafeTier(botTier);
     }
 
     public boolean isAwayFromWorld() {
@@ -6961,7 +6990,7 @@ public class Character extends AbstractCharacterObject {
         }
     }
 
-    private void setChair(int chair) {
+    public void setChair(int chair) {
         this.chair.set(chair);
     }
 

@@ -259,6 +259,89 @@ public abstract class AbstractMovementPacketHandler extends AbstractPacketHandle
         }
     }
 
+    public static void updatePositionBot(InPacket p, AnimatedMapObject target, int yOffset) throws EmptyMovementException {
+        byte numCommands = p.readByte();
+        if (numCommands < 1) {
+            throw new EmptyMovementException(p);
+        }
+        for (byte i = 0; i < numCommands; i++) {
+            byte command = p.readByte();
+            switch (command) {
+                case 0:
+                case 5:
+                case 17: {
+                    Point beforePos = snapshotPosition(target);
+                    short xpos = p.readShort();
+                    short ypos = p.readShort();
+                    Point afterPos = new Point(xpos, ypos + yOffset);
+                    target.setPosition(afterPos);
+                    p.skip(6);
+                    byte newstate = p.readByte();
+                    target.setStance(newstate);
+                    p.readShort();
+                    recordRegularMove(target, beforePos, afterPos);
+                    break;
+                }
+                case 1:
+                case 2:
+                case 6:
+                case 12:
+                case 13:
+                case 16:
+                case 18:
+                case 19:
+                case 20:
+                case 22: {
+                    Point beforePos = snapshotPosition(target);
+                    short deltaX = p.readShort();
+                    short deltaY = p.readShort();
+                    Point afterPos = target instanceof Character
+                            ? estimateRelativeMovePosition(beforePos, deltaX, deltaY)
+                            : null;
+                    byte newstate = p.readByte();
+                    if (afterPos != null) {
+                        target.setPosition(afterPos);
+                    }
+                    target.setStance(newstate);
+                    p.readShort();
+                    recordRegularMove(target, beforePos, afterPos);
+                    break;
+                }
+                case 3:
+                case 4: {
+                    handleTeleportMove(p, target, yOffset);
+                    break;
+                }
+                case 7:
+                case 8:
+                case 9: {
+                    handleDashLikeMove(p, target, yOffset);
+                    break;
+                }
+                case 11: {
+                    handleChairMove(p, target);
+                    break;
+                }
+                case 14:
+                    p.skip(9);
+                    break;
+                case 10:
+                    p.readByte();
+                    break;
+                case 15: {
+                    handleJumpDownMove(p, target, yOffset);
+                    break;
+                }
+                case 21:
+                    p.skip(3);
+                    break;
+                default:
+                    log.warn("Unhandled Case: {}", command);
+                    throw new EmptyMovementException(p);
+            }
+        }
+    }
+
     /**
      * 处理瞬移动作（3/4）：同步坐标并在玩家对象上记录传送前后坐标。
      */

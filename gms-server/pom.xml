@@ -50,6 +50,9 @@
         <fastjson2.version>2.0.47</fastjson2.version>
         <mybatis-flex.version>1.8.9</mybatis-flex.version>
         <swagger.version>2.5.0</swagger.version>
+        <yamlbeans.version>1.17</yamlbeans.version>
+        <jgrapht.version>1.5.2</jgrapht.version>
+        <jgraphx.version>4.2.2</jgraphx.version>
     </properties>
 
     <dependencyManagement>
@@ -125,6 +128,36 @@
             <groupId>org.springdoc</groupId>
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
             <version>${swagger.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.esotericsoftware.yamlbeans</groupId>
+            <artifactId>yamlbeans</artifactId>
+            <version>${yamlbeans.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jgrapht</groupId>
+            <artifactId>jgrapht-core</artifactId>
+            <version>${jgrapht.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jgrapht</groupId>
+            <artifactId>jgrapht-io</artifactId>
+            <version>${jgrapht.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jgrapht</groupId>
+            <artifactId>jgrapht-ext</artifactId>
+            <version>${jgrapht.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jgrapht</groupId>
+            <artifactId>jgrapht-guava</artifactId>
+            <version>${jgrapht.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.github.vlsi.mxgraph</groupId>
+            <artifactId>jgraphx</artifactId>
+            <version>${jgraphx.version}</version>
         </dependency>
         <dependency>
             <groupId>com.mybatis-flex</groupId>
