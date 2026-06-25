@@ -28,8 +28,8 @@ from wzpy.writer import encode_image_body  # noqa: E402
 SKILL_ID = "2121006"
 LEVELS = range(1, 31)
 MOB_COUNT = 6
-LT = (-300, -100)
-RB = (0, 20)
+LT = (-640, -365)
+RB = (65, 220)
 
 
 def atomic_write_bytes(path: Path, data: bytes) -> None:
