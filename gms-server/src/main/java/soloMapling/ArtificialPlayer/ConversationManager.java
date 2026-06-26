@@ -11,6 +11,10 @@ import soloMapling.server.ExecutorServiceManager;
 
 import java.awt.*;
 import java.io.FileReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.List;
 import java.util.concurrent.ScheduledFuture;
@@ -44,14 +48,12 @@ public class ConversationManager {
     private static final int CLUSTER_RANGE_Y = 30;
     private static final int MAX_CLUSTER_SIZE = 4;
 
-    private static final int[] HENESYS_MAP_IDS = {
-            100000000,  // Henesys
-            100000100,  // Henesys Market
-            100000200,  // Henesys Park
-            100000102   // Henesys Potion Shop
+    private static final int[] SOCIAL_MAP_IDS = {
+            910000000   // Free Market Entrance
     };
 
     private static final String DIALOGUE_YAML = "src/main/java/soloMapling/ArtificialPlayer/BotDialoguePack/ConversationDialogue.yaml";
+    private static final String DIALOGUE_RESOURCE = "soloMapling/ArtificialPlayer/BotDialoguePack/ConversationDialogue.yaml";
 
     private final Set<Integer> botsInConversation = Collections.synchronizedSet(new HashSet<>());
     private final LinkedList<String> recentScriptIds = new LinkedList<>();
@@ -123,7 +125,7 @@ public class ConversationManager {
 
         long now = System.currentTimeMillis();
 
-        for (int mapId : HENESYS_MAP_IDS) {
+        for (int mapId : SOCIAL_MAP_IDS) {
             if (!mapsWithRealPlayers.contains(mapId)) continue;
             if (!isMapCooldownReady(mapId, now)) continue;
 
@@ -339,8 +341,12 @@ public class ConversationManager {
     @SuppressWarnings("unchecked")
     private void loadScripts() {
         allScripts = new ArrayList<>();
-        try {
-            YamlReader reader = new YamlReader(new FileReader(DIALOGUE_YAML));
+        try (Reader source = openDialogueReader()) {
+            if (source == null) {
+                log("[ConversationManager] Failed to load conversation scripts: dialogue yaml not found.");
+                return;
+            }
+            YamlReader reader = new YamlReader(source);
             Map<String, Object> root = (Map<String, Object>) reader.read();
             Map<String, Object> conversations = (Map<String, Object>) root.get("conversations");
             if (conversations == null) return;
@@ -370,6 +376,15 @@ public class ConversationManager {
         } catch (Exception e) {
             log("[ConversationManager] Failed to load conversation scripts: " + e.getMessage());
             e.printStackTrace();
+        }
+    }
+
+    private Reader openDialogueReader() {
+        try {
+            return new FileReader(DIALOGUE_YAML, StandardCharsets.UTF_8);
+        } catch (Exception ignored) {
+            InputStream input = ConversationManager.class.getClassLoader().getResourceAsStream(DIALOGUE_RESOURCE);
+            return input == null ? null : new InputStreamReader(input, StandardCharsets.UTF_8);
         }
     }
 

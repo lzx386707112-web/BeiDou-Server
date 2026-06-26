@@ -220,6 +220,10 @@ mkdir -p "$resource_overlay/BOOT-INF/classes"
     cp "$resource" "$resource_overlay/BOOT-INF/classes/$entry"
   done < <(find . -type f ! -name '.DS_Store')
 )
+if [[ -d "$SERVER_DIR/scripts-zh-CN" ]]; then
+  mkdir -p "$resource_overlay/BOOT-INF/classes/scripts-zh-CN"
+  cp -R "$SERVER_DIR/scripts-zh-CN/." "$resource_overlay/BOOT-INF/classes/scripts-zh-CN/"
+fi
 (
   cd "$resource_overlay"
   "$jdk_home/bin/jar" uf "$built_jar" BOOT-INF/classes

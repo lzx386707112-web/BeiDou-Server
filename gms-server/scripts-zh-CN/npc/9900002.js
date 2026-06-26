@@ -28,8 +28,12 @@ var COUNT_KEY_PREFIX = "BOSS_COUNT_";  // 每日次数Key前缀，每天自动�
 var status = 0;
 var matchedConfigs = [];   // 当前地图匹配的配置索引数组
 var selectedConfigIdx = -1;
+var page = 0;
+var selectedBoss = null;
+var PAGE_SIZE = 12;
 
 var LifeFactory = Java.type("org.gms.server.life.LifeFactory");
+var BotBossCombatManager = Java.type("soloMapling.ArtificialPlayer.BotBossCombatManager");
 var Point = Java.type("java.awt.Point");
 
 function start() {
@@ -49,6 +53,12 @@ function action(mode, type, selection) {
     status++;
 
     if (status == 0) {
+        if (cm.getMapId() == FREE_MARKET_ID) {
+            page = 0;
+            sendFreeMarketBossPage();
+            return;
+        }
+
         // ---- 筛选当前地图可用的BOSS配置 ----
         var mapId = cm.getMapId();
         matchedConfigs = [];
@@ -95,6 +105,11 @@ function action(mode, type, selection) {
         cm.sendSimple(menu);
 
     } else if (status == 1) {
+        if (cm.getMapId() == FREE_MARKET_ID) {
+            handleFreeMarketSelection(selection);
+            return;
+        }
+
         if (selection < matchedConfigs.length) {
             // ========== 召唤BOSS ==========
             selectedConfigIdx = matchedConfigs[selection];
@@ -156,6 +171,12 @@ function action(mode, type, selection) {
         }
 
     } else if (status == 2) {
+        if (cm.getMapId() == FREE_MARKET_ID) {
+            summonFreeMarketBoss();
+            cm.dispose();
+            return;
+        }
+
         var cfg = BOSS_CONFIGS[selectedConfigIdx];
         var map = cm.getMap();
 
@@ -202,4 +223,101 @@ function getDailyRemaining(configIdx) {
 function addDailyCount(configIdx) {
     var used = getDailyUsed(configIdx) + 1;
     cm.saveOrUpdateAccountExtendValue(getCountKey(configIdx), String(used), true);
+}
+
+// ==================== 自由市场：全 Boss 列表召唤 ====================
+
+function sendFreeMarketBossPage() {
+    var bosses = LifeFactory.getBossSummonList();
+    if (bosses == null || bosses.size() == 0) {
+        cm.sendOk("没有找到可召唤的 Boss。");
+        cm.dispose();
+        return;
+    }
+
+    var maxPage = Math.floor((bosses.size() - 1) / PAGE_SIZE);
+    if (page > maxPage) {
+        page = maxPage;
+    }
+
+    var start = page * PAGE_SIZE;
+    var end = Math.min(start + PAGE_SIZE, bosses.size());
+    var text = "#e自由市场 Boss 召唤#n\r\n";
+    text += "当前页：" + (page + 1) + " / " + (maxPage + 1) + "，共 " + bosses.size() + " 个 Boss。\r\n";
+    text += "召唤后假人会自动开始集火，Boss 死亡前不能召唤新的。\r\n\r\n";
+
+    for (var i = start; i < end; i++) {
+        var boss = bosses.get(i);
+        text += "#L" + i + "##b" + bossLabel(boss) + "#k#l\r\n";
+    }
+    text += "\r\n";
+    if (page > 0) {
+        text += "#L9000#上一页#l\r\n";
+    }
+    if (page < maxPage) {
+        text += "#L9001#下一页#l\r\n";
+    }
+    cm.sendSimple(text);
+}
+
+function handleFreeMarketSelection(selection) {
+    var bosses = LifeFactory.getBossSummonList();
+    if (selection == 9000) {
+        page = Math.max(0, page - 1);
+        status = 0;
+        sendFreeMarketBossPage();
+        return;
+    }
+    if (selection == 9001) {
+        page++;
+        status = 0;
+        sendFreeMarketBossPage();
+        return;
+    }
+    if (selection < 0 || selection >= bosses.size()) {
+        cm.sendOk("这个 Boss 暂时不可召唤。");
+        cm.dispose();
+        return;
+    }
+    selectedBoss = bosses.get(selection);
+    cm.sendYesNo("确定要在自由市场召唤 #r" + bossLabel(selectedBoss) + "#k 吗？\r\n\r\n同一时间市场只允许存在一只 Boss。");
+}
+
+function summonFreeMarketBoss() {
+    if (selectedBoss == null) {
+        cm.sendOk("请选择一个 Boss。");
+        return;
+    }
+
+    var map = cm.getMap();
+    if (map.countBosses() > 0) {
+        cm.sendOk("当前市场已经存在 Boss，先击败它再召唤新的。");
+        return;
+    }
+
+    var monster = LifeFactory.getMonster(selectedBoss.getId());
+    if (monster == null || !monster.isBoss()) {
+        cm.sendOk("这个怪物不是 Boss，已取消召唤。");
+        return;
+    }
+
+    var playerPos = cm.getPlayer().getPosition();
+    var spawnX = playerPos.x + (cm.getPlayer().isFacingLeft() ? -180 : 180);
+    map.spawnMonsterOnGroundBelow(monster, new Point(spawnX, playerPos.y));
+    BotBossCombatManager.handleChatTrigger(cm.getPlayer(), "假人打boss");
+    cm.sendOk("已召唤 #r" + bossLabel(selectedBoss) + "#k。\r\n假人已经开始集火攻击。");
+}
+
+function bossLabel(boss) {
+    return boss.getName() + " [" + boss.getId() + "] Lv." + boss.getLevel() + " HP " + formatNumber(boss.getHp());
+}
+
+function formatNumber(value) {
+    var str = String(value);
+    var out = "";
+    while (str.length > 3) {
+        out = "," + str.substring(str.length - 3) + out;
+        str = str.substring(0, str.length - 3);
+    }
+    return str + out;
 }

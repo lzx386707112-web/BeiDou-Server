@@ -71,6 +71,12 @@ public class BotGeneration {
                 && getEnvironmentLimitedBotCount() >= SoloMaplingConfig.environmentBotMax();
     }
 
+    public static void disableEnvironmentBotLimit() {
+        environmentBotLimitActive.set(false);
+        environmentBotLimitStartCount.set(0);
+        System.out.println("[BotGeneration] Environment bot limit released.");
+    }
+
     private static int getEnvironmentLimitedBotCount() {
         return Math.max(0, BotGeneration.getBotsCreatedCount() - environmentBotLimitStartCount.get());
     }

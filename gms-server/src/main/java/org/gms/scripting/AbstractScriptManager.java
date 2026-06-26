@@ -32,6 +32,8 @@ import org.slf4j.LoggerFactory;
 import javax.script.*;
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -53,6 +55,13 @@ public abstract class AbstractScriptManager {
         ServiceProperty serviceProperty = ServerManager.getApplicationContext().getBean(ServiceProperty.class);
         String scriptLangName = scriptName + "-" + serviceProperty.getLanguage();
 
+        if (isClasspathPreferredScript(path)) {
+            ScriptEngine preferredEngine = getClasspathScriptEngine(scriptLangName + "/" + path);
+            if (preferredEngine != null) {
+                return preferredEngine;
+            }
+        }
+
         Path scriptPath = Path.of(scriptName, path);
         Path scriptLangPath = Path.of(scriptLangName, path);
 
@@ -62,7 +71,11 @@ public abstract class AbstractScriptManager {
         } else if (Files.exists(scriptPath)){
             actualPath = scriptPath;
         } else {
-            return null;
+            ScriptEngine classpathEngine = getClasspathScriptEngine(scriptLangName + "/" + path);
+            if (classpathEngine == null) {
+                classpathEngine = getClasspathScriptEngine(scriptName + "/" + path);
+            }
+            return classpathEngine;
         }
 
         ScriptEngine engine = sef.getScriptEngine();
@@ -80,6 +93,37 @@ public abstract class AbstractScriptManager {
         }
 
         return graalScriptEngine;
+    }
+
+    private ScriptEngine getClasspathScriptEngine(String resourcePath) {
+        ClassLoader loader = Thread.currentThread().getContextClassLoader();
+        if (loader == null) {
+            loader = AbstractScriptManager.class.getClassLoader();
+        }
+
+        try (InputStream stream = loader.getResourceAsStream(resourcePath)) {
+            if (stream == null) {
+                return null;
+            }
+
+            ScriptEngine engine = sef.getScriptEngine();
+            if (!(engine instanceof GraalJSScriptEngine graalScriptEngine)) {
+                throw new IllegalStateException(I18nUtil.getExceptionMessage("AbstractScriptManager.getInvocableScriptEngine.exception1"));
+            }
+
+            enableScriptHostAccess(graalScriptEngine);
+            try (BufferedReader br = new BufferedReader(new InputStreamReader(stream, StandardCharsets.UTF_8))) {
+                engine.eval(br);
+            }
+            return graalScriptEngine;
+        } catch (final ScriptException | IOException t) {
+            log.warn(I18nUtil.getLogMessage("AbstractScriptManager.getInvocableScriptEngine.warn1"), resourcePath, t);
+            return null;
+        }
+    }
+
+    private boolean isClasspathPreferredScript(String path) {
+        return "npc/9000055.js".equals(path) || "npc/9900002.js".equals(path);
     }
 
     protected ScriptEngine getInvocableScriptEngine(String path, Client c) {

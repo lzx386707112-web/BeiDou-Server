@@ -46,10 +46,10 @@ public class SocialBot extends BotSM {
     private int originalChairId = 0;
 
     private static final String[] INTERACTIVE_OPTIONS = {
-            "What's up?",
-            "Anything interesting?",
-            "Any rumors?",
-            "Goodbye"
+            "最近在忙什么？",
+            "有什么新鲜事？",
+            "听到什么传闻？",
+            "先聊到这里"
     };
 
     private static final String DIALOGUE_PATH = "SocialBotDialogue.yaml";
@@ -206,13 +206,13 @@ public class SocialBot extends BotSM {
         String lower = content.trim().toLowerCase();
 
         String category = null;
-        if (lower.equals("1") || lower.contains("what's up") || lower.contains("whats up")) {
+        if (lower.equals("1") || lower.contains("忙什么")) {
             category = "WhatsUp";
-        } else if (lower.equals("2") || lower.contains("interesting")) {
+        } else if (lower.equals("2") || lower.contains("新鲜事")) {
             category = "Interesting";
-        } else if (lower.equals("3") || lower.contains("rumor")) {
+        } else if (lower.equals("3") || lower.contains("传闻")) {
             category = "Rumors";
-        } else if (lower.equals("4") || lower.contains("goodbye") || lower.contains("bye") || lower.contains("cya")) {
+        } else if (lower.equals("4") || lower.contains("先聊到这里") || lower.contains("再见")) {
             doGoodbye(player);
             resetConversation();
             return;
@@ -313,8 +313,8 @@ public class SocialBot extends BotSM {
     }
 
     private void showBusyHint(Character player) {
-        player.yellowMessage("They seem busy...");
-        player.getClient().sendPacket(PacketCreator.sendHint("They seem busy...", 150, 5));
+        player.yellowMessage("对方好像正在忙...");
+        player.getClient().sendPacket(PacketCreator.sendHint("对方好像正在忙...", 150, 5));
         player.getClient().sendPacket(PacketCreator.enableActions());
         MethodScheduler.runAfterDelay(() -> expirePlayerChatCommands(player), 5000);
     }

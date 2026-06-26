@@ -27,6 +27,7 @@ import org.gms.client.autoban.AutobanFactory;
 import org.gms.client.command.CommandsExecutor;
 import org.gms.net.AbstractPacketHandler;
 import org.gms.net.packet.InPacket;
+import soloMapling.ArtificialPlayer.BotBossCombatManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.gms.server.ChatLogger;
@@ -52,6 +53,8 @@ public final class GeneralChatHandler extends AbstractPacketHandler {
         char heading = s.charAt(0);
         if (CommandsExecutor.isCommand(c, s)) {
             CommandsExecutor.getInstance().handle(c, s);
+        } else if (BotBossCombatManager.handleChatTrigger(chr, s)) {
+            chr.getAutoBanManager().spam(7);
         } else if (heading != '/') {
             int show = p.readByte();
             if (chr.getMap().isMuted() && !chr.isGM()) {

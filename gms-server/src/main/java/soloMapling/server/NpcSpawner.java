@@ -1,6 +1,7 @@
 package soloMapling.server;
 
 import org.gms.client.Character;
+import org.gms.server.maps.Foothold;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.gms.server.life.LifeFactory;
@@ -51,9 +52,14 @@ public class NpcSpawner {
         }
         npc.setPosition(pos);
         npc.setCy(pos.y);
-        npc.setRx0(pos.x + 50);
-        npc.setRx1(pos.x - 50);
-        npc.setFh(map.getFootholds().findBelow(pos).getId());
+        npc.setRx0(pos.x - 50);
+        npc.setRx1(pos.x + 50);
+        Foothold foothold = map.getFootholds().findBelow(pos);
+        if (foothold == null) {
+            log.warn("[NpcSpawner] No foothold below ({}, {}) on map {}, cannot spawn NPC {}", pos.x, pos.y, map.getId(), npcId);
+            return;
+        }
+        npc.setFh(foothold.getId());
         map.addMapObject(npc);
         map.broadcastMessage(PacketCreator.spawnNPC(npc));
         map.broadcastMessage(PacketCreator.spawnNPCRequestController(npc, true));

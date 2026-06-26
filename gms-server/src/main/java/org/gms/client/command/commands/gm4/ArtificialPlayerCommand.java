@@ -19,6 +19,7 @@ import soloMapling.ArtificialPlayer.BotPartySystem.BotPartyQueue;
 import soloMapling.ArtificialPlayer.BotMessagingSystem.QueueMonitor;
 import soloMapling.ArtificialPlayer.BotHelpers;
 import soloMapling.ArtificialPlayer.BotClientHandler;
+import soloMapling.ArtificialPlayer.BotBossCombatManager;
 import soloMapling.ArtificialPlayer.BotSM;
 import soloMapling.ArtificialPlayer.BotTypeManager;
 import soloMapling.ArtificialPlayer.SocialHotPotatoManager;
@@ -136,6 +137,11 @@ public class ArtificialPlayerCommand extends Command {
                 break;
             case "create":
                 BotTypeManager.createBots(c);
+                break;
+            case "attack":
+            case "boss":
+            case "打boss":
+                BotBossCombatManager.handleChatTrigger(c.getPlayer(), "假人打boss");
                 break;
             case "hint":
                 List<String> lstr = List.of("Hey", "Test", "Cho");
@@ -460,6 +466,7 @@ public class ArtificialPlayerCommand extends Command {
         player.yellowMessage("!bot masscreate <start> <end>    - create multiple bots");
         player.yellowMessage("!bot massmanualstart <s> <e>     - start multiple bots");
         player.yellowMessage("!bot massmanualstop <s> <e>      - stop multiple bots");
+        player.yellowMessage("!bot attack / boss               - FM bots attack current boss");
         player.yellowMessage("-- Set Bot Type --");
         player.yellowMessage("!bot fmbot <cid>                 - set as FM bot");
         player.yellowMessage("!bot scrollbot <cid>             - set as scroll bot");

@@ -1,14 +1,18 @@
 package soloMapling.ArtificialPlayer.BotCommandsPack;
 
 import org.gms.client.Character;
+import org.gms.client.Job;
 import org.gms.client.inventory.Item;
 import org.gms.client.inventory.InventoryType;
 import org.gms.client.inventory.WeaponType;
+import org.gms.constants.skills.*;
 import org.gms.server.ItemInformationProvider;
+import org.gms.server.life.Monster;
 import soloMapling.ArtificialPlayer.BotAttackSystem.BotAttackData;
 import org.gms.util.PacketCreator;
 
 import java.util.Collections;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -49,23 +53,118 @@ public final class BotAttack {
     public static void basicSwing(Character chr) {
         if (chr == null) return;
 
+        broadcastCloseRangeAttack(chr, 0, 0, Collections.emptyMap());
+    }
+
+    /**
+     * Broadcasts a real-looking one-target attack packet against a boss. Unlike
+     * the social skill visuals, this packet carries the monster oid and damage,
+     * so support/buff effects are not presented as damaging attacks.
+     */
+    public static boolean bossAttack(Character chr, Monster boss, int damage) {
+        if (chr == null || boss == null || damage <= 0) return false;
+
+        BossAttackSkill skill = resolveBossAttackSkill(chr.getJob());
+        if (skill.skillId() <= 0 || skill.hitCount() <= 0) {
+            return false;
+        }
+        Map<Integer, List<Integer>> targetDamage = Collections.singletonMap(
+                boss.getObjectId(),
+                splitDamage(damage, skill.hitCount())
+        );
+        broadcastAttack(chr, skill, targetDamage);
+        return true;
+    }
+
+    private static void broadcastAttack(Character chr, BossAttackSkill skill, Map<Integer, List<Integer>> targets) {
+        showSkillVisual(chr, skill);
+        switch (skill.packetKind()) {
+            case MAGIC -> broadcastMagicAttack(chr, skill, targets);
+            case RANGED -> broadcastRangedAttack(chr, skill, targets);
+            default -> broadcastCloseRangeAttack(chr, skill.skillId(), skill.skillLevel(), targets);
+        }
+    }
+
+    private static void showSkillVisual(Character chr, BossAttackSkill skill) {
+        if (skill.skillId() <= 0 || chr == null || chr.getMap() == null) {
+            return;
+        }
+        byte direction = (byte) (facingLeft(chr) ? 0 : 1);
+        chr.getMap().broadcastMessage(chr,
+                PacketCreator.showBuffEffect(chr.getId(), skill.skillId(), skill.skillLevel(), 1, direction), false);
+    }
+
+    private static void broadcastCloseRangeAttack(Character chr, int skill, int skillLevel, Map<Integer, List<Integer>> targets) {
         int facingMask = facingLeft(chr) ? BotAttackData.FACING_LEFT_MASK : BotAttackData.FACING_RIGHT_MASK;
+        int direction = facingLeft(chr) ? 0 : 1;
         WeaponType weaponType = resolveEquippedWeaponType(chr);
         int bodyActionId = BotAttackData.randomActionFor(weaponType);
+        int targetCount = targets.size();
+        int hitCount = targetCount == 0 ? 0 : targets.values().iterator().next().size();
+        int numAttackedAndDamage = (targetCount << 4) + hitCount;
 
-        Map<Integer, List<Integer>> emptyTargets = Collections.emptyMap();
         chr.getMap().broadcastMessage(
                 chr,
                 PacketCreator.closeRangeAttack(
                         chr,
-                        /* skill        */ 0,
-                        /* skilllevel   */ 0,
+                        skill,
+                        skillLevel,
                         /* stance       */ facingMask,
-                        /* numAttackedAndDamage */ 0,
-                        /* targets      */ emptyTargets,
+                        numAttackedAndDamage,
+                        targets,
                         /* speed        */ BotAttackData.DEFAULT_ATTACK_SPEED,
-                        /* direction    */ bodyActionId,
-                        /* display      */ 0
+                        /* direction    */ direction,
+                        /* display      */ bodyActionId
+                ),
+                /* repeatToSource */ false
+        );
+    }
+
+    private static void broadcastRangedAttack(Character chr, BossAttackSkill skill, Map<Integer, List<Integer>> targets) {
+        int facingMask = facingLeft(chr) ? BotAttackData.FACING_LEFT_MASK : BotAttackData.FACING_RIGHT_MASK;
+        int direction = facingLeft(chr) ? 0 : 1;
+        int targetCount = targets.size();
+        int hitCount = targetCount == 0 ? 0 : targets.values().iterator().next().size();
+        int numAttackedAndDamage = (targetCount << 4) + hitCount;
+
+        chr.getMap().broadcastMessage(
+                chr,
+                PacketCreator.rangedAttack(
+                        chr,
+                        skill.skillId(),
+                        skill.skillLevel(),
+                        facingMask,
+                        numAttackedAndDamage,
+                        0,
+                        targets,
+                        BotAttackData.DEFAULT_ATTACK_SPEED,
+                        direction,
+                        0
+                ),
+                /* repeatToSource */ false
+        );
+    }
+
+    private static void broadcastMagicAttack(Character chr, BossAttackSkill skill, Map<Integer, List<Integer>> targets) {
+        int facingMask = facingLeft(chr) ? BotAttackData.FACING_LEFT_MASK : BotAttackData.FACING_RIGHT_MASK;
+        int direction = facingLeft(chr) ? 0 : 1;
+        int targetCount = targets.size();
+        int hitCount = targetCount == 0 ? 0 : targets.values().iterator().next().size();
+        int numAttackedAndDamage = (targetCount << 4) + hitCount;
+
+        chr.getMap().broadcastMessage(
+                chr,
+                PacketCreator.magicAttack(
+                        chr,
+                        skill.skillId(),
+                        skill.skillLevel(),
+                        facingMask,
+                        numAttackedAndDamage,
+                        targets,
+                        -1,
+                        BotAttackData.DEFAULT_ATTACK_SPEED,
+                        direction,
+                        0
                 ),
                 /* repeatToSource */ false
         );
@@ -75,5 +174,145 @@ public final class BotAttack {
         Item weapon = chr.getInventory(InventoryType.EQUIPPED).getItem(EQUIP_SLOT_WEAPON);
         if (weapon == null) return null;
         return ItemInformationProvider.getInstance().getWeaponType(weapon.getItemId());
+    }
+
+    private static BossAttackSkill resolveBossAttackSkill(Job job) {
+        if (job == null) {
+            return new BossAttackSkill(0, 0, 1, PacketKind.CLOSE);
+        }
+        if (job == Job.WARRIOR || job == Job.FIGHTER || job == Job.PAGE || job == Job.SPEARMAN) {
+            return new BossAttackSkill(Warrior.SLASH_BLAST, 20, 1, PacketKind.CLOSE);
+        }
+        if (job == Job.CRUSADER) {
+            return new BossAttackSkill(Crusader.SWORD_COMA, 30, 1, PacketKind.CLOSE);
+        }
+        if (job.isA(Job.FIGHTER) || job.isA(Job.DAWNWARRIOR1)) {
+            return new BossAttackSkill(job.isA(Job.DAWNWARRIOR1) ? DawnWarrior.BRANDISH : Hero.BRANDISH, 30, 2, PacketKind.CLOSE);
+        }
+        if (job == Job.WHITEKNIGHT) {
+            return new BossAttackSkill(WhiteKnight.CHARGE_BLOW, 30, 1, PacketKind.CLOSE);
+        }
+        if (job.isA(Job.PAGE)) {
+            return new BossAttackSkill(Paladin.BLAST, 30, 1, PacketKind.CLOSE);
+        }
+        if (job == Job.DRAGONKNIGHT) {
+            return new BossAttackSkill(DragonKnight.SPEAR_CRUSHER, 30, 3, PacketKind.CLOSE);
+        }
+        if (job.isA(Job.SPEARMAN)) {
+            return new BossAttackSkill(DragonKnight.SPEAR_CRUSHER, 30, 3, PacketKind.CLOSE);
+        }
+        if (job == Job.MAGICIAN) {
+            return new BossAttackSkill(Magician.MAGIC_CLAW, 20, 2, PacketKind.MAGIC);
+        }
+        if (job == Job.FP_WIZARD || job == Job.BLAZEWIZARD2) {
+            return new BossAttackSkill(FPWizard.FIRE_ARROW, 30, 1, PacketKind.MAGIC);
+        }
+        if (job == Job.FP_MAGE || job == Job.BLAZEWIZARD3) {
+            return new BossAttackSkill(job == Job.BLAZEWIZARD3 ? BlazeWizard.FIRE_STRIKE : FPMage.EXPLOSION, 30, 1, PacketKind.MAGIC);
+        }
+        if (job.isA(Job.FP_WIZARD) || job.isA(Job.BLAZEWIZARD1)) {
+            return new BossAttackSkill(job.isA(Job.BLAZEWIZARD1) ? BlazeWizard.METEOR_SHOWER : FPArchMage.METEOR_SHOWER, 30, 1, PacketKind.MAGIC);
+        }
+        if (job == Job.IL_WIZARD) {
+            return new BossAttackSkill(ILWizard.COLD_BEAM, 30, 1, PacketKind.MAGIC);
+        }
+        if (job == Job.IL_MAGE) {
+            return new BossAttackSkill(ILMage.ICE_STRIKE, 30, 1, PacketKind.MAGIC);
+        }
+        if (job.isA(Job.IL_WIZARD)) {
+            return new BossAttackSkill(ILArchMage.CHAIN_LIGHTNING, 30, 1, PacketKind.MAGIC);
+        }
+        if (job == Job.CLERIC) {
+            return new BossAttackSkill(Cleric.HOLY_ARROW, 30, 1, PacketKind.MAGIC);
+        }
+        if (job == Job.PRIEST) {
+            return new BossAttackSkill(Priest.SHINING_RAY, 30, 1, PacketKind.MAGIC);
+        }
+        if (job.isA(Job.CLERIC)) {
+            return new BossAttackSkill(Bishop.ANGEL_RAY, 30, 1, PacketKind.MAGIC);
+        }
+        if (job == Job.BOWMAN) {
+            return new BossAttackSkill(3001004, 20, 2, PacketKind.RANGED);
+        }
+        if (job == Job.HUNTER || job == Job.CROSSBOWMAN) {
+            return new BossAttackSkill(job == Job.HUNTER ? Hunter.ARROW_BOMB : Crossbowman.IRON_ARROW, 30, 1, PacketKind.RANGED);
+        }
+        if (job == Job.RANGER) {
+            return new BossAttackSkill(Ranger.STRAFE, 30, 4, PacketKind.RANGED);
+        }
+        if (job.isA(Job.HUNTER) || job.isA(Job.WINDARCHER1)) {
+            return new BossAttackSkill(job.isA(Job.WINDARCHER1) ? WindArcher.STRAFE : Ranger.STRAFE, 30, 4, PacketKind.RANGED);
+        }
+        if (job == Job.SNIPER) {
+            return new BossAttackSkill(Sniper.STRAFE, 30, 4, PacketKind.RANGED);
+        }
+        if (job.isA(Job.CROSSBOWMAN)) {
+            return new BossAttackSkill(Sniper.STRAFE, 30, 4, PacketKind.RANGED);
+        }
+        if (job == Job.THIEF) {
+            return new BossAttackSkill(Rogue.DOUBLE_STAB, 20, 2, PacketKind.CLOSE);
+        }
+        if (job == Job.ASSASSIN) {
+            return new BossAttackSkill(Rogue.LUCKY_SEVEN, 20, 2, PacketKind.RANGED);
+        }
+        if (job == Job.HERMIT) {
+            return new BossAttackSkill(Hermit.AVENGER, 30, 1, PacketKind.RANGED);
+        }
+        if (job.isA(Job.ASSASSIN) || job.isA(Job.NIGHTWALKER1)) {
+            return new BossAttackSkill(job.isA(Job.NIGHTWALKER1) ? NightWalker.TRIPLE_THROW : NightLord.TRIPLE_THROW, 30, 3, PacketKind.RANGED);
+        }
+        if (job == Job.BANDIT) {
+            return new BossAttackSkill(Bandit.SAVAGE_BLOW, 30, 6, PacketKind.CLOSE);
+        }
+        if (job == Job.CHIEFBANDIT) {
+            return new BossAttackSkill(ChiefBandit.BAND_OF_THIEVES, 30, 1, PacketKind.CLOSE);
+        }
+        if (job.isA(Job.BANDIT)) {
+            return new BossAttackSkill(Shadower.BOOMERANG_STEP, 30, 2, PacketKind.CLOSE);
+        }
+        if (job == Job.PIRATE) {
+            return new BossAttackSkill(Pirate.SOMERSAULT_KICK, 20, 1, PacketKind.CLOSE);
+        }
+        if (job == Job.BRAWLER || job == Job.THUNDERBREAKER2) {
+            return new BossAttackSkill(job == Job.THUNDERBREAKER2 ? ThunderBreaker.ENERGY_BLAST : Brawler.DOUBLE_UPPERCUT, 30, 1, PacketKind.CLOSE);
+        }
+        if (job == Job.MARAUDER || job == Job.THUNDERBREAKER3) {
+            return new BossAttackSkill(job == Job.THUNDERBREAKER3 ? ThunderBreaker.SHARK_WAVE : Marauder.ENERGY_BLAST, 30, 1, PacketKind.CLOSE);
+        }
+        if (job.isA(Job.BRAWLER) || job.isA(Job.THUNDERBREAKER1)) {
+            return new BossAttackSkill(job.isA(Job.THUNDERBREAKER1) ? ThunderBreaker.SHARK_WAVE : Buccaneer.DRAGON_STRIKE, 30, 1, PacketKind.CLOSE);
+        }
+        if (job == Job.GUNSLINGER) {
+            return new BossAttackSkill(Pirate.DOUBLE_SHOT, 20, 2, PacketKind.RANGED);
+        }
+        if (job == Job.OUTLAW) {
+            return new BossAttackSkill(Outlaw.BURST_FIRE, 30, 3, PacketKind.RANGED);
+        }
+        if (job.isA(Job.GUNSLINGER)) {
+            return new BossAttackSkill(Corsair.RAPID_FIRE, 30, 1, PacketKind.RANGED);
+        }
+        return new BossAttackSkill(0, 0, 1, PacketKind.CLOSE);
+    }
+
+    private static List<Integer> splitDamage(int totalDamage, int hitCount) {
+        int hits = Math.max(1, hitCount);
+        List<Integer> values = new ArrayList<>(hits);
+        int base = Math.max(1, totalDamage / hits);
+        int remaining = totalDamage;
+        for (int i = 0; i < hits; i++) {
+            int hit = (i == hits - 1) ? remaining : Math.min(base, remaining);
+            values.add(Math.max(1, hit));
+            remaining -= hit;
+        }
+        return values;
+    }
+
+    private enum PacketKind {
+        CLOSE,
+        RANGED,
+        MAGIC
+    }
+
+    private record BossAttackSkill(int skillId, int skillLevel, int hitCount, PacketKind packetKind) {
     }
 }

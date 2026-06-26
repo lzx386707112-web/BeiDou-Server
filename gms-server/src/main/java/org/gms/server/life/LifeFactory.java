@@ -34,6 +34,8 @@ import org.gms.util.Pair;
 import org.gms.util.StringUtil;
 
 import java.awt.*;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -50,6 +52,58 @@ public class LifeFactory {
     private static final Map<Integer, MonsterStats> monsterStats = new HashMap<>();
     private static final Set<Integer> hpbarBosses = getHpBarBosses();
     private static final Map<Integer, String> npcNames = new HashMap<>();
+    private static volatile List<BossInfo> bossSummonList;
+    private static final FixedBossInfo[] FIXED_BOSS_SUMMONS = {
+            new FixedBossInfo(9420014, "泰国六手邪神"),
+            new FixedBossInfo(9600025, "武陵妖僧"),
+            new FixedBossInfo(8220010, "都纳斯"),
+            new FixedBossInfo(9400271, "尼贝隆"),
+            new FixedBossInfo(9400266, "努克斯"),
+            new FixedBossInfo(9400289, "欧碧拉"),
+            new FixedBossInfo(2220000, "红蜗牛王"),
+            new FixedBossInfo(3220000, "树妖王"),
+            new FixedBossInfo(6220000, "鳄鱼多尔"),
+            new FixedBossInfo(5220002, "浮士德"),
+            new FixedBossInfo(6130101, "蘑菇王"),
+            new FixedBossInfo(6300005, "僵尸蘑菇王"),
+            new FixedBossInfo(9300209, "蓝蘑菇王"),
+            new FixedBossInfo(4130103, "战甲吹泡泡鱼"),
+            new FixedBossInfo(7220000, "肯德熊"),
+            new FixedBossInfo(9400409, "天皇蟾蜍")
+    };
+
+    private record FixedBossInfo(int id, String name) {
+    }
+
+    public static final class BossInfo {
+        private final int id;
+        private final String name;
+        private final int level;
+        private final long hp;
+
+        private BossInfo(int id, String name, int level, long hp) {
+            this.id = id;
+            this.name = name;
+            this.level = level;
+            this.hp = hp;
+        }
+
+        public int getId() {
+            return id;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public int getLevel() {
+            return level;
+        }
+
+        public long getHp() {
+            return hp;
+        }
+    }
 
     private static Set<Integer> getHpBarBosses() {
         Set<Integer> ret = new HashSet<>();
@@ -237,6 +291,79 @@ public class LifeFactory {
      */
     private static Data getMonsterData(int mid) {
         return data.getData(StringUtil.getLeftPaddedStr(mid + ".img", '0', 11));
+    }
+
+    public static List<BossInfo> getBossSummonList() {
+        List<BossInfo> cached = bossSummonList;
+        if (cached != null) {
+            return cached;
+        }
+        synchronized (LifeFactory.class) {
+            if (bossSummonList == null) {
+                bossSummonList = Collections.unmodifiableList(loadBossSummonList());
+            }
+            return bossSummonList;
+        }
+    }
+
+    private static List<BossInfo> loadBossSummonList() {
+        List<BossInfo> bosses = new ArrayList<>();
+        for (FixedBossInfo fixedBoss : FIXED_BOSS_SUMMONS) {
+            Data monsterData = getMonsterData(fixedBoss.id());
+            if (monsterData == null) {
+                continue;
+            }
+            Data info = monsterData.getChildByPath("info");
+            if (info == null) {
+                continue;
+            }
+            int level = resolveInfoInt(info, "level", 0, new HashSet<>());
+            long hp = resolveInfoLong(info, "maxHP", 0L, new HashSet<>());
+            if (level <= 0 || hp <= 0 || !isSummonableBoss(fixedBoss.id())) {
+                continue;
+            }
+            bosses.add(new BossInfo(fixedBoss.id(), fixedBoss.name(), level, hp));
+        }
+        return bosses;
+    }
+
+    private static boolean isSummonableBoss(int monsterId) {
+        try {
+            Monster monster = getMonster(monsterId);
+            return monster != null && monster.isBoss() && monster.getMaxHp() > 0;
+        } catch (Exception ignored) {
+            return false;
+        }
+    }
+
+    private static int resolveInfoInt(Data info, String key, int fallback, Set<Integer> seenLinks) {
+        int value = DataTool.getIntConvert(key, info, fallback);
+        if (value != fallback) {
+            return value;
+        }
+        int linkMid = DataTool.getIntConvert("link", info, 0);
+        if (linkMid == 0 || !seenLinks.add(linkMid)) {
+            return fallback;
+        }
+        Data linked = getMonsterData(linkMid);
+        return linked == null || linked.getChildByPath("info") == null
+                ? fallback
+                : resolveInfoInt(linked.getChildByPath("info"), key, fallback, seenLinks);
+    }
+
+    private static long resolveInfoLong(Data info, String key, long fallback, Set<Integer> seenLinks) {
+        long value = DataTool.getLong(key, info, fallback);
+        if (value != fallback) {
+            return value;
+        }
+        int linkMid = DataTool.getIntConvert("link", info, 0);
+        if (linkMid == 0 || !seenLinks.add(linkMid)) {
+            return fallback;
+        }
+        Data linked = getMonsterData(linkMid);
+        return linked == null || linked.getChildByPath("info") == null
+                ? fallback
+                : resolveInfoLong(linked.getChildByPath("info"), key, fallback, seenLinks);
     }
 
     /**

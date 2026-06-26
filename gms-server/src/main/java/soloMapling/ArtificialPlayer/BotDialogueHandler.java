@@ -11,6 +11,10 @@ import soloMapling.ArtificialPlayer.BotTypes.DiceBot;
 import java.util.Map;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.nio.charset.StandardCharsets;
 
 import static soloMapling.ArtificialPlayer.BotCommandsPack.SocialCommands.BotDialogue;
 import static soloMapling.ArtificialPlayer.BotCommandsPack.SocialCommands.BotEmote;
@@ -88,19 +92,29 @@ public class BotDialogueHandler {
     public static Map<String, Object> readDialogueYaml(String dialoguePack, String dialogueType, String dialogueNode) {
         String dialoguePackBase = "src/main/java/soloMapling/ArtificialPlayer/BotDialoguePack/";
         String filePath = String.format("%s%s", dialoguePackBase, dialoguePack);
+        String resourcePath = "soloMapling/ArtificialPlayer/BotDialoguePack/" + dialoguePack;
 
         Map<String, Object> dialogueConstructorNode = null;
-        try {
-            YamlReader reader = new YamlReader(new FileReader(filePath));
-
-            // Read the root node
-            Map<String, Object> root = (Map<String, Object>) reader.read();
-            Map<String, Object> BotTypeNode = (Map<String, Object>) root.get(dialogueType);
-            dialogueConstructorNode = (Map<String, Object>) BotTypeNode.get(dialogueNode);
+        try (Reader source = openDialogueReader(filePath, resourcePath)) {
+            if (source != null) {
+                YamlReader reader = new YamlReader(source);
+                Map<String, Object> root = (Map<String, Object>) reader.read();
+                Map<String, Object> BotTypeNode = (Map<String, Object>) root.get(dialogueType);
+                dialogueConstructorNode = (Map<String, Object>) BotTypeNode.get(dialogueNode);
+            }
         } catch (IOException e) {
             e.printStackTrace();
         }
         return dialogueConstructorNode;
+    }
+
+    private static Reader openDialogueReader(String filePath, String resourcePath) throws IOException {
+        try {
+            return new FileReader(filePath, StandardCharsets.UTF_8);
+        } catch (IOException ignored) {
+            InputStream input = BotDialogueHandler.class.getClassLoader().getResourceAsStream(resourcePath);
+            return input == null ? null : new InputStreamReader(input, StandardCharsets.UTF_8);
+        }
     }
 
     public static DialogueConstructor getDialogueCon(String BotTypeDialoguePath, String BotType, String DialogueNodeName) {

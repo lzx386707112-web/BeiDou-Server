@@ -6,6 +6,7 @@ import org.gms.util.PacketCreator;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static soloMapling.server.SoloMaplingUtilities.generateRandomNumber;
 
@@ -16,6 +17,19 @@ Commands related to bots socializing with the player
 public class SocialCommands {
     static boolean botChatTypingStyle = false;
     static boolean debugSkipDialog = false;
+    private static final int[] BOT_VISUAL_SKILLS = {
+            1001005,   // Power Strike
+            1001004,   // Slash Blast
+            2001002,   // Magic Guard
+            2001003,   // Magic Armor
+            3001003,   // Focus
+            4001003,   // Dark Sight
+            1101007,   // Power Guard
+            2301004,   // Bless
+            2311003,   // Holy Symbol
+            3121002,   // Sharp Eyes
+            5121009    // Time Leap
+    };
 
     public static void BotFullChat(Character fakechar, String message) {
         fakechar.getMap().broadcastMessage(PacketCreator.getChatText(fakechar.getId(), message, fakechar.isGM(), (byte) 0));
@@ -83,6 +97,16 @@ public class SocialCommands {
             fakechar.getMap().broadcastMessage(fakechar, PacketCreator.facialExpression(fakechar, emote), true);
             fakechar.getMap().broadcastMessage(fakechar, PacketCreator.facialExpression(fakechar, emote), fakechar.getPosition());
         }
+    }
+
+    public static void BotRandomSkillVisual(Character fakechar) {
+        if (fakechar == null || fakechar.getMap() == null) {
+            return;
+        }
+        int skillId = BOT_VISUAL_SKILLS[ThreadLocalRandom.current().nextInt(BOT_VISUAL_SKILLS.length)];
+        byte direction = (byte) (fakechar.isFacingLeft() ? 0 : 1);
+        fakechar.getMap().broadcastMessage(fakechar,
+                PacketCreator.showBuffEffect(fakechar.getId(), skillId, 1, 1, direction), false);
     }
 
     public static void displayPlayerChatCommands(Character chr, List<String> commands) {

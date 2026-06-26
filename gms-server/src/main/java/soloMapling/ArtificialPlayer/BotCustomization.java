@@ -58,6 +58,22 @@ public class BotCustomization {
         }
     }
 
+    public static void ClearBotCashEquips(Character fakechar) {
+        if (fakechar == null) {
+            return;
+        }
+        int cashStart = -BodyPart.CASH_END.getValue();
+        int cashEnd = -BodyPart.CASH_BASE.getValue();
+        for (Item item : new ArrayList<>(fakechar.getInventory(InventoryType.EQUIPPED).list())) {
+            short position = item.getPosition();
+            if (position > cashStart && position <= cashEnd) {
+                fakechar.getInventory(InventoryType.EQUIPPED).removeSlot(position);
+            }
+        }
+        fakechar.equipChanged();
+    }
+
+
     public static short getDestinationEquipSlot(int itemID) {
         int itemSlot = ItemConstants.getEquipSlotType(itemID);
         ItemInformationProvider ii = ItemInformationProvider.getInstance();

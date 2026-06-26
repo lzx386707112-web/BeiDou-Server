@@ -129,6 +129,8 @@ public class NXItemPool {
                 pools.put(category, list);
             }
 
+            int fashionCount = FashionCashShopPool.applyTo(pools);
+
             // Auto-populate empty categories from EquipMetadataCache
             int cacheCount = 0;
             if (hasEmptyAutoCategory() && !EquipMetadataCache.isInitialized()) {
@@ -158,6 +160,7 @@ public class NXItemPool {
 
             loaded = true;
             System.out.println("[NXItemPool] Loaded " + itemCount + " curated + "
+                    + fashionCount + " fashion-script + "
                     + cacheCount + " cache-auto + " + fallbackCount
                     + " fallback items across " + pools.size() + " categories");
         } catch (Exception e) {

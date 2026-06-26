@@ -8,6 +8,8 @@ public final class SoloMaplingConfig {
 
     public static final String AUTO_ENVIRONMENT = "solo_mapling_auto_environment";
     public static final String ENVIRONMENT_BOT_MAX = "solo_mapling_environment_bot_max";
+    public static final String MARKET_BOT_MAX = "solo_mapling_market_bot_max";
+    public static final String MARKET_SHOP_MAX = "solo_mapling_market_shop_max";
     public static final String AUTO_MAP_BOTS_ENABLED = "solo_mapling_auto_map_bots_enabled";
     public static final String AUTO_MAP_BOTS_MIN = "solo_mapling_auto_map_bots_min";
     public static final String AUTO_MAP_BOTS_MAX = "solo_mapling_auto_map_bots_max";
@@ -21,6 +23,8 @@ public final class SoloMaplingConfig {
     public static final String AUTO_MAP_BOTS_ACTION_MIN_MS = "solo_mapling_auto_map_bots_action_min_ms";
     public static final String AUTO_MAP_BOTS_ACTION_MAX_MS = "solo_mapling_auto_map_bots_action_max_ms";
     public static final String BOT_RANDOM_CHINESE_NAME = "solo_mapling_bot_random_chinese_name";
+    public static final String BOT_RANDOM_SKILL_ENABLED = "solo_mapling_bot_random_skill_enabled";
+    public static final String BOT_RANDOM_CHAIR_ENABLED = "solo_mapling_bot_random_chair_enabled";
     public static final String BOT_RANDOM_BODY_ENABLED = "solo_mapling_bot_random_body_enabled";
     public static final String BOT_NORMAL_EQUIPS_ENABLED = "solo_mapling_bot_normal_equips_enabled";
     public static final String BOT_FULL_EQUIPS_ENABLED = "solo_mapling_bot_full_equips_enabled";
@@ -54,7 +58,15 @@ public final class SoloMaplingConfig {
     }
 
     public static int environmentBotMax() {
-        return getPositiveInt(ENVIRONMENT_BOT_MAX, 80);
+        return getPositiveInt(ENVIRONMENT_BOT_MAX, 30);
+    }
+
+    public static int marketBotMax() {
+        return getPositiveInt(MARKET_BOT_MAX, 10);
+    }
+
+    public static int marketShopMax() {
+        return getPositiveInt(MARKET_SHOP_MAX, 10);
     }
 
     public static boolean autoMapBotsEnabled() {
@@ -113,6 +125,14 @@ public final class SoloMaplingConfig {
 
     public static boolean randomChineseNameEnabled() {
         return getBoolean(BOT_RANDOM_CHINESE_NAME, true);
+    }
+
+    public static boolean randomSkillEnabled() {
+        return getBoolean(BOT_RANDOM_SKILL_ENABLED, true);
+    }
+
+    public static boolean randomChairEnabled() {
+        return getBoolean(BOT_RANDOM_CHAIR_ENABLED, true);
     }
 
     public static boolean randomBodyEnabled() {

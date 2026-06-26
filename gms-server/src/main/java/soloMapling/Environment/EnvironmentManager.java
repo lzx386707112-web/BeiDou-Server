@@ -1,10 +1,13 @@
 package soloMapling.Environment;
 
 import org.gms.client.Character;
+import org.gms.net.server.Server;
 import org.gms.server.maps.MapleMap;
 import soloMapling.ArtificialPlayer.BotGeneration;
 import soloMapling.ArtificialPlayer.BotMovementSystem.MovementCommands;
 import soloMapling.ArtificialPlayer.BotDecoratorSystem.BotDecorationQueue;
+import soloMapling.ArtificialPlayer.BotDecoratorSystem.BotDecorateBody;
+import soloMapling.ArtificialPlayer.BotDecoratorSystem.BotDecorateNX;
 import soloMapling.ArtificialPlayer.BotDecoratorSystem.BotEquipChecker;
 import soloMapling.ArtificialPlayer.BotHelpers;
 import soloMapling.ArtificialPlayer.BotSM;
@@ -25,12 +28,15 @@ import java.util.Collections;
 import java.util.List;
 
 import static soloMapling.ArtificialPlayer.BotCustomization.getRandomChairId;
+import static soloMapling.ArtificialPlayer.BotCustomization.ClearBotCashEquips;
 import static soloMapling.ArtificialPlayer.BotGeneration.createBotPollReadiness;
 import static soloMapling.ArtificialPlayer.BotHelpers.isBot;
 import static soloMapling.ArtificialPlayer.BotMessagingSystem.CharacterStorage.checkIfRespondant;
 import static soloMapling.ArtificialPlayer.BotMessagingSystem.CharacterStorage.getBotById;
+import static soloMapling.ArtificialPlayer.BotCommandsPack.SocialCommands.BotRandomSkillVisual;
 import static soloMapling.ArtificialPlayer.BotMovementSystem.MovementCommands.botFaceTowardsPoint;
 import static soloMapling.ArtificialPlayer.BotMovementSystem.MovementCommands.botSitChair;
+import static soloMapling.ArtificialPlayer.BotMovementSystem.MovementCommands.botCancelChair;
 import static soloMapling.ArtificialPlayer.BotTypeManager.setAndStartBots;
 import static soloMapling.DebugUtilities.debugprint;
 import static soloMapling.DebugUtilities.fmt;
@@ -54,6 +60,8 @@ public class EnvironmentManager {
 
     private static final String BASE_PATH = "src/main/java/soloMapling/ArtificialPlayer/BotMovementSystem/movementDataPackets";
     private static final AtomicBoolean startupStarted = new AtomicBoolean(false);
+    private static final AtomicBoolean marketAmbientLoopsStarted = new AtomicBoolean(false);
+    private static final AtomicInteger marketEntranceBotCount = new AtomicInteger(0);
     private static volatile boolean startupComplete = false;
 
     /**
@@ -81,6 +89,10 @@ public class EnvironmentManager {
     private static final int OPQ_LOBBY = 200080101;
 
     public static void environmentLoadStartup() {
+        marketEnvironmentStartup();
+    }
+
+    public static void marketEnvironmentStartup() {
         if (!startupStarted.compareAndSet(false, true)) {
             System.out.println("[EnvironmentManager] Environment startup already "
                     + (startupComplete ? "complete" : "running") + "; skipping duplicate request.");
@@ -94,66 +106,32 @@ public class EnvironmentManager {
         BotGeneration.enableEnvironmentBotLimit();
 
         try {
-            runWave(1, "Essentials", List.of(
-                    () -> spawnCasinoNpcs(),
-                    () -> spawnTutorialBot(),
-                    () -> spawnHenesysBotsBatch(10, 0, 0, 0),
+            runWave(1, "Free Market core", List.of(
                     () -> populateFreeMarketRegion("henesys"),
-                    () -> spawnFMEntranceBotsBatch(5, 5, 5)
+                    () -> spawnFMEntranceBotsBatch(2, 2, 2),
+                    () -> spawnMerchBotsBatch("m1", 1, 1, 0),
+                    () -> spawnMerchBotsBatch("m2", 1, 0, 0),
+                    () -> spawnMarketSocialBots()
             ));
 
-            runWave(2, "FM buildout", List.of(
-                    () -> populateFreeMarketRegion("ludi"),
-                    () -> spawnFMEntranceBotsBatch(5, 5, 5),
-                    () -> spawnMerchBotsBatch("m1", 2, 2, 1),
-                    () -> spawnMerchBotsBatch("m2", 2, 2, 0),
-                    () -> spawnMerchBotsBatch("m5", 2, 2, 0),
-                    () -> spawnGachaBotsHenesys()
-            ));
-
-            runWave(3, "Henesys population", List.of(
-                    () -> spawnJQBotsPetPark(),
-                    () -> spawnHenesysBotsBatch(10, 10, 0, 5),
-                    () -> spawnFillerBotsHenesys()
-            ));
-            SocialHotPotatoManager.getInstance().start();
-            ConversationManager.getInstance().start();
-
-            runWave(4, "Expand FM + Henesys Market", List.of(
-                    () -> populateFreeMarketRegion("perion"),
-                    () -> spawnFMEntranceBotsBatch(5, 5, 5),
-                    () -> spawnMerchBotsBatch("m1", 3, 3, 0),
-                    () -> spawnMerchBotsBatch("m2", 2, 2, 1),
-                    () -> spawnMerchBotsBatch("m5", 3, 3, 1),
-                    () -> spawnFillerBotsHenesysMarket()
-            ));
-
-            runWave(5, "Henesys sub-areas", List.of(
-                    () -> populateFreeMarketRegion("elnath"),
-                    () -> spawnHenesysBotsBatch(10, 10, 10, 4),
-                    () -> spawnFillerBotsHenesysPark(),
-                    () -> spawnFillerBotsPotionShop(),
-                    () -> spawnFillerBotsGameZone(),
-                    () -> spawnGameZoneHostBots()
-            ));
-
-            runWave(6, "Specialty areas", List.of(
+            runWave(2, "Free Market specialty", List.of(
+                    () -> spawnCasinoNpcs(),
+                    () -> spawnGachaBotsHenesys(),
                     () -> spawnBlackjackTables(),
-                    () -> spawnDropGameBotPotionShop(),
-                    () -> spawnDropGameSpectatorsPotionShop(),
-                    () -> spawnSocialBotsPetPark(),
-                    () -> convertRandomFillersToScrollBots()
+                    () -> spawnOPQBotsInLobby()
             ));
 
-            runWave(7, "Late arrivals", List.of(
-                    () -> spawnOPQBotsInLobby(),
-                    () -> spawnMerchBotsBatch("m1", 2, 2, 0),
-                    () -> spawnMerchBotsBatch("m2", 2, 2, 1),
-                    () -> spawnMerchBotsBatch("m5", 2, 2, 1)
-            ));
+            if (SoloMaplingConfig.hotPotatoEnabled()) {
+                SocialHotPotatoManager.getInstance().start();
+            }
+            if (SoloMaplingConfig.conversationEnabled()) {
+                ConversationManager.getInstance().start();
+            }
 
             BotDecorationQueue.start();
             BotEquipChecker.start();
+            ExecutorServiceManager.getScheduledExecutorService().schedule(
+                    BotGeneration::disableEnvironmentBotLimit, 120, TimeUnit.SECONDS);
             startupComplete = true;
 
             double totalSeconds = (System.currentTimeMillis() - startupStart) / 1000.0;
@@ -247,12 +225,18 @@ public class EnvironmentManager {
     }
 
     public static void spawnCasinoNpcs() {
-        int casinoMap = 100000203;
-        if (SoloMaplingConfig.casinoNpcEnabled()) {
-            NpcSpawner.spawnNpc(CasinoChipConfig.CASINO_NPC_ID, casinoMap, 1321, 214);
+        ensureMarketServiceNpcs(getMapleMapById(FM_ENTRANCE));
+    }
+
+    public static void ensureMarketServiceNpcs(MapleMap map) {
+        if (map == null || map.getId() != FM_ENTRANCE) {
+            return;
         }
-        if (SoloMaplingConfig.rpsNpcEnabled()) {
-            NpcSpawner.spawnNpc(NpcId.RPS_ADMIN, casinoMap, 899, 275);
+        if (map.getNPCById(CasinoChipConfig.CASINO_NPC_ID) == null) {
+            NpcSpawner.spawnNpc(CasinoChipConfig.CASINO_NPC_ID, map, new Point(180, 34));
+        }
+        if (SoloMaplingConfig.rpsNpcEnabled() && map.getNPCById(NpcId.RPS_ADMIN) == null) {
+            NpcSpawner.spawnNpc(NpcId.RPS_ADMIN, map, new Point(320, 34));
         }
     }
 
@@ -355,8 +339,113 @@ public class EnvironmentManager {
             debugprint("Gacha bots disabled by config.");
             return;
         }
-        List<Integer> bots2 = spawnBotsOnMapOnPlatformInRadius(3, 100000100, "m1",  new Point(366,154), 250);
+        List<Integer> bots2 = spawnBotsOnMapOnPlatformInRadius(2, FM_ENTRANCE, "m5",  new Point(40,34), 250);
         setAndStartBots(bots2, BotTypeManager.BotType.GACHA_BOT); // hene market
+    }
+
+    public static void spawnMarketSocialBots() {
+        List<Integer> allIds = new ArrayList<>();
+        allIds.addAll(spawnFillerBots(3, FM_ENTRANCE, new Point(-260, 34), new Point(330, 34)));
+        setAndStartBots(allIds, BotTypeManager.BotType.SOCIAL_BOT);
+        startMarketAmbientLoops(allIds);
+        debugprint(fmt("Free Market social bots spawned: {}", allIds.size()));
+    }
+
+    private static void startMarketAmbientLoops(List<Integer> preferredBotIds) {
+        if (!marketAmbientLoopsStarted.compareAndSet(false, true)) {
+            return;
+        }
+        Character chairBot = findFirstAvailableMarketBot(preferredBotIds);
+        if (chairBot != null && SoloMaplingConfig.randomChairEnabled()) {
+            ExecutorServiceManager.getScheduledExecutorService().scheduleAtFixedRate(
+                    () -> refreshChairBot(chairBot),
+                    BotGeneration.SPAWN_CHOREOGRAPHY_MAX_MS + 1_000L,
+                    60_000L,
+                    TimeUnit.MILLISECONDS);
+        }
+        if (SoloMaplingConfig.randomSkillEnabled()) {
+            ExecutorServiceManager.getScheduledExecutorService().scheduleWithFixedDelay(
+                    EnvironmentManager::triggerMarketSkillVisual,
+                    BotGeneration.SPAWN_CHOREOGRAPHY_MAX_MS + 5_000L,
+                    20_000L,
+                    TimeUnit.MILLISECONDS);
+        }
+        ExecutorServiceManager.getScheduledExecutorService().scheduleWithFixedDelay(
+                EnvironmentManager::refreshAllBotFashion,
+                300_000L,
+                300_000L,
+                TimeUnit.MILLISECONDS);
+    }
+
+    private static Character findFirstAvailableMarketBot(List<Integer> preferredBotIds) {
+        for (int characterId : preferredBotIds) {
+            BotSM bot = getBotById(characterId);
+            if (bot != null && isUsableMarketBot(bot.getChr())) {
+                return bot.getChr();
+            }
+        }
+        for (Character chr : getAllCharsOnMap(FM_ENTRANCE)) {
+            if (isUsableMarketBot(chr)) {
+                return chr;
+            }
+        }
+        return null;
+    }
+
+    private static void refreshChairBot(Character bot) {
+        if (!SoloMaplingConfig.randomChairEnabled() || !isUsableMarketBot(bot)) {
+            return;
+        }
+        if (bot.getChair() > 0) {
+            botCancelChair(bot);
+        }
+        botSitChair(bot, getRandomChairId());
+    }
+
+    private static void triggerMarketSkillVisual() {
+        if (!SoloMaplingConfig.randomSkillEnabled()) {
+            return;
+        }
+        List<Character> bots = getAllCharsOnMap(FM_ENTRANCE).stream()
+                .filter(EnvironmentManager::isUsableMarketBot)
+                .filter(chr -> chr.getChair() <= 0)
+                .collect(Collectors.toList());
+        if (bots.isEmpty()) {
+            return;
+        }
+        BotRandomSkillVisual(bots.get(random.nextInt(bots.size())));
+    }
+
+    private static void refreshAllBotFashion() {
+        if (!SoloMaplingConfig.randomBodyEnabled() && !SoloMaplingConfig.nxEquipsEnabled()) {
+            return;
+        }
+        try {
+            List<Character> bots = Server.getInstance().getChannel(0, 1).getPlayerStorage().getAllCharacters().stream()
+                    .filter(EnvironmentManager::isRefreshableBot)
+                    .collect(Collectors.toList());
+            for (Character bot : bots) {
+                if (SoloMaplingConfig.randomBodyEnabled()) {
+                    BotDecorateBody.decorateBotBody(bot);
+                }
+                if (SoloMaplingConfig.nxEquipsEnabled()) {
+                    ClearBotCashEquips(bot);
+                    BotDecorateNX.applyForced(bot);
+                }
+                bot.equipChanged();
+            }
+            debugprint(fmt("Refreshed bot fashion for {} bots", bots.size()));
+        } catch (Exception e) {
+            debugprint(fmt("Failed to refresh bot fashion: {}", e.getMessage()));
+        }
+    }
+
+    private static boolean isUsableMarketBot(Character chr) {
+        return chr != null && isBot(chr) && chr.getMapId() == FM_ENTRANCE && chr.getMap() != null;
+    }
+
+    private static boolean isRefreshableBot(Character chr) {
+        return chr != null && isBot(chr) && chr.getMap() != null;
     }
 
     private static int randomizeCount(int base) {
@@ -599,28 +688,12 @@ public class EnvironmentManager {
             debugprint("Blackjack tables disabled by config.");
             return;
         }
-        debugprint("Spawning Blackjack Tables in Game Zone...");
+        debugprint("Spawning Blackjack Tables in Free Market...");
 
         // Table 1
         spawnBlackjackTable(
-                new Point(-947, 64), new Point(-169, 64),
-                new Point(-920, 274), new Point(-169, 274));
-        // Table 2
-        spawnBlackjackTable(
-                new Point(-939, -296), new Point(-152, -296),
-                new Point(-937, -116), new Point(-149, -116));
-        // Table 3
-        spawnBlackjackTable(
-                new Point(226, -296), new Point(937, -296),
-                new Point(227, -116), new Point(940, -116));
-        // Table 4
-        spawnBlackjackTable(
-                new Point(-927, -656), new Point(-130, -656),
-                new Point(-956, -476), new Point(-151, -476));
-        // Table 5
-        spawnBlackjackTable(
-                new Point(229, -656), new Point(924, -656),
-                new Point(220, -476), new Point(943, -476));
+                new Point(-320, -266), new Point(260, -266),
+                new Point(-320, 4), new Point(260, 4));
 
         debugprint("All Blackjack Tables spawned.");
     }
@@ -652,10 +725,10 @@ public class EnvironmentManager {
 
     private static void spawnBlackjackTable(Point topP1, Point topP2, Point botP1, Point botP2) {
         Point[] seats = calculateTablePositions(topP1, topP2, botP1, botP2);
-        int playerCount = 2 + random.nextInt(4); // 2-5 players
+        int playerCount = 2;
 
         // Spawn dealer bot at seat[0]
-        Character dealerChar = createBotWithRetry(seats[0], HENESYS_GAME_ZONE, 5);
+        Character dealerChar = createBotWithRetry(seats[0], FM_ENTRANCE, 5);
         if (dealerChar == null) {
             debugprint("Failed to spawn Blackjack dealer bot");
             return;
@@ -670,7 +743,7 @@ public class EnvironmentManager {
 
         for (int i = 0; i < playerCount; i++) {
             int seatIdx = playerSeatIndices.get(i);
-            Character playerChar = createBotWithRetry(seats[seatIdx], HENESYS_GAME_ZONE, 5);
+            Character playerChar = createBotWithRetry(seats[seatIdx], FM_ENTRANCE, 5);
             if (playerChar != null) {
                 playerChars.add(playerChar);
             }
@@ -742,15 +815,15 @@ public class EnvironmentManager {
             debugprint("OPQ lobby bots disabled by config.");
             return;
         }
-        int totalBots = 10 + random.nextInt(6); // 10-15
-        List<String> platforms = getMainPlatformIds(OPQ_LOBBY);
+        int totalBots = 3;
+        List<String> platforms = List.of("m3", "m4");
 
         if (platforms.isEmpty()) {
-            debugprint("No platforms found for OPQ lobby map");
+            debugprint("No platforms found for Free Market OPQ bots");
             return;
         }
 
-        debugprint(fmt("Spawning {} OPQ bots across {} platforms in lobby...", totalBots, platforms.size()));
+        debugprint(fmt("Spawning {} OPQ-style bots across {} Free Market platforms...", totalBots, platforms.size()));
 
         List<Integer> allBotIds = new ArrayList<>();
         int perPlatform = totalBots / platforms.size();
@@ -759,7 +832,7 @@ public class EnvironmentManager {
         for (int i = 0; i < platforms.size(); i++) {
             int count = perPlatform + (i < remainder ? 1 : 0);
             if (count <= 0) continue;
-            List<Integer> ids = spawnBotsOnMapOnPlatform(count, OPQ_LOBBY, platforms.get(i));
+            List<Integer> ids = spawnBotsOnMapOnPlatform(count, FM_ENTRANCE, platforms.get(i));
             allBotIds.addAll(ids);
         }
 
@@ -1047,11 +1120,16 @@ public class EnvironmentManager {
             if (BotGeneration.environmentBotLimitReached()) {
                 return null;
             }
+            boolean marketSlotReserved = reserveMarketEntranceBotSlot(mapId);
+            if (mapId == FM_ENTRANCE && !marketSlotReserved) {
+                return null;
+            }
             try {
                 Character fakechar = createBotPollReadiness(spawn, mapId);
                 if (fakechar != null) {
                     return fakechar;
                 }
+                releaseMarketEntranceBotSlot(mapId, marketSlotReserved);
                 if (BotGeneration.environmentBotLimitReached()) {
                     return null;
                 }
@@ -1060,6 +1138,7 @@ public class EnvironmentManager {
                     Thread.sleep(200 * attempt); // Exponential-ish backoff
                 }
             } catch (Exception e) {
+                releaseMarketEntranceBotSlot(mapId, marketSlotReserved);
                 debugprint(fmt("Attempt {}/{} failed for bot at {}: {}",
                         attempt, maxRetries, spawn, e.getMessage()));
                 if (attempt < maxRetries) {
@@ -1073,6 +1152,28 @@ public class EnvironmentManager {
             }
         }
         return null;
+    }
+
+    private static boolean reserveMarketEntranceBotSlot(int mapId) {
+        if (mapId != FM_ENTRANCE) {
+            return false;
+        }
+        while (true) {
+            int current = marketEntranceBotCount.get();
+            if (current >= SoloMaplingConfig.marketBotMax()) {
+                debugprint(fmt("Free Market entrance bot limit reached ({})", SoloMaplingConfig.marketBotMax()));
+                return false;
+            }
+            if (marketEntranceBotCount.compareAndSet(current, current + 1)) {
+                return true;
+            }
+        }
+    }
+
+    private static void releaseMarketEntranceBotSlot(int mapId, boolean reserved) {
+        if (mapId == FM_ENTRANCE && reserved) {
+            marketEntranceBotCount.updateAndGet(value -> Math.max(0, value - 1));
+        }
     }
 
     public static void botMoveToPlatformAnyUnoccupiedSpot(Character fakechar, String platform) {

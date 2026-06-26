@@ -39,11 +39,8 @@ public class SocialHotPotatoManager {
     private static final int MEGA_MIN_INTERVAL_MS = 30_000;
     private static final int MEGA_MAX_INTERVAL_MS = 90_000;
 
-    private static final int[] HENESYS_MAP_IDS = {
-            100000000,  // Henesys
-            100000100,  // Henesys Market
-            100000200,  // Henesys Park
-            100000102   // Henesys Potion Shop
+    private static final int[] SOCIAL_MAP_IDS = {
+            910000000   // Free Market Entrance
     };
 
     private static final String SOCIAL_DIALOGUE_PATH = "SocialHotPotatoDialogue.yaml";
@@ -169,7 +166,7 @@ public class SocialHotPotatoManager {
     private Character selectRandomFillerBot() {
         List<Character> fillerBots = new ArrayList<>();
 
-        for (int mapId : HENESYS_MAP_IDS) {
+        for (int mapId : SOCIAL_MAP_IDS) {
             try {
                 MapleMap map = Server.getInstance().getChannel(0, 1).getMapFactory().getMap(mapId);
                 if (map == null) continue;
@@ -190,16 +187,29 @@ public class SocialHotPotatoManager {
     }
 
     private void executeRandomAction(Character bot) {
-        int roll = random.nextInt(100);
+        int chatWeight = 34;
+        int emoteWeight = 12;
+        int chairWeight = SoloMaplingConfig.randomChairEnabled() ? 14 : 0;
+        int positionWeight = 10;
+        int emoteChatWeight = 12;
+        int skillWeight = SoloMaplingConfig.randomSkillEnabled() ? 10 : 0;
+        int chalkboardWeight = 8;
+        int totalWeight = chatWeight + emoteWeight + chairWeight + positionWeight + emoteChatWeight + skillWeight + chalkboardWeight;
 
-        if (roll < 45) {
+        int roll = random.nextInt(totalWeight);
+
+        if (roll < chatWeight) {
             doChat(bot);
-        } else if (roll < 62) {
+        } else if (roll < chatWeight + emoteWeight) {
             doEmote(bot);
-        } else if (roll < 77) {
+        } else if (roll < chatWeight + emoteWeight + chairWeight) {
+            doChairToggle(bot);
+        } else if (roll < chatWeight + emoteWeight + chairWeight + positionWeight) {
             doPositionChange(bot);
-        } else if (roll < 92) {
+        } else if (roll < chatWeight + emoteWeight + chairWeight + positionWeight + emoteChatWeight) {
             doEmoteAndChat(bot);
+        } else if (roll < chatWeight + emoteWeight + chairWeight + positionWeight + emoteChatWeight + skillWeight) {
+            BotRandomSkillVisual(bot);
         } else {
             doChalkboard(bot);
         }
@@ -221,14 +231,10 @@ public class SocialHotPotatoManager {
     }
 
     private void doPositionChange(Character bot) {
-        int pick = random.nextInt(4);
+        int pick = random.nextInt(SoloMaplingConfig.randomChairEnabled() ? 4 : 3);
         switch (pick) {
             case 0:
-                if (bot.getChair() > 0) {
-                    botCancelChair(bot);
-                } else {
-                    botSitChair(bot, getRandomChairId());
-                }
+                doChairToggle(bot);
                 break;
             case 1:
                 microTurnAround(bot);
@@ -239,6 +245,17 @@ public class SocialHotPotatoManager {
             case 3:
                 MovementCommands.nudgeSmall(bot);
                 break;
+        }
+    }
+
+    private void doChairToggle(Character bot) {
+        if (!SoloMaplingConfig.randomChairEnabled()) {
+            return;
+        }
+        if (bot.getChair() > 0) {
+            botCancelChair(bot);
+        } else {
+            botSitChair(bot, getRandomChairId());
         }
     }
 

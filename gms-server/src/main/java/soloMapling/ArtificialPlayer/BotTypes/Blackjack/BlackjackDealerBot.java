@@ -9,6 +9,7 @@ import soloMapling.ArtificialPlayer.BotCustomization;
 import soloMapling.ArtificialPlayer.BotDialogueHandler;
 import soloMapling.ArtificialPlayer.BotLogic;
 import soloMapling.ArtificialPlayer.BotMessagingSystem.ChatMessage;
+import soloMapling.ArtificialPlayer.BotMessagingSystem.CharacterStorage;
 import soloMapling.ArtificialPlayer.BotMessagingSystem.MessageQueue;
 import soloMapling.ArtificialPlayer.BotSM;
 import soloMapling.server.ExecutorServiceManager;
@@ -62,6 +63,49 @@ public class BlackjackDealerBot extends BotSM {
 
     public BlackjackTable getTable() {
         return table;
+    }
+
+    public static String joinNearestTable(Character player) {
+        BlackjackDealerBot nearestDealer = null;
+        double nearestDistance = Double.MAX_VALUE;
+
+        for (BotSM bot : CharacterStorage.getAllBots().values()) {
+            if (!(bot instanceof BlackjackDealerBot dealer)) {
+                continue;
+            }
+            if (dealer.getChr().getMapId() != player.getMapId()) {
+                continue;
+            }
+            double distance = dealer.getChr().getPosition().distance(player.getPosition());
+            if (distance < nearestDistance) {
+                nearestDistance = distance;
+                nearestDealer = dealer;
+            }
+        }
+
+        if (nearestDealer == null) {
+            return "当前地图没有可加入的 21 点荷官。请确认 21 点桌功能已开启，并重新进入自由市场。";
+        }
+        return nearestDealer.joinPlayerFromNpc(player);
+    }
+
+    public synchronized String joinPlayerFromNpc(Character player) {
+        if (isAlreadyAtTable(player)) {
+            return "你已经在这张 21 点桌里了。\r\n\r\n下注方式：把赌场筹码丢在自己附近。轮到你行动时，输入“要牌”或“停牌”。";
+        }
+
+        boolean added = table.addPlayer(player);
+        dprint("NPC JOIN attempt by " + player.getName()
+                + " -> " + (added ? "ADDED" : "REJECTED (full)")
+                + " (tableSize=" + table.getPlayerCount() + ")");
+        if (!added) {
+            return "这张 21 点桌已经满了。";
+        }
+
+        getInteractors().setRespondant(player);
+        botFaceTowardsPoint(getChr(), player.getPosition());
+        SocialCommands.BotChatbubble(getChr(), player.getName() + " 加入了 21 点桌。");
+        return "已加入 " + getChr().getName() + " 的 21 点桌。\r\n\r\n下注方式：把赌场筹码丢在自己附近。轮到你行动时，输入“要牌”或“停牌”。";
     }
 
     // --- Tick rate override: 1-2 seconds for snappy Blackjack pacing ---
@@ -738,10 +782,11 @@ public class BlackjackDealerBot extends BotSM {
                 return;
             }
             String content = message.getContent().toLowerCase();
-            if (content.contains("stand") || content.contains("stay")) {
+            if (content.contains("stand") || content.contains("stay")
+                    || content.contains("停牌") || content.contains("不要") || content.contains("停")) {
                 player.setResponseStatus("RESPONDED");
                 player.setStatus(BlackjackPlayer.PlayerStatus.STAND);
-            } else if (content.contains("hit")) {
+            } else if (content.contains("hit") || content.contains("要牌") || content.contains("补牌")) {
                 player.setResponseStatus("RESPONDED");
                 player.setStatus(BlackjackPlayer.PlayerStatus.ACTIVE); // ACTIVE = HIT
             }
@@ -761,7 +806,7 @@ public class BlackjackDealerBot extends BotSM {
                 return;
             }
             String content = message.getContent().toLowerCase();
-            if (content.contains("join")) {
+            if (content.contains("join") || content.contains("加入")) {
                 Character sender = message.getSender();
 
                 if (isAlreadyAtTable(sender)) {
@@ -801,12 +846,12 @@ public class BlackjackDealerBot extends BotSM {
     @Override
     public void displayCommands(Character chr) {
         // Inquiry hint — shown when a player calls the dealer by name.
-        SocialCommands.displayPlayerChatCommands(chr, List.of("Join"));
+        SocialCommands.displayPlayerChatCommands(chr, List.of("加入"));
     }
 
     // Shown to a real player when it becomes their turn.
     private void showPlayerActionHint(Character chr) {
-        SocialCommands.displayPlayerChatCommands(chr, List.of("Stand", " - Hit -"));
+        SocialCommands.displayPlayerChatCommands(chr, List.of("停牌", " - 要牌 -"));
     }
 
     // TODO: BotSwapItemAtLocation — not yet available in new architecture.

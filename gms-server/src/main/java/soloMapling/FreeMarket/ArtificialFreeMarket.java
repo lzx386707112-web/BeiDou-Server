@@ -13,6 +13,7 @@ import org.gms.util.PacketCreator;
 
 import java.awt.*;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -56,7 +57,9 @@ public class ArtificialFreeMarket {
 
     static List<Integer> hiredMerchantsList = Arrays.asList(5030000, 5030001, 5030002, 5030004, 5030008, 5030010); // 5030012 - tiki torch
     private static final Random random = new Random();
+    private static final AtomicInteger marketShopCount = new AtomicInteger(0);
     public static FMShopInfoManager fmInfo = new FMShopInfoManager();
+    private record ShopSpot(int mapId, Point position) {}
 
     public static void populateFreeMarketSpot(Client c) {
         if (!SoloMaplingConfig.fmRegionFillEnabled()) {
@@ -83,12 +86,20 @@ public class ArtificialFreeMarket {
             debugprint("Free Market region fill disabled by config: " + region);
             return;
         }
-        // Fire every room in the region in parallel. Each room's internal work is
-        // already offloaded to executors, so this just kicks them off concurrently
-        // instead of sleeping 5s between maps.
+        List<ShopSpot> candidates = new java.util.ArrayList<>();
         for (int mapId : fmInfo.getRegionFMMapId(region)) {
-            ExecutorServiceManager.runAsync(() -> populateFreeMarketRoom(mapId));
+            for (Point position : fmInfo.getRegionFMSpots(region)) {
+                candidates.add(new ShopSpot(mapId, position));
+            }
         }
+        Collections.shuffle(candidates, random);
+        for (ShopSpot spot : candidates) {
+            if (marketShopCount.get() >= SoloMaplingConfig.marketShopMax()) {
+                break;
+            }
+            spawnHiredMerchantStore(spot.mapId(), spot.position());
+        }
+        debugprint("Free Market shops populated: " + marketShopCount.get() + "/" + SoloMaplingConfig.marketShopMax());
     }
 
     public static void populateFreeMarketRoom(int mapId) {
@@ -129,7 +140,11 @@ public class ArtificialFreeMarket {
 
 
     private static void spawnHiredMerchantStore(int mapId, Point position) {
+        if (!reserveMarketShopSlot()) {
+            return;
+        }
         if (calculateSkippedSpot(mapId)) {
+            releaseMarketShopSlot();
             return;
         }
 
@@ -458,13 +473,18 @@ public class ArtificialFreeMarket {
             debugprint("Free Market bot shop disabled by config: " + mapId);
             return;
         }
+        if (!reserveMarketShopSlot()) {
+            return;
+        }
         if (BotGeneration.environmentBotLimitReached()) {
             debugprint("Free Market bot shop skipped; environment bot limit reached.");
+            releaseMarketShopSlot();
             return;
         }
         getExecutorService().submit(() -> {
             if (BotGeneration.environmentBotLimitReached()) {
                 debugprint("Free Market bot shop skipped; environment bot limit reached.");
+                releaseMarketShopSlot();
                 return;
             }
             debugprint("Making shop at: " + mapId + ", " + position);
@@ -489,6 +509,7 @@ public class ArtificialFreeMarket {
             Character fakechar2 = createBotPollReadiness(position, mapId);
             if (fakechar2 == null) {
                 System.err.println("Bot not ready after 3 seconds, skipping store");
+                releaseMarketShopSlot();
                 return;
             }
 
@@ -507,5 +528,22 @@ public class ArtificialFreeMarket {
                 }
             }), BotGeneration.SPAWN_CHOREOGRAPHY_MAX_MS, TimeUnit.MILLISECONDS);
         });
+    }
+
+    private static boolean reserveMarketShopSlot() {
+        while (true) {
+            int current = marketShopCount.get();
+            if (current >= SoloMaplingConfig.marketShopMax()) {
+                debugprint("Free Market shop limit reached: " + SoloMaplingConfig.marketShopMax());
+                return false;
+            }
+            if (marketShopCount.compareAndSet(current, current + 1)) {
+                return true;
+            }
+        }
+    }
+
+    private static void releaseMarketShopSlot() {
+        marketShopCount.updateAndGet(value -> Math.max(0, value - 1));
     }
 }
