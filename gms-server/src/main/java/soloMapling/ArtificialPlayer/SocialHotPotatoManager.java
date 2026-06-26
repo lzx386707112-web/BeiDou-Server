@@ -3,6 +3,7 @@ package soloMapling.ArtificialPlayer;
 import org.gms.client.Character;
 import org.gms.net.server.Server;
 import org.gms.server.maps.MapleMap;
+import soloMapling.SoloMaplingConfig;
 import soloMapling.ArtificialPlayer.BotMessagingSystem.CharacterStorage;
 import soloMapling.ArtificialPlayer.BotSM;
 import soloMapling.ArtificialPlayer.BotMovementSystem.MovementCommands;
@@ -85,6 +86,10 @@ public class SocialHotPotatoManager {
 
     public void start() {
         if (running) return;
+        if (!SoloMaplingConfig.hotPotatoEnabled()) {
+            log("[SocialHotPotato] Disabled by config.");
+            return;
+        }
         running = true;
         scheduleNextTick();
         scheduleNextMegaTick();
@@ -104,6 +109,10 @@ public class SocialHotPotatoManager {
 
     private void scheduleNextTick() {
         if (!running) return;
+        if (!SoloMaplingConfig.hotPotatoEnabled()) {
+            stop();
+            return;
+        }
         int delay = MIN_INTERVAL_MS + random.nextInt(MAX_INTERVAL_MS - MIN_INTERVAL_MS);
         scheduledTask = ExecutorServiceManager.getScheduledExecutorService().schedule(() -> {
             try {
@@ -118,6 +127,10 @@ public class SocialHotPotatoManager {
 
     private void scheduleNextMegaTick() {
         if (!running) return;
+        if (!SoloMaplingConfig.hotPotatoEnabled()) {
+            stop();
+            return;
+        }
         int delay = MEGA_MIN_INTERVAL_MS + random.nextInt(MEGA_MAX_INTERVAL_MS - MEGA_MIN_INTERVAL_MS);
         megaScheduledTask = ExecutorServiceManager.getScheduledExecutorService().schedule(() -> {
             try {
@@ -131,12 +144,20 @@ public class SocialHotPotatoManager {
     }
 
     private void megaTick() {
+        if (!SoloMaplingConfig.hotPotatoEnabled()) {
+            stop();
+            return;
+        }
         Character bot = selectRandomFillerBot();
         if (bot == null) return;
         doMegaphone(bot);
     }
 
     private void tick() {
+        if (!SoloMaplingConfig.hotPotatoEnabled()) {
+            stop();
+            return;
+        }
         Character bot = selectRandomFillerBot();
         if (bot == null) return;
 

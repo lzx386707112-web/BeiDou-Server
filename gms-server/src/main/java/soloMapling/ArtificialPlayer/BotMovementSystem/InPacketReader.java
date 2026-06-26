@@ -13,11 +13,12 @@ import soloMapling.ArtificialPlayer.BotMovementSystem.MovementStructures.Movemen
 import java.io.BufferedReader;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.EOFException;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedList;
@@ -32,6 +33,7 @@ import static soloMapling.DebugUtilities.debugprint;
 public class InPacketReader {
 
     private static final String movementDataPacketsPath = "src/main/java/soloMapling/ArtificialPlayer/BotMovementSystem/movementDataPackets/";
+    private static final String movementDataPacketsResourcePath = "soloMapling/ArtificialPlayer/BotMovementSystem/movementDataPackets/";
 
     public static boolean boolRecordMovementData = false;
     public static String movementDataRecordingName = "default_movement_recording";
@@ -49,9 +51,13 @@ public class InPacketReader {
 
     public static List<MovementPacket> readPacketsFromFile(String binaryFileName) {
         List<MovementPacket> packets = new ArrayList<>();
-        try (DataInputStream dis = new DataInputStream(new FileInputStream(binaryFileName))) {
-            while (dis.available() > 0) {
-                packets.add(readSinglePacket(dis));
+        try (DataInputStream dis = new DataInputStream(openPacketInputStream(binaryFileName))) {
+            while (true) {
+                try {
+                    packets.add(readSinglePacket(dis));
+                } catch (EOFException eof) {
+                    break;
+                }
             }
         } catch (IOException e) {
             throw new RuntimeException("Error reading packets from file: " + binaryFileName, e);
@@ -62,7 +68,7 @@ public class InPacketReader {
     public static List<MovementPacketRaw> readRawPacketsFromFile(String csvFileName) {
         List<MovementPacketRaw> packetList = new LinkedList<>();
 
-        try (BufferedReader reader = new BufferedReader(new FileReader(csvFileName))) {
+        try (BufferedReader reader = new BufferedReader(new java.io.InputStreamReader(openPacketInputStream(csvFileName)))) {
             LineReader lineReader = new LineReader(reader);
             String line;
 
@@ -82,6 +88,33 @@ public class InPacketReader {
         }
 
         return packetList;
+    }
+
+    private static InputStream openPacketInputStream(String fileName) throws IOException {
+        Path path = Paths.get(fileName);
+        if (Files.exists(path)) {
+            return new FileInputStream(fileName);
+        }
+
+        String resourceName = toPacketResourceName(fileName);
+        InputStream resource = InPacketReader.class.getClassLoader().getResourceAsStream(resourceName);
+        if (resource != null) {
+            return resource;
+        }
+        throw new IOException("Movement packet file not found on disk or classpath: " + fileName);
+    }
+
+    private static String toPacketResourceName(String fileName) {
+        String normalized = fileName.replace('\\', '/');
+        int resourceStart = normalized.indexOf(movementDataPacketsResourcePath);
+        if (resourceStart >= 0) {
+            return normalized.substring(resourceStart);
+        }
+        int sourceStart = normalized.indexOf(movementDataPacketsPath);
+        if (sourceStart >= 0) {
+            return movementDataPacketsResourcePath + normalized.substring(sourceStart + movementDataPacketsPath.length());
+        }
+        return normalized;
     }
 
     private static long parseTimestamp(String line) {
@@ -186,6 +219,9 @@ public class InPacketReader {
     }
 
     public static String getMovementPacketFileName(int mapId, String fileName, String extension) {
+        if (fileName.startsWith("/")) {
+            fileName = fileName.substring(1);
+        }
         return String.format("%smap%d/%s.%s", movementDataPacketsPath, mapId, fileName, extension);
     }
 

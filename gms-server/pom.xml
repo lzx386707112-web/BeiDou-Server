@@ -259,6 +259,18 @@
 
     <build>
         <finalName>BeiDou</finalName>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+            </resource>
+            <resource>
+                <directory>src/main/java</directory>
+                <includes>
+                    <include>soloMapling/ArtificialPlayer/BotMovementSystem/movementDataPackets/**</include>
+                    <include>soloMapling/ArtificialPlayer/BotDecoratorSystem/*.yaml</include>
+                </includes>
+            </resource>
+        </resources>
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>

@@ -4,6 +4,8 @@ import org.gms.client.Character;
 import org.gms.client.Job;
 import org.gms.client.inventory.InventoryType;
 import soloMapling.ArtificialPlayer.BotTier;
+import soloMapling.ArtificialPlayer.BotCustomization;
+import soloMapling.SoloMaplingConfig;
 import soloMapling.itemPool.EquipMetadataCache;
 
 import java.util.Random;
@@ -266,29 +268,33 @@ public class BotDecorate {
         bot.setLevel(level);
         bot.setJob(Job.getById(job));
 
-        BotDecorateBody.decorateBotBody(bot);
+        if (SoloMaplingConfig.randomBodyEnabled()) {
+            BotDecorateBody.decorateBotBody(bot);
+        }
 
-        if (EquipMetadataCache.isInitialized()) {
+        if (SoloMaplingConfig.normalEquipsEnabled() && EquipMetadataCache.isInitialized()) {
             // Full class-aware decoration is an in-memory cache lookup now, so it
             // runs inline at spawn. FULL_DECORATION_RATE preserves the population
             // mix of "kitted out" (full decoration) and "casual" (QuickEquip) bots.
-            if (ThreadLocalRandom.current().nextDouble() < FULL_DECORATION_RATE) {
+            if (SoloMaplingConfig.fullEquipsEnabled()
+                    && ThreadLocalRandom.current().nextDouble() < FULL_DECORATION_RATE) {
                 BotDecorateEquips.decorateBotEquips(bot);
             } else {
                 QuickEquip.apply(bot);
                 // Safety net: if QuickEquip left the bot with no clothing (common
                 // for low-level bots where the curated pool has no matching items),
                 // run the full decoration so they don't walk around shirtless.
-                if (!hasClothing(bot)) {
+                if (SoloMaplingConfig.fullEquipsEnabled() && !hasClothing(bot)) {
                     BotDecorateEquips.decorateBotEquips(bot);
                 }
             }
-        } else {
+        } else if (SoloMaplingConfig.normalEquipsEnabled()) {
             // Cache not ready (bots spawned before environment init): quick
             // generic equip now, full decoration deferred to the queue.
             QuickEquip.apply(bot);
-            if (!hasClothing(bot)
-                    || ThreadLocalRandom.current().nextDouble() < FULL_DECORATION_RATE) {
+            if (SoloMaplingConfig.fullEquipsEnabled()
+                    && (!hasClothing(bot)
+                    || ThreadLocalRandom.current().nextDouble() < FULL_DECORATION_RATE)) {
                 BotDecorationQueue.addBot("default", bot.getId());
             }
         }
@@ -297,11 +303,33 @@ public class BotDecorate {
         // it took. Its own 30% base gate decides whether the bot actually gets
         // any NX pieces.
         BotDecorateNX.apply(bot);
+
+        if (SoloMaplingConfig.normalEquipsEnabled() && !hasClothing(bot)) {
+            equipFallbackClothing(bot);
+        }
+        if ((SoloMaplingConfig.normalEquipsEnabled() || SoloMaplingConfig.nxEquipsEnabled()) && !hasWeapon(bot)) {
+            BotCustomization.EquipBot(bot, 1302000);
+        }
     }
 
     private static boolean hasClothing(Character bot) {
         return bot.getInventory(InventoryType.EQUIPPED).getItem((short) -5) != null  // coat/overall
                 || bot.getInventory(InventoryType.EQUIPPED).getItem((short) -6) != null; // pants
+    }
+
+    private static boolean hasWeapon(Character bot) {
+        return bot.getInventory(InventoryType.EQUIPPED).getItem((short) -11) != null
+                || bot.getInventory(InventoryType.EQUIPPED).getItem((short) -111) != null;
+    }
+
+    private static void equipFallbackClothing(Character bot) {
+        if (bot.getGender() == 1) {
+            BotCustomization.EquipBot(bot, 1041002);
+            BotCustomization.EquipBot(bot, 1061002);
+        } else {
+            BotCustomization.EquipBot(bot, 1040002);
+            BotCustomization.EquipBot(bot, 1060002);
+        }
     }
 
     /**

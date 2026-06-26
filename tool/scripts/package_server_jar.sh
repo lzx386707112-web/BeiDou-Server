@@ -206,12 +206,19 @@ trap cleanup_resource_overlay EXIT
 
 resource_overlay="$(mktemp -d)"
 mkdir -p "$resource_overlay/BOOT-INF/classes"
+"$jdk_home/bin/jar" tf "$built_jar" \
+  | sed -n 's#^BOOT-INF/classes/##p' \
+  > "$resource_overlay/existing-classpath-entries.txt"
 (
   cd "$SERVER_DIR/target/classes"
   while IFS= read -r resource; do
-    mkdir -p "$resource_overlay/BOOT-INF/classes/$(dirname "$resource")"
-    cp "$resource" "$resource_overlay/BOOT-INF/classes/$resource"
-  done < <(find . -type f ! -name '*.class' ! -name '.DS_Store')
+    entry="${resource#./}"
+    if [[ "$entry" == *.class ]] && grep -Fxq "$entry" "$resource_overlay/existing-classpath-entries.txt"; then
+      continue
+    fi
+    mkdir -p "$resource_overlay/BOOT-INF/classes/$(dirname "$entry")"
+    cp "$resource" "$resource_overlay/BOOT-INF/classes/$entry"
+  done < <(find . -type f ! -name '.DS_Store')
 )
 (
   cd "$resource_overlay"

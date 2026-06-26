@@ -4,9 +4,11 @@ import org.gms.client.Character;
 import org.gms.client.inventory.BodyPart;
 import org.gms.client.inventory.Equip;
 import org.gms.client.inventory.InventoryType;
+import org.gms.client.inventory.Item;
 import org.gms.constants.inventory.ItemConstants;
 import org.gms.server.ItemInformationProvider;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
@@ -45,6 +47,15 @@ public class BotCustomization {
 //            return;
 //        }
         EquipItem(fakechar, itemId, dst);
+    }
+
+    public static void ClearBotEquips(Character fakechar) {
+        if (fakechar == null) {
+            return;
+        }
+        for (Item item : new ArrayList<>(fakechar.getInventory(InventoryType.EQUIPPED).list())) {
+            fakechar.getInventory(InventoryType.EQUIPPED).removeSlot(item.getPosition());
+        }
     }
 
     public static short getDestinationEquipSlot(int itemID) {

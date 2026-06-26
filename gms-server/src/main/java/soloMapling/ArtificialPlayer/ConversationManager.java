@@ -4,6 +4,7 @@ import org.gms.client.Character;
 import com.esotericsoftware.yamlbeans.YamlReader;
 import org.gms.net.server.Server;
 import org.gms.server.maps.MapleMap;
+import soloMapling.SoloMaplingConfig;
 import soloMapling.ArtificialPlayer.BotMessagingSystem.CharacterStorage;
 import soloMapling.ArtificialPlayer.BotSM;
 import soloMapling.server.ExecutorServiceManager;
@@ -69,6 +70,10 @@ public class ConversationManager {
 
     public void start() {
         if (running) return;
+        if (!SoloMaplingConfig.conversationEnabled()) {
+            log("[ConversationManager] Disabled by config.");
+            return;
+        }
         running = true;
         loadScripts();
         scheduleNextTick();
@@ -90,6 +95,10 @@ public class ConversationManager {
 
     private void scheduleNextTick() {
         if (!running) return;
+        if (!SoloMaplingConfig.conversationEnabled()) {
+            stop();
+            return;
+        }
         int delay = MIN_INTERVAL_MS + random.nextInt(MAX_INTERVAL_MS - MIN_INTERVAL_MS);
         scheduledTask = ExecutorServiceManager.getScheduledExecutorService().schedule(() -> {
             try {
@@ -103,6 +112,10 @@ public class ConversationManager {
     }
 
     private void tick() {
+        if (!SoloMaplingConfig.conversationEnabled()) {
+            stop();
+            return;
+        }
         if (allScripts == null || allScripts.isEmpty()) return;
 
         Set<Integer> mapsWithRealPlayers = getMapsWithRealPlayers();
@@ -153,6 +166,10 @@ public class ConversationManager {
     }
 
     public void triggerOnMap(Character player) {
+        if (!SoloMaplingConfig.conversationEnabled()) {
+            player.yellowMessage("[ConversationManager] 对话系统已在后台参数中关闭。");
+            return;
+        }
         if (allScripts == null || allScripts.isEmpty()) {
             loadScripts();
         }

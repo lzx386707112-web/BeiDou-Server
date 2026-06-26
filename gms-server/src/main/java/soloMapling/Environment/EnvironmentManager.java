@@ -13,6 +13,7 @@ import soloMapling.ArtificialPlayer.BotTypes.Blackjack.BlackjackDealerBot;
 import soloMapling.ArtificialPlayer.ConversationManager;
 import soloMapling.ArtificialPlayer.SocialHotPotatoManager;
 import soloMapling.Casino.CasinoChipConfig;
+import soloMapling.SoloMaplingConfig;
 import soloMapling.server.ExecutorServiceManager;
 import soloMapling.server.NpcSpawner;
 import org.gms.constants.id.NpcId;
@@ -90,6 +91,7 @@ public class EnvironmentManager {
         // Server.init() alongside the other WZ-derived data - guaranteed ready
         // before any player can trigger this.
         long startupStart = System.currentTimeMillis();
+        BotGeneration.enableEnvironmentBotLimit();
 
         try {
             runWave(1, "Essentials", List.of(
@@ -186,6 +188,10 @@ public class EnvironmentManager {
     }
 
     private static void spawnFMEntranceBotsBatch(int m1Count, int m2Count, int m5Count) {
+        if (!SoloMaplingConfig.fmBotsEnabled()) {
+            debugprint("FM entrance bots disabled by config.");
+            return;
+        }
         if (m1Count > 0) {
             List<Integer> bots = spawnBotsOnMapOnPlatform(m1Count, FM_ENTRANCE, "m1");
             setAndStartBots(bots, BotTypeManager.BotType.FM_BOT);
@@ -201,6 +207,10 @@ public class EnvironmentManager {
     }
 
     private static void spawnMerchBotsBatch(String platform, int selling, int buying, int nx) {
+        if (!SoloMaplingConfig.fmMerchantsEnabled()) {
+            debugprint("FM merchant bots disabled by config.");
+            return;
+        }
         if (selling > 0) {
             List<Integer> bots = spawnBotsOnMapOnPlatform(selling, FM_ENTRANCE, platform);
             setAndStartBots(bots, BotTypeManager.BotType.SELLING_MERCHANT_BOT);
@@ -216,19 +226,19 @@ public class EnvironmentManager {
     }
 
     private static void spawnHenesysBotsBatch(int mainCount, int marketCount, int parkCount, int socialCount) {
-        if (mainCount > 0) {
+        if (mainCount > 0 && SoloMaplingConfig.henesysCrowdEnabled()) {
             List<Integer> bots = spawnBotsOnMapOnPlatform(mainCount, HENESYS, "m1");
             setAndStartBots(bots, BotTypeManager.BotType.HENESYS_BOT);
         }
-        if (marketCount > 0) {
+        if (marketCount > 0 && SoloMaplingConfig.henesysMarketCrowdEnabled()) {
             List<Integer> bots = spawnBotsOnMapOnPlatform(marketCount, HENESYS_MARKET, "m1");
             setAndStartBots(bots, BotTypeManager.BotType.HENESYS_BOT);
         }
-        if (parkCount > 0) {
+        if (parkCount > 0 && SoloMaplingConfig.henesysParkCrowdEnabled()) {
             List<Integer> bots = spawnBotsOnMapOnPlatform(parkCount, HENESYS_PARK, "m1");
             setAndStartBots(bots, BotTypeManager.BotType.HENESYS_BOT);
         }
-        if (socialCount > 0) {
+        if (socialCount > 0 && SoloMaplingConfig.henesysCrowdEnabled()) {
             int perSpot = Math.max(1, socialCount / 3);
             List<Integer> s1 = spawnBotsOnMapOnPlatform(perSpot, HENESYS, "m4_social");
             List<Integer> s2 = spawnBotsOnMapOnPlatform(perSpot, HENESYS, "m5_social");
@@ -238,8 +248,12 @@ public class EnvironmentManager {
 
     public static void spawnCasinoNpcs() {
         int casinoMap = 100000203;
-        NpcSpawner.spawnNpc(CasinoChipConfig.CASINO_NPC_ID, casinoMap, 1321, 214);
-        NpcSpawner.spawnNpc(NpcId.RPS_ADMIN, casinoMap, 899, 275);
+        if (SoloMaplingConfig.casinoNpcEnabled()) {
+            NpcSpawner.spawnNpc(CasinoChipConfig.CASINO_NPC_ID, casinoMap, 1321, 214);
+        }
+        if (SoloMaplingConfig.rpsNpcEnabled()) {
+            NpcSpawner.spawnNpc(NpcId.RPS_ADMIN, casinoMap, 899, 275);
+        }
     }
 
     private static void runPhase(List<Runnable> tasks) {
@@ -256,6 +270,10 @@ public class EnvironmentManager {
     spawn 50 bots in fm
      */
     public static void spawnBotsInFMEntrance() {
+        if (!SoloMaplingConfig.fmBotsEnabled()) {
+            debugprint("FM entrance bots disabled by config.");
+            return;
+        }
         int fm_entrance = 910000000;
         List<Integer> bots1 = spawnBotsOnMapOnPlatform(15, fm_entrance, "m1"); // Bottom row
         debugprint("bots1", bots1);
@@ -269,6 +287,10 @@ public class EnvironmentManager {
     }
 
     public static void spawnMerchBotsInFMEntrance() {
+        if (!SoloMaplingConfig.fmMerchantsEnabled()) {
+            debugprint("FM merchant bots disabled by config.");
+            return;
+        }
         int fm_entrance = 910000000;
 
         // m1 - Bottom row: 7 selling, 7 buying, 1 nx
@@ -297,24 +319,42 @@ public class EnvironmentManager {
     }
 
     public static void spawnHenesysBots() {
+        if (!SoloMaplingConfig.henesysCrowdEnabled()
+                && !SoloMaplingConfig.henesysMarketCrowdEnabled()
+                && !SoloMaplingConfig.henesysParkCrowdEnabled()) {
+            debugprint("Henesys bots disabled by config.");
+            return;
+        }
         int henesys_map = 100000000;
-        List<Integer> bots1 = spawnBotsOnMapOnPlatform(30, henesys_map, "m1");
-        setAndStartBots(bots1, BotTypeManager.BotType.HENESYS_BOT);
+        if (SoloMaplingConfig.henesysCrowdEnabled()) {
+            List<Integer> bots1 = spawnBotsOnMapOnPlatform(30, henesys_map, "m1");
+            setAndStartBots(bots1, BotTypeManager.BotType.HENESYS_BOT);
+        }
 
-        List<Integer> bots2 = spawnBotsOnMapOnPlatform(10, 100000100, "m1");
-        List<Integer> bots3 = spawnBotsOnMapOnPlatform(10, 100000100, "m2");
-        setAndStartBots(bots2, BotTypeManager.BotType.HENESYS_BOT); // hene market
-        setAndStartBots(bots3, BotTypeManager.BotType.HENESYS_BOT);
+        if (SoloMaplingConfig.henesysMarketCrowdEnabled()) {
+            List<Integer> bots2 = spawnBotsOnMapOnPlatform(10, 100000100, "m1");
+            List<Integer> bots3 = spawnBotsOnMapOnPlatform(10, 100000100, "m2");
+            setAndStartBots(bots2, BotTypeManager.BotType.HENESYS_BOT); // hene market
+            setAndStartBots(bots3, BotTypeManager.BotType.HENESYS_BOT);
+        }
 
-        List<Integer> bots4 = spawnBotsOnMapOnPlatform(10, 100000200, "m1");
-        setAndStartBots(bots4, BotTypeManager.BotType.HENESYS_BOT); // hene park
+        if (SoloMaplingConfig.henesysParkCrowdEnabled()) {
+            List<Integer> bots4 = spawnBotsOnMapOnPlatform(10, 100000200, "m1");
+            setAndStartBots(bots4, BotTypeManager.BotType.HENESYS_BOT); // hene park
+        }
 
-        List<Integer> bots5 = spawnBotsOnMapOnPlatform(3, henesys_map, "m4_social"); // nana fairy area
-        List<Integer> bots6 = spawnBotsOnMapOnPlatform(3, henesys_map, "m5_social");
-        List<Integer> bots7 = spawnBotsOnMapOnPlatform(3, henesys_map, "m6_social");
+        if (SoloMaplingConfig.henesysCrowdEnabled()) {
+            List<Integer> bots5 = spawnBotsOnMapOnPlatform(3, henesys_map, "m4_social"); // nana fairy area
+            List<Integer> bots6 = spawnBotsOnMapOnPlatform(3, henesys_map, "m5_social");
+            List<Integer> bots7 = spawnBotsOnMapOnPlatform(3, henesys_map, "m6_social");
+        }
     }
 
     public static void spawnGachaBotsHenesys() {
+        if (!SoloMaplingConfig.gachaBotsEnabled()) {
+            debugprint("Gacha bots disabled by config.");
+            return;
+        }
         List<Integer> bots2 = spawnBotsOnMapOnPlatformInRadius(3, 100000100, "m1",  new Point(366,154), 250);
         setAndStartBots(bots2, BotTypeManager.BotType.GACHA_BOT); // hene market
     }
@@ -324,6 +364,10 @@ public class EnvironmentManager {
     }
 
     public static void spawnFillerBotsHenesys() {
+        if (!SoloMaplingConfig.henesysCrowdEnabled()) {
+            debugprint("Henesys filler bots disabled by config.");
+            return;
+        }
         int map = HENESYS;
         debugprint("Spawning filler bots in Henesys...");
 
@@ -344,6 +388,10 @@ public class EnvironmentManager {
     }
 
     public static void spawnFillerBotsHenesysMarket() {
+        if (!SoloMaplingConfig.henesysMarketCrowdEnabled()) {
+            debugprint("Henesys Market filler bots disabled by config.");
+            return;
+        }
         int map = HENESYS_MARKET;
         debugprint("Spawning filler bots in Henesys Market...");
 
@@ -363,6 +411,10 @@ public class EnvironmentManager {
     }
 
     public static void spawnFillerBotsHenesysPark() {
+        if (!SoloMaplingConfig.henesysParkCrowdEnabled()) {
+            debugprint("Henesys Park filler bots disabled by config.");
+            return;
+        }
         int map = HENESYS_PARK;
         debugprint("Spawning filler bots in Henesys Park...");
 
@@ -383,6 +435,10 @@ public class EnvironmentManager {
     }
 
     public static void spawnFillerBotsGameZone() {
+        if (!SoloMaplingConfig.henesysGameZoneCrowdEnabled()) {
+            debugprint("Henesys Game Zone filler bots disabled by config.");
+            return;
+        }
         int map = HENESYS_GAME_ZONE;
         debugprint("Spawning filler bots in Henesys Game Zone...");
 
@@ -397,6 +453,10 @@ public class EnvironmentManager {
     }
 
     public static void spawnFillerBotsPotionShop() {
+        if (!SoloMaplingConfig.henesysPotionShopCrowdEnabled()) {
+            debugprint("Henesys Potion Shop filler bots disabled by config.");
+            return;
+        }
         int map = HENESYS_POTION_SHOP;
         debugprint("Spawning filler bots in Henesys Potion Shop...");
 
@@ -410,6 +470,10 @@ public class EnvironmentManager {
     }
 
     public static void spawnDropGameBotPotionShop() {
+        if (!SoloMaplingConfig.potionShopDropGameEnabled()) {
+            debugprint("Potion Shop Drop Game disabled by config.");
+            return;
+        }
         debugprint("Spawning Drop Game Bot in Henesys Potion Shop...");
         Point spawn = new Point(45, 182);
         ExecutorServiceManager.runAsync(() -> {
@@ -426,6 +490,10 @@ public class EnvironmentManager {
     }
 
     public static void spawnDropGameSpectatorsPotionShop() {
+        if (!SoloMaplingConfig.potionShopDropGameEnabled()) {
+            debugprint("Potion Shop Drop Game spectators disabled by config.");
+            return;
+        }
         debugprint("Spawning Drop Game Spectator bots in Henesys Potion Shop...");
         Point[] spots = {
                 new Point(145, 145), new Point(76, 22), new Point(297, -28),
@@ -453,6 +521,10 @@ public class EnvironmentManager {
     }
 
     public static void spawnTutorialBot() {
+        if (!SoloMaplingConfig.tutorialBotEnabled()) {
+            debugprint("Tutorial bot disabled by config.");
+            return;
+        }
         debugprint("Spawning Tutorial Bot on Maple Island...");
         Point spawn = new Point(158, 485);
         Character fakechar = createBotWithRetry(spawn, MAPLE_ISLAND_TUTORIAL, 5);
@@ -465,6 +537,10 @@ public class EnvironmentManager {
     }
 
     public static void spawnJQBotsPetPark() {
+        if (!SoloMaplingConfig.petParkJqBotsEnabled()) {
+            debugprint("Pet Park JQ bots disabled by config.");
+            return;
+        }
         debugprint("Spawning JQ Bots in Henesys Pet Park...");
         List<Integer> botIds = spawnBotsOnMapOnPlatform(15, HENESYS_PET_PARK, "m1");
         setAndStartBots(botIds, BotTypeManager.BotType.HENESYS_JQ_BOT);
@@ -472,6 +548,10 @@ public class EnvironmentManager {
     }
 
     public static void spawnSocialBotsPetPark() {
+        if (!SoloMaplingConfig.petParkSocialBotsEnabled()) {
+            debugprint("Pet Park social bots disabled by config.");
+            return;
+        }
         int map = HENESYS_PET_PARK;
         debugprint("Spawning social bots in Henesys Pet Park...");
 
@@ -491,6 +571,10 @@ public class EnvironmentManager {
     }
 
     public static void spawnGameZoneHostBots() {
+        if (!SoloMaplingConfig.gameZoneHostBotsEnabled()) {
+            debugprint("Game Zone Host bots disabled by config.");
+            return;
+        }
         debugprint("Spawning Game Zone Host Bots...");
         Point[] spawns = { new Point(503, 250), new Point(716, 254) };
         List<Integer> botIds = new ArrayList<>();
@@ -511,6 +595,10 @@ public class EnvironmentManager {
     }
 
     public static void spawnBlackjackTables() {
+        if (!SoloMaplingConfig.blackjackTablesEnabled()) {
+            debugprint("Blackjack tables disabled by config.");
+            return;
+        }
         debugprint("Spawning Blackjack Tables in Game Zone...");
 
         // Table 1
@@ -609,6 +697,10 @@ public class EnvironmentManager {
     }
 
     public static void convertRandomFillersToScrollBots() {
+        if (!SoloMaplingConfig.scrollBotsEnabled()) {
+            debugprint("Scroll bot conversion disabled by config.");
+            return;
+        }
         debugprint("Converting random filler bots to Scroll Bots across Henesys maps...");
 
         int[] maps = { HENESYS, HENESYS_MARKET, HENESYS_PARK, HENESYS_POTION_SHOP, HENESYS_GAME_ZONE };
@@ -646,6 +738,10 @@ public class EnvironmentManager {
     }
 
     public static void spawnOPQBotsInLobby() {
+        if (!SoloMaplingConfig.opqLobbyBotsEnabled()) {
+            debugprint("OPQ lobby bots disabled by config.");
+            return;
+        }
         int totalBots = 10 + random.nextInt(6); // 10-15
         List<String> platforms = getMainPlatformIds(OPQ_LOBBY);
 
@@ -948,10 +1044,16 @@ public class EnvironmentManager {
 
     private static Character createBotWithRetry(Point spawn, int mapId, int maxRetries) {
         for (int attempt = 1; attempt <= maxRetries; attempt++) {
+            if (BotGeneration.environmentBotLimitReached()) {
+                return null;
+            }
             try {
                 Character fakechar = createBotPollReadiness(spawn, mapId);
                 if (fakechar != null) {
                     return fakechar;
+                }
+                if (BotGeneration.environmentBotLimitReached()) {
+                    return null;
                 }
                 // If null but no exception, brief pause before retry
                 if (attempt < maxRetries) {

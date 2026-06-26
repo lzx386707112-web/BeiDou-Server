@@ -6,6 +6,7 @@ import org.gms.client.command.Command;
 import soloMapling.ArtificialPlayer.BotHelpers;
 import soloMapling.ArtificialPlayer.BotClientHandler;
 import soloMapling.FreeMarket.ArtificialFreeMarket;
+import soloMapling.SoloMaplingConfig;
 import soloMapling.server.ExecutorServiceManager;
 
 //import static soloMapling.FreeMarket.ArtificialFreeMarket.populateFreeMarket;
@@ -31,6 +32,7 @@ public class ArtificialFreeMarketCommand extends Command {
         BotClientHandler.createBotClient(c);
         player = c.getPlayer();
         if (params.length == 0) {
+            if (!requireFmFillEnabled()) return;
             ExecutorServiceManager.getExecutorService().execute(() ->
                     populateFreeMarketSpot(c));
             return;
@@ -44,6 +46,7 @@ public class ArtificialFreeMarketCommand extends Command {
             return;
         }
         if (params.length == 1) {
+            if (!requireFmFillEnabled()) return;
             System.out.println(params[0]);
             ExecutorServiceManager.getExecutorService().execute(() ->
                     populateFreeMarketRegion(params[0]));
@@ -110,12 +113,21 @@ public class ArtificialFreeMarketCommand extends Command {
             case "Test":
                 break;
             case "botshop":
+                if (!requireFmFillEnabled()) return;
                 ArtificialFreeMarket.createBotShopAtLocation(c.getPlayer().getPosition(), c.getPlayer().getMapId());
                 break;
             default:
                 player.yellowMessage("Invalid command - handleStringIntCommand");
                 break;
         }
+    }
+
+    private static boolean requireFmFillEnabled() {
+        if (SoloMaplingConfig.fmRegionFillEnabled()) {
+            return true;
+        }
+        player.yellowMessage("自由市场区域填充已在后台参数中关闭。");
+        return false;
     }
 
 }

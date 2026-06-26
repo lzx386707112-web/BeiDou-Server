@@ -10,6 +10,7 @@ import soloMapling.ArtificialPlayer.BotTypeManager;
 import soloMapling.ArtificialPlayer.ConversationManager;
 import soloMapling.ArtificialPlayer.SocialHotPotatoManager;
 import soloMapling.Casino.CasinoChipConfig;
+import soloMapling.SoloMaplingConfig;
 import soloMapling.server.ExecutorServiceManager;
 import soloMapling.server.NpcSpawner;
 
@@ -107,19 +108,26 @@ public class EnvironmentCommand extends Command {
                 printHelp();
                 break;
             case "loadenv":
+                if (!requireFeature(SoloMaplingConfig.autoEnvironmentEnabled(), "完整 SoloMapling 大环境自动加载")) return;
                 environmentLoadStartup();
                 break;
             case "spawnfmbots":
+                if (!requireFeature(SoloMaplingConfig.fmBotsEnabled(), "FM 假人")) return;
                 spawnBotsInFMEntrance();
                 break;
             case "spawnmerchantbots":
             case "spawnmerchbots":
+                if (!requireFeature(SoloMaplingConfig.fmMerchantsEnabled(), "FM 商人")) return;
                 spawnMerchBotsInFMEntrance();
                 break;
             case "spawnhenesysbots":
+                if (!requireFeature(SoloMaplingConfig.henesysCrowdEnabled()
+                        || SoloMaplingConfig.henesysMarketCrowdEnabled()
+                        || SoloMaplingConfig.henesysParkCrowdEnabled(), "射手村人群")) return;
                 spawnHenesysBots();
                 break;
             case "spawngachabots":
+                if (!requireFeature(SoloMaplingConfig.gachaBotsEnabled(), "扭蛋假人")) return;
                 spawnGachaBotsHenesys();
                 break;
             case "getmap":
@@ -148,26 +156,31 @@ public class EnvironmentCommand extends Command {
                 System.out.println(getMainPlatformIds((c.getPlayer().getMapId())));
                 break;
             case "spawnhenefillers":
+                if (!requireFeature(SoloMaplingConfig.henesysCrowdEnabled(), "射手村人群")) return;
                 player.yellowMessage("Spawning Henesys filler bots...");
                 spawnFillerBotsHenesys();
                 player.yellowMessage("Henesys filler bots done.");
                 break;
             case "spawnmarketfillers":
+                if (!requireFeature(SoloMaplingConfig.henesysMarketCrowdEnabled(), "射手村市场人群")) return;
                 player.yellowMessage("Spawning Henesys Market filler bots...");
                 spawnFillerBotsHenesysMarket();
                 player.yellowMessage("Henesys Market filler bots done.");
                 break;
             case "spawnparkfillers":
+                if (!requireFeature(SoloMaplingConfig.henesysParkCrowdEnabled(), "射手村公园人群")) return;
                 player.yellowMessage("Spawning Henesys Park filler bots...");
                 spawnFillerBotsHenesysPark();
                 player.yellowMessage("Henesys Park filler bots done.");
                 break;
             case "spawngamezonefillers":
+                if (!requireFeature(SoloMaplingConfig.henesysGameZoneCrowdEnabled(), "游戏区人群")) return;
                 player.yellowMessage("Spawning Game Zone filler bots...");
                 spawnFillerBotsGameZone();
                 player.yellowMessage("Game Zone filler bots done.");
                 break;
             case "spawnpotshopfillers":
+                if (!requireFeature(SoloMaplingConfig.henesysPotionShopCrowdEnabled(), "药店人群")) return;
                 player.yellowMessage("Spawning Potion Shop filler bots...");
                 spawnFillerBotsPotionShop();
                 player.yellowMessage("Potion Shop filler bots done.");
@@ -182,26 +195,31 @@ public class EnvironmentCommand extends Command {
                 player.yellowMessage("All filler bots done.");
                 break;
             case "convertscrollbots":
+                if (!requireFeature(SoloMaplingConfig.scrollBotsEnabled(), "卷轴假人转换")) return;
                 player.yellowMessage("Converting random fillers to Scroll Bots...");
                 convertRandomFillersToScrollBots();
                 player.yellowMessage("Scroll Bot conversion done.");
                 break;
             case "spawnopqbots":
+                if (!requireFeature(SoloMaplingConfig.opqLobbyBotsEnabled(), "OPQ lobby 假人")) return;
                 player.yellowMessage("Spawning OPQ bots in lobby...");
                 spawnOPQBotsInLobby();
                 player.yellowMessage("OPQ lobby bots done.");
                 break;
             case "spawngzhbots":
+                if (!requireFeature(SoloMaplingConfig.gameZoneHostBotsEnabled(), "游戏区主持假人")) return;
                 player.yellowMessage("Spawning Game Zone Host Bots...");
                 spawnGameZoneHostBots();
                 player.yellowMessage("Game Zone Host Bots done.");
                 break;
             case "spawnbjtables":
+                if (!requireFeature(SoloMaplingConfig.blackjackTablesEnabled(), "21点桌")) return;
                 player.yellowMessage("Spawning Blackjack Tables...");
                 spawnBlackjackTables();
                 player.yellowMessage("Blackjack Tables done.");
                 break;
             case "starthotpotato":
+                if (!requireFeature(SoloMaplingConfig.hotPotatoEnabled(), "Hot Potato 社交系统")) return;
                 SocialHotPotatoManager.getInstance().start();
                 player.yellowMessage("Social Hot Potato started.");
                 break;
@@ -210,6 +228,7 @@ public class EnvironmentCommand extends Command {
                 player.yellowMessage("Social Hot Potato stopped.");
                 break;
             case "startconvo":
+                if (!requireFeature(SoloMaplingConfig.conversationEnabled(), "对话系统")) return;
                 ConversationManager.getInstance().start();
                 player.yellowMessage("Conversation Manager started.");
                 break;
@@ -218,12 +237,15 @@ public class EnvironmentCommand extends Command {
                 player.yellowMessage("Conversation Manager stopped.");
                 break;
             case "spawncasinonpc":
+                if (!requireFeature(SoloMaplingConfig.casinoNpcEnabled(), "赌场 NPC")) return;
                 spawnCasinoNpc(c);
                 break;
             case "spawnrpsnpc":
+                if (!requireFeature(SoloMaplingConfig.rpsNpcEnabled(), "猜拳 NPC")) return;
                 NpcSpawner.spawnNpcAtPlayer(c.getPlayer(), 9000019);
                 break;
             case "spawncasinonpcs":
+                if (!requireFeature(SoloMaplingConfig.casinoNpcEnabled() || SoloMaplingConfig.rpsNpcEnabled(), "赌场/猜拳 NPC")) return;
                 spawnCasinoNpcs();
                 player.yellowMessage("Casino NPCs spawned on map 100000203.");
                 break;
@@ -231,6 +253,14 @@ public class EnvironmentCommand extends Command {
                 player.yellowMessage("Invalid command - Direct Command");
                 break;
         }
+    }
+
+    private static boolean requireFeature(boolean enabled, String featureName) {
+        if (enabled) {
+            return true;
+        }
+        player.yellowMessage(featureName + " 已在后台参数中关闭。");
+        return false;
     }
 
     public static void handleStringIntIntCommand(String input, int input2, int input3, Client c) {

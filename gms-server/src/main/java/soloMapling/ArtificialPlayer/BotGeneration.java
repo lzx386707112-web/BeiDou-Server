@@ -5,18 +5,22 @@ import org.gms.client.Client;
 import org.gms.client.Job;
 import org.gms.server.maps.MapleMap;
 import soloMapling.ArtificialPlayer.BotMessagingSystem.CharacterStorage;
+import soloMapling.SoloMaplingConfig;
 import soloMapling.server.SoloMaplingConstants;
 import soloMapling.server.SoloMaplingUtilities;
 
 import java.awt.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static soloMapling.ArtificialPlayer.BotClientHandler.getBotClient;
 import static soloMapling.ArtificialPlayer.BotCommandsPack.WarpCommands.botEnterPortalDropDown;
 import static soloMapling.ArtificialPlayer.BotDecoratorSystem.BotDecorate.setBotVariables;
+import static soloMapling.ArtificialPlayer.BotCustomization.ClearBotEquips;
 import static soloMapling.ArtificialPlayer.BotMovementSystem.MovementCommands.microTurnAroundToLeft;
 import static soloMapling.DebugUtilities.debugprint;
+import static soloMapling.FreeMarket.FMShopDescGen.getRandomCharacterIGN;
 import static soloMapling.server.ExecutorServiceManager.runAsync;
 import static soloMapling.server.SoloMaplingUtilities.getChr;
 import static soloMapling.server.SoloMaplingUtilities.channel;
@@ -30,6 +34,8 @@ public class BotGeneration {
     // Atomic because bots spawn in parallel - a plain int would let two threads
     // grab the same id, silently overwriting one bot with another in storage.
     private static final AtomicInteger currentBotCount = new AtomicInteger(100);
+    private static final AtomicBoolean environmentBotLimitActive = new AtomicBoolean(false);
+    private static final AtomicInteger environmentBotLimitStartCount = new AtomicInteger(0);
     private static final String[] CHINESE_NAME_PREFIXES = {
             "小", "阿", "云", "星", "枫", "南", "北", "青", "白", "洛",
             "夏", "秋", "雨", "风", "月", "川", "竹", "桃", "一", "七"
@@ -53,6 +59,22 @@ public class BotGeneration {
         return currentBotCount.get() - 100;
     }
 
+    public static void enableEnvironmentBotLimit() {
+        environmentBotLimitStartCount.compareAndSet(0, getBotsCreatedCount());
+        environmentBotLimitActive.set(true);
+        System.out.println("[BotGeneration] Environment bot limit active. max="
+                + SoloMaplingConfig.environmentBotMax());
+    }
+
+    public static boolean environmentBotLimitReached() {
+        return environmentBotLimitActive.get()
+                && getEnvironmentLimitedBotCount() >= SoloMaplingConfig.environmentBotMax();
+    }
+
+    private static int getEnvironmentLimitedBotCount() {
+        return Math.max(0, BotGeneration.getBotsCreatedCount() - environmentBotLimitStartCount.get());
+    }
+
 
     public static Character getConsoleBot() {
         Character consoleBot = getChr(999);
@@ -70,9 +92,17 @@ public class BotGeneration {
     }
 
     public static int createBot(Point pos, MapleMap map) {
+        int botId = reserveBotId();
+        if (botId < 0) {
+            debugprint("Environment bot limit reached; skipping bot creation.");
+            return -1;
+        }
+
         Character bot = loadBotTemplate();
-        int botId = SoloMaplingConstants.GameConstants.BOT_BASE_ID + currentBotCount.getAndIncrement();
         bot = setBotStats(bot, botId); // Bot onDemandBot
+        if (SoloMaplingConfig.normalEquipsEnabled()) {
+            ClearBotEquips(bot);
+        }
         addBotToServer(bot);
         placeBotOnMap(bot, pos, map);
         // Decorate before the drop-down plays so the bot arrives fully dressed
@@ -84,6 +114,19 @@ public class BotGeneration {
         Character finalBot = bot;
         runAsync(() -> playSpawnChoreography(finalBot));
         return botId;
+    }
+
+    private static int reserveBotId() {
+        while (true) {
+            int current = currentBotCount.get();
+            int limitedCreated = Math.max(0, current - 100 - environmentBotLimitStartCount.get());
+            if (environmentBotLimitActive.get() && limitedCreated >= SoloMaplingConfig.environmentBotMax()) {
+                return -1;
+            }
+            if (currentBotCount.compareAndSet(current, current + 1)) {
+                return SoloMaplingConstants.GameConstants.BOT_BASE_ID + current;
+            }
+        }
     }
 
     private static Character loadBotTemplate() {
@@ -161,7 +204,7 @@ public class BotGeneration {
     private static Character setBotStats(Character baseChr, int botId) {
         Character onDemandBot = baseChr; // Character.getDefault(c)
         attachMockClient(onDemandBot);
-        onDemandBot.setName(getRandomChineseBotName());
+        onDemandBot.setName(SoloMaplingConfig.randomChineseNameEnabled() ? getRandomChineseBotName() : getRandomCharacterIGN());
         onDemandBot.setID(botId);
         onDemandBot.setFame(botId); // debug purposes
         return onDemandBot;
@@ -218,6 +261,9 @@ public class BotGeneration {
      */
     public static Character createBotPollReadiness(Point position, int mapId) {
         int botId = BotGeneration.createBot(position, getMapleMapById(mapId));
+        if (botId < 0) {
+            return null;
+        }
 
         for (int i = 0; i < 30; i++) { // 30 * 100ms = 3000ms max
             Character fakechar = BotHelpers.getCharFromChannelStorage(botId);

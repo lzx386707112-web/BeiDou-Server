@@ -7,6 +7,7 @@ import org.gms.net.server.Server;
 import org.gms.server.maps.HiredMerchant;
 import org.gms.server.maps.PlayerShop;
 import org.gms.server.maps.PlayerShopItem;
+import soloMapling.SoloMaplingConfig;
 import soloMapling.server.ExecutorServiceManager;
 import org.gms.util.PacketCreator;
 
@@ -58,10 +59,18 @@ public class ArtificialFreeMarket {
     public static FMShopInfoManager fmInfo = new FMShopInfoManager();
 
     public static void populateFreeMarketSpot(Client c) {
+        if (!SoloMaplingConfig.fmRegionFillEnabled()) {
+            debugprint("Free Market spot fill disabled by config.");
+            return;
+        }
         spawnHiredMerchantStore(c.getPlayer().getMapId(), c.getPlayer().getPosition());
     }
 
     public static void populateFreeMarketFull() {
+        if (!SoloMaplingConfig.fmRegionFillEnabled()) {
+            debugprint("Free Market full fill disabled by config.");
+            return;
+        }
         List<String> regions = List.of("henesys", "ludi", "perion", "elnath");
         for (String region : regions) {
             populateFreeMarketRegion(region);
@@ -70,6 +79,10 @@ public class ArtificialFreeMarket {
 
 
     public static void populateFreeMarketRegion(String region) {
+        if (!SoloMaplingConfig.fmRegionFillEnabled()) {
+            debugprint("Free Market region fill disabled by config: " + region);
+            return;
+        }
         // Fire every room in the region in parallel. Each room's internal work is
         // already offloaded to executors, so this just kicks them off concurrently
         // instead of sleeping 5s between maps.
@@ -79,6 +92,10 @@ public class ArtificialFreeMarket {
     }
 
     public static void populateFreeMarketRoom(int mapId) {
+        if (!SoloMaplingConfig.fmRegionFillEnabled()) {
+            debugprint("Free Market room fill disabled by config: " + mapId);
+            return;
+        }
         String region = getRegionByMapId(mapId);
         debugprint("Populating room: ", mapId);
 
@@ -437,7 +454,19 @@ public class ArtificialFreeMarket {
 //    private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
     public static void createBotShopAtLocation(Point position, int mapId) {
+        if (!SoloMaplingConfig.fmRegionFillEnabled()) {
+            debugprint("Free Market bot shop disabled by config: " + mapId);
+            return;
+        }
+        if (BotGeneration.environmentBotLimitReached()) {
+            debugprint("Free Market bot shop skipped; environment bot limit reached.");
+            return;
+        }
         getExecutorService().submit(() -> {
+            if (BotGeneration.environmentBotLimitReached()) {
+                debugprint("Free Market bot shop skipped; environment bot limit reached.");
+                return;
+            }
             debugprint("Making shop at: " + mapId + ", " + position);
 
 //            int botId = BotGeneration.createBot(position, getMapleMapById(mapId));

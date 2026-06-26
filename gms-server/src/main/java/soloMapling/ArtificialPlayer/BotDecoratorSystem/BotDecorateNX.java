@@ -3,6 +3,7 @@ package soloMapling.ArtificialPlayer.BotDecoratorSystem;
 import org.gms.client.Character;
 import soloMapling.ArtificialPlayer.BotCustomization;
 import soloMapling.ArtificialPlayer.BotTier;
+import soloMapling.SoloMaplingConfig;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -17,14 +18,13 @@ import java.util.concurrent.ThreadLocalRandom;
  * and layer visually on top of whatever the bot is already wearing.
  *
  * Decision flow per bot:
- *   1. {@link #NX_BASE_CHANCE} flat gate - does this bot have NX at all?
- *   2. Roll intensity by tier (S=[3,8] ... D=[1,1]).
- *   3. Weighted draw without replacement of `intensity` slots from the main
+ *   1. Equip mandatory NX clothing and weapon so every enabled bot visibly
+ *      wears cash cosmetics.
+ *   2. Roll extra intensity by tier (S=[2,5] ... D=[1,1]).
+ *   3. Weighted draw without replacement of `intensity` extra slots from the main
  *      slot pool. Higher-tier slots (weapon / cap / clothing) are drawn first
  *      statistically so a bot with only 1-2 pieces still looks "real".
- *   4. Equip each picked slot, with two special cases:
- *        - WEAPON has a {@link #WEAPON_OPT_OUT_CHANCE} skip ("proud of my
- *          real weapon" players).
+ *   4. Equip each picked slot, with one special case:
  *        - CLOTHING rolls overall vs top+bottom with the same either/or
  *          fallback as {@link QuickEquip}.
  *   5. Separately, a small tier-scaled chance to wear a ring (not part of the
@@ -35,12 +35,6 @@ import java.util.concurrent.ThreadLocalRandom;
 public class BotDecorateNX {
 
     public static boolean ENABLED = true;
-
-    /** Flat chance per bot to even consider NX. Independent of tier. */
-    private static final double NX_BASE_CHANCE = 0.20;
-
-    /** Chance to skip the NX weapon even if the weapon slot was picked. */
-    private static final double WEAPON_OPT_OUT_CHANCE = 0.40;
 
     /** Within the clothing branch, preference for overall over top+bottom. */
     private static final double OVERALL_PREFERENCE = 0.75;
@@ -97,12 +91,10 @@ public class BotDecorateNX {
      */
     public static void apply(Character bot) {
         if (!ENABLED) return;
+        if (!SoloMaplingConfig.nxEquipsEnabled()) return;
         if (!NXItemPool.isLoaded()) {
             NXItemPool.load();
         }
-
-        ThreadLocalRandom rng = ThreadLocalRandom.current();
-        if (rng.nextDouble() >= NX_BASE_CHANCE) return;
 
         applyInternal(bot);
     }
@@ -122,6 +114,9 @@ public class BotDecorateNX {
         ThreadLocalRandom rng = ThreadLocalRandom.current();
         BotTier tier = bot.getTier();
         int gender = bot.getGender();
+
+        equipFromCategory(bot, "weapons", gender);
+        equipClothing(bot, gender, rng);
 
         int intensity = rollIntensity(tier, rng);
         List<NxSlot> slots = pickSlots(intensity, rng);
@@ -164,8 +159,6 @@ public class BotDecorateNX {
     private static void equipSlot(Character bot, NxSlot slot, int gender, ThreadLocalRandom rng) {
         switch (slot) {
             case WEAPON:
-                // Some players prefer their real weapon over a cosmetic override.
-                if (rng.nextDouble() < WEAPON_OPT_OUT_CHANCE) return;
                 equipFromCategory(bot, "weapons", gender);
                 break;
             case CAP:

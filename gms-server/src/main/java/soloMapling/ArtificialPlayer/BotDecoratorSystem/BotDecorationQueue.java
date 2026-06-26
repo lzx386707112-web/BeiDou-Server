@@ -2,6 +2,7 @@ package soloMapling.ArtificialPlayer.BotDecoratorSystem;
 
 import org.gms.client.Character;
 import soloMapling.ArtificialPlayer.BotHelpers;
+import soloMapling.SoloMaplingConfig;
 
 import java.util.Map;
 import java.util.concurrent.*;
@@ -44,6 +45,7 @@ public class BotDecorationQueue {
      */
     public static void addBot(String category, int botId) {
         if (!ENABLED) return;
+        if (!SoloMaplingConfig.deferredDecorationEnabled()) return;
         queues.computeIfAbsent(category, k -> new ConcurrentLinkedQueue<>()).add(botId);
     }
 
@@ -53,6 +55,7 @@ public class BotDecorationQueue {
      */
     public static void start() {
         if (!ENABLED) return;
+        if (!SoloMaplingConfig.deferredDecorationEnabled()) return;
         if (scheduler != null && !scheduler.isShutdown()) return;
 
         scheduler = Executors.newSingleThreadScheduledExecutor(r -> {

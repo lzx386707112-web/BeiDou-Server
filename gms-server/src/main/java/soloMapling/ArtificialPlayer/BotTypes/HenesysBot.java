@@ -1,8 +1,8 @@
 package soloMapling.ArtificialPlayer.BotTypes;
 
 import org.gms.client.Character;
-import org.gms.config.GameConfig;
 import org.gms.server.maps.MapleMap;
+import soloMapling.SoloMaplingConfig;
 import soloMapling.ArtificialPlayer.BotCommandsPack.SocialCommands;
 import soloMapling.ArtificialPlayer.BotMessagingSystem.ChatMessage;
 import soloMapling.ArtificialPlayer.BotMessagingSystem.MessageQueue;
@@ -177,7 +177,7 @@ public class HenesysBot extends BotSM {
     }
 
     private boolean isMapRoamingEnabled() {
-        return GameConfig.getServerBoolean("solo_mapling_henesys_bots_change_maps");
+        return SoloMaplingConfig.henesysBotsChangeMapsEnabled();
     }
 
     /**

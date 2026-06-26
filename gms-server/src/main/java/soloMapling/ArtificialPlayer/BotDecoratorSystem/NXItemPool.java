@@ -4,7 +4,11 @@ import com.esotericsoftware.yamlbeans.YamlReader;
 import org.gms.constants.inventory.EquipType;
 import soloMapling.itemPool.EquipMetadataCache;
 
+import java.io.File;
 import java.io.FileReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -21,6 +25,8 @@ public class NXItemPool {
 
     private static final String YAML_PATH =
             "src/main/java/soloMapling/ArtificialPlayer/BotDecoratorSystem/NXItemPool.yaml";
+    private static final String YAML_RESOURCE =
+            "soloMapling/ArtificialPlayer/BotDecoratorSystem/NXItemPool.yaml";
 
     public static final int GENDER_MALE = 0;
     public static final int GENDER_FEMALE = 1;
@@ -69,6 +75,31 @@ public class NXItemPool {
             })
     );
 
+    private static final Map<String, int[]> FALLBACK_ITEMS = Map.ofEntries(
+            Map.entry("weapons", new int[]{
+                    1702022, 1702036, 1702181, 1702220, 1702340, 1702585,
+                    1702631, 1702750, 1702787, 1702988
+            }),
+            Map.entry("overalls", new int[]{
+                    1052248, 1052512, 1052923, 1053156, 1053552, 1053625
+            }),
+            Map.entry("tops", new int[]{
+                    1042270, 1042264, 1042099, 1042072, 1042114, 1042339
+            }),
+            Map.entry("bottoms", new int[]{
+                    1062219, 1062231, 1062033, 1062147, 1062184, 1062281
+            }),
+            Map.entry("shoes", new int[]{
+                    1072010, 1072153, 1072337, 1072344, 1072455
+            }),
+            Map.entry("gloves", new int[]{
+                    1082145, 1082173, 1082232, 1082276
+            }),
+            Map.entry("capes", new int[]{
+                    1102041, 1102084, 1102140, 1102172
+            })
+    );
+
     private static final Map<String, List<PoolItem>> pools = new HashMap<>();
     private static boolean loaded = false;
 
@@ -77,7 +108,7 @@ public class NXItemPool {
         if (loaded) return;
 
         try {
-            YamlReader reader = new YamlReader(new FileReader(YAML_PATH));
+            YamlReader reader = new YamlReader(openYamlReader());
             Map<String, Object> root = (Map<String, Object>) reader.read();
             if (root == null) root = Collections.emptyMap();
 
@@ -100,6 +131,9 @@ public class NXItemPool {
 
             // Auto-populate empty categories from EquipMetadataCache
             int cacheCount = 0;
+            if (hasEmptyAutoCategory() && !EquipMetadataCache.isInitialized()) {
+                EquipMetadataCache.initialize();
+            }
             if (EquipMetadataCache.isInitialized()) {
                 EquipMetadataCache cache = EquipMetadataCache.get();
                 for (Map.Entry<String, EquipType[]> mapping : CATEGORY_TO_EQUIP_TYPES.entrySet()) {
@@ -120,13 +154,59 @@ public class NXItemPool {
                         + "empty categories will have no NX items");
             }
 
+            int fallbackCount = addFallbackItemsForEmptyCategories();
+
             loaded = true;
             System.out.println("[NXItemPool] Loaded " + itemCount + " curated + "
-                    + cacheCount + " cache-auto items across " + pools.size() + " categories");
+                    + cacheCount + " cache-auto + " + fallbackCount
+                    + " fallback items across " + pools.size() + " categories");
         } catch (Exception e) {
             System.err.println("[NXItemPool] Failed to load YAML: " + e.getMessage());
             e.printStackTrace();
         }
+    }
+
+    private static boolean hasEmptyAutoCategory() {
+        for (String category : CATEGORY_TO_EQUIP_TYPES.keySet()) {
+            List<PoolItem> existing = pools.get(category);
+            if (existing == null || existing.isEmpty()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static int addFallbackItemsForEmptyCategories() {
+        int count = 0;
+        for (Map.Entry<String, int[]> entry : FALLBACK_ITEMS.entrySet()) {
+            String category = entry.getKey();
+            List<PoolItem> existing = pools.get(category);
+            if (existing != null && !existing.isEmpty()) {
+                continue;
+            }
+
+            List<PoolItem> fallback = new ArrayList<>();
+            for (int itemId : entry.getValue()) {
+                fallback.add(new PoolItem(itemId, GENDER_UNISEX));
+            }
+            pools.put(category, fallback);
+            count += fallback.size();
+            System.out.println("[NXItemPool]   Fallback-populated '" + category
+                    + "' with " + fallback.size() + " built-in items");
+        }
+        return count;
+    }
+
+    private static java.io.Reader openYamlReader() throws Exception {
+        File file = new File(YAML_PATH);
+        if (file.exists()) {
+            return new FileReader(file);
+        }
+        InputStream input = NXItemPool.class.getClassLoader().getResourceAsStream(YAML_RESOURCE);
+        if (input == null) {
+            throw new IllegalStateException("Cannot find " + YAML_RESOURCE + " on classpath");
+        }
+        return new InputStreamReader(input, StandardCharsets.UTF_8);
     }
 
     /**
@@ -163,7 +243,8 @@ public class NXItemPool {
     private static int deriveGender(int itemId, String category, Integer override) {
         if (override != null) return override;
         if (BODY_SLOT_CATEGORIES.contains(category)) {
-            return (itemId / 1000) % 10;
+            int digit = (itemId / 1000) % 10;
+            return (digit == GENDER_MALE || digit == GENDER_FEMALE) ? digit : GENDER_UNISEX;
         }
         return GENDER_UNISEX;
     }
