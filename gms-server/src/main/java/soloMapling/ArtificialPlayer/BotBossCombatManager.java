@@ -4,6 +4,8 @@ import org.gms.client.Character;
 import org.gms.server.life.Monster;
 import org.gms.server.maps.MapleMap;
 import org.gms.util.PacketCreator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import soloMapling.ArtificialPlayer.BotMessagingSystem.CharacterStorage;
 import soloMapling.server.ExecutorServiceManager;
 
@@ -29,6 +31,7 @@ import static soloMapling.ArtificialPlayer.BotMovementSystem.MovementCommands.is
 import static soloMapling.ArtificialPlayer.BotMovementSystem.MovementCommands.pathFinderBeta;
 
 public final class BotBossCombatManager {
+    private static final Logger log = LoggerFactory.getLogger(BotBossCombatManager.class);
     private static final int FM_ENTRANCE = 910000000;
     private static final int MAX_ATTACKERS = 10;
     private static final long ATTACK_INTERVAL_MS = 1200L;
@@ -76,13 +79,26 @@ public final class BotBossCombatManager {
         moveAttackersNearBoss(attackers, boss);
         BotChatbubble(attackers.get(ThreadLocalRandom.current().nextInt(attackers.size())), randomStartLine());
         ScheduledFuture<?> future = ExecutorServiceManager.getScheduledExecutorService().scheduleWithFixedDelay(
-                () -> attackTick(player, map, boss),
+                () -> safeAttackTick(player, map, boss),
                 800L,
                 ATTACK_INTERVAL_MS,
                 TimeUnit.MILLISECONDS);
         ACTIVE_BY_MAP.put(map.getId(), future);
         player.yellowMessage("假人已开始集火Boss。");
         return true;
+    }
+
+    private static void safeAttackTick(Character owner, MapleMap map, Monster boss) {
+        try {
+            attackTick(owner, map, boss);
+        } catch (Exception e) {
+            if (map != null) {
+                log.warn("假人Boss战攻击循环异常，保留任务继续执行: mapId={}, bossId={}",
+                        map.getId(), boss != null ? boss.getId() : 0, e);
+            } else {
+                log.warn("假人Boss战攻击循环异常，保留任务继续执行", e);
+            }
+        }
     }
 
     private static boolean isTriggerPhrase(String message) {
@@ -147,6 +163,10 @@ public final class BotBossCombatManager {
         int damage = calculateDamage(boss);
         int index = 0;
         for (Character bot : attackers) {
+            if (shouldStop(map, boss)) {
+                stop(map.getId());
+                return;
+            }
             if (bot.getChair() > 0) {
                 botCancelChair(bot);
             }
@@ -218,6 +238,9 @@ public final class BotBossCombatManager {
     }
 
     private static void applyBotAttack(Character damageOwner, Character bot, Monster boss, int damage) {
+        if (damageOwner == null || damageOwner.getMap() == null || bot == null || boss == null || !boss.isAlive()) {
+            return;
+        }
         int visibleDamage = (int) Math.max(1L, Math.min((long) damage, boss.getHp()));
         boolean skillPacketSent = false;
         try {

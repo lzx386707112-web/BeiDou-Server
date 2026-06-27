@@ -9,12 +9,14 @@ import org.gms.constants.skills.*;
 import org.gms.server.ItemInformationProvider;
 import org.gms.server.life.Monster;
 import soloMapling.ArtificialPlayer.BotAttackSystem.BotAttackData;
+import soloMapling.server.ExecutorServiceManager;
 import org.gms.util.PacketCreator;
 
 import java.util.Collections;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import static soloMapling.ArtificialPlayer.BotMovementSystem.MovementCommands.facingLeft;
 
@@ -73,6 +75,7 @@ public final class BotAttack {
                 splitDamage(damage, skill.hitCount())
         );
         broadcastAttack(chr, skill, targetDamage);
+        broadcastSkillDamageNumbers(chr, boss, targetDamage.get(boss.getObjectId()));
         return true;
     }
 
@@ -92,6 +95,31 @@ public final class BotAttack {
         byte direction = (byte) (facingLeft(chr) ? 0 : 1);
         chr.getMap().broadcastMessage(chr,
                 PacketCreator.showBuffEffect(chr.getId(), skill.skillId(), skill.skillLevel(), 1, direction), false);
+    }
+
+    private static void broadcastSkillDamageNumbers(Character chr, Monster boss, List<Integer> damageLines) {
+        if (chr == null || chr.getMap() == null || boss == null || damageLines == null || damageLines.isEmpty()) {
+            return;
+        }
+        for (int i = 0; i < damageLines.size(); i++) {
+            Integer damageLine = damageLines.get(i);
+            if (damageLine != null && damageLine > 0) {
+                if (i == 0) {
+                    chr.getMap().broadcastMessage(PacketCreator.damageMonster(boss.getObjectId(), damageLine));
+                } else {
+                    int delayedDamage = damageLine;
+                    ExecutorServiceManager.getScheduledExecutorService().schedule(
+                            () -> {
+                                if (chr.getMap() != null && boss.isAlive()) {
+                                    chr.getMap().broadcastMessage(PacketCreator.damageMonster(boss.getObjectId(), delayedDamage));
+                                }
+                            },
+                            i * 80L,
+                            TimeUnit.MILLISECONDS
+                    );
+                }
+            }
+        }
     }
 
     private static void broadcastCloseRangeAttack(Character chr, int skill, int skillLevel, Map<Integer, List<Integer>> targets) {
@@ -277,10 +305,10 @@ public final class BotAttack {
             return new BossAttackSkill(job == Job.THUNDERBREAKER2 ? ThunderBreaker.ENERGY_BLAST : Brawler.DOUBLE_UPPERCUT, 30, 1, PacketKind.CLOSE);
         }
         if (job == Job.MARAUDER || job == Job.THUNDERBREAKER3) {
-            return new BossAttackSkill(job == Job.THUNDERBREAKER3 ? ThunderBreaker.SHARK_WAVE : Marauder.ENERGY_BLAST, 30, 1, PacketKind.CLOSE);
+            return new BossAttackSkill(job == Job.THUNDERBREAKER3 ? ThunderBreaker.BARRAGE : Marauder.ENERGY_BLAST, 30, job == Job.THUNDERBREAKER3 ? 6 : 1, PacketKind.CLOSE);
         }
         if (job.isA(Job.BRAWLER) || job.isA(Job.THUNDERBREAKER1)) {
-            return new BossAttackSkill(job.isA(Job.THUNDERBREAKER1) ? ThunderBreaker.SHARK_WAVE : Buccaneer.DRAGON_STRIKE, 30, 1, PacketKind.CLOSE);
+            return new BossAttackSkill(job.isA(Job.THUNDERBREAKER1) ? ThunderBreaker.BARRAGE : Buccaneer.BARRAGE, 30, 6, PacketKind.CLOSE);
         }
         if (job == Job.GUNSLINGER) {
             return new BossAttackSkill(Pirate.DOUBLE_SHOT, 20, 2, PacketKind.RANGED);
@@ -289,7 +317,7 @@ public final class BotAttack {
             return new BossAttackSkill(Outlaw.BURST_FIRE, 30, 3, PacketKind.RANGED);
         }
         if (job.isA(Job.GUNSLINGER)) {
-            return new BossAttackSkill(Corsair.RAPID_FIRE, 30, 1, PacketKind.RANGED);
+            return new BossAttackSkill(Corsair.BATTLESHIP_CANNON, 30, 4, PacketKind.RANGED);
         }
         return new BossAttackSkill(0, 0, 1, PacketKind.CLOSE);
     }

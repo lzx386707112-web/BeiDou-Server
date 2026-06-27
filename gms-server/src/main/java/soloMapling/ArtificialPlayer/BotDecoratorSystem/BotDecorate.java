@@ -132,8 +132,8 @@ public class BotDecorate {
             return 0; // BEGINNER
         }
 
-        // Randomly select a base class (Warrior, Magician, Bowman, or Thief)
-        int baseClass = (int) (Math.random() * 4) + 1;
+        // Randomly select a base class (Warrior, Magician, Bowman, Thief, or Pirate)
+        int baseClass = (int) (Math.random() * 5) + 1;
 
         // First job advancement (levels 10-29)
         if (level < 30) {
@@ -146,6 +146,8 @@ public class BotDecorate {
                     return 300; // BOWMAN
                 case 4:
                     return 400; // THIEF
+                case 5:
+                    return 500; // PIRATE
                 default:
                     return 0;  // BEGINNER (fallback)
             }
@@ -178,6 +180,8 @@ public class BotDecorate {
                     return (Math.random() < 0.5) ? 310 : 320; // HUNTER or CROSSBOWMAN
                 case 4: // THIEF paths
                     return (Math.random() < 0.5) ? 410 : 420; // ASSASSIN or BANDIT
+                case 5: // PIRATE paths
+                    return (Math.random() < 0.5) ? 510 : 520; // BRAWLER or GUNSLINGER
                 default:
                     return 0; // BEGINNER (fallback)
             }
@@ -210,6 +214,8 @@ public class BotDecorate {
                     return (Math.random() < 0.5) ? 311 : 321; // RANGER or SNIPER
                 case 4: // THIEF paths
                     return (Math.random() < 0.5) ? 411 : 421; // HERMIT or CHIEFBANDIT
+                case 5: // PIRATE paths
+                    return (Math.random() < 0.5) ? 511 : 521; // MARAUDER or OUTLAW
                 default:
                     return 0; // BEGINNER (fallback)
             }
@@ -241,6 +247,8 @@ public class BotDecorate {
                 return (Math.random() < 0.5) ? 312 : 322; // BOWMASTER or MARKSMAN
             case 4: // THIEF paths
                 return (Math.random() < 0.5) ? 412 : 422; // NIGHTLORD or SHADOWER
+            case 5: // PIRATE paths
+                return (Math.random() < 0.5) ? 512 : 522; // BUCCANEER or CORSAIR
             default:
                 return 0; // BEGINNER (fallback)
         }
