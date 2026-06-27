@@ -991,4 +991,3 @@ function 获取更换职业次数() {
 function 保存更换职业次数() {
     cm.saveOrUpdateAccountExtendValue("更换职业次数", String(获取更换职业次数() + 1));
 }
-

@@ -35,4 +35,32 @@ public class Bishop {
     public static final int ANGEL_RAY = 2321007;
     public static final int GENESIS = 2321008;
     public static final int HEROS_WILL = 2321009;
+    public static final int DRAGON_2217_SWIFT = 2321010;
+    public static final int DRAGON_2217_DIVE = 2321011;
+    public static final int DRAGON_2217_BREATH = 2321012;
+    public static final int DRAGON_2218_THUNDER_SWIFT = 2321013;
+    public static final int DRAGON_2218_EARTH_DIVE = 2321014;
+    public static final int DRAGON_2218_WIND_BREATH = 2321015;
+    public static final int DRAGON_2220_SWIFT = 2321016;
+    public static final int DRAGON_2220_DIVE = 2321017;
+    public static final int DRAGON_2220_BREATH = 2321018;
+    public static final int DRAGON_5TH_SWIFT = 2331010;
+    public static final int DRAGON_5TH_DIVE = 2331011;
+    public static final int DRAGON_5TH_BREATH = 2331012;
+    public static final int DRAGON_5TH_THUNDER_SWIFT = 2331013;
+    public static final int DRAGON_5TH_EARTH_DIVE = 2331014;
+    public static final int DRAGON_5TH_WIND_BREATH = 2331015;
+    public static final int DRAGON_5TH_6TH_SWIFT = 2331016;
+    public static final int DRAGON_5TH_6TH_DIVE = 2331017;
+    public static final int DRAGON_5TH_6TH_BREATH = 2331018;
+    public static final int NEW_SKILL_TEST = DRAGON_2217_SWIFT;
+
+    public static boolean isDragonCopySkill(int skill) {
+        return skill == DRAGON_2217_SWIFT || skill == DRAGON_5TH_SWIFT;
+    }
+
+    public static boolean isDragonManualAttackSkill(int skill) {
+        return (skill >= DRAGON_2217_DIVE && skill <= DRAGON_2220_BREATH)
+                || (skill >= DRAGON_5TH_DIVE && skill <= DRAGON_5TH_6TH_BREATH);
+    }
 }

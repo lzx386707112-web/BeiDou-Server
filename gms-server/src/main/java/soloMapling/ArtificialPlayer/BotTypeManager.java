@@ -150,7 +150,15 @@ public class BotTypeManager {
     }
 
     public static void manuallyStartBot(Character fakechar) {
+        if (fakechar == null) {
+            debugprint("Cannot start null bot character.");
+            return;
+        }
         BotSM bot = getBotById(fakechar.getId());
+        if (bot == null) {
+            debugprint(fmt("Cannot start bot {} because no BotSM is registered.", fakechar.getId()));
+            return;
+        }
         if (bot.getRunning()) {
             return;
         }
@@ -164,7 +172,15 @@ public class BotTypeManager {
     }
 
     public static void manuallyStopBot(Character fakechar) {
+        if (fakechar == null) {
+            debugprint("Cannot stop null bot character.");
+            return;
+        }
         BotSM bot = getBotById(fakechar.getId());
+        if (bot == null) {
+            debugprint(fmt("Cannot stop bot {} because no BotSM is registered.", fakechar.getId()));
+            return;
+        }
         bot.setRunning(false);
         bot.stopScheduledTask();
     }
@@ -242,8 +258,12 @@ public class BotTypeManager {
         for (Integer id : botIds) {
             Character fakechar = getValidBot(id);
             if (fakechar == null) continue;
-            botType.createAndSetBot(fakechar);
-            manuallyStartBot(fakechar);
+            try {
+                botType.createAndSetBot(fakechar);
+                manuallyStartBot(fakechar);
+            } catch (Exception e) {
+                debugprint(fmt("Failed to set/start bot {} as {}: {}", id, botType, e.getMessage()));
+            }
         }
     }
 

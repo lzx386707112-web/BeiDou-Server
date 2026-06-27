@@ -1,10 +1,12 @@
 package soloMapling.Environment;
 
 import org.gms.client.Character;
+import org.gms.client.Job;
 import org.gms.net.server.Server;
 import org.gms.server.maps.MapleMap;
 import soloMapling.ArtificialPlayer.BotGeneration;
 import soloMapling.ArtificialPlayer.BotMovementSystem.MovementCommands;
+import soloMapling.ArtificialPlayer.BotDecoratorSystem.BotDecorate;
 import soloMapling.ArtificialPlayer.BotDecoratorSystem.BotDecorationQueue;
 import soloMapling.ArtificialPlayer.BotDecoratorSystem.BotDecorateBody;
 import soloMapling.ArtificialPlayer.BotDecoratorSystem.BotDecorateNX;
@@ -417,14 +419,12 @@ public class EnvironmentManager {
     }
 
     private static void refreshAllBotFashion() {
-        if (!SoloMaplingConfig.randomBodyEnabled() && !SoloMaplingConfig.nxEquipsEnabled()) {
-            return;
-        }
         try {
             List<Character> bots = Server.getInstance().getChannel(0, 1).getPlayerStorage().getAllCharacters().stream()
                     .filter(EnvironmentManager::isRefreshableBot)
                     .collect(Collectors.toList());
             for (Character bot : bots) {
+                refreshBotJob(bot);
                 if (SoloMaplingConfig.randomBodyEnabled()) {
                     BotDecorateBody.decorateBotBody(bot);
                 }
@@ -434,9 +434,24 @@ public class EnvironmentManager {
                 }
                 bot.equipChanged();
             }
-            debugprint(fmt("Refreshed bot fashion for {} bots", bots.size()));
+            debugprint(fmt("Refreshed bot jobs/fashion for {} bots", bots.size()));
         } catch (Exception e) {
-            debugprint(fmt("Failed to refresh bot fashion: {}", e.getMessage()));
+            debugprint(fmt("Failed to refresh bot jobs/fashion: {}", e.getMessage()));
+        }
+    }
+
+    private static void refreshBotJob(Character bot) {
+        if (bot == null) {
+            return;
+        }
+        int currentJobId = bot.getJob() == null ? -1 : bot.getJob().getId();
+        int newJobId = currentJobId;
+        for (int i = 0; i < 4 && newJobId == currentJobId; i++) {
+            newJobId = BotDecorate.selectJobByLevel(bot.getLevel());
+        }
+        Job newJob = Job.getById(newJobId);
+        if (newJob != null) {
+            bot.setJob(newJob);
         }
     }
 

@@ -49,7 +49,8 @@ function action(mode, type, selection) {
         text += "#L3#怪物卡戒#l\t\t\t";
         text += "#L4#世界任务#l\t\t\t";
         text += "#L5#跑环#l\t\r\n\r\n";
-        text += "#L6#狩猎#l\t\r\n\r\n";
+        text += "#L6#狩猎#l\t\t\t";
+        text += "#L7#Boss成长#l\t\r\n\r\n";
         cm.sendSimple(text);
     } else if (status === 1) {
         doSelect(selection);
@@ -80,6 +81,9 @@ function doSelect(selection) {
             break;
         case 6:
             openNpc("任务/狩猎");
+            break;
+        case 7:
+            openNpc("Boss成长系统");
             break;
         default:
             cm.sendOk("该功能暂不支持，敬请期待！");

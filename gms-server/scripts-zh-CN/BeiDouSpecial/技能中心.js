@@ -28,6 +28,7 @@ function action(mode, type, selection) {
         text += "#L3#三宠技能#l\t\r\n\r\n";
         text += "#L4#技能偷学#l\t\r\n\r\n";
         text += "#L5#风影漫步修复(仅限风灵使者使用)#l\t\r\n\r\n";
+        text += "#L6#龙神技能面板#l\t\r\n\r\n";
         cm.sendSimple(text);
     } else if (status === 1) {
         doSelect(selection);
@@ -52,6 +53,9 @@ function doSelect(selection) {
             break;
         case 5:
             风影漫步修复();
+            break;
+        case 6:
+            openNpc("龙神技能面板");
             break;
         default:
             cm.sendOk("该功能暂不支持，敬请期待！");
@@ -83,5 +87,4 @@ function 风影漫步修复() {
         cm.dispose();
     }
 }
-
 

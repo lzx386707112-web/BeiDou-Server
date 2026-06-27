@@ -70,14 +70,14 @@ function action(mode, type, selection) {
         }
 
         if (cm.getPlayer().getLevel() >= 10) {
-            text += "#L13#物品兑换#l\t #L7#卷轴商店#l\t #L17#益智答题#l\r\n";
+            text += "#L13#物品兑换#l\t #L7#卷轴商店#l\t #L27#Boss成长#l\r\n";
         }
 
         if (cm.getPlayer().getLevel() >= 10) {
             text += "#L8#大药商店#l\t #L22#技能全满#l \t #L23#更换职业#l\r\n";
         }
         if (cm.getPlayer().getLevel() >= 10) {
-            text += "#L99#二段跳#l\t #L24#一键转生#l\r\n";
+            text += "#L99#二段跳#l\t #L26#龙神技能#l\t #L24#一键转生#l\r\n";
         }
 
 
@@ -194,6 +194,12 @@ function doSelect(selection) {
 
         case 25:
             openNpc("2006");  //明珠港怪物卡戒指NPC
+            break;
+        case 26:
+            openNpc("龙神技能面板");
+            break;
+        case 27:
+            openNpc("Boss成长系统");
             break;
 
         // GM功能

@@ -1306,6 +1306,28 @@ public class Character extends AbstractCharacterObject {
 //        log.info("keyCode=: " + keyCode + " SkillId=" + SkillId);
     }
 
+    public void addSkillToKeyboardAndQuickslot(int keyCode, int skillId) {
+        keymap.put(keyCode, new KeyBinding(1, skillId));
+        sendKeymap();
+
+        byte[] quickSlots = quickSlotKeyMapped == null
+                ? QuickslotBinding.DEFAULT_QUICKSLOTS.clone()
+                : quickSlotKeyMapped.GetKeybindings().clone();
+        byte quickKey = (byte) keyCode;
+        boolean containsKey = false;
+        for (byte key : quickSlots) {
+            if (key == quickKey) {
+                containsKey = true;
+                break;
+            }
+        }
+        if (!containsKey) {
+            quickSlots[0] = quickKey;
+        }
+        changeQuickslotKeybinding(quickSlots);
+        sendQuickmap();
+    }
+
     public boolean removeBySkillId(int targetSkillId) {
         if (keymap == null || keymap.isEmpty()) {
             return false;
@@ -2710,6 +2732,7 @@ public class Character extends AbstractCharacterObject {
     private static boolean dispelSkills(int skillid) {
         return switch (skillid) {
             case DarkKnight.BEHOLDER, FPArchMage.ELQUINES, ILArchMage.IFRIT, Priest.SUMMON_DRAGON, Bishop.BAHAMUT,
+                 Bishop.DRAGON_2217_SWIFT, Bishop.DRAGON_5TH_SWIFT,
                  Ranger.PUPPET, Ranger.SILVER_HAWK, Sniper.PUPPET, Sniper.GOLDEN_EAGLE, Hermit.SHADOW_PARTNER -> true;
             default -> false;
         };

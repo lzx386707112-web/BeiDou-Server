@@ -51,6 +51,7 @@ import org.slf4j.LoggerFactory;
 import org.gms.scripting.event.EventInstanceManager;
 import org.gms.scripting.map.MapScriptManager;
 import org.gms.server.ItemInformationProvider;
+import org.gms.server.BossDamageGrowth;
 import org.gms.server.StatEffect;
 import org.gms.server.TimerManager;
 import org.gms.server.events.gm.Coconut;
@@ -1444,7 +1445,8 @@ public class MapleMap {
             }
         }
         if (monster.isAlive()) {
-            boolean killed = monster.damage(chr, damage, false);
+            int actualDamage = BossDamageGrowth.applyBossDamageBonus(chr, monster.getId(), damage);
+            boolean killed = monster.damage(chr, actualDamage, false);
 
             selfDestruction selfDestr = monster.getStats().selfDestruction();
             if (selfDestr != null && selfDestr.getHp() > -1) {// should work ;p
@@ -1578,6 +1580,7 @@ public class MapleMap {
                     }
 
                     Character dropOwner = monster.killBy(chr);
+                    BossDamageGrowth.recordBossKill(chr, monster.getId());
                     if (withDrops && !monster.dropsDisabled()) {
                         if (dropOwner == null) {
                             dropOwner = chr;

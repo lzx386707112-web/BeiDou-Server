@@ -740,6 +740,8 @@ public class StatEffect {
                 case Bowmaster.PHOENIX:
                 case ILArchMage.IFRIT:
                 case Bishop.BAHAMUT:
+                case Bishop.DRAGON_2217_SWIFT:
+                case Bishop.DRAGON_5TH_SWIFT:
                 case DarkKnight.BEHOLDER:
                 case Outlaw.GAVIOTA:
                 case DawnWarrior.SOUL:
@@ -1845,6 +1847,8 @@ public class StatEffect {
             case FPArchMage.ELQUINES:
             case ILArchMage.IFRIT:
             case Bishop.BAHAMUT:
+            case Bishop.DRAGON_2217_SWIFT:
+            case Bishop.DRAGON_5TH_SWIFT:
             case DawnWarrior.SOUL:
             case BlazeWizard.FLAME:
             case BlazeWizard.IFRIT:

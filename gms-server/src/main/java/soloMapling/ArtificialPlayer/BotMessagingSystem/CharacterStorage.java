@@ -4,9 +4,10 @@ import org.gms.client.Character;
 import soloMapling.ArtificialPlayer.BotSM;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class CharacterStorage {
-    private static Map<Integer, BotSM> activeBotMap = new HashMap<>();
+    private static Map<Integer, BotSM> activeBotMap = new ConcurrentHashMap<>();
     private static List<Character> currentRespondants = new ArrayList<>(); // Current respondants
     private static List<Character> inquirer = new ArrayList<>();
     private static final List<Integer> invisibleBotList = Arrays.asList(100);

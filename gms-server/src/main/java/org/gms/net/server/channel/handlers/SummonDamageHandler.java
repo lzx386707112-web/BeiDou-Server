@@ -30,6 +30,7 @@ import org.gms.client.inventory.InventoryType;
 import org.gms.client.inventory.Item;
 import org.gms.client.inventory.WeaponType;
 import org.gms.client.status.MonsterStatusEffect;
+import org.gms.constants.skills.Bishop;
 import org.gms.constants.skills.Outlaw;
 import org.gms.net.packet.InPacket;
 import org.slf4j.Logger;
@@ -49,7 +50,7 @@ public final class SummonDamageHandler extends AbstractDealDamageHandler {
         add(2221005);   // 火魔兽
         add(2121005);   // 冰魔兽
         add(2311006);   // 圣龙
-        add(2321003);   // 强化圣龙
+        add(Bishop.BAHAMUT);   // 强化圣龙
     }});
 
     public final class SummonAttackEntry {
@@ -117,7 +118,7 @@ public final class SummonDamageHandler extends AbstractDealDamageHandler {
                     AutobanFactory.DAMAGE_HACK.alert(c.getPlayer(), "Possible packet editing summon damage exploit.");
                     final String mobName = MonsterInformationProvider.getInstance().getMobNameFromId(target.getId());
                     //白名单里的技能不打印
-                    if (!SKILL_WHITELIST.contains(summon.getSkill())) {
+                    if (!SKILL_WHITELIST.contains(summon.getSkill()) && !Bishop.isDragonCopySkill(summon.getSkill())) {
                         log.info("Possible exploit - chr {} used a summon of skillId {} to attack {} with damage {} (max: {})",
                                 c.getPlayer().getName(), summon.getSkill(), mobName, damage, maxDmg);
                     }
