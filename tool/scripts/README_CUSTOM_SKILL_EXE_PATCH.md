@@ -308,6 +308,7 @@ rtk objdump -D -Mintel --start-address=0xaef680 --stop-address=0xaef6b0 clien/Be
 默认不要强制绑定，避免服务端发送全量 keymap 时覆盖玩家刚手动调整过的按键。
 快捷技能.js、技能全满.js、快速转职.js 不再发放 2321010-2321018。
 如果要改成物品双击唤起，只需要把对应物品的 spec/script 指向“龙神技能面板”。
+```
 
 图标处理：
 
@@ -315,7 +316,6 @@ rtk objdump -D -Mintel --start-address=0xaef680 --stop-address=0xaef6b0 clien/Be
 当前资源只提供 Dragon/_Canvas 动作帧，没有完整 Dragon 技能文件中的原始 icon。
 patch_bishop_dragon_skills.py 会从对应攻击动作的中间帧裁剪并缩放生成 32x32 图标，
 写入 icon/iconMouseOver/iconDisabled，避免 2321010-2321018 全部显示为 2321003 的强化圣龙图标。
-```
 ```
 
 ## 阶段性记录：2331010-2331018 独立 V tab 尝试
@@ -420,6 +420,33 @@ hit 存在，delay 总和为 0。
 3. 如果 233 技能仍出现在 4 转 tab，
    说明 0x4F0751 的 selected-tab 过滤还没有命中真实字段，
    需要继续反汇编技能窗口中 [skillWindow + offset] 的当前页签字段。
+```
+
+## 最终方案：保留在 4 转 tab
+
+最终没有继续强行实现第 5/V tab，而是采用更稳的 4 转 tab 方案：
+
+```text
+1. 技能继续放在主教 4 转职业文件 232.img。
+   这样沿用客户端已有技能窗口和释放分类路径，减少 EXE UI patch 风险。
+
+2. 技能排序放到 4 转 tab 最下面。
+   通过技能节点顺序/客户端数据顺序控制显示位置。
+
+3. 显示门槛放到服务端控制。
+   登录或面板发放时检查角色等级，大于 180 级才 teach/显示龙神技能。
+   等级不足时不 teachSkill，客户端技能栏自然不会显示。
+
+4. 5/V tab 尝试先保留为研究记录。
+   独立 tab 涉及 tab 循环、布局槽位、职业分类、当前选中页字段等多处 EXE UI 逻辑，
+   容易出现“循环到了但不绘制”或“仍归入 4 转 tab”的问题。
+```
+
+当前推荐维护方向：
+
+```text
+优先维护 232 组技能、4 转 tab 排序、180 级服务端门槛。
+不要再为了显示页签优先改 EXE UI，除非后续明确要完整实现第 5/V tab。
 ```
 
 ## 风险边界
