@@ -85,6 +85,73 @@ rtk tool/scripts/pack_img_wz_wizard.sh
 
 另外，根目录运行库 `ijl15.dll` 和 `2ijl15.dll` 需要成套匹配。`ijl15.dll` 是客户端加载的 JPEG 库代理/补丁 DLL，`2ijl15.dll` 是实际的 Intel JPEG Library。如果这两个 DLL 版本不匹配，客户端可能在启动或加载资源阶段直接报错。遇到启动期资源错误时，除了检查 WZ，也要确认这两个 DLL 来自同一套可运行客户端。
 
+
+# 095 内容迁移记录
+
+来源目录：`/Users/lizixian/Documents/mxd/怀旧岛V095仿官版/怀旧岛V095服务端`。本次仅做资源与脚本盘点，未直接迁移文件。
+
+## 差异概览
+
+与当前 beidou 资源相比，095 服务端 WZ 大约多出：
+
+- 怪物：575 个
+- 地图：703 张
+
+095 是 Windows 成品包，`ZeroMS/095.jar` 不是普通 JVM 可直接加载的 jar，直接 `java -cp ZeroMS/095.jar:lib/* server.Start` 会报 `ClassFormatError`。因此更现实的路线是把可读的 WZ、脚本、入口 NPC 逐步迁入 beidou，而不是迁移 095 服务端本体。
+
+## 优先迁移目标
+
+### 第一批：进阶扎昆
+
+适合作为迁移试点，资源范围小，现有 beidou 已有普通扎昆逻辑可参考。
+
+- 怪物：`8800100-8800116`
+- 地图：`211042301` 进阶扎昆入口、`280030001` 进阶扎昆的祭台
+- 095 脚本：`scripts/event/ChaosZakum.js`
+- beidou 参考：`scripts/event/ZakumBattle.js`
+
+### 第二批：进阶暗黑龙王
+
+可以参考 beidou 现有普通龙王事件，主要补充进阶龙王怪物、地图与召唤流程。
+
+- 怪物：`8810100-8810130`
+- 地图：`240060001`、`240060101`、`240060201`
+- 095 脚本：`scripts/event/ChaosHorntail.js`
+- beidou 参考：`scripts/event/HorntailBattle.js`
+
+### 第三批：希纳斯 / 未来之门
+
+内容价值高，但依赖范围比前两批大，需要整套地图、怪物、NPC、入口与事件脚本配合。
+
+- 怪物：`8850000-8850013`，包含米哈尔、奥兹、伊莉娜、伊卡尔特、胡克、神兽、希纳斯
+- 地图：`271000000` 起的未来之门、破坏的射手村、骑士团要塞；重点入口 `271040000`、`271040100`
+- 095 脚本：`scripts/event/CygnusBattle.js`
+
+### 第四批：埃德尔斯坦 / 反抗者区域
+
+地图资源相对完整，但如果继续迁职业、技能、任务链，成本会明显提高。
+
+- 地图：`310000000` 起，包含埃德尔斯坦、反抗者本部、莱班矿山、格里梅尔研究所
+- 注意：反抗者职业相关逻辑可能涉及客户端、技能、任务、包处理，不建议作为第一批迁移内容。
+
+## 暂缓迁移内容
+
+以下内容在 095 脚本中存在，但实际 WZ 资源不完整或与当前版本跨度较大，暂不作为第一批目标：
+
+- Hilla：`scripts/event/HillaBattle.js`，引用 `262030300`、`8870000`
+- Arkarium：`scripts/event/ArkariumBattle.js`，引用 `272020200`、`8860000`
+- Magnus：`scripts/event/BossMagnus_HARD.js`，引用 `401060100`、`8880000`
+- Root Abyss 四 Boss：`BossBanban_CHAOS.js`、`BossBelen_CHAOS.js`、`BossBloody_CHAOS.js`、`BossPierre_CHAOS.js`
+
+这些脚本更像高版本内容混入或残留，迁移前需要先确认客户端 WZ、服务端 WZ、包结构和入口 NPC 是否完整。
+
+## 迁移注意事项
+
+- 服务端和客户端 WZ 必须同步迁移；只拷服务端 XML，客户端缺素材时会黑图、缺怪或闪退。
+- beidou 脚本风格偏 HeavenMS/Cosmic，095 脚本偏老 Odin 风格。095 中的 `em.getMonster(...)`、`setInstanceMap(...)`、`disposeIfPlayerBelow(...)` 等调用需要按 beidou 现有事件脚本改写。
+- 先迁一个闭环 Boss：地图 XML、怪物 XML、String 名称、NPC/反应堆入口、event 脚本、掉落/奖励，再进游戏验证。
+- Tokyo、拉瓦那、马来西亚等内容 beidou 已有较多资源，优先级低于上述新增 Boss 和地图。
+
 # docker
 原服务端中docker相关配置已移除，配置已独立到[新的仓库](https://github.com/BeiDouMS/BeiDou-docker)，且支持[镜像拉取](https://github.com/BeiDouMS/BeiDou-docker/pkgs/container/beidou-server-all)。想参加docker开发，欢迎在新仓库进行pr。  
 [了解更多](https://github.com/BeiDouMS/BeiDou-docker)

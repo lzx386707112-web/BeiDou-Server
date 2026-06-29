@@ -126,31 +126,273 @@ effect / hit / ball / action / prepare / keydown 等节点
 7. 技能能打怪但表现异常时，再查 action、effect、hit、effect0、delay。
 ```
 
+## 实战流程：从一个新技能定位到 EXE hook
+
+下面这套流程是从 `2121006` 群攻、`2321010` 复制强化圣龙、`2321010-2321018`
+龙神复刻技能，以及后续 `233` V tab 尝试里沉淀出来的。重点不是记住某一个地址，
+而是知道“症状对应客户端哪一层硬编码”。
+
+### 1. 先选一个行为参考技能
+
+新增技能不要从空白节点开始，先找一个客户端已经完整支持的同类技能。
+
+```text
+矩形 AoE：参考 2121006 / 2121007 / 2201005
+召唤攻击：参考 2321003
+全屏攻击：参考 genesis 类技能
+弹道技能：参考同职业已有 ball/keydown/prepare 结构
+```
+
+必须先确认两件事：
+
+```text
+1. 新技能的数据结构尽量克隆参考技能，再改名字、图标、范围、特效。
+2. EXE 里不是“注册新技能”，而是把新技能 ID 接到参考技能已经能走通的分支。
+```
+
+例如 `2321010` 复制 `2321003` 时，WZ 里复制技能节点只能让技能栏认识它；
+如果 EXE 没把 `2321010` 接进 `2321003` 的释放/召唤分支，快捷键按下去仍然没动作。
+
+### 2. 确认数据层是否完整
+
+客户端和服务端都要有同一份技能数据。攻击技能至少检查这些节点：
+
+```text
+客户端：
+clien/Data/Skill/<job>.img
+clien/Data/String/Skill.img
+
+服务端：
+gms-server/wz/Skill.wz/<job>.img.xml
+gms-server/wz/String.wz/Skill.img.xml
+
+等级数据：
+level/1..30
+attackCount
+mobCount
+lt
+rb
+action
+effect
+hit
+ball / prepare / keydown / summon 等按技能类型决定
+```
+
+服务端 `StatEffect` 会从 XML 读技能参数，例如 `mobCount` 缺失时默认只有 1：
+
+```java
+ret.mobCount = DataTool.getInt("mobCount", source, 1);
+```
+
+攻击处理还会校验客户端上报目标数：
+
+```java
+if (attack.numAttacked > mobCount) {
+    AutobanFactory.MOB_COUNT.autoban(...);
+    return;
+}
+```
+
+所以如果要改群攻，只补 EXE 不补 `mobCount/lt/rb` 不行；反过来，只补 WZ 不补 EXE，
+客户端也可能仍然只选 1 个目标。
+
+### 3. 把技能 ID 转成 EXE 里能搜的字节
+
+EXE 里比较技能 ID 时通常是 32 位立即数，小端序存放。
+
+```bash
+rtk node - <<'NODE'
+const ids = [2121006, 2321003, 2321010, 2321018, 2331010];
+for (const id of ids) {
+  const b = Buffer.alloc(4);
+  b.writeUInt32LE(id >>> 0, 0);
+  console.log(id, "hex=0x" + id.toString(16), "le=" + b.toString("hex"));
+}
+NODE
+```
+
+也可以直接扫描 `BeiDou.exe` 中某个技能 ID 出现的位置：
+
+```bash
+rtk node - <<'NODE'
+const fs = require("fs");
+const buf = fs.readFileSync("clien/BeiDou.exe");
+
+function le32(n) {
+  const b = Buffer.alloc(4);
+  b.writeUInt32LE(n >>> 0, 0);
+  return b;
+}
+
+for (const id of [2321003, 2321010, 2121006, 2201005]) {
+  const needle = le32(id);
+  const hits = [];
+  for (let i = 0; (i = buf.indexOf(needle, i)) >= 0; i += needle.length) {
+    hits.push("0x" + i.toString(16));
+  }
+  console.log(id, hits.join(" "));
+}
+NODE
+```
+
+这里扫出来的是文件偏移，不是反汇编里看到的虚拟地址。
+
+### 4. 做 PE 地址换算
+
+当前 `BeiDou.exe` 的 `.text` 段里，文件偏移和虚拟地址的关系可以按下面处理：
+
+```text
+ImageBase = 0x400000
+file offset = VA - 0x400000
+VA = file offset + 0x400000
+```
+
+例如：
+
+```text
+file offset 0x555d0e -> VA 0x955d0e
+VA 0x7A5227 -> file offset 0x3A5227
+VA 0xAEF620 -> file offset 0x6EF620
+```
+
+反汇编时用 VA：
+
+```bash
+rtk objdump -D -Mintel --start-address=0x955d00 --stop-address=0x955d40 clien/BeiDou.exe
+```
+
+写文件时用 offset：
+
+```python
+IMAGE_BASE = 0x400000
+HOOK_VA = 0x955D0E
+HOOK_OFFSET = HOOK_VA - IMAGE_BASE
+```
+
+### 5. 根据症状判断要找哪一类硬编码
+
+不同现象对应不同 EXE 逻辑，不要所有问题都往一个 hook 上堆。
+
+```text
+技能栏没有技能：
+  先查 WZ / String / 服务端 teachSkill / 数据库 skills。
+  如果是新职业段，例如 233，再查技能窗口职业分类和 tab 逻辑。
+
+技能栏有、能绑键、按键没动作：
+  优先查技能释放/动作分类。
+  2321010 当时就是缺 0x967EE6 这一类释放分类 hook。
+
+技能能释放但只能打一只：
+  先查 mobCount/lt/rb。
+  数据没问题再查 AoE/选怪分支，例如 0x955D0E。
+
+技能能打怪但 hit 慢：
+  先查 effect/hit/action 播放链路。
+  这次 Dragon 动作放到 genesis 路径时出现过 effect 先播完、hit 后出现的问题。
+
+新职业段技能不进技能窗口：
+  查 skillId / 10000 的职业段分发。
+  233 尝试时涉及 0x4F0751 和 Bishop 子分支 0xA0A3D6。
+
+想新增第 5/V tab：
+  不只是补 UI 图。
+  还要查 tab 循环上限、tab 布局槽位、当前选中页字段、职业段过滤。
+```
+
+### 6. 反汇编对照技能附近代码
+
+优先从“参考技能 ID 出现的位置”附近开始反汇编。例如 `2321003` 的小端字节是
+`6b 6a 23 00`，能定位到召唤相关判断：
+
+```bash
+rtk objdump -D -Mintel --start-address=0x7a5200 --stop-address=0x7a5260 clien/BeiDou.exe
+rtk objdump -D -Mintel --start-address=0x7ad4e0 --stop-address=0x7ad530 clien/BeiDou.exe
+rtk objdump -D -Mintel --start-address=0x967ed8 --stop-address=0x967f20 clien/BeiDou.exe
+```
+
+判断目标分支时要看“命中旧技能后跳到哪里”，而不是只看 `cmp` 本身。
+新增技能的目标就是让新 ID 命中后跳到同一个已验证分支。
+
+### 7. 写 hook 时优先追加判断，不要替换旧 ID
+
+错误做法：
+
+```text
+把 EXE 里的 2321003 直接改成 2321010。
+```
+
+这样旧技能会坏掉，而且同一技能可能在多处被硬编码，改一处不完整。
+
+推荐做法：
+
+```text
+1. 原位置写 5 字节 jmp 跳到 code cave。
+2. cave 里先保留被覆盖的原逻辑或等效逻辑。
+3. 追加新技能 ID 判断。
+4. 命中新技能时跳到旧技能的成功分支。
+5. 不命中时跳回原来的继续分支。
+```
+
+Python 写相对跳转的基础函数：
+
+```python
+import struct
+
+def jmp(from_va: int, to_va: int) -> bytes:
+    return b"\xE9" + struct.pack("<i", to_va - (from_va + 5))
+
+def je(from_va: int, to_va: int) -> bytes:
+    return b"\x0F\x84" + struct.pack("<i", to_va - (from_va + 6))
+
+def jbe(from_va: int, to_va: int) -> bytes:
+    return b"\x0F\x86" + struct.pack("<i", to_va - (from_va + 6))
+
+def cmp_reg_imm(op: bytes, value: int) -> bytes:
+    return op + struct.pack("<I", value)
+```
+
+连续技能 ID 可以用范围判断，避免写一串 `cmp`：
+
+```asm
+mov edx, skillId
+sub edx, 2321010
+cmp edx, 8
+jbe target
+```
+
+这表示 `2321010-2321018` 都命中，因为最大差值是 `8`。
+
+### 8. patch 前后都要验证字节
+
+脚本里要检查当前位置是“原始字节”或“自己已经写过的 hook”，避免重复 patch 或误伤别的版本。
+
+```python
+current = bytes(data[HOOK_OFFSET:HOOK_OFFSET + len(HOOK_ORIGINAL)])
+if current not in (HOOK_ORIGINAL, hook_patch):
+    raise RuntimeError(f"unexpected bytes at 0x{HOOK_VA:x}: {current.hex()}")
+```
+
+写入后用 `objdump` 看两段：
+
+```bash
+rtk objdump -D -Mintel --start-address=0x7a5220 --stop-address=0x7a5248 clien/BeiDou.exe
+rtk objdump -D -Mintel --start-address=0xaef620 --stop-address=0xaef648 clien/BeiDou.exe
+```
+
+成功时应该能看到原位置已经跳到 cave，cave 里有新技能范围判断。
+
 ## exe patch 原则
 
-1. 先把技能 ID 转为十六进制和 little-endian 字节。
+上面的流程是完整操作步骤，实际落地时再记住这几条原则：
 
-   ```bash
-   rtk node -e 'const n=2121010; console.log(n.toString(16), Buffer.from(Uint32Array.of(n).buffer).toString("hex"))'
-   ```
-
-2. 在 `clien/BeiDou.exe` 中搜索该 ID 的字节，看客户端是否已经有硬编码识别。
-
-3. 反汇编同类技能附近逻辑，确认目标分支。
-
-   ```bash
-   rtk objdump -D -Mintel --start-address=0x... --stop-address=0x... clien/BeiDou.exe
-   ```
-
-4. 优先用跳板和 code cave 追加新技能判断。
-
-   不要直接把旧技能 ID 改成新技能 ID，否则旧技能行为会被破坏。
-
-5. code cave 中保留被覆盖的原逻辑。
-
-6. patch 后用 `objdump` 验证跳转和比较目标正确。
-
-7. 游戏内验证自己视角、他人视角、实际命中目标、服务端校验是否正常。
+```text
+1. 先做数据层闭环，再碰 EXE。
+2. 先找同类旧技能，再让新技能接入旧技能已验证分支。
+3. 不要把旧技能 ID 直接替换成新技能 ID，要用 code cave 追加判断。
+4. code cave 要保留被覆盖的原逻辑，或者写出等效分支。
+5. 写入前校验原始字节，写入后 objdump 验证跳转和目标分支。
+6. 游戏内验证要分开看：技能栏、按键动作、选怪数量、hit/特效、服务端伤害校验。
+```
 
 ## 已确认可参考的 AoE 分支
 
@@ -221,6 +463,54 @@ jmp 0x955d19
    不能只补一个地方。2321010 至少需要下面三个 hook。
 ```
 
+### 2321010 定位过程
+
+当时的现象是：
+
+```text
+1. 技能栏能看到 2321010。
+2. 服务端可以 teachSkill。
+3. 技能能拖到快捷键。
+4. 按快捷键没有正常触发 2321003 那套召唤攻击动作。
+```
+
+这说明前面 WZ、String、服务端发放都基本没问题，问题集中在客户端本地释放/动作分类。
+
+先扫描参考技能 `2321003` 和新技能 `2321010`：
+
+```bash
+rtk node - <<'NODE'
+const fs = require("fs");
+const buf = fs.readFileSync("clien/BeiDou.exe");
+
+function scanId(id) {
+  const b = Buffer.alloc(4);
+  b.writeUInt32LE(id >>> 0, 0);
+  const hits = [];
+  for (let i = 0; (i = buf.indexOf(b, i)) >= 0; i += b.length) {
+    hits.push("0x" + i.toString(16));
+  }
+  return hits;
+}
+
+for (const id of [2321003, 2321010]) {
+  console.log(id, scanId(id).join(" "));
+}
+NODE
+```
+
+`2321010` 是新增技能，正常情况下原始 EXE 里搜不到；`2321003` 能搜到多个位置。
+对这些位置附近反汇编后，最终确认至少三类判断要补：
+
+```text
+0x7A5227：召唤相关距离/方向判断。
+0x7AD4F8：技能对象/属性分类。
+0x967EE6：释放动作分类，决定按快捷键时是否进入对应技能处理。
+```
+
+其中 `0x967EE6` 是最容易漏的。前两个 hook 补了以后，技能仍可能“能学、能绑、按键没反应”；
+缺的就是这层释放分类。
+
 已验证的三个 EXE hook：
 
 ```text
@@ -240,6 +530,69 @@ cave VA：0xAEF680
 逻辑：cmp esi, 2321010；命中后走 2321003 同一分支 0x9689DF
 ```
 
+单技能测试时的 cave 逻辑大意：
+
+```asm
+; hook1：保留原本 mov [ebp-0x18], eax，再比较 [ebx+0xb4] 的技能 ID
+mov [ebp-0x18], eax
+cmp dword ptr [ebx+0xb4], 2321003
+je  0x7A5236
+cmp dword ptr [ebx+0xb4], 2321010
+je  0x7A5236
+jmp 0x7A5241
+
+; hook2：eax 是当前技能 ID
+cmp eax, 2321003
+je  0x7AD51B
+cmp eax, 2321010
+je  0x7AD51B
+jmp 0x7AD4FF
+
+; hook3：esi 是当前释放技能 ID
+cmp esi, 2321010
+je  0x9689DF
+; 后面接回原本被覆盖的比较/跳转逻辑
+jmp 0x967EF5
+```
+
+后续扩展为 `2321010-2321018` 时，不再逐个 `cmp`，而是改成范围判断：
+
+```asm
+mov edx, skillId
+sub edx, 2321010
+cmp edx, 8
+jbe oldSkillSuccessBranch
+```
+
+当前维护脚本对应：
+
+```text
+tool/scripts/patch_bishop_dragon_skills.py
+```
+
+关键常量：
+
+```python
+OLD_ID = 2321003
+NEW_MIN = 2321010
+NEW_MAX = 2321018
+
+HOOK1_VA = 0x7A5227
+HOOK1_CAVE_VA = 0xAEF620
+HOOK1_EQUAL_VA = 0x7A5236
+HOOK1_NOT_EQUAL_VA = 0x7A5241
+
+HOOK2_VA = 0x7AD4F8
+HOOK2_CAVE_VA = 0xAEF650
+HOOK2_EQUAL_VA = 0x7AD51B
+HOOK2_RETURN_VA = 0x7AD4FF
+
+HOOK3_VA = 0x967EE6
+HOOK3_CAVE_VA = 0xAEF680
+HOOK3_TARGET_VA = 0x9689DF
+HOOK3_RETURN_VA = 0x967EF5
+```
+
 关键排错结论：
 
 ```text
@@ -255,16 +608,25 @@ cave VA：0xAEF680
 验证命令：
 
 ```bash
+rtk python3 tool/scripts/patch_bishop_dragon_skills.py --dry-run
+rtk objdump -D -Mintel --start-address=0x7a5220 --stop-address=0x7a5248 clien/BeiDou.exe
+rtk objdump -D -Mintel --start-address=0x7ad4e8 --stop-address=0x7ad530 clien/BeiDou.exe
 rtk objdump -D -Mintel --start-address=0x967ed8 --stop-address=0x967f20 clien/BeiDou.exe
+rtk objdump -D -Mintel --start-address=0xaef620 --stop-address=0xaef648 clien/BeiDou.exe
+rtk objdump -D -Mintel --start-address=0xaef650 --stop-address=0xaef678 clien/BeiDou.exe
 rtk objdump -D -Mintel --start-address=0xaef680 --stop-address=0xaef6c0 clien/BeiDou.exe
 ```
 
 成功时应能看到：
 
 ```asm
+0x7a5227: jmp 0xaef620
+0x7ad4f8: jmp 0xaef650
 0x967ee6: jmp 0xaef680
-0xaef680: cmp esi, 0x236a72
-0xaef686: je  0x9689df
+0xaef680: mov edx, esi
+0xaef682: sub edx, 0x236a72   ; 2321010
+0xaef688: cmp edx, 0x8
+0xaef68b: jbe 0x9689df
 ```
 
 本案例脚本：
