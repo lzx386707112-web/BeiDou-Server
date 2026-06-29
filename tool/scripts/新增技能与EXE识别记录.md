@@ -518,6 +518,129 @@ hit 存在，delay 总和为 0。
 不要再为了显示页签优先改 EXE UI，除非后续明确要完整实现第 5/V tab。
 ```
 
+## 完成后技能栏仍看不到：补数据库
+
+客户端 WZ、服务端 WZ、String、JAR 都更新后，如果电脑端能看到、手机端看不到，
+或者角色已经是 `job=232` 且等级大于 180 仍然没有新技能，优先检查数据库。
+
+原因：
+
+```text
+技能栏显示不是只看 WZ。
+客户端技能栏会显示角色已经学会的技能，服务端登录时会从数据库 skills 表加载技能。
+复制客户端、JAR、服务端 wz 文件不会自动给已有角色补 skills 表记录。
+```
+
+当前 232 方案需要补的技能 ID：
+
+```text
+2321010-2321018
+```
+
+### 电脑端补数据库
+
+如果本机服务端配置仍是默认值，可以直接连接：
+
+```text
+数据库：beidou
+账号：root
+密码：root
+```
+
+也可以先看 `gms-server/src/main/resources/application.yml` 里的 `spring.datasource.url`，
+确认真实数据库名，例如：
+
+```text
+jdbc:mysql://localhost:3306/beidou?...
+```
+
+进入 MySQL/MariaDB 后，先查角色：
+
+```sql
+SELECT id, name, job, level FROM characters WHERE name = 'Admin';
+```
+
+角色确认是 `job=232` 且 `level>180` 后，补技能：
+
+```sql
+INSERT INTO skills (characterid, skillid, skilllevel, masterlevel, expiration)
+SELECT c.id, s.skillid, 30, 30, -1
+FROM characters c
+JOIN (
+    SELECT 2321010 AS skillid UNION ALL
+    SELECT 2321011 UNION ALL
+    SELECT 2321012 UNION ALL
+    SELECT 2321013 UNION ALL
+    SELECT 2321014 UNION ALL
+    SELECT 2321015 UNION ALL
+    SELECT 2321016 UNION ALL
+    SELECT 2321017 UNION ALL
+    SELECT 2321018
+) s
+WHERE c.name = 'Admin'
+  AND c.job = 232
+  AND c.level > 180
+ON DUPLICATE KEY UPDATE
+    skilllevel = VALUES(skilllevel),
+    masterlevel = VALUES(masterlevel),
+    expiration = VALUES(expiration);
+```
+
+验证：
+
+```sql
+SELECT s.skillid, s.skilllevel, s.masterlevel
+FROM characters c
+JOIN skills s ON s.characterid = c.id
+WHERE c.name = 'Admin'
+  AND s.skillid BETWEEN 2321010 AND 2321018
+ORDER BY s.skillid;
+```
+
+能看到 `2321010` 到 `2321018` 共 9 行，就说明数据库已经补好。
+角色需要离线后重新登录；如果服务端已经启动，建议重启服务端再进游戏验证。
+
+### 手机 ZeroTermux / MariaDB 补数据库
+
+打开 ZeroTermux 后，如果出现一键启动台，不要输入 `1`，直接回车进入普通命令行。
+先单独启动数据库：
+
+```bash
+mysqld_safe &
+sleep 3
+```
+
+教程里的数据库名是 `beidou`，账号密码是 `root/root`，进入数据库：
+
+```bash
+mariadb -u root -proot beidou
+```
+
+如果不支持 `-proot`，用交互密码：
+
+```bash
+mariadb -u root -p beidou
+```
+
+然后输入：
+
+```text
+root
+```
+
+进入 MariaDB 后执行和电脑端相同的查询、插入、验证 SQL。
+
+如果手机端插完仍然看不到，按下面顺序查：
+
+```text
+1. 插入的是不是手机服务端实际连接的 beidou 数据库。
+2. 角色是否已经离线并重新登录，必要时重启 Java 服务端。
+3. 手机端运行的 BeiDou.jar 是否是最新打包后的 JAR。
+4. 手机客户端 clien/Data/Skill/232.img 是否是替换后的新文件。
+5. 手机客户端 clien/Data/String/Skill.img 是否包含 2321010-2321018 描述。
+6. 服务端目录下 wz/Skill.wz/232.img.xml 和 wz/String.wz/Skill.img.xml 是否也是新文件。
+```
+
 ## 踩坑清单
 
 这次比较值得记住的坑：
@@ -579,7 +702,7 @@ hit 存在，delay 总和为 0。
 
 ## 当前参考文件
 
-- `tool/scripts/README_2121006_AOE.md`
+- `tool/scripts/2121006群攻补丁分析记录.md`
 - `tool/scripts/patch_2121006_exe_aoe.js`
 - `tool/scripts/patch_2121006_aoe.py`
 - `clien/BeiDou.exe`
