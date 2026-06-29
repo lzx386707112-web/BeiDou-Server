@@ -229,7 +229,7 @@ fi
   "$jdk_home/bin/jar" uf "$built_jar" BOOT-INF/classes
 )
 
-if ! "$jdk_home/bin/jar" tf "$built_jar" | grep -q '^BOOT-INF/classes/application.yml$'; then
+if ! "$jdk_home/bin/jar" tf "$built_jar" | awk '$0 == "BOOT-INF/classes/application.yml" { found = 1 } END { exit found ? 0 : 1 }'; then
   echo "打包后的 jar 缺少 BOOT-INF/classes/application.yml" >&2
   exit 1
 fi

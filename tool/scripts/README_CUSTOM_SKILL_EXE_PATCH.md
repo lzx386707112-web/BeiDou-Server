@@ -33,6 +33,49 @@
 
 这种情况下，可以把新技能 ID 追加到已有客户端分支中，而不是替换旧技能 ID。
 
+## 工具与库
+
+本次主要用到这些工具：
+
+```text
+Python 3
+  用来批量改客户端 WZ、服务端 XML 和 BeiDou.exe 字节。
+
+tool/wz-python/wzpy
+  仓库内的 WZ 读写库，用 WzImage/WzKey 解析 .img，
+  用 encode_image_body 写回客户端 WZ。
+
+Pillow
+  来自 tool/wz-python/requirements.txt 的 pillow>=10.0。
+  用于 decode_canvas 后裁剪/缩放龙神动作帧，生成 32x32 技能图标。
+
+struct
+  Python 标准库，用来生成 little-endian 技能 ID、相对跳转偏移、cmp 立即数。
+
+objdump
+  用来反汇编 BeiDou.exe，确认 hook 位置、跳转目标和 code cave 内容。
+
+rg / sed / jar / unzip
+  用于快速检查文件、脚本、jar 内容和构建产物。
+
+rtk
+  本地命令代理。仓库里所有示例命令都按当前环境习惯加了 rtk 前缀。
+```
+
+WZ 区域 key 要特别注意：
+
+```text
+当前客户端 clien/Data 主要按 GMS key 读写。
+外部素材来源 <modern-client>/Data 按 BMS key 读写。
+脚本里如果 WzKey.for_region 选错，可能能解析节点名，但 canvas 解码/写回会出错。
+```
+
+依赖安装参考：
+
+```bash
+rtk python3 -m pip install -r tool/wz-python/requirements.txt
+```
+
 ## 后续需要提供的信息
 
 等新技能节点加好后，至少确认这些信息：
@@ -55,6 +98,32 @@ mobCount
 lt
 rb
 effect / hit / ball / action / prepare / keydown 等节点
+```
+
+## 推荐排查顺序
+
+新增攻击技能时，建议按下面顺序查，不要一开始就改 EXE：
+
+```text
+1. 客户端 WZ 是否有技能节点。
+   clien/Data/Skill/<job>.img
+
+2. 客户端 String 是否有技能名和描述。
+   clien/Data/String/Skill.img
+
+3. 服务端 XML 是否有同一份技能数据。
+   gms-server/wz/Skill.wz/<job>.img.xml
+   gms-server/wz/String.wz/Skill.img.xml
+
+4. 服务端是否真的 teachSkill。
+   技能栏看得到，通常说明这一步和前两步大体没问题。
+
+5. 快捷键能绑定但按键没反应时，再查客户端释放/动作分类。
+   这通常是 EXE 硬编码没有认新技能。
+
+6. 技能能释放但打不到怪时，再查 AoE/选怪分支和服务端校验。
+
+7. 技能能打怪但表现异常时，再查 action、effect、hit、effect0、delay。
 ```
 
 ## exe patch 原则
@@ -223,7 +292,7 @@ tool/scripts/patch_bishop_dragon_skills.py
 实现方式：每个新技能固定一种龙神攻击效果，而不是单个技能内随机效果
 ```
 
-当前技能文字从 `/Users/lizixian/Documents/mxd/273/sanjindao/Data/String/Skill.img` 复制，
+当前技能文字从 `<modern-client>/Data/String/Skill.img` 复制，
 不要用临时自造名字覆盖。
 
 当前技能分配：
@@ -447,6 +516,45 @@ hit 存在，delay 总和为 0。
 ```text
 优先维护 232 组技能、4 转 tab 排序、180 级服务端门槛。
 不要再为了显示页签优先改 EXE UI，除非后续明确要完整实现第 5/V tab。
+```
+
+## 踩坑清单
+
+这次比较值得记住的坑：
+
+```text
+1. WZ 有节点不等于客户端会释放。
+   客户端还有本地技能类型分派，新增 ID 往往要补 EXE 判断。
+
+2. 不能把旧技能 ID 直接替换成新技能 ID。
+   这样会让旧技能失效。正确做法是 code cave 里追加新技能判断。
+
+3. 技能栏可见不代表释放路径正确。
+   “能学习、能绑键、按键没反应”优先怀疑释放/动作分类 hook。
+
+4. hit 延迟不一定是服务端问题。
+   这次 action=genesis 加完整 Dragon effect 会出现先播完大特效再出 hit。
+   改成 action=paralyze、移除 effect0 后，effect 和 hit 才回到同时播放的表现。
+
+5. 技能 tab 比攻击逻辑更难稳定。
+   新增第 5/V tab 会牵涉循环上限、布局槽位、职业分类、当前页字段等多处 UI 逻辑。
+   已验证可行的方案是继续放 4 转 tab，并用排序和服务端等级门槛控制体验。
+
+6. 外部 Dragon/_Canvas 不是完整技能文件。
+   它主要是动作帧素材，缺完整 skill 节点、icon、等级数据和客户端释放分类。
+   所以要么克隆已有技能结构，要么补齐所有必要节点。
+
+7. 生成图标时不要直接复用 2321003 图标。
+   否则多个新技能在技能栏里都像强化圣龙，不利于测试和玩家辨认。
+
+8. WZ key/region 不能混用。
+   本地客户端按 GMS，外部素材按 BMS；读写 key 错了很容易出现 canvas 异常。
+
+9. dry-run 和 objdump 验证很重要。
+   脚本先 dry-run，再反汇编确认 hook bytes；游戏内验证再看自己视角、他人视角和实际命中。
+
+10. README 要记录失败方案。
+    V tab 虽然最终没采用，但保留失败路径和地址记录，后面再查不会重复踩同一个坑。
 ```
 
 ## 风险边界
