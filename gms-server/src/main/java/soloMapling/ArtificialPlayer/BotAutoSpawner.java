@@ -3,9 +3,17 @@ package soloMapling.ArtificialPlayer;
 import org.gms.client.Character;
 import soloMapling.Environment.EnvironmentManager;
 import soloMapling.SoloMaplingConfig;
+import soloMapling.server.ExecutorServiceManager;
+
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 
 public final class BotAutoSpawner {
+    private static final int FM_ENTRANCE = 910000000;
+    private static final long MARKET_STARTUP_DELAY_MS = 2_500L;
+    private static final AtomicBoolean marketStartupQueued = new AtomicBoolean(false);
+
     private BotAutoSpawner() {
     }
 
@@ -14,11 +22,20 @@ public final class BotAutoSpawner {
             return;
         }
         EnvironmentManager.ensureMarketServiceNpcs(player.getMap());
-        if (!SoloMaplingConfig.autoMapBotsEnabled()) {
+        BotClientHandler.createBotClient(player.getClient());
+
+        if (player.getMapId() != FM_ENTRANCE
+                || !SoloMaplingConfig.autoEnvironmentEnabled()
+                || !SoloMaplingConfig.autoMapBotsEnabled()) {
             return;
         }
-
-        BotClientHandler.createBotClient(player.getClient());
-        EnvironmentManager.marketEnvironmentStartup();
+        if (!marketStartupQueued.compareAndSet(false, true)) {
+            return;
+        }
+        ExecutorServiceManager.getScheduledExecutorService().schedule(
+                EnvironmentManager::marketEnvironmentStartup,
+                MARKET_STARTUP_DELAY_MS,
+                TimeUnit.MILLISECONDS
+        );
     }
 }

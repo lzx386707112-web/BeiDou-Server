@@ -4,8 +4,9 @@
 
 function act() {
     rm.changeMusic("Bgm14/HonTale");
-    if (rm.getReactor().getMap().getMonsterById(8810026) == null && rm.getReactor().getMap().getMonsterById(8810018) == null) {
-        rm.getReactor().getMap().spawnChaosHorntailOnGroundBelow(new java.awt.Point(71, 260));
+    var map = rm.getReactor().getMap();
+    if (map.getMonsterById(8810130) == null && map.getMonsterById(8810118) == null && map.getMonsterById(8810119) == null && map.getMonsterById(8810120) == null && map.getMonsterById(8810121) == null && map.getMonsterById(8810122) == null) {
+        map.spawnChaosHorntailOnGroundBelow(new java.awt.Point(71, 260));
 
         var eim = rm.getEventInstance();
         if (eim != null) {

@@ -67,11 +67,11 @@ function setup(channel) {
     const Point = Java.type('java.awt.Point');
     var map, mob;
     map = eim.getInstanceMap(240060001);
-    mob = LifeFactory.getMonster(8810128);
+    mob = LifeFactory.getMonster(8810100);
     map.spawnMonsterOnGroundBelow(mob, new Point(890, 230));
 
     map = eim.getInstanceMap(240060101);
-    mob = LifeFactory.getMonster(8810129);
+    mob = LifeFactory.getMonster(8810101);
     map.spawnMonsterOnGroundBelow(mob, new Point(-360, 230));
 
     eim.startEventTimer(eventTime * 60000);
@@ -154,7 +154,7 @@ function isChaosHorntailHead(mob) {
 }
 
 function isChaosHorntail(mob) {
-    return mob.getId() == 8810018;
+    return mob.getId() == 8810122;
 }
 
 function monsterKilled(mob, eim) {

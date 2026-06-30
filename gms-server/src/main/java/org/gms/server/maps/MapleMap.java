@@ -66,7 +66,6 @@ import org.gms.server.life.MonsterDropEntry;
 import org.gms.server.life.MonsterGlobalDropEntry;
 import org.gms.server.life.MonsterInformationProvider;
 import org.gms.server.life.MonsterListener;
-import org.gms.server.life.MonsterStats;
 import org.gms.server.life.NPC;
 import org.gms.server.life.PlayerNPC;
 import org.gms.server.life.SpawnPoint;
@@ -4369,11 +4368,10 @@ public class MapleMap {
     }
 
     public void spawnChaosHorntailOnGroundBelow(final Point targetPoint) {
-        Monster htIntro = LifeFactory.getMonster(MobId.SUMMON_HORNTAIL);
+        Monster htIntro = LifeFactory.getMonster(MobId.SUMMON_CHAOS_HORNTAIL);
         spawnMonsterOnGroundBelow(htIntro, targetPoint);
 
-        final Monster ht = LifeFactory.getMonster(MobId.HORNTAIL);
-        applyCombatStats(ht, MobId.CHAOS_HORNTAIL_5);
+        final Monster ht = LifeFactory.getMonster(MobId.CHAOS_HORNTAIL);
         ht.setParentMobOid(htIntro.getObjectId());
         ht.addListener(new MonsterListener() {
             @Override
@@ -4392,9 +4390,8 @@ public class MapleMap {
         });
         spawnMonsterOnGroundBelow(ht, targetPoint);
 
-        for (int mobId = MobId.HORNTAIL_HEAD_A; mobId <= MobId.HORNTAIL_TAIL; mobId++) {
+        for (int mobId = MobId.CHAOS_HORNTAIL_HEAD_A; mobId <= MobId.CHAOS_HORNTAIL_TAIL; mobId++) {
             Monster m = LifeFactory.getMonster(mobId);
-            applyCombatStats(m, mobId + 100);
             m.setParentMobOid(htIntro.getObjectId());
 
             m.addListener(new MonsterListener() {
@@ -4415,32 +4412,6 @@ public class MapleMap {
 
             spawnMonsterOnGroundBelow(m, targetPoint);
         }
-    }
-
-    private void applyCombatStats(final Monster target, final int sourceMobId) {
-        Monster source = LifeFactory.getMonster(sourceMobId);
-        MonsterStats sourceStats = source.getStats();
-        MonsterStats targetStats = target.getStats();
-
-        targetStats.setLevel(sourceStats.getLevel());
-        targetStats.setExp(sourceStats.getExp());
-        targetStats.setHp(sourceStats.getHp());
-        targetStats.setMp(sourceStats.getMp());
-        targetStats.setPADamage(sourceStats.getPADamage());
-        targetStats.setPDDamage(sourceStats.getPDDamage());
-        targetStats.setMADamage(sourceStats.getMADamage());
-        targetStats.setMDDamage(sourceStats.getMDDamage());
-        targetStats.setBoss(sourceStats.isBoss());
-        targetStats.setFfaLoot(sourceStats.isFfaLoot());
-        targetStats.setUndead(sourceStats.isUndead());
-        targetStats.setFirstAttack(sourceStats.isFirstAttack());
-        targetStats.setTagColor(sourceStats.getTagColor());
-        targetStats.setTagBgColor(sourceStats.getTagBgColor());
-        targetStats.acc = sourceStats.acc;
-        targetStats.eva = sourceStats.eva;
-
-        target.setStartingHp(sourceStats.getHp());
-        target.setMp(sourceStats.getMp());
     }
 
     public boolean claimOwnership(Character chr) {
