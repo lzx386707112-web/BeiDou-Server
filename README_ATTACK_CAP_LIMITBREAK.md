@@ -104,6 +104,36 @@ i32_2147483647 包含 0x3416c、0x34170
 - `clien/BeiDou.exe` 未发现相关 `19999999` 常量，本次没有修改。
 - `clien/Canvas.dll` 曾扫到一个 `int32 19999999`，但位置更像资源/表数据误命中，实测成功不需要改。
 
+### client-runtime 同步
+
+如果使用下面目录里的独立客户端运行库，也要同步 DLL：
+
+```text
+tool/client-runtime/
+```
+
+本次处理的文件：
+
+```text
+tool/client-runtime/ijl15_手机用.dll
+```
+
+该 DLL 和 `clien/ijl15.dll` 大小不同，cap 表位置整体不同。同步修改的位置：
+
+```text
+0x3516c: int32 199999 -> 2147483647
+0x35170: int32 1999 -> 2147483647
+0x35180: double 199999.0 -> 2147483647.0
+```
+
+修改前已备份：
+
+```text
+tool/client-runtime/backup-before-attack-cap-20260630-142647/
+```
+
+`tool/client-runtime/2ijl15_手机用.dll` 没有发现需要同步的旧 cap 表值，本次未修改。
+
 ## 3. 武器 limitBreak
 
 客户端和服务端的武器数据都要有：
@@ -177,4 +207,3 @@ totDamage = (int) Math.min(Integer.MAX_VALUE, (long) totDamage + totDamageToOneM
 - 服务端 `AbstractDealDamageHandler` 使用 `decodeClientDamage`
 - 实际运行的服务端 jar/classes 是改完后的版本
 - 客户端和服务端都重启，且客户端运行的是本仓库这份已修改的 `clien/ijl15.dll`
-

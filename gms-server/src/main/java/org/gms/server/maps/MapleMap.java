@@ -4398,7 +4398,7 @@ public class MapleMap {
     }
 
     private void spawnChaosHorntailPartsOnGroundBelow(final Monster ht, final Point targetPoint, final int parentMobOid) {
-        for (int mobId = MobId.CHAOS_HORNTAIL_HEAD_A; mobId <= MobId.CHAOS_HORNTAIL_TAIL; mobId++) {
+        for (int mobId : getChaosHorntailPartSpawnOrder()) {
             Monster m = LifeFactory.getMonster(mobId);
             if (parentMobOid != 0) {
                 m.setParentMobOid(parentMobOid);
@@ -4424,10 +4424,28 @@ public class MapleMap {
         }
     }
 
+    private int[] getChaosHorntailPartSpawnOrder() {
+        return new int[] {
+            MobId.CHAOS_HORNTAIL_WINGS,
+            MobId.CHAOS_HORNTAIL_HEAD_A,
+            MobId.CHAOS_HORNTAIL_HEAD_B,
+            MobId.CHAOS_HORNTAIL_HEAD_C,
+            MobId.CHAOS_HORNTAIL_HAND_LEFT,
+            MobId.CHAOS_HORNTAIL_HAND_RIGHT,
+            MobId.CHAOS_HORNTAIL_LEGS,
+            MobId.CHAOS_HORNTAIL_TAIL
+        };
+    }
+
     public void refreshChaosHorntailBody(final Monster ht) {
         addHorntailBodyListener(ht);
 
-        for (int mobId = MobId.CHAOS_HORNTAIL_HEAD_A; mobId <= MobId.CHAOS_HORNTAIL_TAIL; mobId++) {
+        for (int mobId = MobId.DEAD_HORNTAIL_MIN; mobId <= MobId.DEAD_HORNTAIL_MAX; mobId++) {
+            killMonster(getMonsterById(mobId), null, false, 1);
+        }
+
+        final Point spawnPoint = new Point(ht.getPosition());
+        for (int mobId : getChaosHorntailPartSpawnOrder()) {
             if (getMonsterById(mobId) != null) {
                 continue;
             }
@@ -4450,9 +4468,7 @@ public class MapleMap {
                 }
             });
 
-            m.setPosition(ht.getPosition());
-            m.setFh(ht.getFh());
-            spawnMonster(m);
+            spawnMonsterOnGroundBelow(m, spawnPoint);
         }
     }
 

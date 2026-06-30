@@ -219,6 +219,15 @@ def set_vector(parent: WzSubProperty, name: str, xy: tuple[int, int]) -> None:
     replace_child(parent, WzVectorProperty(name, xy[0], xy[1], parent))
 
 
+def ensure_icon_anchor(skill: WzSubProperty) -> None:
+    for child_name in ICON_CHILDREN:
+        icon = skill.get(child_name)
+        if icon is None:
+            continue
+        replace_child(icon, WzVectorProperty("origin", 0, 32, icon))
+        replace_child(icon, WzIntProperty("z", 0, icon))
+
+
 def set_action(skill: WzSubProperty, action_name: str) -> None:
     action = WzSubProperty("action", skill)
     action.add(WzStringProperty("0", action_name, action))
@@ -267,6 +276,7 @@ def replace_source_visuals(target_skill: WzSubProperty, source_skill: WzSubPrope
             replace_child(target_skill, copy_visual_property(source_child, child_name, target_skill, target_key, source_region))
         elif child_name not in ("icon", "iconMouseOver", "iconDisabled"):
             remove_child(target_skill, child_name)
+    ensure_icon_anchor(target_skill)
 
 
 def replace_effect_from_dragon_action(target_skill: WzSubProperty, dragon_group: WzSubProperty, target_key: WzKey) -> None:

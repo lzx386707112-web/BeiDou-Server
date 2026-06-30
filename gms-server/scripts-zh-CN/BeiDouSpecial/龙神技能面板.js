@@ -1,19 +1,19 @@
 /*
  * 龙神技能面板
- * 统一管理 2331010-2331018，不再通过快捷技能、快速转职、技能全满自动发放。
+ * 统一管理 2321010-2321018，不再通过快捷技能、快速转职、技能全满自动发放。
  */
 var status = -1;
 var SKILL_LEVEL = 30;
 var dragonSkills = [
-    {id: 2331010, name: "聖歐尼斯龍", type: "召唤", key: 21, keyName: "Y"},
-    {id: 2331011, name: "龍之躍", type: "龙攻击", key: 22, keyName: "22"},
-    {id: 2331012, name: "龍之氣息", type: "龙攻击", key: 23, keyName: "23"},
-    {id: 2331013, name: "閃雷之捷", type: "融合攻击", key: 24, keyName: "24"},
-    {id: 2331014, name: "塵土之躍", type: "融合攻击", key: 25, keyName: "25"},
-    {id: 2331015, name: "風之氣息", type: "融合攻击", key: 26, keyName: "26"},
-    {id: 2331016, name: "龍之捷VI", type: "六转龙攻击", key: 27, keyName: "27"},
-    {id: 2331017, name: "龍之躍VI", type: "六转龙攻击", key: 28, keyName: "28"},
-    {id: 2331018, name: "龍之氣息VI", type: "六转龙攻击", key: 29, keyName: "29"}
+    {id: 2321010, name: "聖歐尼斯龍", type: "召唤", key: 21, keyName: "Y"},
+    {id: 2321011, name: "龍之躍", type: "龙攻击", key: 22, keyName: "U"},
+    {id: 2321012, name: "龍之氣息", type: "龙攻击", key: 23, keyName: "I"},
+    {id: 2321013, name: "閃雷之捷", type: "融合攻击", key: 24, keyName: "O"},
+    {id: 2321014, name: "塵土之躍", type: "融合攻击", key: 25, keyName: "P"},
+    {id: 2321015, name: "風之氣息", type: "融合攻击", key: 26, keyName: "["},
+    {id: 2321016, name: "龍之捷VI", type: "六转龙攻击", key: 27, keyName: "]"},
+    {id: 2321017, name: "龍之躍VI", type: "六转龙攻击", key: 28, keyName: "\\"},
+    {id: 2321018, name: "龍之氣息VI", type: "六转龙攻击", key: 29, keyName: "29"}
 ];
 
 function start() {
