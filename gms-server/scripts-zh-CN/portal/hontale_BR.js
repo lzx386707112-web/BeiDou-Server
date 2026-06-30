@@ -20,24 +20,22 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 function enter(pi) {
-    if (pi.getPlayer().getMapId() == 240060000) {
-        if (pi.getEventInstance().getIntProperty("defeatedHead") >= 1) {
-            pi.playPortalSound();
-            pi.warp(240060100, 0);
-            return true;
-        } else {
-            pi.getPlayer().dropMessage(6, "【暗黑龙王】的封印阻挡着这扇门！");
-            return false;
-        }
-    } else if (pi.getPlayer().getMapId() == 240060100) {
-        if (pi.getEventInstance().getIntProperty("defeatedHead") >= 2) {
-            pi.playPortalSound();
-            pi.warp(240060200, 0);
-            return true;
-        } else {
-            pi.getPlayer().dropMessage(6, "【暗黑龙王】的封印阻挡着这扇门！");
-            return false;
-        }
+    var mapId = pi.getPlayer().getMapId();
+    if (mapId == 240060000 || mapId == 240060001) {
+        return warpIfHeadDefeated(pi, 1, mapId + 100);
+    } else if (mapId == 240060100 || mapId == 240060101) {
+        return warpIfHeadDefeated(pi, 2, mapId + 100);
     }
+    return false;
+}
+
+function warpIfHeadDefeated(pi, defeatedHeadCount, targetMap) {
+    if (pi.getEventInstance().getIntProperty("defeatedHead") >= defeatedHeadCount) {
+        pi.playPortalSound();
+        pi.warp(targetMap, 0);
+        return true;
+    }
+
+    pi.getPlayer().dropMessage(6, "Horntail's Seal is Blocking this Door.");
     return false;
 }

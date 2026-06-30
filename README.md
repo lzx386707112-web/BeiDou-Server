@@ -90,6 +90,8 @@ rtk tool/scripts/pack_img_wz_wizard.sh
 
 来源目录：`/Users/lizixian/Documents/mxd/怀旧岛V095仿官版/怀旧岛V095服务端`。本次仅做资源与脚本盘点，未直接迁移文件。
 
+迁移操作手册、踩坑记录和下一批进阶黑龙检查清单见：[README_095_MIGRATION.md](README_095_MIGRATION.md)。
+
 ## 差异概览
 
 与当前 beidou 资源相比，095 服务端 WZ 大约多出：
@@ -151,6 +153,59 @@ rtk tool/scripts/pack_img_wz_wizard.sh
 - beidou 脚本风格偏 HeavenMS/Cosmic，095 脚本偏老 Odin 风格。095 中的 `em.getMonster(...)`、`setInstanceMap(...)`、`disposeIfPlayerBelow(...)` 等调用需要按 beidou 现有事件脚本改写。
 - 先迁一个闭环 Boss：地图 XML、怪物 XML、String 名称、NPC/反应堆入口、event 脚本、掉落/奖励，再进游戏验证。
 - Tokyo、拉瓦那、马来西亚等内容 beidou 已有较多资源，优先级低于上述新增 Boss 和地图。
+
+## 第一批迁移：进阶扎昆
+
+已把进阶扎昆闭环迁入 beidou，入口从 `211042301` 进入 `211042401`，由 NPC `2030016` 创建 `CHAOS_ZAKUM` 远征，事件 `ChaosZakum` 进入 `280030001`，通过反应堆 `2111101` 召唤 `8800100` 假身和 `8800103-8800110` 手臂。
+
+本批次补充的服务端内容：
+
+- 地图 XML：`211042301`，并把 `211042401` 回退目标改到 `211042301`
+- NPC/反应堆 XML：`2030016`、`2111101`
+- 脚本：`scripts/event/ChaosZakum.js`、`scripts/npc/2030016.js`、`scripts/reactor/2111101.js`，并适配 `portal/Zakum05.js`
+- Java：补充进阶扎昆 MobId、远征 bosslog、Zakum 假身/手臂判定对进阶扎昆的支持
+- DB：`V2.1.17__add_chaos_zakum_bosslog.sql`，给 bosslog enum 增加 `CHAOS_ZAKUM`
+
+本批次补充的客户端内容：
+
+- 从 095 客户端 WZ 直接导出的 IMG：`Map/Map2/211042301.img`、`Map/Map2/211042401.img`、`Reactor/2111101.img`
+- 095 客户端 WZ 没有 `Npc/2030016.img`，因此使用同外观的 `2030013.img` 导出后作为 `2030016.img`
+- `String/Npc.img` 由 beidou 已更新的 `String.wz/Npc.img.xml` 重建，用于补 `2030016` 文案
+- 从 095 WZ 导出的客户端 IMG 需要从 CMS key 转成 beidou 客户端使用的 GMS key，否则客户端进图时可能报 `-2147467261` 无效指针
+
+迁移校验结论：
+
+- 095 客户端 WZ 需要用 CMS IV 才能正确解出明文 IMG 名称。
+- 地图/反应堆/NPC 这类直接从 095 WZ 导出的 IMG，落到 `clien/Data` 前必须重新保存为 GMS key。
+- 进阶扎昆本体 HP 当前为 `528000000`、`704000000`、`880000000`，未超过 21 亿，本批不需要把服务端 HP XML 改成 `string`。
+- 进阶扎昆怪物服务端 XML 使用 `8800100-8800110`，客户端 IMG 已恢复为 095 原始进阶扎昆资源；`MobSkill.img` 中召唤技能 `200/184-194` 在 beidou 客户端和服务端均存在。
+- `211042301` 引用的客户端素材 `Back/moltenRock.img`、`Obj/dungeon2.img`、`Tile/moltenRock.img` 在 beidou 客户端已存在。
+- `280030001` 祭坛崩溃排查：显式引用的 `Back/moltenRock.img`、`Obj/connect.img`、`Obj/dungeon2.img`、`Tile/moltenRock.img`、`Npc/2030010.img`、`Reactor/2111101.img` 都存在且可用 GMS key 解析，未发现缺文件。
+- 为规避 095 导出地图结构在 beidou 客户端中进图闪退，`280030001` 已改为基于 beidou 原 `280030000` 祭坛底座重建，仅保留自循环目标 `280030001` 和反应堆 `2111101`；旧版已备份到 `/private/tmp/280030001.before-compat.img(.xml)`。
+- 普通扎昆祭坛对比后，服务端 `280030001` 与 `280030000` 地图只剩地图名、自循环传送目标和反应堆 ID 差异；客户端 `Reactor/2111101.img` 已改为完全复用普通祭坛 `2111001.img` 的兼容资源，服务端 XML 也只保留根节点 `2111101.img` 的差异，旧版备份到 `/private/tmp/2111101.before-compat.img(.xml)`。
+- 进一步排查发现，由服务端 `media=NONE` XML 重建的客户端 `280030001.img` 缺少普通祭坛客户端 IMG 中的 `miniMap/canvas`，表现为 `decoded_canvases=0`；已改为直接复制普通 `280030000.img` 作为客户端 `280030001.img`，确保 `decoded_canvases=1`，旧版备份到 `/private/tmp/280030001.no-minimap-canvas.img`。
+- 召唤后闪退排查：进图阶段已排除地图/反应堆显式资源缺失，召唤阶段新增加载 boss 血条 UI 和 `String/Mob`。实际缺口是客户端 `String/Mob.img` 缺少 `8800100-8800110` 名称，且 `UIWindow/MobGage/Mob/8800100-8800102` 原为 1x1 `_inlink` 到 `8800001`。已补客户端 `String/Mob.img` 名称，并把 `UIWindow.img` 中 `8800100/8800101/8800102` 血条 icon 改为实体 25x25 canvas，分别复制 `8800000/8800001/8800002`；服务端 XML 同步为 UOL 映射。临时普通扎昆 mob 替换已撤销，当前 `Mob/8800100-8800110.img` 已恢复为原始进阶扎昆资源，覆盖前状态备份在 `/private/tmp/chaos-zakum-before-resource-fix/`。
+- 深度资源审计补齐：逐节点检查了 `211042301`、`211042401`、`280030001` 的 `back/obj/tile/life/reactor/miniMap/portal`，以及 `8800100-8800110` 的 `revive/skill/MobSkill`、召唤怪、UI 血条和 `String/Mob`。补齐项包括：客户端 `280030001.img` 的 portal 目标从 `280030000` 改为自循环 `280030001`、reactor id 从 `2111001` 改为 `2111101`；补客户端和服务端 `String/Mob` 的 `9400407`、`9420604` 名称；发现 `8800108` 原引用的 `MobSkill 114/37` 属于 095 新结构，包含 Beidou 客户端原生 `114` 等级中没有的 `mob/mob0` 特效节点，容易触发客户端“游戏数据不正确”；已撤回硬补的 `114/37`，改为把客户端和服务端 `8800108` 的该技能适配到 Beidou 原生 `114/1`；`9400389.img` 原为空壳 0 canvas，已保留自身 `info` 并补入 `9400387` 的显示动作，避免 `MobSkill 200/189` 召唤后加载空资源。深度审计最终结果：`ok=536 warn=6 fail=0`，6 个 warning 均为相关地图没有 `obj/tile/tS` 节点，属于未使用对应层级资源。覆盖前备份在 `/private/tmp/chaos-zakum-before-deep-audit-fix/`。
+- 已用 OpenJDK 21 执行 `mvn -pl gms-server -DskipTests compile`，编译通过。
+
+## 第二批迁移：进阶暗黑龙王
+
+已把 095 进阶暗黑龙王闭环迁入 beidou。入口复用 NPC `2083004`，现在可选择普通暗黑龙王或 `CHAOS_HORNTAIL` 远征；事件 `ChaosHorntail` 使用 `240060001`、`240060101`、`240060201` 三张地图，前两张地图分别刷 `8810128`、`8810129` 预头召唤怪，最终场通过反应堆 `2401100` 调用 `spawnChaosHorntailOnGroundBelow` 召唤 `8810130`、`8810118` 和 `8810102-8810109` 部件。
+
+本批次补充和适配内容：
+
+- 脚本：`scripts/event/ChaosHorntail.js`、`scripts/reactor/2401100.js`，并扩展 `portal/hontale_BR.js` 支持 `240060001 -> 240060101 -> 240060201`。
+- 入口：`scripts/npc/2083004.js` 支持普通/进阶黑龙双模式；`scripts-zh-CN` 同步了 NPC、event、portal、reactor 脚本。
+- Java：补充进阶黑龙 MobId、远征击杀日志、`CHAOS_HORNTAIL` bosslog；新增 `spawnChaosHorntailOnGroundBelow`，并让死部件齐全后的本体击杀逻辑同时支持 `8810118`。
+- DB：`V2.1.18__add_chaos_horntail_bosslog.sql` 给 bosslog enum 增加 `CHAOS_HORNTAIL`。
+- 资源：补齐服务端和客户端 `String/Mob` 的 `8810100-8810109`、`8810118-8810130` 名称；`UIWindow/MobGage/Mob/8810118` 改为 UOL 到普通黑龙血条，避免 1x1 `_inlink` 占位。
+- 服务端怪物 XML：给 `8810118`、`8810128`、`8810129`、`8810130` 补 `boss=1`；客户端怪物和地图 IMG 不从服务端 XML 重建，保留现有可解码画布资源。
+
+兼容处理说明：
+
+- 095 地图里的 `hontale_boss1/hontale_boss2` portal 触发方式没有硬搬；当前事件在 `setup()` 中直接刷预头，传送门只根据 `defeatedHead` 放行。
+- 进阶黑龙死亡部件仍复用普通黑龙 `8810010-8810017`，因此服务端结算逻辑必须显式寻找并击杀 `8810118`，否则进阶本体不会进入后续阶段。
+- `8810110-8810117` 在 095 来源 WZ 中不存在，本批实际迁移的进阶黑龙资源为 `8810100-8810109`、`8810118-8810130`。
 
 # docker
 原服务端中docker相关配置已移除，配置已独立到[新的仓库](https://github.com/BeiDouMS/BeiDou-docker)，且支持[镜像拉取](https://github.com/BeiDouMS/BeiDou-docker/pkgs/container/beidou-server-all)。想参加docker开发，欢迎在新仓库进行pr。  

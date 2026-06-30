@@ -584,6 +584,10 @@ public class EventManager {
                         eim.startEvent();
                     } catch (ScriptException | NoSuchMethodException ex) {
                         log.error("Event script startInstance（事件脚本startInstance）", ex);
+                        if (lobbyId > -1) {
+                            setLockLobby(lobbyId, false);
+                        }
+                        return false;
                     }
 
                     return true;

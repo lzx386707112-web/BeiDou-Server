@@ -12703,11 +12703,7 @@
       <uol name="8810121" value="8810118"/>
       <uol name="8810120" value="8810118"/>
       <uol name="8810119" value="8810118"/>
-      <canvas name="8810118" width="1" height="1">
-        <int name="delay" value="500"/>
-        <vector name="origin" x="0" y="0"/>
-        <string name="_inlink" value="MobGage/Mob/8810018"/>
-      </canvas>
+      <uol name="8810118" value="8810018"/>
       <uol name="8810101" value="8810018"/>
       <uol name="8810100" value="8810018"/>
       <canvas name="8800400" width="25" height="26">
@@ -12716,21 +12712,9 @@
         <string name="_hash" value="9118c3946facc3fa3d2257f0fa79121ef06d0f6dc18e217f258a870e97333f4b"/>
       </canvas>
       <uol name="8800200" value="9500390"/>
-      <canvas name="8800102" width="1" height="1">
-        <int name="delay" value="500"/>
-        <vector name="origin" x="0" y="0"/>
-        <string name="_inlink" value="MobGage/Mob/8800001"/>
-      </canvas>
-      <canvas name="8800101" width="1" height="1">
-        <int name="delay" value="500"/>
-        <vector name="origin" x="0" y="0"/>
-        <string name="_inlink" value="MobGage/Mob/8800001"/>
-      </canvas>
-      <canvas name="8800100" width="1" height="1">
-        <int name="delay" value="500"/>
-        <vector name="origin" x="0" y="0"/>
-        <string name="_inlink" value="MobGage/Mob/8800001"/>
-      </canvas>
+      <uol name="8800102" value="8800002"/>
+      <uol name="8800101" value="8800001"/>
+      <uol name="8800100" value="8800000"/>
       <uol name="8800022" value="8800002"/>
       <uol name="8800021" value="8800001"/>
       <uol name="8800020" value="8800000"/>

@@ -35,9 +35,28 @@ public class MobId {
     public static final int ZAKUM_ARM_6 = 8800008;
     public static final int ZAKUM_ARM_7 = 8800009;
     public static final int ZAKUM_ARM_8 = 8800010;
+    public static final int CHAOS_ZAKUM_1 = 8800100;
+    public static final int CHAOS_ZAKUM_2 = 8800101;
+    public static final int CHAOS_ZAKUM_3 = 8800102;
+    public static final int CHAOS_ZAKUM_ARM_1 = 8800103;
+    public static final int CHAOS_ZAKUM_ARM_2 = 8800104;
+    public static final int CHAOS_ZAKUM_ARM_3 = 8800105;
+    public static final int CHAOS_ZAKUM_ARM_4 = 8800106;
+    public static final int CHAOS_ZAKUM_ARM_5 = 8800107;
+    public static final int CHAOS_ZAKUM_ARM_6 = 8800108;
+    public static final int CHAOS_ZAKUM_ARM_7 = 8800109;
+    public static final int CHAOS_ZAKUM_ARM_8 = 8800110;
 
     public static boolean isZakumArm(int mobId) {
         return mobId >= ZAKUM_ARM_1 && mobId <= ZAKUM_ARM_8;
+    }
+
+    public static boolean isChaosZakumArm(int mobId) {
+        return mobId >= CHAOS_ZAKUM_ARM_1 && mobId <= CHAOS_ZAKUM_ARM_8;
+    }
+
+    public static boolean isAnyZakumArm(int mobId) {
+        return isZakumArm(mobId) || isChaosZakumArm(mobId);
     }
 
     public static final int HORNTAIL_PREHEAD_LEFT = 8810000;
@@ -54,6 +73,19 @@ public class MobId {
     public static final int DEAD_HORNTAIL_MAX = 8810017;
     public static final int HORNTAIL = 8810018;
     public static final int SUMMON_HORNTAIL = 8810026;
+    public static final int CHAOS_HORNTAIL_PREHEAD_LEFT = 8810100;
+    public static final int CHAOS_HORNTAIL_PREHEAD_RIGHT = 8810101;
+    public static final int CHAOS_HORNTAIL_HEAD_A = 8810102;
+    public static final int CHAOS_HORNTAIL_HEAD_B = 8810103;
+    public static final int CHAOS_HORNTAIL_HEAD_C = 8810104;
+    public static final int CHAOS_HORNTAIL_HAND_LEFT = 8810105;
+    public static final int CHAOS_HORNTAIL_HAND_RIGHT = 8810106;
+    public static final int CHAOS_HORNTAIL_WINGS = 8810107;
+    public static final int CHAOS_HORNTAIL_LEGS = 8810108;
+    public static final int CHAOS_HORNTAIL_TAIL = 8810109;
+    public static final int CHAOS_HORNTAIL = 8810118;
+    public static final int CHAOS_HORNTAIL_5 = 8810122;
+    public static final int SUMMON_CHAOS_HORNTAIL = 8810130;
 
     public static boolean isDeadHorntailPart(int mobId) {
         return mobId >= DEAD_HORNTAIL_MIN && mobId <= DEAD_HORNTAIL_MAX;

@@ -43,7 +43,9 @@ public class ExpeditionBossLog {
 
     public enum BossLogEntry {
         ZAKUM(3, 1, false),
+        CHAOS_ZAKUM(5, 1, false),
         HORNTAIL(3, 1, false),
+        CHAOS_HORNTAIL(5, 1, false),
         PINKBEAN(3, 1, false),
         SCARGA(1, 1, false),
         PAPULATUS(2, 1, false);

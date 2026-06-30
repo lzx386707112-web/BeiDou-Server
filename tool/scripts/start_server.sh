@@ -96,6 +96,40 @@ find_jdk21() {
   return 1
 }
 
+stop_process() {
+  local pid="$1"
+  local reason="$2"
+  local waited
+
+  if [[ ! "${pid}" =~ ^[0-9]+$ ]] || ! kill -0 "${pid}" 2>/dev/null; then
+    return 0
+  fi
+
+  echo "检测到已有服务端进程，PID: ${pid}（${reason}），正在停止..."
+  kill "${pid}" 2>/dev/null || true
+  waited=0
+  while kill -0 "${pid}" 2>/dev/null; do
+    if [[ "$waited" -ge 30 ]]; then
+      echo "进程 ${pid} 未在 30 秒内退出，强制停止..."
+      kill -9 "${pid}" 2>/dev/null || true
+      break
+    fi
+    sleep 1
+    waited=$((waited + 1))
+  done
+
+  waited=0
+  while kill -0 "${pid}" 2>/dev/null; do
+    if [[ "$waited" -ge 5 ]]; then
+      echo "无法停止已有服务端进程，PID: ${pid}" >&2
+      exit 1
+    fi
+    sleep 1
+    waited=$((waited + 1))
+  done
+  echo "已有服务端进程已停止，PID: ${pid}"
+}
+
 jar="$DEFAULT_JAR"
 config=""
 background=0
@@ -173,6 +207,30 @@ if [[ "$log_file" != /* ]]; then
   log_file="$ROOT/$log_file"
 fi
 
+server_port="8686"
+if [[ "$has_app_args" -eq 1 ]]; then
+  for app_arg in "${app_args[@]}"; do
+    case "$app_arg" in
+      --server.port=*)
+        server_port="${app_arg#*=}"
+        ;;
+    esac
+  done
+fi
+
+if [[ -f "$pid_file" ]]; then
+  old_pid="$(cat "$pid_file" 2>/dev/null || true)"
+  stop_process "$old_pid" "PID 文件"
+fi
+
+if [[ -n "$server_port" ]] && command -v lsof >/dev/null 2>&1; then
+  port_pids="$(lsof -nP -tiTCP:"$server_port" -sTCP:LISTEN 2>/dev/null || true)"
+  while IFS= read -r port_pid; do
+    [[ -n "$port_pid" ]] || continue
+    stop_process "$port_pid" "端口 $server_port"
+  done <<< "$port_pids"
+fi
+
 jdk_home="$(find_jdk21 || true)"
 if [[ -z "$jdk_home" ]]; then
   cat >&2 <<'EOF'
@@ -220,14 +278,6 @@ if [[ "$has_app_args" -eq 1 ]]; then
 fi
 
 if [[ "$background" -eq 1 ]]; then
-  if [[ -f "$pid_file" ]]; then
-    old_pid="$(cat "$pid_file" 2>/dev/null || true)"
-    if [[ "$old_pid" =~ ^[0-9]+$ ]] && kill -0 "$old_pid" 2>/dev/null; then
-      echo "服务端似乎已在运行，PID: $old_pid" >&2
-      exit 1
-    fi
-  fi
-
   mkdir -p "$(dirname "$pid_file")" "$(dirname "$log_file")"
   (
     cd "$SERVER_DIR"

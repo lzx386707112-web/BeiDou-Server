@@ -816,6 +816,9 @@ public class Monster extends AbstractLoadedLife {
                         if (MobId.isDeadHorntailPart(mob.getId()) && reviveMap.isHorntailDefeated()) {
                             boolean htKilled = false;
                             Monster ht = reviveMap.getMonsterById(MobId.HORNTAIL);
+                            if (ht == null) {
+                                ht = reviveMap.getMonsterById(MobId.CHAOS_HORNTAIL);
+                            }
 
                             if (ht != null) {
                                 ht.lockMonster();
