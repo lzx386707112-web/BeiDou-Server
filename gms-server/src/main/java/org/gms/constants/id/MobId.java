@@ -91,6 +91,14 @@ public class MobId {
         return mobId >= DEAD_HORNTAIL_MIN && mobId <= DEAD_HORNTAIL_MAX;
     }
 
+    public static boolean isChaosHorntailBody(int mobId) {
+        return mobId >= CHAOS_HORNTAIL && mobId <= CHAOS_HORNTAIL_5;
+    }
+
+    public static boolean isRevivingChaosHorntailBody(int mobId) {
+        return mobId >= CHAOS_HORNTAIL && mobId < CHAOS_HORNTAIL_5;
+    }
+
     public static final int SCARLION_STATUE = 9420546;
     public static final int SCARLION = 9420547;
     public static final int ANGRY_SCARLION = 9420548;

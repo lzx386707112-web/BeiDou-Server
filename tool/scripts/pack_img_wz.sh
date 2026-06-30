@@ -9,6 +9,7 @@ LIB_DIR="$ORZ_HOME/lib"
 CLASSES_DIR="$ORANGE_WZ_DIR/target/classes"
 SOURCES_FILE="$ORANGE_WZ_DIR/target/sources.txt"
 COMPILE_STAMP="$ORANGE_WZ_DIR/target/.pack-img-compile.stamp"
+DEFAULT_PACK_IMG_WZ_JAVA_OPTS="-Xms512m -Xmx8g -XX:+UseG1GC"
 
 usage() {
   cat <<'USAGE'
@@ -23,6 +24,10 @@ usage() {
   JAVA_HOME_21       自动检测失败时，手动指定 JDK 21 路径
   ORZ_REPACKER_HOME  OrzRepacker 目录，默认:
                      /Users/lizixian/Documents/mxd/OrzRepacker-v1.157.48
+  PACK_IMG_WZ_JAVA_OPTS
+                     打包进程 JVM 参数，默认:
+                     -Xms512m -Xmx8g -XX:+UseG1GC
+                     Character 仍内存不足时可设为: -Xms512m -Xmx12g -XX:+UseG1GC
 USAGE
 }
 
@@ -390,6 +395,11 @@ fi
 
 compile_orange_wz "$jdk_home"
 
+pack_img_wz_java_opts="${PACK_IMG_WZ_JAVA_OPTS:-$DEFAULT_PACK_IMG_WZ_JAVA_OPTS}"
+read -r -a java_opts <<< "$pack_img_wz_java_opts"
+echo "JVM 参数: ${java_opts[*]}"
+
 exec "$jdk_home/bin/java" \
+  "${java_opts[@]}" \
   -cp "$CLASSES_DIR:$LIB_DIR/*" \
   orange.wz.cli.PackImgDirToWz "$@"

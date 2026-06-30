@@ -812,12 +812,20 @@ public class Monster extends AbstractLoadedLife {
                             mob.disableDrops();
                         }
                         reviveMap.spawnMonster(mob);
+                        if (MobId.isChaosHorntailBody(mob.getId())) {
+                            reviveMap.refreshChaosHorntailBody(mob);
+                        }
 
                         if (MobId.isDeadHorntailPart(mob.getId()) && reviveMap.isHorntailDefeated()) {
                             boolean htKilled = false;
                             Monster ht = reviveMap.getMonsterById(MobId.HORNTAIL);
                             if (ht == null) {
-                                ht = reviveMap.getMonsterById(MobId.CHAOS_HORNTAIL);
+                                for (int bodyId = MobId.CHAOS_HORNTAIL; bodyId <= MobId.CHAOS_HORNTAIL_5; bodyId++) {
+                                    ht = reviveMap.getMonsterById(bodyId);
+                                    if (ht != null) {
+                                        break;
+                                    }
+                                }
                             }
 
                             if (ht != null) {

@@ -1495,7 +1495,7 @@ public class MapleMap {
             spawnedMonstersOnMap.decrementAndGet();
             removeMapObject(monster);
             monster.disposeMapObject();
-            if (monster.hasBossHPBar()) {   // thanks resinate for noticing boss HPbar not clearing after mob defeat in certain scenarios   //感谢resinate注意到在某些情况下暴徒失败后老板HPbar没有清除
+            if (monster.hasBossHPBar() && !MobId.isRevivingChaosHorntailBody(monster.getId())) {   // thanks resinate for noticing boss HPbar not clearing after mob defeat in certain scenarios   //感谢resinate注意到在某些情况下暴徒失败后老板HPbar没有清除
                 broadcastBossHpMessage(monster, monster.hashCode(), monster.makeBossHPBarPacket(), monster.getPosition());
             }
 
@@ -4373,6 +4373,13 @@ public class MapleMap {
 
         final Monster ht = LifeFactory.getMonster(MobId.CHAOS_HORNTAIL);
         ht.setParentMobOid(htIntro.getObjectId());
+        addHorntailBodyListener(ht);
+        spawnMonsterOnGroundBelow(ht, targetPoint);
+
+        spawnChaosHorntailPartsOnGroundBelow(ht, targetPoint, htIntro.getObjectId());
+    }
+
+    private void addHorntailBodyListener(final Monster ht) {
         ht.addListener(new MonsterListener() {
             @Override
             public void monsterKilled(int aniTime) {
@@ -4388,11 +4395,14 @@ public class MapleMap {
                 ht.addHp(-trueHeal);
             }
         });
-        spawnMonsterOnGroundBelow(ht, targetPoint);
+    }
 
+    private void spawnChaosHorntailPartsOnGroundBelow(final Monster ht, final Point targetPoint, final int parentMobOid) {
         for (int mobId = MobId.CHAOS_HORNTAIL_HEAD_A; mobId <= MobId.CHAOS_HORNTAIL_TAIL; mobId++) {
             Monster m = LifeFactory.getMonster(mobId);
-            m.setParentMobOid(htIntro.getObjectId());
+            if (parentMobOid != 0) {
+                m.setParentMobOid(parentMobOid);
+            }
 
             m.addListener(new MonsterListener() {
                 @Override
@@ -4411,6 +4421,38 @@ public class MapleMap {
             });
 
             spawnMonsterOnGroundBelow(m, targetPoint);
+        }
+    }
+
+    public void refreshChaosHorntailBody(final Monster ht) {
+        addHorntailBodyListener(ht);
+
+        for (int mobId = MobId.CHAOS_HORNTAIL_HEAD_A; mobId <= MobId.CHAOS_HORNTAIL_TAIL; mobId++) {
+            if (getMonsterById(mobId) != null) {
+                continue;
+            }
+
+            Monster m = LifeFactory.getMonster(mobId);
+
+            m.addListener(new MonsterListener() {
+                @Override
+                public void monsterKilled(int aniTime) {
+                }
+
+                @Override
+                public void monsterDamaged(Character from, int trueDmg) {
+                    ht.applyFakeDamage(from, trueDmg, true);
+                }
+
+                @Override
+                public void monsterHealed(int trueHeal) {
+                    ht.addHp(trueHeal);
+                }
+            });
+
+            m.setPosition(ht.getPosition());
+            m.setFh(ht.getFh());
+            spawnMonster(m);
         }
     }
 

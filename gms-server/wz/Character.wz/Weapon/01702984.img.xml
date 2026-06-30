@@ -2,1528 +2,1529 @@
 <imgdir indent="2" media="NONE" name="01702984.img">
   <imgdir name="info">
     <canvas format="2" height="36" name="icon" scale="0" width="38">
-      <vector name="origin" x="3" y="34"/>
-      <string name="_hash" value="9c780f70ed958f6c4b1092208b0acc40010b8e42775639922c9c93f8e069bad6"/>
+      <vector name="origin" x="3" y="34" />
+      <string name="_hash" value="9c780f70ed958f6c4b1092208b0acc40010b8e42775639922c9c93f8e069bad6" />
     </canvas>
     <canvas format="2" height="36" name="iconRaw" scale="0" width="38">
-      <vector name="origin" x="3" y="34"/>
-      <string name="_hash" value="7075a81ecf21c0a03180bb4de340dc2a734d526d3c263657425986e34063db32"/>
+      <vector name="origin" x="3" y="34" />
+      <string name="_hash" value="7075a81ecf21c0a03180bb4de340dc2a734d526d3c263657425986e34063db32" />
     </canvas>
-    <string name="islot" value="Wp"/>
-    <string name="vslot" value="Wp"/>
-    <int name="reqJob" value="0"/>
-    <int name="reqLevel" value="0"/>
-    <int name="reqSTR" value="0"/>
-    <int name="reqDEX" value="0"/>
-    <int name="reqINT" value="0"/>
-    <int name="reqLUK" value="0"/>
-    <int name="cash" value="1"/>
+    <string name="islot" value="Wp" />
+    <string name="vslot" value="Wp" />
+    <int name="reqJob" value="0" />
+    <int name="reqLevel" value="0" />
+    <int name="reqSTR" value="0" />
+    <int name="reqDEX" value="0" />
+    <int name="reqINT" value="0" />
+    <int name="reqLUK" value="0" />
+    <int name="cash" value="1" />
+    <int name="limitBreak" value="2147483647" />
   </imgdir>
   <imgdir name="30">
     <imgdir name="walk1">
       <imgdir name="0">
         <canvas format="2" height="22" name="weapon" scale="0" width="37">
-          <vector name="origin" x="-19" y="-3"/>
+          <vector name="origin" x="-19" y="-3" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="z" value="weapon"/>
-          <string name="_hash" value="a167a7f02bea670798212a0b65d0dfca67190ecb7354413022652a09ea5e37e0"/>
+          <string name="z" value="weapon" />
+          <string name="_hash" value="a167a7f02bea670798212a0b65d0dfca67190ecb7354413022652a09ea5e37e0" />
         </canvas>
         <canvas format="2" height="43" name="effect" scale="0" width="44">
-          <vector name="origin" x="-23" y="11"/>
-          <string name="z" value="characterEnd"/>
+          <vector name="origin" x="-23" y="11" />
+          <string name="z" value="characterEnd" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="_hash" value="fb90ae24f144dfdf0e723f7111ea4b76e2af94f262c0aea06c4602a8aedcade4"/>
+          <string name="_hash" value="fb90ae24f144dfdf0e723f7111ea4b76e2af94f262c0aea06c4602a8aedcade4" />
         </canvas>
       </imgdir>
       <imgdir name="1">
         <canvas format="2" height="54" name="effect" scale="0" width="67">
-          <vector name="origin" x="-24" y="19"/>
-          <string name="z" value="characterEnd"/>
+          <vector name="origin" x="-24" y="19" />
+          <string name="z" value="characterEnd" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="_hash" value="c333134d96d3b980928e26e5eae43b67bcaa873d585b607b6b682660e1c248ea"/>
+          <string name="_hash" value="c333134d96d3b980928e26e5eae43b67bcaa873d585b607b6b682660e1c248ea" />
         </canvas>
-        <uol name="weapon" value="../../../30/walk1/0/weapon"/>
+        <uol name="weapon" value="../../../30/walk1/0/weapon" />
       </imgdir>
       <imgdir name="2">
         <canvas format="2" height="22" name="weapon" scale="0" width="37">
-          <vector name="origin" x="-19" y="0"/>
+          <vector name="origin" x="-19" y="0" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="z" value="weapon"/>
-          <string name="_hash" value="2f557e2c36d644dd9511fd16056cb471b53c72db00fc37f042f11615e932f2fe"/>
+          <string name="z" value="weapon" />
+          <string name="_hash" value="2f557e2c36d644dd9511fd16056cb471b53c72db00fc37f042f11615e932f2fe" />
         </canvas>
         <canvas format="2" height="52" name="effect" scale="0" width="69">
-          <vector name="origin" x="-26" y="19"/>
-          <string name="z" value="characterEnd"/>
+          <vector name="origin" x="-26" y="19" />
+          <string name="z" value="characterEnd" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="_hash" value="3c431c0dee4217d2e8c5631e4bc16c136b3f750dd19b1e925b76777e9693cd20"/>
+          <string name="_hash" value="3c431c0dee4217d2e8c5631e4bc16c136b3f750dd19b1e925b76777e9693cd20" />
         </canvas>
       </imgdir>
       <imgdir name="3">
         <canvas format="2" height="35" name="effect" scale="0" width="71">
-          <vector name="origin" x="-25" y="5"/>
-          <string name="z" value="characterEnd"/>
+          <vector name="origin" x="-25" y="5" />
+          <string name="z" value="characterEnd" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="_hash" value="e13e9a334703d162eae4009abb7c460bf19709f2de0406cedb1eabb4ffc62424"/>
+          <string name="_hash" value="e13e9a334703d162eae4009abb7c460bf19709f2de0406cedb1eabb4ffc62424" />
         </canvas>
-        <uol name="weapon" value="../../../30/walk1/0/weapon"/>
+        <uol name="weapon" value="../../../30/walk1/0/weapon" />
       </imgdir>
     </imgdir>
     <imgdir name="walk2">
       <imgdir name="0">
-        <uol name="weapon" value="../../../30/walk1/0/weapon"/>
-        <uol name="effect" value="../../../30/walk1/0/effect"/>
+        <uol name="weapon" value="../../../30/walk1/0/weapon" />
+        <uol name="effect" value="../../../30/walk1/0/effect" />
       </imgdir>
       <imgdir name="1">
-        <uol name="weapon" value="../../../30/walk1/0/weapon"/>
-        <uol name="effect" value="../../../30/walk1/1/effect"/>
+        <uol name="weapon" value="../../../30/walk1/0/weapon" />
+        <uol name="effect" value="../../../30/walk1/1/effect" />
       </imgdir>
       <imgdir name="2">
-        <uol name="weapon" value="../../../30/walk1/2/weapon"/>
-        <uol name="effect" value="../../../30/walk1/2/effect"/>
+        <uol name="weapon" value="../../../30/walk1/2/weapon" />
+        <uol name="effect" value="../../../30/walk1/2/effect" />
       </imgdir>
       <imgdir name="3">
-        <uol name="weapon" value="../../../30/walk1/0/weapon"/>
-        <uol name="effect" value="../../../30/walk1/3/effect"/>
+        <uol name="weapon" value="../../../30/walk1/0/weapon" />
+        <uol name="effect" value="../../../30/walk1/3/effect" />
       </imgdir>
     </imgdir>
     <imgdir name="stand1">
       <imgdir name="0">
         <canvas format="2" height="83" name="effect" scale="0" width="140">
-          <vector name="origin" x="63" y="43"/>
-          <string name="z" value="characterEnd"/>
+          <vector name="origin" x="63" y="43" />
+          <string name="z" value="characterEnd" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="_hash" value="2f05d3b6c265093bd4924a1ef1c269aa09a685af739bb08de1791aaef3b996d6"/>
+          <string name="_hash" value="2f05d3b6c265093bd4924a1ef1c269aa09a685af739bb08de1791aaef3b996d6" />
         </canvas>
-        <uol name="weapon" value="../../../30/walk1/2/weapon"/>
+        <uol name="weapon" value="../../../30/walk1/2/weapon" />
       </imgdir>
       <imgdir name="1">
         <canvas format="2" height="70" name="effect" scale="0" width="157">
-          <vector name="origin" x="72" y="26"/>
-          <string name="z" value="characterEnd"/>
+          <vector name="origin" x="72" y="26" />
+          <string name="z" value="characterEnd" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="_hash" value="ae44c75c5b2e420acd8bd0c605d49f2f54227216baea834394e3e29e07ad957b"/>
+          <string name="_hash" value="ae44c75c5b2e420acd8bd0c605d49f2f54227216baea834394e3e29e07ad957b" />
         </canvas>
-        <uol name="weapon" value="../../../30/walk1/0/weapon"/>
+        <uol name="weapon" value="../../../30/walk1/0/weapon" />
       </imgdir>
       <imgdir name="2">
         <canvas format="2" height="57" name="effect" scale="0" width="167">
-          <vector name="origin" x="79" y="10"/>
-          <string name="z" value="characterEnd"/>
+          <vector name="origin" x="79" y="10" />
+          <string name="z" value="characterEnd" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="_hash" value="e455182dd1c70418da028c7a9859c68939de0ab1631d9d05fbe30d6ba6b03a49"/>
+          <string name="_hash" value="e455182dd1c70418da028c7a9859c68939de0ab1631d9d05fbe30d6ba6b03a49" />
         </canvas>
-        <uol name="weapon" value="../../../30/walk1/0/weapon"/>
+        <uol name="weapon" value="../../../30/walk1/0/weapon" />
       </imgdir>
     </imgdir>
     <imgdir name="stand2">
       <imgdir name="0">
-        <uol name="weapon" value="../../../30/walk1/2/weapon"/>
-        <uol name="effect" value="../../../30/stand1/0/effect"/>
+        <uol name="weapon" value="../../../30/walk1/2/weapon" />
+        <uol name="effect" value="../../../30/stand1/0/effect" />
       </imgdir>
       <imgdir name="1">
-        <uol name="weapon" value="../../../30/walk1/0/weapon"/>
-        <uol name="effect" value="../../../30/stand1/1/effect"/>
+        <uol name="weapon" value="../../../30/walk1/0/weapon" />
+        <uol name="effect" value="../../../30/stand1/1/effect" />
       </imgdir>
       <imgdir name="2">
-        <uol name="weapon" value="../../../30/walk1/0/weapon"/>
-        <uol name="effect" value="../../../30/stand1/2/effect"/>
+        <uol name="weapon" value="../../../30/walk1/0/weapon" />
+        <uol name="effect" value="../../../30/stand1/2/effect" />
       </imgdir>
     </imgdir>
     <imgdir name="alert">
       <imgdir name="0">
         <canvas format="2" height="83" name="effect" scale="0" width="140">
-          <vector name="origin" x="76" y="46"/>
-          <string name="z" value="characterEnd"/>
+          <vector name="origin" x="76" y="46" />
+          <string name="z" value="characterEnd" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="_hash" value="9abe175f184a4f357f0013754875974b6c59eb4bd7b765ff983d8c3d1c693945"/>
+          <string name="_hash" value="9abe175f184a4f357f0013754875974b6c59eb4bd7b765ff983d8c3d1c693945" />
         </canvas>
-        <uol name="weapon" value="../../../30/walk1/2/weapon"/>
+        <uol name="weapon" value="../../../30/walk1/2/weapon" />
       </imgdir>
       <imgdir name="1">
         <canvas format="2" height="70" name="effect" scale="0" width="157">
-          <vector name="origin" x="84" y="27"/>
-          <string name="z" value="characterEnd"/>
+          <vector name="origin" x="84" y="27" />
+          <string name="z" value="characterEnd" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="_hash" value="0c3fcf905133263b5f1caf80f90a91fb2430ffb75fee143fa7178532759a6054"/>
+          <string name="_hash" value="0c3fcf905133263b5f1caf80f90a91fb2430ffb75fee143fa7178532759a6054" />
         </canvas>
-        <uol name="weapon" value="../../../30/walk1/2/weapon"/>
+        <uol name="weapon" value="../../../30/walk1/2/weapon" />
       </imgdir>
       <imgdir name="2">
         <canvas format="2" height="55" name="effect" scale="0" width="165">
-          <vector name="origin" x="90" y="9"/>
-          <string name="z" value="characterEnd"/>
+          <vector name="origin" x="90" y="9" />
+          <string name="z" value="characterEnd" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="_hash" value="67a333841bcce7325d7840c67d45d5b3ad70d1f56a2b45b88d9b495d4684a40d"/>
+          <string name="_hash" value="67a333841bcce7325d7840c67d45d5b3ad70d1f56a2b45b88d9b495d4684a40d" />
         </canvas>
-        <uol name="weapon" value="../../../30/walk1/2/weapon"/>
+        <uol name="weapon" value="../../../30/walk1/2/weapon" />
       </imgdir>
     </imgdir>
     <imgdir name="swingO1">
       <imgdir name="0">
         <canvas format="2" height="24" name="weapon" scale="0" width="37">
-          <vector name="origin" x="65" y="7"/>
+          <vector name="origin" x="65" y="7" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="z" value="weaponBelowBody"/>
-          <string name="_hash" value="c12747a571a6042b8f53d16728635a73a638a42c68ab0fa98da67d1994b66197"/>
+          <string name="z" value="weaponBelowBody" />
+          <string name="_hash" value="c12747a571a6042b8f53d16728635a73a638a42c68ab0fa98da67d1994b66197" />
         </canvas>
         <canvas format="2" height="98" name="effect" scale="0" width="152">
-          <vector name="origin" x="57" y="58"/>
-          <string name="z" value="characterEnd"/>
+          <vector name="origin" x="57" y="58" />
+          <string name="z" value="characterEnd" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="_hash" value="6dfa08153d3b04975b7c796ae78b2a5650e9418049cb991f1d3f7639226e52f6"/>
+          <string name="_hash" value="6dfa08153d3b04975b7c796ae78b2a5650e9418049cb991f1d3f7639226e52f6" />
         </canvas>
       </imgdir>
       <imgdir name="1">
         <canvas format="2" height="137" name="effect" scale="0" width="215">
-          <vector name="origin" x="130" y="19"/>
-          <string name="z" value="characterEnd"/>
+          <vector name="origin" x="130" y="19" />
+          <string name="z" value="characterEnd" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="_hash" value="701c3328f6478b1a85199188adfe70be491608219131495ee9a74933d7f3d0ca"/>
+          <string name="_hash" value="701c3328f6478b1a85199188adfe70be491608219131495ee9a74933d7f3d0ca" />
         </canvas>
-        <uol name="weapon" value="../../../30/swingO1/0/weapon"/>
+        <uol name="weapon" value="../../../30/swingO1/0/weapon" />
       </imgdir>
       <imgdir name="2">
         <canvas format="2" height="219" name="effect" scale="0" width="229">
-          <vector name="origin" x="119" y="131"/>
-          <string name="z" value="characterEnd"/>
+          <vector name="origin" x="119" y="131" />
+          <string name="z" value="characterEnd" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="_hash" value="f09a925ed0b2bc22898d9d3b5cd3cb8fe90e17f009b7fcd31d4ec430777790ef"/>
+          <string name="_hash" value="f09a925ed0b2bc22898d9d3b5cd3cb8fe90e17f009b7fcd31d4ec430777790ef" />
         </canvas>
-        <uol name="weapon" value="../../../30/walk1/2/weapon"/>
+        <uol name="weapon" value="../../../30/walk1/2/weapon" />
       </imgdir>
     </imgdir>
     <imgdir name="swingO2">
       <imgdir name="0">
         <canvas format="2" height="147" name="effect" scale="0" width="158">
-          <vector name="origin" x="63" y="103"/>
-          <string name="z" value="characterEnd"/>
+          <vector name="origin" x="63" y="103" />
+          <string name="z" value="characterEnd" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="_hash" value="a52124f6feb142aac216d11545b288b432cde0534155869fdcf90a7c6f6a4f36"/>
+          <string name="_hash" value="a52124f6feb142aac216d11545b288b432cde0534155869fdcf90a7c6f6a4f36" />
         </canvas>
-        <uol name="weapon" value="../../../30/swingO1/0/weapon"/>
+        <uol name="weapon" value="../../../30/swingO1/0/weapon" />
       </imgdir>
       <imgdir name="1">
         <canvas format="2" height="24" name="weapon" scale="0" width="37">
-          <vector name="origin" x="68" y="16"/>
+          <vector name="origin" x="68" y="16" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="z" value="weaponBelowBody"/>
-          <string name="_hash" value="097ade85df92e8bdea9f55f0f6a35deed98bc01f01292d3c64698fc137c24b9c"/>
+          <string name="z" value="weaponBelowBody" />
+          <string name="_hash" value="097ade85df92e8bdea9f55f0f6a35deed98bc01f01292d3c64698fc137c24b9c" />
         </canvas>
         <canvas format="2" height="169" name="effect" scale="0" width="176">
-          <vector name="origin" x="80" y="127"/>
-          <string name="z" value="characterEnd"/>
+          <vector name="origin" x="80" y="127" />
+          <string name="z" value="characterEnd" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="_hash" value="314c41266ab083eb0e2a1d4d5c3549630dc72e4e693ba44e991cfeeaf6f5d6bd"/>
+          <string name="_hash" value="314c41266ab083eb0e2a1d4d5c3549630dc72e4e693ba44e991cfeeaf6f5d6bd" />
         </canvas>
       </imgdir>
       <imgdir name="2">
         <canvas format="2" height="184" name="effect" scale="0" width="233">
-          <vector name="origin" x="128" y="131"/>
-          <string name="z" value="characterEnd"/>
+          <vector name="origin" x="128" y="131" />
+          <string name="z" value="characterEnd" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="_hash" value="806bec153d8829af99809ce4e53a0b9760214d1f59c91c2df52f9524884e5ea6"/>
+          <string name="_hash" value="806bec153d8829af99809ce4e53a0b9760214d1f59c91c2df52f9524884e5ea6" />
         </canvas>
-        <uol name="weapon" value="../../../30/walk1/2/weapon"/>
+        <uol name="weapon" value="../../../30/walk1/2/weapon" />
       </imgdir>
     </imgdir>
     <imgdir name="swingO3">
       <imgdir name="0">
         <canvas format="2" height="98" name="effect" scale="0" width="154">
-          <vector name="origin" x="56" y="58"/>
-          <string name="z" value="characterEnd"/>
+          <vector name="origin" x="56" y="58" />
+          <string name="z" value="characterEnd" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="_hash" value="d94f153f8a21d440b191596450953fc63d772deab4022a849c3525fe30eff889"/>
+          <string name="_hash" value="d94f153f8a21d440b191596450953fc63d772deab4022a849c3525fe30eff889" />
         </canvas>
-        <uol name="weapon" value="../../../30/swingO2/1/weapon"/>
+        <uol name="weapon" value="../../../30/swingO2/1/weapon" />
       </imgdir>
       <imgdir name="1">
         <canvas format="2" height="167" name="effect" scale="0" width="219">
-          <vector name="origin" x="128" y="126"/>
-          <string name="z" value="characterEnd"/>
+          <vector name="origin" x="128" y="126" />
+          <string name="z" value="characterEnd" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="_hash" value="a1f9148974f2d190029037c5510ff732fb145bb307f569ba8a33f8c7c994d1ba"/>
+          <string name="_hash" value="a1f9148974f2d190029037c5510ff732fb145bb307f569ba8a33f8c7c994d1ba" />
         </canvas>
-        <uol name="weapon" value="../../../30/swingO2/1/weapon"/>
+        <uol name="weapon" value="../../../30/swingO2/1/weapon" />
       </imgdir>
       <imgdir name="2">
         <canvas format="2" height="204" name="effect" scale="0" width="221">
-          <vector name="origin" x="115" y="93"/>
-          <string name="z" value="characterEnd"/>
+          <vector name="origin" x="115" y="93" />
+          <string name="z" value="characterEnd" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="_hash" value="08d393b938478824ba51de5bb3a09a17384900d2fbc7a9e7266d6e5d887460a5"/>
+          <string name="_hash" value="08d393b938478824ba51de5bb3a09a17384900d2fbc7a9e7266d6e5d887460a5" />
         </canvas>
-        <uol name="weapon" value="../../../30/walk1/0/weapon"/>
+        <uol name="weapon" value="../../../30/walk1/0/weapon" />
       </imgdir>
     </imgdir>
     <imgdir name="swingOF">
       <imgdir name="0">
         <canvas format="2" height="129" name="effect" scale="0" width="169">
-          <vector name="origin" x="61" y="92"/>
-          <string name="z" value="characterEnd"/>
+          <vector name="origin" x="61" y="92" />
+          <string name="z" value="characterEnd" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="_hash" value="0a1adfa77b5bfcb0abf312798d13606cf89c1ad37c0dc0e200a551c319eb8b33"/>
+          <string name="_hash" value="0a1adfa77b5bfcb0abf312798d13606cf89c1ad37c0dc0e200a551c319eb8b33" />
         </canvas>
-        <uol name="weapon" value="../../../30/swingO1/0/weapon"/>
+        <uol name="weapon" value="../../../30/swingO1/0/weapon" />
       </imgdir>
       <imgdir name="1">
         <canvas format="2" height="166" name="effect" scale="0" width="159">
-          <vector name="origin" x="59" y="117"/>
-          <string name="z" value="characterEnd"/>
+          <vector name="origin" x="59" y="117" />
+          <string name="z" value="characterEnd" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="_hash" value="add6af3cf4450b1f297acba707ad7bbef362fefc62c7b2563f57e19838f6362a"/>
+          <string name="_hash" value="add6af3cf4450b1f297acba707ad7bbef362fefc62c7b2563f57e19838f6362a" />
         </canvas>
-        <uol name="weapon" value="../../../30/swingO2/1/weapon"/>
+        <uol name="weapon" value="../../../30/swingO2/1/weapon" />
       </imgdir>
       <imgdir name="2">
         <canvas format="2" height="170" name="effect" scale="0" width="222">
-          <vector name="origin" x="124" y="126"/>
-          <string name="z" value="characterEnd"/>
+          <vector name="origin" x="124" y="126" />
+          <string name="z" value="characterEnd" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="_hash" value="cfd7fac11aed5c9c15400af2fd78c8a0e61cabfe59d0a30f46aa4b12187cf0e1"/>
+          <string name="_hash" value="cfd7fac11aed5c9c15400af2fd78c8a0e61cabfe59d0a30f46aa4b12187cf0e1" />
         </canvas>
-        <uol name="weapon" value="../../../30/swingO1/0/weapon"/>
+        <uol name="weapon" value="../../../30/swingO1/0/weapon" />
       </imgdir>
       <imgdir name="3">
         <canvas format="2" height="186" name="effect" scale="0" width="240">
-          <vector name="origin" x="124" y="73"/>
-          <string name="z" value="characterEnd"/>
+          <vector name="origin" x="124" y="73" />
+          <string name="z" value="characterEnd" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="_hash" value="ffab6e65615e293507fe6bb0affd15802d6b74e036254967323a0bdeccc7f898"/>
+          <string name="_hash" value="ffab6e65615e293507fe6bb0affd15802d6b74e036254967323a0bdeccc7f898" />
         </canvas>
-        <uol name="weapon" value="../../../30/walk1/0/weapon"/>
+        <uol name="weapon" value="../../../30/walk1/0/weapon" />
       </imgdir>
     </imgdir>
     <imgdir name="swingT1">
       <imgdir name="0">
         <canvas format="2" height="149" name="effect" scale="0" width="161">
-          <vector name="origin" x="51" y="104"/>
-          <string name="z" value="characterEnd"/>
+          <vector name="origin" x="51" y="104" />
+          <string name="z" value="characterEnd" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="_hash" value="8fef672b26784e2939f07f8249df80170411da05ee882460a67f244011d235e7"/>
+          <string name="_hash" value="8fef672b26784e2939f07f8249df80170411da05ee882460a67f244011d235e7" />
         </canvas>
-        <uol name="weapon" value="../../../30/swingO1/0/weapon"/>
+        <uol name="weapon" value="../../../30/swingO1/0/weapon" />
       </imgdir>
       <imgdir name="1">
         <canvas format="2" height="170" name="effect" scale="0" width="174">
-          <vector name="origin" x="79" y="128"/>
-          <string name="z" value="characterEnd"/>
+          <vector name="origin" x="79" y="128" />
+          <string name="z" value="characterEnd" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="_hash" value="a3653e85249bd356e578db83743e76039175630c8b0a1e60426d00e43e6fe3a6"/>
+          <string name="_hash" value="a3653e85249bd356e578db83743e76039175630c8b0a1e60426d00e43e6fe3a6" />
         </canvas>
-        <uol name="weapon" value="../../../30/swingO1/0/weapon"/>
+        <uol name="weapon" value="../../../30/swingO1/0/weapon" />
       </imgdir>
       <imgdir name="2">
         <canvas format="2" height="174" name="effect" scale="0" width="222">
-          <vector name="origin" x="119" y="131"/>
-          <string name="z" value="characterEnd"/>
+          <vector name="origin" x="119" y="131" />
+          <string name="z" value="characterEnd" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="_hash" value="b2fb5df74e445b028eb961a633f0b27257bbb58351cb99d2909d0cef189a84c1"/>
+          <string name="_hash" value="b2fb5df74e445b028eb961a633f0b27257bbb58351cb99d2909d0cef189a84c1" />
         </canvas>
-        <uol name="weapon" value="../../../30/walk1/0/weapon"/>
+        <uol name="weapon" value="../../../30/walk1/0/weapon" />
       </imgdir>
     </imgdir>
     <imgdir name="swingT2">
       <imgdir name="0">
         <canvas format="2" height="129" name="effect" scale="0" width="170">
-          <vector name="origin" x="62" y="87"/>
-          <string name="z" value="characterEnd"/>
+          <vector name="origin" x="62" y="87" />
+          <string name="z" value="characterEnd" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="_hash" value="73a2f2df54200b56d8afd7819cee5eb8a3ab0b2f41f88019956477b1681604c8"/>
+          <string name="_hash" value="73a2f2df54200b56d8afd7819cee5eb8a3ab0b2f41f88019956477b1681604c8" />
         </canvas>
-        <uol name="weapon" value="../../../30/swingO1/0/weapon"/>
+        <uol name="weapon" value="../../../30/swingO1/0/weapon" />
       </imgdir>
       <imgdir name="1">
         <canvas format="2" height="168" name="effect" scale="0" width="214">
-          <vector name="origin" x="114" y="126"/>
-          <string name="z" value="characterEnd"/>
+          <vector name="origin" x="114" y="126" />
+          <string name="z" value="characterEnd" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="_hash" value="053e46c5159f7a7dc36689f74a1c39a4b819af3129c103673976e339603418da"/>
+          <string name="_hash" value="053e46c5159f7a7dc36689f74a1c39a4b819af3129c103673976e339603418da" />
         </canvas>
-        <uol name="weapon" value="../../../30/swingO1/0/weapon"/>
+        <uol name="weapon" value="../../../30/swingO1/0/weapon" />
       </imgdir>
       <imgdir name="2">
         <canvas format="2" height="193" name="effect" scale="0" width="232">
-          <vector name="origin" x="122" y="132"/>
-          <string name="z" value="characterEnd"/>
+          <vector name="origin" x="122" y="132" />
+          <string name="z" value="characterEnd" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="_hash" value="319c0cbb2d6a13b5f14154bfc30e86b0ab547e9b4cb771fd892ea0fef67dda38"/>
+          <string name="_hash" value="319c0cbb2d6a13b5f14154bfc30e86b0ab547e9b4cb771fd892ea0fef67dda38" />
         </canvas>
-        <uol name="weapon" value="../../../30/walk1/0/weapon"/>
+        <uol name="weapon" value="../../../30/walk1/0/weapon" />
       </imgdir>
     </imgdir>
     <imgdir name="swingT3">
       <imgdir name="0">
         <canvas format="2" height="98" name="effect" scale="0" width="157">
-          <vector name="origin" x="59" y="56"/>
-          <string name="z" value="characterEnd"/>
+          <vector name="origin" x="59" y="56" />
+          <string name="z" value="characterEnd" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="_hash" value="e734cf801b27782c37fca192959c83b277d909e692343819db33f93d8c5ffd9b"/>
+          <string name="_hash" value="e734cf801b27782c37fca192959c83b277d909e692343819db33f93d8c5ffd9b" />
         </canvas>
-        <uol name="weapon" value="../../../30/swingO1/0/weapon"/>
+        <uol name="weapon" value="../../../30/swingO1/0/weapon" />
       </imgdir>
       <imgdir name="1">
         <canvas format="2" height="138" name="effect" scale="0" width="220">
-          <vector name="origin" x="126" y="23"/>
-          <string name="z" value="characterEnd"/>
+          <vector name="origin" x="126" y="23" />
+          <string name="z" value="characterEnd" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="_hash" value="4887232bc59cc7802bae57952e583af3ae5ffd373578906ce6085d32c48fd234"/>
+          <string name="_hash" value="4887232bc59cc7802bae57952e583af3ae5ffd373578906ce6085d32c48fd234" />
         </canvas>
-        <uol name="weapon" value="../../../30/swingO1/0/weapon"/>
+        <uol name="weapon" value="../../../30/swingO1/0/weapon" />
       </imgdir>
       <imgdir name="2">
         <canvas format="2" height="202" name="effect" scale="0" width="227">
-          <vector name="origin" x="122" y="131"/>
-          <string name="z" value="characterEnd"/>
+          <vector name="origin" x="122" y="131" />
+          <string name="z" value="characterEnd" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="_hash" value="06ec801f30dd1ef4229b78e462c70fae47f77e3a6b44d014c45f09500b7192f6"/>
+          <string name="_hash" value="06ec801f30dd1ef4229b78e462c70fae47f77e3a6b44d014c45f09500b7192f6" />
         </canvas>
-        <uol name="weapon" value="../../../30/walk1/0/weapon"/>
+        <uol name="weapon" value="../../../30/walk1/0/weapon" />
       </imgdir>
     </imgdir>
     <imgdir name="swingTF">
       <imgdir name="0">
         <canvas format="2" height="129" name="effect" scale="0" width="172">
-          <vector name="origin" x="68" y="88"/>
-          <string name="z" value="characterEnd"/>
+          <vector name="origin" x="68" y="88" />
+          <string name="z" value="characterEnd" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="_hash" value="f2c9aa8a2a5ff6095a3076a5b455dfa32a70e2006c682b7b76514d0d326db4f0"/>
+          <string name="_hash" value="f2c9aa8a2a5ff6095a3076a5b455dfa32a70e2006c682b7b76514d0d326db4f0" />
         </canvas>
-        <uol name="weapon" value="../../../30/swingO1/0/weapon"/>
+        <uol name="weapon" value="../../../30/swingO1/0/weapon" />
       </imgdir>
       <imgdir name="1">
         <canvas format="2" height="170" name="effect" scale="0" width="167">
-          <vector name="origin" x="63" y="124"/>
-          <string name="z" value="characterEnd"/>
+          <vector name="origin" x="63" y="124" />
+          <string name="z" value="characterEnd" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="_hash" value="844babf24ff659da3655de70d7f09488ed75380ea5742481951c5be86421ed15"/>
+          <string name="_hash" value="844babf24ff659da3655de70d7f09488ed75380ea5742481951c5be86421ed15" />
         </canvas>
-        <uol name="weapon" value="../../../30/swingO1/0/weapon"/>
+        <uol name="weapon" value="../../../30/swingO1/0/weapon" />
       </imgdir>
       <imgdir name="2">
         <canvas format="2" height="168" name="effect" scale="0" width="219">
-          <vector name="origin" x="117" y="128"/>
-          <string name="z" value="characterEnd"/>
+          <vector name="origin" x="117" y="128" />
+          <string name="z" value="characterEnd" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="_hash" value="4bd2a4d88b30be91bc214eb1f249029c3262e7c6de72887133349651fa7115d2"/>
+          <string name="_hash" value="4bd2a4d88b30be91bc214eb1f249029c3262e7c6de72887133349651fa7115d2" />
         </canvas>
-        <uol name="weapon" value="../../../30/swingO1/0/weapon"/>
+        <uol name="weapon" value="../../../30/swingO1/0/weapon" />
       </imgdir>
       <imgdir name="3">
         <canvas format="2" height="180" name="effect" scale="0" width="225">
-          <vector name="origin" x="120" y="134"/>
-          <string name="z" value="characterEnd"/>
+          <vector name="origin" x="120" y="134" />
+          <string name="z" value="characterEnd" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="_hash" value="1b901614422e7e492c479f61fb41a1983a983a18a08f2656de65954c404b84e3"/>
+          <string name="_hash" value="1b901614422e7e492c479f61fb41a1983a983a18a08f2656de65954c404b84e3" />
         </canvas>
-        <uol name="weapon" value="../../../30/walk1/0/weapon"/>
+        <uol name="weapon" value="../../../30/walk1/0/weapon" />
       </imgdir>
     </imgdir>
     <imgdir name="swingP1">
       <imgdir name="0">
         <canvas format="2" height="151" name="effect" scale="0" width="166">
-          <vector name="origin" x="51" y="107"/>
-          <string name="z" value="characterEnd"/>
+          <vector name="origin" x="51" y="107" />
+          <string name="z" value="characterEnd" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="_hash" value="e756379b01877dcd15dc52ebc0312bed998e54942b029ae5f27a404c4437d3a4"/>
+          <string name="_hash" value="e756379b01877dcd15dc52ebc0312bed998e54942b029ae5f27a404c4437d3a4" />
         </canvas>
-        <uol name="weapon" value="../../../30/swingO1/0/weapon"/>
+        <uol name="weapon" value="../../../30/swingO1/0/weapon" />
       </imgdir>
       <imgdir name="1">
         <canvas format="2" height="171" name="effect" scale="0" width="174">
-          <vector name="origin" x="79" y="130"/>
-          <string name="z" value="characterEnd"/>
+          <vector name="origin" x="79" y="130" />
+          <string name="z" value="characterEnd" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="_hash" value="e1098f077e83efb07ea60a463e9fc32957e418f05733e89a12c0bea111f8baf4"/>
+          <string name="_hash" value="e1098f077e83efb07ea60a463e9fc32957e418f05733e89a12c0bea111f8baf4" />
         </canvas>
-        <uol name="weapon" value="../../../30/swingO1/0/weapon"/>
+        <uol name="weapon" value="../../../30/swingO1/0/weapon" />
       </imgdir>
       <imgdir name="2">
         <canvas format="2" height="176" name="effect" scale="0" width="221">
-          <vector name="origin" x="118" y="130"/>
-          <string name="z" value="characterEnd"/>
+          <vector name="origin" x="118" y="130" />
+          <string name="z" value="characterEnd" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="_hash" value="f20ef153b1019cb765ff2ffe9a63bf22bb85a660af347fa5a8c281cbfc5ad7cb"/>
+          <string name="_hash" value="f20ef153b1019cb765ff2ffe9a63bf22bb85a660af347fa5a8c281cbfc5ad7cb" />
         </canvas>
-        <uol name="weapon" value="../../../30/walk1/0/weapon"/>
+        <uol name="weapon" value="../../../30/walk1/0/weapon" />
       </imgdir>
     </imgdir>
     <imgdir name="swingP2">
       <imgdir name="0">
         <canvas format="2" height="129" name="effect" scale="0" width="171">
-          <vector name="origin" x="62" y="89"/>
-          <string name="z" value="characterEnd"/>
+          <vector name="origin" x="62" y="89" />
+          <string name="z" value="characterEnd" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="_hash" value="f3652f77871c8575c8ff8b75a9fa512a385c172043cf70c1d452c61a4b9b5c7d"/>
+          <string name="_hash" value="f3652f77871c8575c8ff8b75a9fa512a385c172043cf70c1d452c61a4b9b5c7d" />
         </canvas>
-        <uol name="weapon" value="../../../30/swingO1/0/weapon"/>
+        <uol name="weapon" value="../../../30/swingO1/0/weapon" />
       </imgdir>
       <imgdir name="1">
         <canvas format="2" height="170" name="effect" scale="0" width="215">
-          <vector name="origin" x="115" y="128"/>
-          <string name="z" value="characterEnd"/>
+          <vector name="origin" x="115" y="128" />
+          <string name="z" value="characterEnd" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="_hash" value="791bb01ed6f61cb8bc77ffa9a3eb46eb46e23521093fac3d7ab83809c8124dc1"/>
+          <string name="_hash" value="791bb01ed6f61cb8bc77ffa9a3eb46eb46e23521093fac3d7ab83809c8124dc1" />
         </canvas>
-        <uol name="weapon" value="../../../30/swingO1/0/weapon"/>
+        <uol name="weapon" value="../../../30/swingO1/0/weapon" />
       </imgdir>
       <imgdir name="2">
         <canvas format="2" height="200" name="effect" scale="0" width="225">
-          <vector name="origin" x="118" y="89"/>
-          <string name="z" value="characterEnd"/>
+          <vector name="origin" x="118" y="89" />
+          <string name="z" value="characterEnd" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="_hash" value="446834f747704f4cb5257ace7044da0426fe487f8c7b3e5ad04f8478384d3f8e"/>
+          <string name="_hash" value="446834f747704f4cb5257ace7044da0426fe487f8c7b3e5ad04f8478384d3f8e" />
         </canvas>
-        <uol name="weapon" value="../../../30/walk1/0/weapon"/>
+        <uol name="weapon" value="../../../30/walk1/0/weapon" />
       </imgdir>
     </imgdir>
     <imgdir name="swingPF">
       <imgdir name="0">
         <canvas format="2" height="129" name="effect" scale="0" width="171">
-          <vector name="origin" x="49" y="94"/>
-          <string name="z" value="characterEnd"/>
+          <vector name="origin" x="49" y="94" />
+          <string name="z" value="characterEnd" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="_hash" value="792462c3f9fb9a51d305433c3f04f70ad2ba096ba956209c0ac3defa250f82a3"/>
+          <string name="_hash" value="792462c3f9fb9a51d305433c3f04f70ad2ba096ba956209c0ac3defa250f82a3" />
         </canvas>
-        <uol name="weapon" value="../../../30/swingO1/0/weapon"/>
+        <uol name="weapon" value="../../../30/swingO1/0/weapon" />
       </imgdir>
       <imgdir name="1">
         <canvas format="2" height="172" name="effect" scale="0" width="161">
-          <vector name="origin" x="50" y="134"/>
-          <string name="z" value="characterEnd"/>
+          <vector name="origin" x="50" y="134" />
+          <string name="z" value="characterEnd" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="_hash" value="44e5b6c734be8d5ded0b5a7306172616d873c035b782f771e1ffc851e6ab72e1"/>
+          <string name="_hash" value="44e5b6c734be8d5ded0b5a7306172616d873c035b782f771e1ffc851e6ab72e1" />
         </canvas>
-        <uol name="weapon" value="../../../30/swingO1/0/weapon"/>
+        <uol name="weapon" value="../../../30/swingO1/0/weapon" />
       </imgdir>
       <imgdir name="2">
         <canvas format="2" height="172" name="effect" scale="0" width="225">
-          <vector name="origin" x="118" y="117"/>
-          <string name="z" value="characterEnd"/>
+          <vector name="origin" x="118" y="117" />
+          <string name="z" value="characterEnd" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="_hash" value="fa5a222a5cdeaef0db33f43517cb6735226c7ba3fc19492c1d6ebff5b0e617d6"/>
+          <string name="_hash" value="fa5a222a5cdeaef0db33f43517cb6735226c7ba3fc19492c1d6ebff5b0e617d6" />
         </canvas>
-        <uol name="weapon" value="../../../30/swingO1/0/weapon"/>
+        <uol name="weapon" value="../../../30/swingO1/0/weapon" />
       </imgdir>
       <imgdir name="3">
         <canvas format="2" height="187" name="effect" scale="0" width="226">
-          <vector name="origin" x="140" y="132"/>
-          <string name="z" value="characterEnd"/>
+          <vector name="origin" x="140" y="132" />
+          <string name="z" value="characterEnd" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="_hash" value="101ae9517e68660bff034b1c4a74aa3d62509f793ee5a05ac331368db9128591"/>
+          <string name="_hash" value="101ae9517e68660bff034b1c4a74aa3d62509f793ee5a05ac331368db9128591" />
         </canvas>
-        <uol name="weapon" value="../../../30/walk1/0/weapon"/>
+        <uol name="weapon" value="../../../30/walk1/0/weapon" />
       </imgdir>
     </imgdir>
     <imgdir name="stabO1">
       <imgdir name="0">
         <canvas format="2" height="103" name="effect" scale="0" width="179">
-          <vector name="origin" x="73" y="46"/>
-          <string name="z" value="characterEnd"/>
+          <vector name="origin" x="73" y="46" />
+          <string name="z" value="characterEnd" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="_hash" value="3d1e9095e6a83a859e9e228a18bb119ae27fdc4efe8d812b434294781868269c"/>
+          <string name="_hash" value="3d1e9095e6a83a859e9e228a18bb119ae27fdc4efe8d812b434294781868269c" />
         </canvas>
-        <uol name="weapon" value="../../../30/walk1/0/weapon"/>
+        <uol name="weapon" value="../../../30/walk1/0/weapon" />
       </imgdir>
       <imgdir name="1">
         <canvas format="2" height="133" name="effect" scale="0" width="245">
-          <vector name="origin" x="137" y="78"/>
-          <string name="z" value="characterEnd"/>
+          <vector name="origin" x="137" y="78" />
+          <string name="z" value="characterEnd" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="_hash" value="39a9a09efa89fc227ce1b86489f55ec5ff9ffe0aa2e7abfb5eb9761e34ffbca7"/>
+          <string name="_hash" value="39a9a09efa89fc227ce1b86489f55ec5ff9ffe0aa2e7abfb5eb9761e34ffbca7" />
         </canvas>
-        <uol name="weapon" value="../../../30/swingO1/0/weapon"/>
+        <uol name="weapon" value="../../../30/swingO1/0/weapon" />
       </imgdir>
     </imgdir>
     <imgdir name="stabO2">
       <imgdir name="0">
         <canvas format="2" height="122" name="effect" scale="0" width="180">
-          <vector name="origin" x="74" y="60"/>
-          <string name="z" value="characterEnd"/>
+          <vector name="origin" x="74" y="60" />
+          <string name="z" value="characterEnd" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="_hash" value="8384c0809c772c3f690a1b5d9d68a96cbe1d086ecdaba91b6bc18ba91d5c67ff"/>
+          <string name="_hash" value="8384c0809c772c3f690a1b5d9d68a96cbe1d086ecdaba91b6bc18ba91d5c67ff" />
         </canvas>
-        <uol name="weapon" value="../../../30/walk1/0/weapon"/>
+        <uol name="weapon" value="../../../30/walk1/0/weapon" />
       </imgdir>
       <imgdir name="1">
         <canvas format="2" height="133" name="effect" scale="0" width="245">
-          <vector name="origin" x="138" y="77"/>
-          <string name="z" value="characterEnd"/>
+          <vector name="origin" x="138" y="77" />
+          <string name="z" value="characterEnd" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="_hash" value="09f9052295421d3a0c734cac74ea14067cb8a74e20afe2963e9f7840eca5abee"/>
+          <string name="_hash" value="09f9052295421d3a0c734cac74ea14067cb8a74e20afe2963e9f7840eca5abee" />
         </canvas>
-        <uol name="weapon" value="../../../30/swingO1/0/weapon"/>
+        <uol name="weapon" value="../../../30/swingO1/0/weapon" />
       </imgdir>
     </imgdir>
     <imgdir name="stabOF">
       <imgdir name="0">
         <canvas format="2" height="98" name="effect" scale="0" width="172">
-          <vector name="origin" x="69" y="43"/>
-          <string name="z" value="characterEnd"/>
+          <vector name="origin" x="69" y="43" />
+          <string name="z" value="characterEnd" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="_hash" value="371c68f2a834bb72a3473ed8fb6eff9b66f09cfab0cf4f10dade1484939d81c4"/>
+          <string name="_hash" value="371c68f2a834bb72a3473ed8fb6eff9b66f09cfab0cf4f10dade1484939d81c4" />
         </canvas>
-        <uol name="weapon" value="../../../30/swingO1/0/weapon"/>
+        <uol name="weapon" value="../../../30/swingO1/0/weapon" />
       </imgdir>
       <imgdir name="1">
         <canvas format="2" height="106" name="effect" scale="0" width="188">
-          <vector name="origin" x="78" y="60"/>
-          <string name="z" value="characterEnd"/>
+          <vector name="origin" x="78" y="60" />
+          <string name="z" value="characterEnd" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="_hash" value="4ac41c4b4d0c266fa04cac3e862b79a376a9040ba2f8b24d302f61705dc13e05"/>
+          <string name="_hash" value="4ac41c4b4d0c266fa04cac3e862b79a376a9040ba2f8b24d302f61705dc13e05" />
         </canvas>
-        <uol name="weapon" value="../../../30/swingO1/0/weapon"/>
+        <uol name="weapon" value="../../../30/swingO1/0/weapon" />
       </imgdir>
       <imgdir name="2">
         <canvas format="2" height="141" name="effect" scale="0" width="221">
-          <vector name="origin" x="116" y="79"/>
-          <string name="z" value="characterEnd"/>
+          <vector name="origin" x="116" y="79" />
+          <string name="z" value="characterEnd" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="_hash" value="379962c5b741aa422341c4d74f25a2fca09ee7145dd4e420d599c9cb0f9fc9a9"/>
+          <string name="_hash" value="379962c5b741aa422341c4d74f25a2fca09ee7145dd4e420d599c9cb0f9fc9a9" />
         </canvas>
-        <uol name="weapon" value="../../../30/walk1/0/weapon"/>
+        <uol name="weapon" value="../../../30/walk1/0/weapon" />
       </imgdir>
     </imgdir>
     <imgdir name="stabT1">
       <imgdir name="0">
         <canvas format="2" height="98" name="effect" scale="0" width="169">
-          <vector name="origin" x="64" y="37"/>
-          <string name="z" value="characterEnd"/>
+          <vector name="origin" x="64" y="37" />
+          <string name="z" value="characterEnd" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="_hash" value="957f18429fc859355bd8d23bf66be713a6c75a4b053ffd0da49251f36b340043"/>
+          <string name="_hash" value="957f18429fc859355bd8d23bf66be713a6c75a4b053ffd0da49251f36b340043" />
         </canvas>
-        <uol name="weapon" value="../../../30/swingO1/0/weapon"/>
+        <uol name="weapon" value="../../../30/swingO1/0/weapon" />
       </imgdir>
       <imgdir name="1">
-        <uol name="weapon" value="../../../30/swingO1/0/weapon"/>
-        <uol name="effect" value="../../../30/stabOF/1/effect"/>
+        <uol name="weapon" value="../../../30/swingO1/0/weapon" />
+        <uol name="effect" value="../../../30/stabOF/1/effect" />
       </imgdir>
       <imgdir name="2">
         <canvas format="2" height="141" name="effect" scale="0" width="219">
-          <vector name="origin" x="127" y="80"/>
-          <string name="z" value="characterEnd"/>
+          <vector name="origin" x="127" y="80" />
+          <string name="z" value="characterEnd" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="_hash" value="0906e0145f996c380c5531d3da0c1f05470317c9f05ad254cf83f2a12f8c2610"/>
+          <string name="_hash" value="0906e0145f996c380c5531d3da0c1f05470317c9f05ad254cf83f2a12f8c2610" />
         </canvas>
-        <uol name="weapon" value="../../../30/walk1/0/weapon"/>
+        <uol name="weapon" value="../../../30/walk1/0/weapon" />
       </imgdir>
     </imgdir>
     <imgdir name="stabT2">
       <imgdir name="0">
         <canvas format="2" height="103" name="effect" scale="0" width="166">
-          <vector name="origin" x="62" y="36"/>
-          <string name="z" value="characterEnd"/>
+          <vector name="origin" x="62" y="36" />
+          <string name="z" value="characterEnd" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="_hash" value="4342dbb5474db1521155d3708a385722f90d41ffa8d624246955c4e2713fda76"/>
+          <string name="_hash" value="4342dbb5474db1521155d3708a385722f90d41ffa8d624246955c4e2713fda76" />
         </canvas>
-        <uol name="weapon" value="../../../30/walk1/0/weapon"/>
+        <uol name="weapon" value="../../../30/walk1/0/weapon" />
       </imgdir>
       <imgdir name="1">
         <canvas format="2" height="106" name="effect" scale="0" width="188">
-          <vector name="origin" x="75" y="57"/>
-          <string name="z" value="characterEnd"/>
+          <vector name="origin" x="75" y="57" />
+          <string name="z" value="characterEnd" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="_hash" value="80ac808f970833db0e4fc4314ea033212583482c578ceff0809f2622d3c77fea"/>
+          <string name="_hash" value="80ac808f970833db0e4fc4314ea033212583482c578ceff0809f2622d3c77fea" />
         </canvas>
-        <uol name="weapon" value="../../../30/walk1/0/weapon"/>
+        <uol name="weapon" value="../../../30/walk1/0/weapon" />
       </imgdir>
       <imgdir name="2">
         <canvas format="2" height="133" name="effect" scale="0" width="241">
-          <vector name="origin" x="134" y="74"/>
-          <string name="z" value="characterEnd"/>
+          <vector name="origin" x="134" y="74" />
+          <string name="z" value="characterEnd" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="_hash" value="74fd11a81134ac5f852c7c321fa17346f9968c7347ec0a42c4631e2fcc556ad9"/>
+          <string name="_hash" value="74fd11a81134ac5f852c7c321fa17346f9968c7347ec0a42c4631e2fcc556ad9" />
         </canvas>
-        <uol name="weapon" value="../../../30/swingO1/0/weapon"/>
+        <uol name="weapon" value="../../../30/swingO1/0/weapon" />
       </imgdir>
     </imgdir>
     <imgdir name="stabTF">
       <imgdir name="0">
-        <uol name="weapon" value="../../swingPF/0/weapon"/>
-        <uol name="effect" value="../../swingPF/0/effect"/>
+        <uol name="weapon" value="../../swingPF/0/weapon" />
+        <uol name="effect" value="../../swingPF/0/effect" />
       </imgdir>
       <imgdir name="1">
-        <uol name="weapon" value="../../swingPF/1/weapon"/>
-        <uol name="effect" value="../../swingPF/1/effect"/>
+        <uol name="weapon" value="../../swingPF/1/weapon" />
+        <uol name="effect" value="../../swingPF/1/effect" />
       </imgdir>
       <imgdir name="2">
         <canvas format="2" height="154" name="effect" scale="0" width="122">
-          <vector name="origin" x="25" y="56"/>
-          <string name="z" value="characterEnd"/>
+          <vector name="origin" x="25" y="56" />
+          <string name="z" value="characterEnd" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="_hash" value="d5d9956a387e36ceb9f5ac3276d2e3505024864e547adcbc25486ba3e13f672e"/>
+          <string name="_hash" value="d5d9956a387e36ceb9f5ac3276d2e3505024864e547adcbc25486ba3e13f672e" />
         </canvas>
-        <uol name="weapon" value="../../../30/swingO1/0/weapon"/>
+        <uol name="weapon" value="../../../30/swingO1/0/weapon" />
       </imgdir>
       <imgdir name="3">
-        <uol name="weapon" value="../../stabT1/2/weapon"/>
-        <uol name="effect" value="../../stabT1/2/effect"/>
+        <uol name="weapon" value="../../stabT1/2/weapon" />
+        <uol name="effect" value="../../stabT1/2/effect" />
       </imgdir>
     </imgdir>
     <imgdir name="shoot1">
       <imgdir name="0">
         <canvas format="2" height="105" name="effect" scale="0" width="167">
-          <vector name="origin" x="65" y="35"/>
-          <string name="z" value="characterEnd"/>
+          <vector name="origin" x="65" y="35" />
+          <string name="z" value="characterEnd" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="_hash" value="6daed8799a53eaa9ce001f1c585507fd5acdc7354c69e35c36e8fc0410baa57b"/>
+          <string name="_hash" value="6daed8799a53eaa9ce001f1c585507fd5acdc7354c69e35c36e8fc0410baa57b" />
         </canvas>
-        <uol name="weapon" value="../../../30/walk1/0/weapon"/>
+        <uol name="weapon" value="../../../30/walk1/0/weapon" />
       </imgdir>
       <imgdir name="1">
         <canvas format="2" height="141" name="effect" scale="0" width="215">
-          <vector name="origin" x="126" y="104"/>
-          <string name="z" value="characterEnd"/>
+          <vector name="origin" x="126" y="104" />
+          <string name="z" value="characterEnd" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="_hash" value="35f180e647052b8b569a26c06c78748d4b6db23ff0fe32820387daeea7a2e2a9"/>
+          <string name="_hash" value="35f180e647052b8b569a26c06c78748d4b6db23ff0fe32820387daeea7a2e2a9" />
         </canvas>
-        <uol name="weapon" value="../../../30/swingO1/0/weapon"/>
+        <uol name="weapon" value="../../../30/swingO1/0/weapon" />
       </imgdir>
       <imgdir name="2">
         <canvas format="2" height="134" name="effect" scale="0" width="225">
-          <vector name="origin" x="129" y="89"/>
-          <string name="z" value="characterEnd"/>
+          <vector name="origin" x="129" y="89" />
+          <string name="z" value="characterEnd" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="_hash" value="6f73816b1b48e5402b972179760337d9a72f1f38113535e02bd68892b85e5797"/>
+          <string name="_hash" value="6f73816b1b48e5402b972179760337d9a72f1f38113535e02bd68892b85e5797" />
         </canvas>
-        <uol name="weapon" value="../../../30/swingO2/1/weapon"/>
+        <uol name="weapon" value="../../../30/swingO2/1/weapon" />
       </imgdir>
     </imgdir>
     <imgdir name="shoot2">
       <imgdir name="0">
         <canvas format="2" height="134" name="effect" scale="0" width="146">
-          <vector name="origin" x="119" y="92"/>
-          <string name="z" value="characterEnd"/>
+          <vector name="origin" x="119" y="92" />
+          <string name="z" value="characterEnd" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="_hash" value="2457e01ea8e8bd246cdcd9a9be1a715353521d35dc35122595558b655bb04156"/>
+          <string name="_hash" value="2457e01ea8e8bd246cdcd9a9be1a715353521d35dc35122595558b655bb04156" />
         </canvas>
-        <uol name="weapon" value="../../../30/walk1/2/weapon"/>
+        <uol name="weapon" value="../../../30/walk1/2/weapon" />
       </imgdir>
       <imgdir name="1">
         <canvas format="2" height="171" name="effect" scale="0" width="193">
-          <vector name="origin" x="103" y="129"/>
-          <string name="z" value="characterEnd"/>
+          <vector name="origin" x="103" y="129" />
+          <string name="z" value="characterEnd" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="_hash" value="6de65eec34db91fa6401b7060789b702dce42b32d8b1fa525fd322fb9738f880"/>
+          <string name="_hash" value="6de65eec34db91fa6401b7060789b702dce42b32d8b1fa525fd322fb9738f880" />
         </canvas>
-        <uol name="weapon" value="../../../30/walk1/0/weapon"/>
+        <uol name="weapon" value="../../../30/walk1/0/weapon" />
       </imgdir>
       <imgdir name="2">
         <canvas format="2" height="231" name="effect" scale="0" width="233">
-          <vector name="origin" x="125" y="117"/>
-          <string name="z" value="characterEnd"/>
+          <vector name="origin" x="125" y="117" />
+          <string name="z" value="characterEnd" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="_hash" value="776875e78477aa2be961bb56086e72e77443dbddc09052379065b2e06eedd408"/>
+          <string name="_hash" value="776875e78477aa2be961bb56086e72e77443dbddc09052379065b2e06eedd408" />
         </canvas>
-        <uol name="weapon" value="../../../30/swingO2/1/weapon"/>
+        <uol name="weapon" value="../../../30/swingO2/1/weapon" />
       </imgdir>
       <imgdir name="3">
         <canvas format="2" height="142" name="effect" scale="0" width="238">
-          <vector name="origin" x="132" y="26"/>
-          <string name="z" value="characterEnd"/>
+          <vector name="origin" x="132" y="26" />
+          <string name="z" value="characterEnd" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="_hash" value="de70ee56e00f8d783c211127fd4a9db833d62537c664d23e65e027ed04980318"/>
+          <string name="_hash" value="de70ee56e00f8d783c211127fd4a9db833d62537c664d23e65e027ed04980318" />
         </canvas>
-        <uol name="weapon" value="../../../30/swingO2/1/weapon"/>
+        <uol name="weapon" value="../../../30/swingO2/1/weapon" />
       </imgdir>
       <imgdir name="4">
         <canvas format="2" height="160" name="effect" scale="0" width="234">
-          <vector name="origin" x="131" y="47"/>
-          <string name="z" value="characterEnd"/>
+          <vector name="origin" x="131" y="47" />
+          <string name="z" value="characterEnd" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="_hash" value="cf670fb56bad82d07d3be91b68599f2e0837fdf4a00c62556d55ba8e149ba602"/>
+          <string name="_hash" value="cf670fb56bad82d07d3be91b68599f2e0837fdf4a00c62556d55ba8e149ba602" />
         </canvas>
-        <uol name="weapon" value="../../../30/walk1/0/weapon"/>
+        <uol name="weapon" value="../../../30/walk1/0/weapon" />
       </imgdir>
     </imgdir>
     <imgdir name="shootF">
       <imgdir name="0">
         <canvas format="2" height="122" name="effect" scale="0" width="183">
-          <vector name="origin" x="78" y="62"/>
-          <string name="z" value="characterEnd"/>
+          <vector name="origin" x="78" y="62" />
+          <string name="z" value="characterEnd" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="_hash" value="a8e1ea88fbb6d9bd38937b641dcad47a75a6403f03eb4f528bd220354fe22146"/>
+          <string name="_hash" value="a8e1ea88fbb6d9bd38937b641dcad47a75a6403f03eb4f528bd220354fe22146" />
         </canvas>
-        <uol name="weapon" value="../../../30/walk1/0/weapon"/>
+        <uol name="weapon" value="../../../30/walk1/0/weapon" />
       </imgdir>
       <imgdir name="1">
         <canvas format="2" height="133" name="effect" scale="0" width="239">
-          <vector name="origin" x="133" y="73"/>
-          <string name="z" value="characterEnd"/>
+          <vector name="origin" x="133" y="73" />
+          <string name="z" value="characterEnd" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="_hash" value="c33a5bfc872b914e703ca109c60691446ff8697e73bf99b27d3097f32020194d"/>
+          <string name="_hash" value="c33a5bfc872b914e703ca109c60691446ff8697e73bf99b27d3097f32020194d" />
         </canvas>
-        <uol name="weapon" value="../../../30/swingO2/1/weapon"/>
+        <uol name="weapon" value="../../../30/swingO2/1/weapon" />
       </imgdir>
       <imgdir name="2">
-        <uol name="weapon" value="../1/weapon"/>
-        <uol name="effect" value="../1/effect"/>
+        <uol name="weapon" value="../1/weapon" />
+        <uol name="effect" value="../1/effect" />
       </imgdir>
     </imgdir>
     <imgdir name="proneStab">
       <imgdir name="0">
         <canvas format="2" height="98" name="effect" scale="0" width="183">
-          <vector name="origin" x="83" y="55"/>
-          <string name="z" value="characterEnd"/>
+          <vector name="origin" x="83" y="55" />
+          <string name="z" value="characterEnd" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="_hash" value="dfa146e12b31372bbeb2ad4f508f6e06adb1cc15d5793067b52f6af59f7e78ad"/>
+          <string name="_hash" value="dfa146e12b31372bbeb2ad4f508f6e06adb1cc15d5793067b52f6af59f7e78ad" />
         </canvas>
-        <uol name="weapon" value="../../../30/walk1/2/weapon"/>
+        <uol name="weapon" value="../../../30/walk1/2/weapon" />
       </imgdir>
       <imgdir name="1">
         <canvas format="2" height="141" name="effect" scale="0" width="221">
-          <vector name="origin" x="126" y="99"/>
-          <string name="z" value="characterEnd"/>
+          <vector name="origin" x="126" y="99" />
+          <string name="z" value="characterEnd" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="_hash" value="638630c259d1f17877ed6123d8d8ea10f70a9a3cc686dfcd9377919188c87f1d"/>
+          <string name="_hash" value="638630c259d1f17877ed6123d8d8ea10f70a9a3cc686dfcd9377919188c87f1d" />
         </canvas>
-        <uol name="weapon" value="../../../30/swingO1/0/weapon"/>
+        <uol name="weapon" value="../../../30/swingO1/0/weapon" />
       </imgdir>
     </imgdir>
     <imgdir name="prone">
       <imgdir name="0">
-        <uol name="weapon" value="../../proneStab/0/weapon"/>
-        <uol name="effect" value="../../proneStab/0/effect"/>
+        <uol name="weapon" value="../../proneStab/0/weapon" />
+        <uol name="effect" value="../../proneStab/0/effect" />
       </imgdir>
     </imgdir>
     <imgdir name="heal">
       <imgdir name="0">
-        <uol name="weapon" value="../../alert/1/weapon"/>
-        <uol name="effect" value="../../alert/1/effect"/>
+        <uol name="weapon" value="../../alert/1/weapon" />
+        <uol name="effect" value="../../alert/1/effect" />
       </imgdir>
       <imgdir name="1">
-        <uol name="weapon" value="../../swingO2/1/weapon"/>
-        <uol name="effect" value="../../swingO2/1/effect"/>
+        <uol name="weapon" value="../../swingO2/1/weapon" />
+        <uol name="effect" value="../../swingO2/1/effect" />
       </imgdir>
       <imgdir name="2">
-        <uol name="weapon" value="../../swingO2/0/weapon"/>
-        <uol name="effect" value="../../swingO2/0/effect"/>
+        <uol name="weapon" value="../../swingO2/0/weapon" />
+        <uol name="effect" value="../../swingO2/0/effect" />
       </imgdir>
     </imgdir>
     <imgdir name="fly">
       <imgdir name="0">
         <canvas format="2" height="94" name="effect" scale="0" width="102">
-          <vector name="origin" x="17" y="34"/>
-          <string name="z" value="characterEnd"/>
+          <vector name="origin" x="17" y="34" />
+          <string name="z" value="characterEnd" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="_hash" value="1f743a3edf8950c7a53c799e01e8e51aa98777a0ef285ccb67bd08032c611706"/>
+          <string name="_hash" value="1f743a3edf8950c7a53c799e01e8e51aa98777a0ef285ccb67bd08032c611706" />
         </canvas>
-        <uol name="weapon" value="../../../30/walk1/0/weapon"/>
+        <uol name="weapon" value="../../../30/walk1/0/weapon" />
       </imgdir>
       <imgdir name="1">
-        <uol name="weapon" value="../0/weapon"/>
-        <uol name="effect" value="../0/effect"/>
+        <uol name="weapon" value="../0/weapon" />
+        <uol name="effect" value="../0/effect" />
       </imgdir>
     </imgdir>
     <imgdir name="jump">
       <imgdir name="0">
         <canvas format="2" height="235" name="effect" scale="0" width="231">
-          <vector name="origin" x="115" y="121"/>
-          <string name="z" value="characterEnd"/>
+          <vector name="origin" x="115" y="121" />
+          <string name="z" value="characterEnd" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="_hash" value="bf3431c42f20c91bae2d408d1d3a52b1669ec9445b0604e5ae5b8e3f64bf7825"/>
+          <string name="_hash" value="bf3431c42f20c91bae2d408d1d3a52b1669ec9445b0604e5ae5b8e3f64bf7825" />
         </canvas>
-        <uol name="weapon" value="../../../30/swingO2/1/weapon"/>
+        <uol name="weapon" value="../../../30/swingO2/1/weapon" />
       </imgdir>
     </imgdir>
     <imgdir name="sit">
       <imgdir name="0">
         <canvas format="2" height="52" name="effect" scale="0" width="89">
-          <vector name="origin" x="62" y="14"/>
-          <string name="z" value="characterEnd"/>
+          <vector name="origin" x="62" y="14" />
+          <string name="z" value="characterEnd" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="_hash" value="cd41601c5a73e6aab42e8d2f823a9420083044b1f5028aeb7865aa632ea49720"/>
+          <string name="_hash" value="cd41601c5a73e6aab42e8d2f823a9420083044b1f5028aeb7865aa632ea49720" />
         </canvas>
-        <uol name="weapon" value="../../../30/walk1/2/weapon"/>
+        <uol name="weapon" value="../../../30/walk1/2/weapon" />
       </imgdir>
     </imgdir>
     <imgdir name="ladder">
       <imgdir name="0">
         <canvas format="2" height="65" name="effect" scale="0" width="96">
-          <vector name="origin" x="46" y="29"/>
-          <string name="z" value="characterEnd"/>
+          <vector name="origin" x="46" y="29" />
+          <string name="z" value="characterEnd" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="_hash" value="70008603c3ae88a24c4b3967c6f7c431d6ea97dcaea86649469e142bb9d96cc5"/>
+          <string name="_hash" value="70008603c3ae88a24c4b3967c6f7c431d6ea97dcaea86649469e142bb9d96cc5" />
         </canvas>
-        <uol name="weapon" value="../../../30/swingO2/1/weapon"/>
+        <uol name="weapon" value="../../../30/swingO2/1/weapon" />
       </imgdir>
       <imgdir name="1">
         <canvas format="2" height="55" name="effect" scale="0" width="114">
-          <vector name="origin" x="59" y="24"/>
-          <string name="z" value="characterEnd"/>
+          <vector name="origin" x="59" y="24" />
+          <string name="z" value="characterEnd" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="_hash" value="0dac5712542a0c82c9a857fb2dc3fec05be1d5d6b98343c398bc46ee5046cffa"/>
+          <string name="_hash" value="0dac5712542a0c82c9a857fb2dc3fec05be1d5d6b98343c398bc46ee5046cffa" />
         </canvas>
-        <uol name="weapon" value="../../../30/swingO1/0/weapon"/>
+        <uol name="weapon" value="../../../30/swingO1/0/weapon" />
       </imgdir>
     </imgdir>
     <imgdir name="rope">
       <imgdir name="0">
         <canvas format="2" height="65" name="effect" scale="0" width="96">
-          <vector name="origin" x="46" y="34"/>
-          <string name="z" value="characterEnd"/>
+          <vector name="origin" x="46" y="34" />
+          <string name="z" value="characterEnd" />
           <imgdir name="map">
-            <vector name="navel" x="0" y="0"/>
+            <vector name="navel" x="0" y="0" />
           </imgdir>
-          <string name="_hash" value="928de37913db66a24d86d91090e023986916851a8b5d4193eb56f6e0e50d5e12"/>
+          <string name="_hash" value="928de37913db66a24d86d91090e023986916851a8b5d4193eb56f6e0e50d5e12" />
         </canvas>
-        <uol name="weapon" value="../../../30/swingO1/0/weapon"/>
+        <uol name="weapon" value="../../../30/swingO1/0/weapon" />
       </imgdir>
       <imgdir name="1">
-        <uol name="weapon" value="../../../30/swingO1/0/weapon"/>
-        <uol name="effect" value="../../../30/ladder/1/effect"/>
+        <uol name="weapon" value="../../../30/swingO1/0/weapon" />
+        <uol name="effect" value="../../../30/ladder/1/effect" />
       </imgdir>
     </imgdir>
   </imgdir>
-  <uol name="31" value="30"/>
-  <uol name="32" value="30"/>
-  <uol name="33" value="30"/>
-  <uol name="36" value="30"/>
-  <uol name="37" value="30"/>
-  <uol name="38" value="30"/>
-  <uol name="40" value="30"/>
-  <uol name="41" value="30"/>
-  <uol name="42" value="30"/>
-  <uol name="43" value="30"/>
-  <uol name="44" value="30"/>
-  <uol name="45" value="30"/>
-  <uol name="46" value="30"/>
-  <uol name="47" value="30"/>
-  <uol name="48" value="30"/>
-  <uol name="49" value="30"/>
-  <uol name="52" value="30"/>
-  <uol name="53" value="30"/>
+  <uol name="31" value="30" />
+  <uol name="32" value="30" />
+  <uol name="33" value="30" />
+  <uol name="36" value="30" />
+  <uol name="37" value="30" />
+  <uol name="38" value="30" />
+  <uol name="40" value="30" />
+  <uol name="41" value="30" />
+  <uol name="42" value="30" />
+  <uol name="43" value="30" />
+  <uol name="44" value="30" />
+  <uol name="45" value="30" />
+  <uol name="46" value="30" />
+  <uol name="47" value="30" />
+  <uol name="48" value="30" />
+  <uol name="49" value="30" />
+  <uol name="52" value="30" />
+  <uol name="53" value="30" />
   <imgdir name="21">
     <imgdir name="walk1">
       <imgdir name="0">
-        <uol name="weapon" value="../../../30/walk1/0/weapon"/>
-        <uol name="weapon1" value="../../../30/walk1/0/weapon"/>
-        <uol name="weapon2" value="../../../30/walk1/0/weapon"/>
-        <uol name="weapon3" value="../../../30/walk1/0/weapon"/>
-        <uol name="effect" value="../../../30/walk1/0/effect"/>
-        <uol name="effect1" value="../../../30/walk1/0/effect"/>
-        <uol name="effect2" value="../../../30/walk1/0/effect"/>
-        <uol name="effect3" value="../../../30/walk1/0/effect"/>
+        <uol name="weapon" value="../../../30/walk1/0/weapon" />
+        <uol name="weapon1" value="../../../30/walk1/0/weapon" />
+        <uol name="weapon2" value="../../../30/walk1/0/weapon" />
+        <uol name="weapon3" value="../../../30/walk1/0/weapon" />
+        <uol name="effect" value="../../../30/walk1/0/effect" />
+        <uol name="effect1" value="../../../30/walk1/0/effect" />
+        <uol name="effect2" value="../../../30/walk1/0/effect" />
+        <uol name="effect3" value="../../../30/walk1/0/effect" />
       </imgdir>
       <imgdir name="1">
-        <uol name="weapon" value="../../../30/walk1/1/weapon"/>
-        <uol name="weapon1" value="../../../30/walk1/1/weapon"/>
-        <uol name="weapon2" value="../../../30/walk1/1/weapon"/>
-        <uol name="weapon3" value="../../../30/walk1/1/weapon"/>
-        <uol name="effect" value="../../../30/walk1/1/effect"/>
-        <uol name="effect1" value="../../../30/walk1/1/effect"/>
-        <uol name="effect2" value="../../../30/walk1/1/effect"/>
-        <uol name="effect3" value="../../../30/walk1/1/effect"/>
+        <uol name="weapon" value="../../../30/walk1/1/weapon" />
+        <uol name="weapon1" value="../../../30/walk1/1/weapon" />
+        <uol name="weapon2" value="../../../30/walk1/1/weapon" />
+        <uol name="weapon3" value="../../../30/walk1/1/weapon" />
+        <uol name="effect" value="../../../30/walk1/1/effect" />
+        <uol name="effect1" value="../../../30/walk1/1/effect" />
+        <uol name="effect2" value="../../../30/walk1/1/effect" />
+        <uol name="effect3" value="../../../30/walk1/1/effect" />
       </imgdir>
       <imgdir name="2">
-        <uol name="weapon" value="../../../30/walk1/2/weapon"/>
-        <uol name="weapon1" value="../../../30/walk1/2/weapon"/>
-        <uol name="weapon2" value="../../../30/walk1/2/weapon"/>
-        <uol name="weapon3" value="../../../30/walk1/2/weapon"/>
-        <uol name="effect" value="../../../30/walk1/2/effect"/>
-        <uol name="effect1" value="../../../30/walk1/2/effect"/>
-        <uol name="effect2" value="../../../30/walk1/2/effect"/>
-        <uol name="effect3" value="../../../30/walk1/2/effect"/>
+        <uol name="weapon" value="../../../30/walk1/2/weapon" />
+        <uol name="weapon1" value="../../../30/walk1/2/weapon" />
+        <uol name="weapon2" value="../../../30/walk1/2/weapon" />
+        <uol name="weapon3" value="../../../30/walk1/2/weapon" />
+        <uol name="effect" value="../../../30/walk1/2/effect" />
+        <uol name="effect1" value="../../../30/walk1/2/effect" />
+        <uol name="effect2" value="../../../30/walk1/2/effect" />
+        <uol name="effect3" value="../../../30/walk1/2/effect" />
       </imgdir>
       <imgdir name="3">
-        <uol name="weapon" value="../../../30/walk1/3/weapon"/>
-        <uol name="weapon1" value="../../../30/walk1/3/weapon"/>
-        <uol name="weapon2" value="../../../30/walk1/3/weapon"/>
-        <uol name="weapon3" value="../../../30/walk1/3/weapon"/>
-        <uol name="effect" value="../../../30/walk1/3/effect"/>
-        <uol name="effect1" value="../../../30/walk1/3/effect"/>
-        <uol name="effect2" value="../../../30/walk1/3/effect"/>
-        <uol name="effect3" value="../../../30/walk1/3/effect"/>
+        <uol name="weapon" value="../../../30/walk1/3/weapon" />
+        <uol name="weapon1" value="../../../30/walk1/3/weapon" />
+        <uol name="weapon2" value="../../../30/walk1/3/weapon" />
+        <uol name="weapon3" value="../../../30/walk1/3/weapon" />
+        <uol name="effect" value="../../../30/walk1/3/effect" />
+        <uol name="effect1" value="../../../30/walk1/3/effect" />
+        <uol name="effect2" value="../../../30/walk1/3/effect" />
+        <uol name="effect3" value="../../../30/walk1/3/effect" />
       </imgdir>
     </imgdir>
     <imgdir name="stand1">
       <imgdir name="0">
-        <uol name="weapon" value="../../../30/stand1/0/weapon"/>
-        <uol name="weapon1" value="../../../30/stand1/0/weapon"/>
-        <uol name="weapon2" value="../../../30/stand1/0/weapon"/>
-        <uol name="weapon3" value="../../../30/stand1/0/weapon"/>
-        <uol name="effect" value="../../../30/stand1/0/effect"/>
-        <uol name="effect1" value="../../../30/stand1/0/effect"/>
-        <uol name="effect2" value="../../../30/stand1/0/effect"/>
-        <uol name="effect3" value="../../../30/stand1/0/effect"/>
+        <uol name="weapon" value="../../../30/stand1/0/weapon" />
+        <uol name="weapon1" value="../../../30/stand1/0/weapon" />
+        <uol name="weapon2" value="../../../30/stand1/0/weapon" />
+        <uol name="weapon3" value="../../../30/stand1/0/weapon" />
+        <uol name="effect" value="../../../30/stand1/0/effect" />
+        <uol name="effect1" value="../../../30/stand1/0/effect" />
+        <uol name="effect2" value="../../../30/stand1/0/effect" />
+        <uol name="effect3" value="../../../30/stand1/0/effect" />
       </imgdir>
       <imgdir name="1">
-        <uol name="weapon" value="../../../30/stand1/1/weapon"/>
-        <uol name="weapon1" value="../../../30/stand1/1/weapon"/>
-        <uol name="weapon2" value="../../../30/stand1/1/weapon"/>
-        <uol name="weapon3" value="../../../30/stand1/1/weapon"/>
-        <uol name="effect" value="../../../30/stand1/1/effect"/>
-        <uol name="effect1" value="../../../30/stand1/1/effect"/>
-        <uol name="effect2" value="../../../30/stand1/1/effect"/>
-        <uol name="effect3" value="../../../30/stand1/1/effect"/>
+        <uol name="weapon" value="../../../30/stand1/1/weapon" />
+        <uol name="weapon1" value="../../../30/stand1/1/weapon" />
+        <uol name="weapon2" value="../../../30/stand1/1/weapon" />
+        <uol name="weapon3" value="../../../30/stand1/1/weapon" />
+        <uol name="effect" value="../../../30/stand1/1/effect" />
+        <uol name="effect1" value="../../../30/stand1/1/effect" />
+        <uol name="effect2" value="../../../30/stand1/1/effect" />
+        <uol name="effect3" value="../../../30/stand1/1/effect" />
       </imgdir>
       <imgdir name="2">
-        <uol name="weapon" value="../../../30/stand1/2/weapon"/>
-        <uol name="weapon1" value="../../../30/stand1/2/weapon"/>
-        <uol name="weapon2" value="../../../30/stand1/2/weapon"/>
-        <uol name="weapon3" value="../../../30/stand1/2/weapon"/>
-        <uol name="effect" value="../../../30/stand1/2/effect"/>
-        <uol name="effect1" value="../../../30/stand1/2/effect"/>
-        <uol name="effect2" value="../../../30/stand1/2/effect"/>
-        <uol name="effect3" value="../../../30/stand1/2/effect"/>
+        <uol name="weapon" value="../../../30/stand1/2/weapon" />
+        <uol name="weapon1" value="../../../30/stand1/2/weapon" />
+        <uol name="weapon2" value="../../../30/stand1/2/weapon" />
+        <uol name="weapon3" value="../../../30/stand1/2/weapon" />
+        <uol name="effect" value="../../../30/stand1/2/effect" />
+        <uol name="effect1" value="../../../30/stand1/2/effect" />
+        <uol name="effect2" value="../../../30/stand1/2/effect" />
+        <uol name="effect3" value="../../../30/stand1/2/effect" />
       </imgdir>
     </imgdir>
     <imgdir name="alert">
       <imgdir name="0">
-        <uol name="weapon" value="../../../30/alert/0/weapon"/>
-        <uol name="weapon1" value="../../../30/alert/0/weapon"/>
-        <uol name="weapon2" value="../../../30/alert/0/weapon"/>
-        <uol name="weapon3" value="../../../30/alert/0/weapon"/>
-        <uol name="effect" value="../../../30/alert/0/effect"/>
-        <uol name="effect1" value="../../../30/alert/0/effect"/>
-        <uol name="effect2" value="../../../30/alert/0/effect"/>
-        <uol name="effect3" value="../../../30/alert/0/effect"/>
+        <uol name="weapon" value="../../../30/alert/0/weapon" />
+        <uol name="weapon1" value="../../../30/alert/0/weapon" />
+        <uol name="weapon2" value="../../../30/alert/0/weapon" />
+        <uol name="weapon3" value="../../../30/alert/0/weapon" />
+        <uol name="effect" value="../../../30/alert/0/effect" />
+        <uol name="effect1" value="../../../30/alert/0/effect" />
+        <uol name="effect2" value="../../../30/alert/0/effect" />
+        <uol name="effect3" value="../../../30/alert/0/effect" />
       </imgdir>
       <imgdir name="1">
-        <uol name="weapon" value="../../../30/alert/1/weapon"/>
-        <uol name="weapon1" value="../../../30/alert/1/weapon"/>
-        <uol name="weapon2" value="../../../30/alert/1/weapon"/>
-        <uol name="weapon3" value="../../../30/alert/1/weapon"/>
-        <uol name="effect" value="../../../30/alert/1/effect"/>
-        <uol name="effect1" value="../../../30/alert/1/effect"/>
-        <uol name="effect2" value="../../../30/alert/1/effect"/>
-        <uol name="effect3" value="../../../30/alert/1/effect"/>
+        <uol name="weapon" value="../../../30/alert/1/weapon" />
+        <uol name="weapon1" value="../../../30/alert/1/weapon" />
+        <uol name="weapon2" value="../../../30/alert/1/weapon" />
+        <uol name="weapon3" value="../../../30/alert/1/weapon" />
+        <uol name="effect" value="../../../30/alert/1/effect" />
+        <uol name="effect1" value="../../../30/alert/1/effect" />
+        <uol name="effect2" value="../../../30/alert/1/effect" />
+        <uol name="effect3" value="../../../30/alert/1/effect" />
       </imgdir>
       <imgdir name="2">
-        <uol name="weapon" value="../../../30/alert/2/weapon"/>
-        <uol name="weapon1" value="../../../30/alert/2/weapon"/>
-        <uol name="weapon2" value="../../../30/alert/2/weapon"/>
-        <uol name="weapon3" value="../../../30/alert/2/weapon"/>
-        <uol name="effect" value="../../../30/alert/2/effect"/>
-        <uol name="effect1" value="../../../30/alert/2/effect"/>
-        <uol name="effect2" value="../../../30/alert/2/effect"/>
-        <uol name="effect3" value="../../../30/alert/2/effect"/>
+        <uol name="weapon" value="../../../30/alert/2/weapon" />
+        <uol name="weapon1" value="../../../30/alert/2/weapon" />
+        <uol name="weapon2" value="../../../30/alert/2/weapon" />
+        <uol name="weapon3" value="../../../30/alert/2/weapon" />
+        <uol name="effect" value="../../../30/alert/2/effect" />
+        <uol name="effect1" value="../../../30/alert/2/effect" />
+        <uol name="effect2" value="../../../30/alert/2/effect" />
+        <uol name="effect3" value="../../../30/alert/2/effect" />
       </imgdir>
     </imgdir>
     <imgdir name="swingO1">
       <imgdir name="0">
-        <uol name="weapon" value="../../../30/swingO1/0/weapon"/>
-        <uol name="weapon1" value="../../../30/swingO1/0/weapon"/>
-        <uol name="weapon2" value="../../../30/swingO1/0/weapon"/>
-        <uol name="weapon3" value="../../../30/swingO1/0/weapon"/>
-        <uol name="effect" value="../../../30/swingO1/0/effect"/>
-        <uol name="effect1" value="../../../30/swingO1/0/effect"/>
-        <uol name="effect2" value="../../../30/swingO1/0/effect"/>
-        <uol name="effect3" value="../../../30/swingO1/0/effect"/>
+        <uol name="weapon" value="../../../30/swingO1/0/weapon" />
+        <uol name="weapon1" value="../../../30/swingO1/0/weapon" />
+        <uol name="weapon2" value="../../../30/swingO1/0/weapon" />
+        <uol name="weapon3" value="../../../30/swingO1/0/weapon" />
+        <uol name="effect" value="../../../30/swingO1/0/effect" />
+        <uol name="effect1" value="../../../30/swingO1/0/effect" />
+        <uol name="effect2" value="../../../30/swingO1/0/effect" />
+        <uol name="effect3" value="../../../30/swingO1/0/effect" />
       </imgdir>
       <imgdir name="1">
-        <uol name="weapon" value="../../../30/swingO1/1/weapon"/>
-        <uol name="weapon1" value="../../../30/swingO1/1/weapon"/>
-        <uol name="weapon2" value="../../../30/swingO1/1/weapon"/>
-        <uol name="weapon3" value="../../../30/swingO1/1/weapon"/>
-        <uol name="effect" value="../../../30/swingO1/1/effect"/>
-        <uol name="effect1" value="../../../30/swingO1/1/effect"/>
-        <uol name="effect2" value="../../../30/swingO1/1/effect"/>
-        <uol name="effect3" value="../../../30/swingO1/1/effect"/>
+        <uol name="weapon" value="../../../30/swingO1/1/weapon" />
+        <uol name="weapon1" value="../../../30/swingO1/1/weapon" />
+        <uol name="weapon2" value="../../../30/swingO1/1/weapon" />
+        <uol name="weapon3" value="../../../30/swingO1/1/weapon" />
+        <uol name="effect" value="../../../30/swingO1/1/effect" />
+        <uol name="effect1" value="../../../30/swingO1/1/effect" />
+        <uol name="effect2" value="../../../30/swingO1/1/effect" />
+        <uol name="effect3" value="../../../30/swingO1/1/effect" />
       </imgdir>
       <imgdir name="2">
-        <uol name="weapon" value="../../../30/swingO1/2/weapon"/>
-        <uol name="weapon1" value="../../../30/swingO1/2/weapon"/>
-        <uol name="weapon2" value="../../../30/swingO1/2/weapon"/>
-        <uol name="weapon3" value="../../../30/swingO1/2/weapon"/>
-        <uol name="effect" value="../../../30/swingO1/2/effect"/>
-        <uol name="effect1" value="../../../30/swingO1/2/effect"/>
-        <uol name="effect2" value="../../../30/swingO1/2/effect"/>
-        <uol name="effect3" value="../../../30/swingO1/2/effect"/>
+        <uol name="weapon" value="../../../30/swingO1/2/weapon" />
+        <uol name="weapon1" value="../../../30/swingO1/2/weapon" />
+        <uol name="weapon2" value="../../../30/swingO1/2/weapon" />
+        <uol name="weapon3" value="../../../30/swingO1/2/weapon" />
+        <uol name="effect" value="../../../30/swingO1/2/effect" />
+        <uol name="effect1" value="../../../30/swingO1/2/effect" />
+        <uol name="effect2" value="../../../30/swingO1/2/effect" />
+        <uol name="effect3" value="../../../30/swingO1/2/effect" />
       </imgdir>
     </imgdir>
     <imgdir name="swingO2">
       <imgdir name="0">
-        <uol name="weapon" value="../../../30/swingO2/0/weapon"/>
-        <uol name="weapon1" value="../../../30/swingO2/0/weapon"/>
-        <uol name="weapon2" value="../../../30/swingO2/0/weapon"/>
-        <uol name="weapon3" value="../../../30/swingO2/0/weapon"/>
-        <uol name="effect" value="../../../30/swingO2/0/effect"/>
-        <uol name="effect1" value="../../../30/swingO2/0/effect"/>
-        <uol name="effect2" value="../../../30/swingO2/0/effect"/>
-        <uol name="effect3" value="../../../30/swingO2/0/effect"/>
+        <uol name="weapon" value="../../../30/swingO2/0/weapon" />
+        <uol name="weapon1" value="../../../30/swingO2/0/weapon" />
+        <uol name="weapon2" value="../../../30/swingO2/0/weapon" />
+        <uol name="weapon3" value="../../../30/swingO2/0/weapon" />
+        <uol name="effect" value="../../../30/swingO2/0/effect" />
+        <uol name="effect1" value="../../../30/swingO2/0/effect" />
+        <uol name="effect2" value="../../../30/swingO2/0/effect" />
+        <uol name="effect3" value="../../../30/swingO2/0/effect" />
       </imgdir>
       <imgdir name="1">
-        <uol name="weapon" value="../../../30/swingO2/1/weapon"/>
-        <uol name="weapon1" value="../../../30/swingO2/1/weapon"/>
-        <uol name="weapon2" value="../../../30/swingO2/1/weapon"/>
-        <uol name="weapon3" value="../../../30/swingO2/1/weapon"/>
-        <uol name="effect" value="../../../30/swingO2/1/effect"/>
-        <uol name="effect1" value="../../../30/swingO2/1/effect"/>
-        <uol name="effect2" value="../../../30/swingO2/1/effect"/>
-        <uol name="effect3" value="../../../30/swingO2/1/effect"/>
+        <uol name="weapon" value="../../../30/swingO2/1/weapon" />
+        <uol name="weapon1" value="../../../30/swingO2/1/weapon" />
+        <uol name="weapon2" value="../../../30/swingO2/1/weapon" />
+        <uol name="weapon3" value="../../../30/swingO2/1/weapon" />
+        <uol name="effect" value="../../../30/swingO2/1/effect" />
+        <uol name="effect1" value="../../../30/swingO2/1/effect" />
+        <uol name="effect2" value="../../../30/swingO2/1/effect" />
+        <uol name="effect3" value="../../../30/swingO2/1/effect" />
       </imgdir>
       <imgdir name="2">
-        <uol name="weapon" value="../../../30/swingO2/2/weapon"/>
-        <uol name="weapon1" value="../../../30/swingO2/2/weapon"/>
-        <uol name="weapon2" value="../../../30/swingO2/2/weapon"/>
-        <uol name="weapon3" value="../../../30/swingO2/2/weapon"/>
-        <uol name="effect" value="../../../30/swingO2/2/effect"/>
-        <uol name="effect1" value="../../../30/swingO2/2/effect"/>
-        <uol name="effect2" value="../../../30/swingO2/2/effect"/>
-        <uol name="effect3" value="../../../30/swingO2/2/effect"/>
+        <uol name="weapon" value="../../../30/swingO2/2/weapon" />
+        <uol name="weapon1" value="../../../30/swingO2/2/weapon" />
+        <uol name="weapon2" value="../../../30/swingO2/2/weapon" />
+        <uol name="weapon3" value="../../../30/swingO2/2/weapon" />
+        <uol name="effect" value="../../../30/swingO2/2/effect" />
+        <uol name="effect1" value="../../../30/swingO2/2/effect" />
+        <uol name="effect2" value="../../../30/swingO2/2/effect" />
+        <uol name="effect3" value="../../../30/swingO2/2/effect" />
       </imgdir>
     </imgdir>
     <imgdir name="swingO3">
       <imgdir name="0">
-        <uol name="weapon" value="../../../30/swingO3/0/weapon"/>
-        <uol name="weapon1" value="../../../30/swingO3/0/weapon"/>
-        <uol name="weapon2" value="../../../30/swingO3/0/weapon"/>
-        <uol name="weapon3" value="../../../30/swingO3/0/weapon"/>
-        <uol name="effect" value="../../../30/swingO3/0/effect"/>
-        <uol name="effect1" value="../../../30/swingO3/0/effect"/>
-        <uol name="effect2" value="../../../30/swingO3/0/effect"/>
-        <uol name="effect3" value="../../../30/swingO3/0/effect"/>
+        <uol name="weapon" value="../../../30/swingO3/0/weapon" />
+        <uol name="weapon1" value="../../../30/swingO3/0/weapon" />
+        <uol name="weapon2" value="../../../30/swingO3/0/weapon" />
+        <uol name="weapon3" value="../../../30/swingO3/0/weapon" />
+        <uol name="effect" value="../../../30/swingO3/0/effect" />
+        <uol name="effect1" value="../../../30/swingO3/0/effect" />
+        <uol name="effect2" value="../../../30/swingO3/0/effect" />
+        <uol name="effect3" value="../../../30/swingO3/0/effect" />
       </imgdir>
       <imgdir name="1">
-        <uol name="weapon" value="../../../30/swingO3/1/weapon"/>
-        <uol name="weapon1" value="../../../30/swingO3/1/weapon"/>
-        <uol name="weapon2" value="../../../30/swingO3/1/weapon"/>
-        <uol name="weapon3" value="../../../30/swingO3/1/weapon"/>
-        <uol name="effect" value="../../../30/swingO3/1/effect"/>
-        <uol name="effect1" value="../../../30/swingO3/1/effect"/>
-        <uol name="effect2" value="../../../30/swingO3/1/effect"/>
-        <uol name="effect3" value="../../../30/swingO3/1/effect"/>
+        <uol name="weapon" value="../../../30/swingO3/1/weapon" />
+        <uol name="weapon1" value="../../../30/swingO3/1/weapon" />
+        <uol name="weapon2" value="../../../30/swingO3/1/weapon" />
+        <uol name="weapon3" value="../../../30/swingO3/1/weapon" />
+        <uol name="effect" value="../../../30/swingO3/1/effect" />
+        <uol name="effect1" value="../../../30/swingO3/1/effect" />
+        <uol name="effect2" value="../../../30/swingO3/1/effect" />
+        <uol name="effect3" value="../../../30/swingO3/1/effect" />
       </imgdir>
       <imgdir name="2">
-        <uol name="weapon" value="../../../30/swingO3/2/weapon"/>
-        <uol name="weapon1" value="../../../30/swingO3/2/weapon"/>
-        <uol name="weapon2" value="../../../30/swingO3/2/weapon"/>
-        <uol name="weapon3" value="../../../30/swingO3/2/weapon"/>
-        <uol name="effect" value="../../../30/swingO3/2/effect"/>
-        <uol name="effect1" value="../../../30/swingO3/2/effect"/>
-        <uol name="effect2" value="../../../30/swingO3/2/effect"/>
-        <uol name="effect3" value="../../../30/swingO3/2/effect"/>
+        <uol name="weapon" value="../../../30/swingO3/2/weapon" />
+        <uol name="weapon1" value="../../../30/swingO3/2/weapon" />
+        <uol name="weapon2" value="../../../30/swingO3/2/weapon" />
+        <uol name="weapon3" value="../../../30/swingO3/2/weapon" />
+        <uol name="effect" value="../../../30/swingO3/2/effect" />
+        <uol name="effect1" value="../../../30/swingO3/2/effect" />
+        <uol name="effect2" value="../../../30/swingO3/2/effect" />
+        <uol name="effect3" value="../../../30/swingO3/2/effect" />
       </imgdir>
     </imgdir>
     <imgdir name="stabO1">
       <imgdir name="0">
-        <uol name="weapon" value="../../../30/stabO1/0/weapon"/>
-        <uol name="weapon1" value="../../../30/stabO1/0/weapon"/>
-        <uol name="weapon2" value="../../../30/stabO1/0/weapon"/>
-        <uol name="weapon3" value="../../../30/stabO1/0/weapon"/>
-        <uol name="effect" value="../../../30/stabO1/0/effect"/>
-        <uol name="effect1" value="../../../30/stabO1/0/effect"/>
-        <uol name="effect2" value="../../../30/stabO1/0/effect"/>
-        <uol name="effect3" value="../../../30/stabO1/0/effect"/>
+        <uol name="weapon" value="../../../30/stabO1/0/weapon" />
+        <uol name="weapon1" value="../../../30/stabO1/0/weapon" />
+        <uol name="weapon2" value="../../../30/stabO1/0/weapon" />
+        <uol name="weapon3" value="../../../30/stabO1/0/weapon" />
+        <uol name="effect" value="../../../30/stabO1/0/effect" />
+        <uol name="effect1" value="../../../30/stabO1/0/effect" />
+        <uol name="effect2" value="../../../30/stabO1/0/effect" />
+        <uol name="effect3" value="../../../30/stabO1/0/effect" />
       </imgdir>
       <imgdir name="1">
-        <uol name="weapon" value="../../../30/stabO1/1/weapon"/>
-        <uol name="weapon1" value="../../../30/stabO1/1/weapon"/>
-        <uol name="weapon2" value="../../../30/stabO1/1/weapon"/>
-        <uol name="weapon3" value="../../../30/stabO1/1/weapon"/>
-        <uol name="effect" value="../../../30/stabO1/1/effect"/>
-        <uol name="effect1" value="../../../30/stabO1/1/effect"/>
-        <uol name="effect2" value="../../../30/stabO1/1/effect"/>
-        <uol name="effect3" value="../../../30/stabO1/1/effect"/>
+        <uol name="weapon" value="../../../30/stabO1/1/weapon" />
+        <uol name="weapon1" value="../../../30/stabO1/1/weapon" />
+        <uol name="weapon2" value="../../../30/stabO1/1/weapon" />
+        <uol name="weapon3" value="../../../30/stabO1/1/weapon" />
+        <uol name="effect" value="../../../30/stabO1/1/effect" />
+        <uol name="effect1" value="../../../30/stabO1/1/effect" />
+        <uol name="effect2" value="../../../30/stabO1/1/effect" />
+        <uol name="effect3" value="../../../30/stabO1/1/effect" />
       </imgdir>
     </imgdir>
     <imgdir name="stabO2">
       <imgdir name="0">
-        <uol name="weapon" value="../../../30/stabO2/0/weapon"/>
-        <uol name="weapon1" value="../../../30/stabO2/0/weapon"/>
-        <uol name="weapon2" value="../../../30/stabO2/0/weapon"/>
-        <uol name="weapon3" value="../../../30/stabO2/0/weapon"/>
-        <uol name="effect" value="../../../30/stabO2/0/effect"/>
-        <uol name="effect1" value="../../../30/stabO2/0/effect"/>
-        <uol name="effect2" value="../../../30/stabO2/0/effect"/>
-        <uol name="effect3" value="../../../30/stabO2/0/effect"/>
+        <uol name="weapon" value="../../../30/stabO2/0/weapon" />
+        <uol name="weapon1" value="../../../30/stabO2/0/weapon" />
+        <uol name="weapon2" value="../../../30/stabO2/0/weapon" />
+        <uol name="weapon3" value="../../../30/stabO2/0/weapon" />
+        <uol name="effect" value="../../../30/stabO2/0/effect" />
+        <uol name="effect1" value="../../../30/stabO2/0/effect" />
+        <uol name="effect2" value="../../../30/stabO2/0/effect" />
+        <uol name="effect3" value="../../../30/stabO2/0/effect" />
       </imgdir>
       <imgdir name="1">
-        <uol name="weapon" value="../../../30/stabO2/1/weapon"/>
-        <uol name="weapon1" value="../../../30/stabO2/1/weapon"/>
-        <uol name="weapon2" value="../../../30/stabO2/1/weapon"/>
-        <uol name="weapon3" value="../../../30/stabO2/1/weapon"/>
-        <uol name="effect" value="../../../30/stabO2/1/effect"/>
-        <uol name="effect1" value="../../../30/stabO2/1/effect"/>
-        <uol name="effect2" value="../../../30/stabO2/1/effect"/>
-        <uol name="effect3" value="../../../30/stabO2/1/effect"/>
+        <uol name="weapon" value="../../../30/stabO2/1/weapon" />
+        <uol name="weapon1" value="../../../30/stabO2/1/weapon" />
+        <uol name="weapon2" value="../../../30/stabO2/1/weapon" />
+        <uol name="weapon3" value="../../../30/stabO2/1/weapon" />
+        <uol name="effect" value="../../../30/stabO2/1/effect" />
+        <uol name="effect1" value="../../../30/stabO2/1/effect" />
+        <uol name="effect2" value="../../../30/stabO2/1/effect" />
+        <uol name="effect3" value="../../../30/stabO2/1/effect" />
       </imgdir>
     </imgdir>
     <imgdir name="shoot1">
       <imgdir name="0">
-        <uol name="weapon" value="../../../30/shoot1/0/weapon"/>
-        <uol name="weapon1" value="../../../30/shoot1/0/weapon"/>
-        <uol name="weapon2" value="../../../30/shoot1/0/weapon"/>
-        <uol name="weapon3" value="../../../30/shoot1/0/weapon"/>
-        <uol name="effect" value="../../../30/shoot1/0/effect"/>
-        <uol name="effect1" value="../../../30/shoot1/0/effect"/>
-        <uol name="effect2" value="../../../30/shoot1/0/effect"/>
-        <uol name="effect3" value="../../../30/shoot1/0/effect"/>
+        <uol name="weapon" value="../../../30/shoot1/0/weapon" />
+        <uol name="weapon1" value="../../../30/shoot1/0/weapon" />
+        <uol name="weapon2" value="../../../30/shoot1/0/weapon" />
+        <uol name="weapon3" value="../../../30/shoot1/0/weapon" />
+        <uol name="effect" value="../../../30/shoot1/0/effect" />
+        <uol name="effect1" value="../../../30/shoot1/0/effect" />
+        <uol name="effect2" value="../../../30/shoot1/0/effect" />
+        <uol name="effect3" value="../../../30/shoot1/0/effect" />
       </imgdir>
       <imgdir name="1">
-        <uol name="weapon" value="../../../30/shoot1/1/weapon"/>
-        <uol name="weapon1" value="../../../30/shoot1/1/weapon"/>
-        <uol name="weapon2" value="../../../30/shoot1/1/weapon"/>
-        <uol name="weapon3" value="../../../30/shoot1/1/weapon"/>
-        <uol name="effect" value="../../../30/shoot1/1/effect"/>
-        <uol name="effect1" value="../../../30/shoot1/1/effect"/>
-        <uol name="effect2" value="../../../30/shoot1/1/effect"/>
-        <uol name="effect3" value="../../../30/shoot1/1/effect"/>
+        <uol name="weapon" value="../../../30/shoot1/1/weapon" />
+        <uol name="weapon1" value="../../../30/shoot1/1/weapon" />
+        <uol name="weapon2" value="../../../30/shoot1/1/weapon" />
+        <uol name="weapon3" value="../../../30/shoot1/1/weapon" />
+        <uol name="effect" value="../../../30/shoot1/1/effect" />
+        <uol name="effect1" value="../../../30/shoot1/1/effect" />
+        <uol name="effect2" value="../../../30/shoot1/1/effect" />
+        <uol name="effect3" value="../../../30/shoot1/1/effect" />
       </imgdir>
       <imgdir name="2">
-        <uol name="weapon" value="../../../30/shoot1/2/weapon"/>
-        <uol name="weapon1" value="../../../30/shoot1/2/weapon"/>
-        <uol name="weapon2" value="../../../30/shoot1/2/weapon"/>
-        <uol name="weapon3" value="../../../30/shoot1/2/weapon"/>
-        <uol name="effect" value="../../../30/shoot1/2/effect"/>
-        <uol name="effect1" value="../../../30/shoot1/2/effect"/>
-        <uol name="effect2" value="../../../30/shoot1/2/effect"/>
-        <uol name="effect3" value="../../../30/shoot1/2/effect"/>
+        <uol name="weapon" value="../../../30/shoot1/2/weapon" />
+        <uol name="weapon1" value="../../../30/shoot1/2/weapon" />
+        <uol name="weapon2" value="../../../30/shoot1/2/weapon" />
+        <uol name="weapon3" value="../../../30/shoot1/2/weapon" />
+        <uol name="effect" value="../../../30/shoot1/2/effect" />
+        <uol name="effect1" value="../../../30/shoot1/2/effect" />
+        <uol name="effect2" value="../../../30/shoot1/2/effect" />
+        <uol name="effect3" value="../../../30/shoot1/2/effect" />
       </imgdir>
     </imgdir>
     <imgdir name="shootF">
       <imgdir name="0">
-        <uol name="weapon" value="../../../30/shootF/0/weapon"/>
-        <uol name="weapon1" value="../../../30/shootF/0/weapon"/>
-        <uol name="weapon2" value="../../../30/shootF/0/weapon"/>
-        <uol name="weapon3" value="../../../30/shootF/0/weapon"/>
-        <uol name="effect" value="../../../30/shootF/0/effect"/>
-        <uol name="effect1" value="../../../30/shootF/0/effect"/>
-        <uol name="effect2" value="../../../30/shootF/0/effect"/>
-        <uol name="effect3" value="../../../30/shootF/0/effect"/>
+        <uol name="weapon" value="../../../30/shootF/0/weapon" />
+        <uol name="weapon1" value="../../../30/shootF/0/weapon" />
+        <uol name="weapon2" value="../../../30/shootF/0/weapon" />
+        <uol name="weapon3" value="../../../30/shootF/0/weapon" />
+        <uol name="effect" value="../../../30/shootF/0/effect" />
+        <uol name="effect1" value="../../../30/shootF/0/effect" />
+        <uol name="effect2" value="../../../30/shootF/0/effect" />
+        <uol name="effect3" value="../../../30/shootF/0/effect" />
       </imgdir>
       <imgdir name="1">
-        <uol name="weapon" value="../../../30/shootF/1/weapon"/>
-        <uol name="weapon1" value="../../../30/shootF/1/weapon"/>
-        <uol name="weapon2" value="../../../30/shootF/1/weapon"/>
-        <uol name="weapon3" value="../../../30/shootF/1/weapon"/>
-        <uol name="effect" value="../../../30/shootF/1/effect"/>
-        <uol name="effect1" value="../../../30/shootF/1/effect"/>
-        <uol name="effect2" value="../../../30/shootF/1/effect"/>
-        <uol name="effect3" value="../../../30/shootF/1/effect"/>
+        <uol name="weapon" value="../../../30/shootF/1/weapon" />
+        <uol name="weapon1" value="../../../30/shootF/1/weapon" />
+        <uol name="weapon2" value="../../../30/shootF/1/weapon" />
+        <uol name="weapon3" value="../../../30/shootF/1/weapon" />
+        <uol name="effect" value="../../../30/shootF/1/effect" />
+        <uol name="effect1" value="../../../30/shootF/1/effect" />
+        <uol name="effect2" value="../../../30/shootF/1/effect" />
+        <uol name="effect3" value="../../../30/shootF/1/effect" />
       </imgdir>
       <imgdir name="2">
-        <uol name="weapon" value="../../../30/shootF/1/weapon"/>
-        <uol name="weapon1" value="../../../30/shootF/1/weapon"/>
-        <uol name="weapon2" value="../../../30/shootF/1/weapon"/>
-        <uol name="weapon3" value="../../../30/shootF/1/weapon"/>
-        <uol name="effect" value="../../../30/shootF/1/effect"/>
-        <uol name="effect1" value="../../../30/shootF/1/effect"/>
-        <uol name="effect2" value="../../../30/shootF/1/effect"/>
-        <uol name="effect3" value="../../../30/shootF/1/effect"/>
+        <uol name="weapon" value="../../../30/shootF/1/weapon" />
+        <uol name="weapon1" value="../../../30/shootF/1/weapon" />
+        <uol name="weapon2" value="../../../30/shootF/1/weapon" />
+        <uol name="weapon3" value="../../../30/shootF/1/weapon" />
+        <uol name="effect" value="../../../30/shootF/1/effect" />
+        <uol name="effect1" value="../../../30/shootF/1/effect" />
+        <uol name="effect2" value="../../../30/shootF/1/effect" />
+        <uol name="effect3" value="../../../30/shootF/1/effect" />
       </imgdir>
     </imgdir>
     <imgdir name="proneStab">
       <imgdir name="0">
-        <uol name="weapon" value="../../../30/proneStab/0/weapon"/>
-        <uol name="weapon1" value="../../../30/proneStab/0/weapon"/>
-        <uol name="weapon2" value="../../../30/proneStab/0/weapon"/>
-        <uol name="weapon3" value="../../../30/proneStab/0/weapon"/>
-        <uol name="effect" value="../../../30/proneStab/0/effect"/>
-        <uol name="effect1" value="../../../30/proneStab/0/effect"/>
-        <uol name="effect2" value="../../../30/proneStab/0/effect"/>
-        <uol name="effect3" value="../../../30/proneStab/0/effect"/>
+        <uol name="weapon" value="../../../30/proneStab/0/weapon" />
+        <uol name="weapon1" value="../../../30/proneStab/0/weapon" />
+        <uol name="weapon2" value="../../../30/proneStab/0/weapon" />
+        <uol name="weapon3" value="../../../30/proneStab/0/weapon" />
+        <uol name="effect" value="../../../30/proneStab/0/effect" />
+        <uol name="effect1" value="../../../30/proneStab/0/effect" />
+        <uol name="effect2" value="../../../30/proneStab/0/effect" />
+        <uol name="effect3" value="../../../30/proneStab/0/effect" />
       </imgdir>
       <imgdir name="1">
-        <uol name="weapon" value="../../../30/proneStab/1/weapon"/>
-        <uol name="weapon1" value="../../../30/proneStab/1/weapon"/>
-        <uol name="weapon2" value="../../../30/proneStab/1/weapon"/>
-        <uol name="weapon3" value="../../../30/proneStab/1/weapon"/>
-        <uol name="effect" value="../../../30/proneStab/1/effect"/>
-        <uol name="effect1" value="../../../30/proneStab/1/effect"/>
-        <uol name="effect2" value="../../../30/proneStab/1/effect"/>
-        <uol name="effect3" value="../../../30/proneStab/1/effect"/>
+        <uol name="weapon" value="../../../30/proneStab/1/weapon" />
+        <uol name="weapon1" value="../../../30/proneStab/1/weapon" />
+        <uol name="weapon2" value="../../../30/proneStab/1/weapon" />
+        <uol name="weapon3" value="../../../30/proneStab/1/weapon" />
+        <uol name="effect" value="../../../30/proneStab/1/effect" />
+        <uol name="effect1" value="../../../30/proneStab/1/effect" />
+        <uol name="effect2" value="../../../30/proneStab/1/effect" />
+        <uol name="effect3" value="../../../30/proneStab/1/effect" />
       </imgdir>
     </imgdir>
     <imgdir name="prone">
       <imgdir name="0">
-        <uol name="weapon" value="../../../30/proneStab/0/weapon"/>
-        <uol name="weapon1" value="../../../30/proneStab/0/weapon"/>
-        <uol name="weapon2" value="../../../30/proneStab/0/weapon"/>
-        <uol name="weapon3" value="../../../30/proneStab/0/weapon"/>
+        <uol name="weapon" value="../../../30/proneStab/0/weapon" />
+        <uol name="weapon1" value="../../../30/proneStab/0/weapon" />
+        <uol name="weapon2" value="../../../30/proneStab/0/weapon" />
+        <uol name="weapon3" value="../../../30/proneStab/0/weapon" />
       </imgdir>
     </imgdir>
     <imgdir name="heal">
       <imgdir name="0">
-        <uol name="weapon" value="../../../30/alert/1/weapon"/>
-        <uol name="weapon1" value="../../../30/alert/1/weapon"/>
-        <uol name="weapon2" value="../../../30/alert/1/weapon"/>
-        <uol name="weapon3" value="../../../30/alert/1/weapon"/>
-        <uol name="effect" value="../../../30/alert/1/effect"/>
-        <uol name="effect1" value="../../../30/alert/1/effect"/>
-        <uol name="effect2" value="../../../30/alert/1/effect"/>
-        <uol name="effect3" value="../../../30/alert/1/effect"/>
+        <uol name="weapon" value="../../../30/alert/1/weapon" />
+        <uol name="weapon1" value="../../../30/alert/1/weapon" />
+        <uol name="weapon2" value="../../../30/alert/1/weapon" />
+        <uol name="weapon3" value="../../../30/alert/1/weapon" />
+        <uol name="effect" value="../../../30/alert/1/effect" />
+        <uol name="effect1" value="../../../30/alert/1/effect" />
+        <uol name="effect2" value="../../../30/alert/1/effect" />
+        <uol name="effect3" value="../../../30/alert/1/effect" />
       </imgdir>
       <imgdir name="1">
-        <uol name="weapon" value="../../../30/swingO2/1/weapon"/>
-        <uol name="weapon1" value="../../../30/swingO2/1/weapon"/>
-        <uol name="weapon2" value="../../../30/swingO2/1/weapon"/>
-        <uol name="weapon3" value="../../../30/swingO2/1/weapon"/>
-        <uol name="effect" value="../../../30/swingO2/1/effect"/>
-        <uol name="effect1" value="../../../30/swingO2/1/effect"/>
-        <uol name="effect2" value="../../../30/swingO2/1/effect"/>
-        <uol name="effect3" value="../../../30/swingO2/1/effect"/>
+        <uol name="weapon" value="../../../30/swingO2/1/weapon" />
+        <uol name="weapon1" value="../../../30/swingO2/1/weapon" />
+        <uol name="weapon2" value="../../../30/swingO2/1/weapon" />
+        <uol name="weapon3" value="../../../30/swingO2/1/weapon" />
+        <uol name="effect" value="../../../30/swingO2/1/effect" />
+        <uol name="effect1" value="../../../30/swingO2/1/effect" />
+        <uol name="effect2" value="../../../30/swingO2/1/effect" />
+        <uol name="effect3" value="../../../30/swingO2/1/effect" />
       </imgdir>
       <imgdir name="2">
-        <uol name="weapon" value="../../../30/swingO2/0/weapon"/>
-        <uol name="weapon1" value="../../../30/swingO2/0/weapon"/>
-        <uol name="weapon2" value="../../../30/swingO2/0/weapon"/>
-        <uol name="weapon3" value="../../../30/swingO2/0/weapon"/>
-        <uol name="effect" value="../../../30/swingO2/0/effect"/>
-        <uol name="effect1" value="../../../30/swingO2/0/effect"/>
-        <uol name="effect2" value="../../../30/swingO2/0/effect"/>
-        <uol name="effect3" value="../../../30/swingO2/0/effect"/>
+        <uol name="weapon" value="../../../30/swingO2/0/weapon" />
+        <uol name="weapon1" value="../../../30/swingO2/0/weapon" />
+        <uol name="weapon2" value="../../../30/swingO2/0/weapon" />
+        <uol name="weapon3" value="../../../30/swingO2/0/weapon" />
+        <uol name="effect" value="../../../30/swingO2/0/effect" />
+        <uol name="effect1" value="../../../30/swingO2/0/effect" />
+        <uol name="effect2" value="../../../30/swingO2/0/effect" />
+        <uol name="effect3" value="../../../30/swingO2/0/effect" />
       </imgdir>
     </imgdir>
     <imgdir name="fly">
       <imgdir name="0">
-        <uol name="weapon" value="../../../30/fly/0/weapon"/>
-        <uol name="weapon1" value="../../../30/fly/0/weapon"/>
-        <uol name="weapon2" value="../../../30/fly/0/weapon"/>
-        <uol name="weapon3" value="../../../30/fly/0/weapon"/>
-        <uol name="effect" value="../../../30/fly/0/effect"/>
-        <uol name="effect1" value="../../../30/fly/0/effect"/>
-        <uol name="effect2" value="../../../30/fly/0/effect"/>
-        <uol name="effect3" value="../../../30/fly/0/effect"/>
+        <uol name="weapon" value="../../../30/fly/0/weapon" />
+        <uol name="weapon1" value="../../../30/fly/0/weapon" />
+        <uol name="weapon2" value="../../../30/fly/0/weapon" />
+        <uol name="weapon3" value="../../../30/fly/0/weapon" />
+        <uol name="effect" value="../../../30/fly/0/effect" />
+        <uol name="effect1" value="../../../30/fly/0/effect" />
+        <uol name="effect2" value="../../../30/fly/0/effect" />
+        <uol name="effect3" value="../../../30/fly/0/effect" />
       </imgdir>
       <imgdir name="1">
-        <uol name="weapon" value="../../../30/fly/0/weapon"/>
-        <uol name="weapon1" value="../../../30/fly/0/weapon"/>
-        <uol name="weapon2" value="../../../30/fly/0/weapon"/>
-        <uol name="weapon3" value="../../../30/fly/0/weapon"/>
-        <uol name="effect" value="../../../30/fly/0/effect"/>
-        <uol name="effect1" value="../../../30/fly/0/effect"/>
-        <uol name="effect2" value="../../../30/fly/0/effect"/>
-        <uol name="effect3" value="../../../30/fly/0/effect"/>
+        <uol name="weapon" value="../../../30/fly/0/weapon" />
+        <uol name="weapon1" value="../../../30/fly/0/weapon" />
+        <uol name="weapon2" value="../../../30/fly/0/weapon" />
+        <uol name="weapon3" value="../../../30/fly/0/weapon" />
+        <uol name="effect" value="../../../30/fly/0/effect" />
+        <uol name="effect1" value="../../../30/fly/0/effect" />
+        <uol name="effect2" value="../../../30/fly/0/effect" />
+        <uol name="effect3" value="../../../30/fly/0/effect" />
       </imgdir>
     </imgdir>
     <imgdir name="jump">
       <imgdir name="0">
-        <uol name="weapon" value="../../../30/jump/0/weapon"/>
-        <uol name="weapon1" value="../../../30/jump/0/weapon"/>
-        <uol name="weapon2" value="../../../30/jump/0/weapon"/>
-        <uol name="weapon3" value="../../../30/jump/0/weapon"/>
-        <uol name="effect" value="../../../30/jump/0/effect"/>
-        <uol name="effect1" value="../../../30/jump/0/effect"/>
-        <uol name="effect2" value="../../../30/jump/0/effect"/>
-        <uol name="effect3" value="../../../30/jump/0/effect"/>
+        <uol name="weapon" value="../../../30/jump/0/weapon" />
+        <uol name="weapon1" value="../../../30/jump/0/weapon" />
+        <uol name="weapon2" value="../../../30/jump/0/weapon" />
+        <uol name="weapon3" value="../../../30/jump/0/weapon" />
+        <uol name="effect" value="../../../30/jump/0/effect" />
+        <uol name="effect1" value="../../../30/jump/0/effect" />
+        <uol name="effect2" value="../../../30/jump/0/effect" />
+        <uol name="effect3" value="../../../30/jump/0/effect" />
       </imgdir>
     </imgdir>
     <imgdir name="sit">
       <imgdir name="0">
-        <uol name="weapon" value="../../../30/sit/0/weapon"/>
-        <uol name="weapon1" value="../../../30/sit/0/weapon"/>
-        <uol name="weapon2" value="../../../30/sit/0/weapon"/>
-        <uol name="weapon3" value="../../../30/sit/0/weapon"/>
-        <uol name="effect" value="../../../30/sit/0/effect"/>
-        <uol name="effect1" value="../../../30/sit/0/effect"/>
-        <uol name="effect2" value="../../../30/sit/0/effect"/>
-        <uol name="effect3" value="../../../30/sit/0/effect"/>
+        <uol name="weapon" value="../../../30/sit/0/weapon" />
+        <uol name="weapon1" value="../../../30/sit/0/weapon" />
+        <uol name="weapon2" value="../../../30/sit/0/weapon" />
+        <uol name="weapon3" value="../../../30/sit/0/weapon" />
+        <uol name="effect" value="../../../30/sit/0/effect" />
+        <uol name="effect1" value="../../../30/sit/0/effect" />
+        <uol name="effect2" value="../../../30/sit/0/effect" />
+        <uol name="effect3" value="../../../30/sit/0/effect" />
       </imgdir>
     </imgdir>
     <imgdir name="ladder">
       <imgdir name="0">
-        <uol name="weapon" value="../../../30/ladder/0/weapon"/>
-        <uol name="weapon1" value="../../../30/ladder/0/weapon"/>
-        <uol name="weapon2" value="../../../30/ladder/0/weapon"/>
-        <uol name="weapon3" value="../../../30/ladder/0/weapon"/>
-        <uol name="effect" value="../../../30/ladder/0/effect"/>
-        <uol name="effect1" value="../../../30/ladder/0/effect"/>
-        <uol name="effect2" value="../../../30/ladder/0/effect"/>
-        <uol name="effect3" value="../../../30/ladder/0/effect"/>
+        <uol name="weapon" value="../../../30/ladder/0/weapon" />
+        <uol name="weapon1" value="../../../30/ladder/0/weapon" />
+        <uol name="weapon2" value="../../../30/ladder/0/weapon" />
+        <uol name="weapon3" value="../../../30/ladder/0/weapon" />
+        <uol name="effect" value="../../../30/ladder/0/effect" />
+        <uol name="effect1" value="../../../30/ladder/0/effect" />
+        <uol name="effect2" value="../../../30/ladder/0/effect" />
+        <uol name="effect3" value="../../../30/ladder/0/effect" />
       </imgdir>
       <imgdir name="1">
-        <uol name="weapon" value="../../../30/ladder/1/weapon"/>
-        <uol name="weapon1" value="../../../30/ladder/1/weapon"/>
-        <uol name="weapon2" value="../../../30/ladder/1/weapon"/>
-        <uol name="weapon3" value="../../../30/ladder/1/weapon"/>
-        <uol name="effect" value="../../../30/ladder/1/effect"/>
-        <uol name="effect1" value="../../../30/ladder/1/effect"/>
-        <uol name="effect2" value="../../../30/ladder/1/effect"/>
-        <uol name="effect3" value="../../../30/ladder/1/effect"/>
+        <uol name="weapon" value="../../../30/ladder/1/weapon" />
+        <uol name="weapon1" value="../../../30/ladder/1/weapon" />
+        <uol name="weapon2" value="../../../30/ladder/1/weapon" />
+        <uol name="weapon3" value="../../../30/ladder/1/weapon" />
+        <uol name="effect" value="../../../30/ladder/1/effect" />
+        <uol name="effect1" value="../../../30/ladder/1/effect" />
+        <uol name="effect2" value="../../../30/ladder/1/effect" />
+        <uol name="effect3" value="../../../30/ladder/1/effect" />
       </imgdir>
     </imgdir>
     <imgdir name="rope">
       <imgdir name="0">
-        <uol name="weapon" value="../../../30/rope/0/weapon"/>
-        <uol name="weapon1" value="../../../30/rope/0/weapon"/>
-        <uol name="weapon2" value="../../../30/rope/0/weapon"/>
-        <uol name="weapon3" value="../../../30/rope/0/weapon"/>
-        <uol name="effect" value="../../../30/rope/0/effect"/>
-        <uol name="effect1" value="../../../30/rope/0/effect"/>
-        <uol name="effect2" value="../../../30/rope/0/effect"/>
-        <uol name="effect3" value="../../../30/rope/0/effect"/>
+        <uol name="weapon" value="../../../30/rope/0/weapon" />
+        <uol name="weapon1" value="../../../30/rope/0/weapon" />
+        <uol name="weapon2" value="../../../30/rope/0/weapon" />
+        <uol name="weapon3" value="../../../30/rope/0/weapon" />
+        <uol name="effect" value="../../../30/rope/0/effect" />
+        <uol name="effect1" value="../../../30/rope/0/effect" />
+        <uol name="effect2" value="../../../30/rope/0/effect" />
+        <uol name="effect3" value="../../../30/rope/0/effect" />
       </imgdir>
       <imgdir name="1">
-        <uol name="weapon" value="../../../30/rope/1/weapon"/>
-        <uol name="weapon1" value="../../../30/rope/1/weapon"/>
-        <uol name="weapon2" value="../../../30/rope/1/weapon"/>
-        <uol name="weapon3" value="../../../30/rope/1/weapon"/>
-        <uol name="effect" value="../../../30/rope/1/effect"/>
-        <uol name="effect1" value="../../../30/rope/1/effect"/>
-        <uol name="effect2" value="../../../30/rope/1/effect"/>
-        <uol name="effect3" value="../../../30/rope/1/effect"/>
+        <uol name="weapon" value="../../../30/rope/1/weapon" />
+        <uol name="weapon1" value="../../../30/rope/1/weapon" />
+        <uol name="weapon2" value="../../../30/rope/1/weapon" />
+        <uol name="weapon3" value="../../../30/rope/1/weapon" />
+        <uol name="effect" value="../../../30/rope/1/effect" />
+        <uol name="effect1" value="../../../30/rope/1/effect" />
+        <uol name="effect2" value="../../../30/rope/1/effect" />
+        <uol name="effect3" value="../../../30/rope/1/effect" />
       </imgdir>
     </imgdir>
   </imgdir>
-  <uol name="22" value="30"/>
-  <uol name="23" value="30"/>
-  <uol name="24" value="30"/>
-  <uol name="26" value="30"/>
-  <uol name="56" value="30"/>
-  <uol name="57" value="30"/>
-  <uol name="58" value="30"/>
-  <uol name="27" value="30"/>
-  <uol name="28" value="30"/>
-  <uol name="59" value="30"/>
+  <uol name="22" value="30" />
+  <uol name="23" value="30" />
+  <uol name="24" value="30" />
+  <uol name="26" value="30" />
+  <uol name="56" value="30" />
+  <uol name="57" value="30" />
+  <uol name="58" value="30" />
+  <uol name="27" value="30" />
+  <uol name="28" value="30" />
+  <uol name="59" value="30" />
 </imgdir>

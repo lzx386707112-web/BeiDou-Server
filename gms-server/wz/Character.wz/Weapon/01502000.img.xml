@@ -2,158 +2,159 @@
 <imgdir indent="2" media="NONE" name="01502000.img">
   <imgdir name="info">
     <canvas format="2" height="31" name="icon" scale="0" width="30">
-      <vector name="origin" x="-1" y="31"/>
-      <string name="_hash" value="18d68249f0a422ad78c1171363031bf21a8a391681592fc0eb4c358ab48a8bda"/>
+      <vector name="origin" x="-1" y="31" />
+      <string name="_hash" value="18d68249f0a422ad78c1171363031bf21a8a391681592fc0eb4c358ab48a8bda" />
     </canvas>
     <canvas format="2" height="30" name="iconRaw" scale="0" width="30">
-      <vector name="origin" x="-1" y="31"/>
-      <string name="_hash" value="1e881d6e6ef33b992614c83f56cb0506883bab169fc6c89f358f5e0a9693e581"/>
+      <vector name="origin" x="-1" y="31" />
+      <string name="_hash" value="1e881d6e6ef33b992614c83f56cb0506883bab169fc6c89f358f5e0a9693e581" />
     </canvas>
-    <string name="islot" value="Wp"/>
+    <string name="islot" value="Wp" />
     <imgdir name="gatherTool">
-      <string name="action" value="gather0"/>
-      <int name="reqSkillLevel" value="1"/>
-      <string name="toolEffectPath" value="Effect/ItemEff.img/1502000"/>
+      <string name="action" value="gather0" />
+      <int name="reqSkillLevel" value="1" />
+      <string name="toolEffectPath" value="Effect/ItemEff.img/1502000" />
     </imgdir>
-    <int name="price" value="500"/>
-    <int name="equipTradeBlock" value="1"/>
-    <int name="tradeAvailable" value="2"/>
+    <int name="price" value="500" />
+    <int name="equipTradeBlock" value="1" />
+    <int name="tradeAvailable" value="2" />
     <imgdir name="level">
       <imgdir name="info">
         <imgdir name="1">
-          <int name="exp" value="10000"/>
+          <int name="exp" value="10000" />
         </imgdir>
         <imgdir name="2">
-          <int name="exp" value="10000"/>
+          <int name="exp" value="10000" />
         </imgdir>
         <imgdir name="3">
-          <int name="exp" value="10000"/>
+          <int name="exp" value="10000" />
         </imgdir>
         <imgdir name="4">
-          <int name="exp" value="10000"/>
+          <int name="exp" value="10000" />
         </imgdir>
         <imgdir name="5">
-          <int name="exp" value="10000"/>
+          <int name="exp" value="10000" />
         </imgdir>
         <imgdir name="6">
-          <int name="exp" value="10000"/>
+          <int name="exp" value="10000" />
         </imgdir>
         <imgdir name="7">
-          <int name="exp" value="10000"/>
+          <int name="exp" value="10000" />
         </imgdir>
         <imgdir name="8">
-          <int name="exp" value="10000"/>
+          <int name="exp" value="10000" />
         </imgdir>
         <imgdir name="9">
-          <int name="exp" value="10000"/>
+          <int name="exp" value="10000" />
         </imgdir>
         <imgdir name="10">
-          <int name="exp" value="10000"/>
+          <int name="exp" value="10000" />
         </imgdir>
         <imgdir name="11">
-          <int name="exp" value="10000"/>
+          <int name="exp" value="10000" />
         </imgdir>
         <imgdir name="12">
-          <int name="exp" value="10000"/>
+          <int name="exp" value="10000" />
         </imgdir>
         <imgdir name="13">
-          <int name="exp" value="10000"/>
+          <int name="exp" value="10000" />
         </imgdir>
         <imgdir name="14">
-          <int name="exp" value="10000"/>
+          <int name="exp" value="10000" />
         </imgdir>
         <imgdir name="15">
-          <int name="exp" value="10000"/>
+          <int name="exp" value="10000" />
         </imgdir>
         <imgdir name="16">
-          <int name="exp" value="10000"/>
+          <int name="exp" value="10000" />
         </imgdir>
         <imgdir name="17">
-          <int name="exp" value="10000"/>
+          <int name="exp" value="10000" />
         </imgdir>
         <imgdir name="18">
-          <int name="exp" value="10000"/>
+          <int name="exp" value="10000" />
         </imgdir>
         <imgdir name="19">
-          <int name="exp" value="10000"/>
+          <int name="exp" value="10000" />
         </imgdir>
         <imgdir name="20">
-          <int name="exp" value="10000"/>
+          <int name="exp" value="10000" />
         </imgdir>
         <imgdir name="21">
-          <int name="exp" value="10000"/>
+          <int name="exp" value="10000" />
         </imgdir>
         <imgdir name="22">
-          <int name="exp" value="10000"/>
+          <int name="exp" value="10000" />
         </imgdir>
         <imgdir name="23">
-          <int name="exp" value="10000"/>
+          <int name="exp" value="10000" />
         </imgdir>
         <imgdir name="24">
-          <int name="exp" value="10000"/>
+          <int name="exp" value="10000" />
         </imgdir>
         <imgdir name="25">
-          <int name="exp" value="10000"/>
+          <int name="exp" value="10000" />
         </imgdir>
         <imgdir name="26">
-          <int name="exp" value="10000"/>
+          <int name="exp" value="10000" />
         </imgdir>
         <imgdir name="27">
-          <int name="exp" value="10000"/>
+          <int name="exp" value="10000" />
         </imgdir>
         <imgdir name="28">
-          <int name="exp" value="10000"/>
+          <int name="exp" value="10000" />
         </imgdir>
         <imgdir name="29">
-          <int name="exp" value="10000"/>
+          <int name="exp" value="10000" />
         </imgdir>
         <imgdir name="30">
-          <int name="exp" value="10000"/>
+          <int name="exp" value="10000" />
         </imgdir>
       </imgdir>
     </imgdir>
+    <int name="limitBreak" value="2147483647" />
   </imgdir>
   <imgdir name="swingT1">
     <imgdir name="0">
       <canvas format="2" height="19" name="weapon" scale="0" width="51">
-        <vector name="origin" x="7" y="14"/>
+        <vector name="origin" x="7" y="14" />
         <imgdir name="map">
-          <vector name="hand" x="0" y="0"/>
+          <vector name="hand" x="0" y="0" />
         </imgdir>
-        <string name="z" value="weaponBelowArm"/>
-        <string name="_hash" value="f1be497b7d926d941e2bd6bbf62e08c7bd539309673fff1053bd92a79b582ba6"/>
+        <string name="z" value="weaponBelowArm" />
+        <string name="_hash" value="f1be497b7d926d941e2bd6bbf62e08c7bd539309673fff1053bd92a79b582ba6" />
       </canvas>
     </imgdir>
     <imgdir name="1">
       <canvas format="2" height="51" name="weapon" scale="0" width="19">
-        <vector name="origin" x="1" y="44"/>
+        <vector name="origin" x="1" y="44" />
         <imgdir name="map">
-          <vector name="hand" x="0" y="0"/>
+          <vector name="hand" x="0" y="0" />
         </imgdir>
-        <string name="z" value="weaponBelowArm"/>
-        <string name="_hash" value="c9ffe101ea8bfbff003742f01c2433221a78ca2341ae6ac88727a5dacf0f2a3c"/>
+        <string name="z" value="weaponBelowArm" />
+        <string name="_hash" value="c9ffe101ea8bfbff003742f01c2433221a78ca2341ae6ac88727a5dacf0f2a3c" />
       </canvas>
     </imgdir>
     <imgdir name="2">
       <canvas format="2" height="19" name="weapon" scale="0" width="51">
-        <vector name="origin" x="39" y="7"/>
+        <vector name="origin" x="39" y="7" />
         <imgdir name="map">
-          <vector name="hand" x="0" y="0"/>
+          <vector name="hand" x="0" y="0" />
         </imgdir>
-        <string name="z" value="weaponBelowBody"/>
-        <string name="_hash" value="0257b8c7912211758b2502bf0e11dab58f80888905f46560f3cd10810cd57a5e"/>
+        <string name="z" value="weaponBelowBody" />
+        <string name="_hash" value="0257b8c7912211758b2502bf0e11dab58f80888905f46560f3cd10810cd57a5e" />
       </canvas>
     </imgdir>
   </imgdir>
   <imgdir name="swingT2">
     <imgdir name="2">
       <canvas format="2" height="19" name="weapon" scale="0" width="51">
-        <vector name="origin" x="40" y="5"/>
+        <vector name="origin" x="40" y="5" />
         <imgdir name="map">
-          <vector name="hand" x="0" y="0"/>
+          <vector name="hand" x="0" y="0" />
         </imgdir>
-        <string name="z" value="weaponOverBody"/>
-        <string name="_hash" value="5974c4016bd5d1a581c530a3453594e2caac1f29abc83e4028df3243d3c27c4e"/>
+        <string name="z" value="weaponOverBody" />
+        <string name="_hash" value="5974c4016bd5d1a581c530a3453594e2caac1f29abc83e4028df3243d3c27c4e" />
       </canvas>
     </imgdir>
   </imgdir>

@@ -2,37 +2,38 @@
 <imgdir indent="2" media="NONE" name="01402173.img">
   <imgdir name="info">
     <canvas format="2" height="39" name="icon" scale="0" width="40">
-      <vector name="origin" x="1" y="38"/>
+      <vector name="origin" x="1" y="38" />
     </canvas>
     <canvas format="2" height="39" name="iconRaw" scale="0" width="40">
-      <vector name="origin" x="1" y="38"/>
+      <vector name="origin" x="1" y="38" />
     </canvas>
-    <string name="islot" value="WpSi"/>
-    <string name="vslot" value="WpSi"/>
+    <string name="islot" value="WpSi" />
+    <string name="vslot" value="WpSi" />
+    <int name="limitBreak" value="2147483647" />
   </imgdir>
   <imgdir name="proneStab">
     <imgdir name="0">
       <canvas format="2" height="53" name="weapon" scale="0" width="145">
-        <vector name="origin" x="99" y="31"/>
+        <vector name="origin" x="99" y="31" />
         <imgdir name="map">
-          <vector name="hand" x="0" y="0"/>
+          <vector name="hand" x="0" y="0" />
         </imgdir>
-        <string name="z" value="weaponBelowArm"/>
+        <string name="z" value="weaponBelowArm" />
       </canvas>
     </imgdir>
     <imgdir name="1">
       <canvas format="2" height="29" name="weapon" scale="0" width="94">
-        <vector name="origin" x="77" y="15"/>
+        <vector name="origin" x="77" y="15" />
         <imgdir name="map">
-          <vector name="hand" x="0" y="0"/>
+          <vector name="hand" x="0" y="0" />
         </imgdir>
-        <string name="z" value="weaponBelowArm"/>
+        <string name="z" value="weaponBelowArm" />
       </canvas>
     </imgdir>
   </imgdir>
   <imgdir name="prone">
     <imgdir name="0">
-      <uol name="weapon" value="../../proneStab/0/weapon"/>
+      <uol name="weapon" value="../../proneStab/0/weapon" />
     </imgdir>
   </imgdir>
 </imgdir>
