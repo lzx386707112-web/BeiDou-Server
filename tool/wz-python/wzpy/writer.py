@@ -171,9 +171,9 @@ def encode_offset(position: int, target: int, fstart: int, version_hash: int) ->
 #                       type names — but the parser accepts either
 #                       interchangeably, so we use 0x00 everywhere.
 #   sign  (1, signed)   < 0 → ASCII length, > 0 → Unicode (UTF-16LE) char count.
-#                       If |sign| == 127, an i32 length follows.
-#   [length i32]        only when |sign| == 127
-#   payload (n)         encrypted bytes (n = |sign| if |sign| < 127 else the i32)
+#                       -128 extends ASCII length; +127 extends Unicode length.
+#   [length i32]        only for the extension sentinels
+#   payload (n)         encrypted bytes
 #
 # Empty strings are encoded as a single sign byte 0x00 (the parser then
 # returns "" without consuming a payload). The marker byte is still required.
@@ -196,9 +196,9 @@ def encode_string(reader: Any, s: str, prefer_ascii: bool = True) -> bytes:
     if use_ascii:
         cipher = re_encrypt_string(reader, s, "ascii")
         n = len(cipher)
-        if n < 127:
+        if n <= 127:
             return _struct.pack("<b", -n) + cipher
-        return _struct.pack("<bi", -127, n) + cipher
+        return _struct.pack("<bi", -128, n) + cipher
     cipher = re_encrypt_string(reader, s, "unicode")
     n = len(cipher) // 2  # char count
     if n < 127:

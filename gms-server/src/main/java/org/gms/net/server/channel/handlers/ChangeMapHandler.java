@@ -88,6 +88,7 @@ public final class ChangeMapHandler extends AbstractPacketHandler {
             Portal portal = chr.getMap().getPortal(portalName);
             p.readByte();
             boolean wheel = p.readByte() > 0;
+            logPortalTrace(chr, targetMapId, portalName, portal, "received");
 
             boolean chasing = p.readByte() == 1 && chr.isGM() && p.available() == 2 * Integer.BYTES;
             if (chasing) {
@@ -158,6 +159,7 @@ public final class ChangeMapHandler extends AbstractPacketHandler {
             }
 
             if (portal != null && !portal.getPortalStatus()) {
+                logPortalTrace(chr, targetMapId, portalName, portal, "blocked-status");
                 c.sendPacket(PacketCreator.blockedMessage(1));
                 c.sendPacket(PacketCreator.enableActions());
                 return;
@@ -170,17 +172,24 @@ public final class ChangeMapHandler extends AbstractPacketHandler {
             }
 
             if (portal != null) {
-                if (portal.getPosition().distanceSq(chr.getPosition()) > 400000) {
+                double distanceSq = portal.getPosition().distanceSq(chr.getPosition());
+                if (distanceSq > 400000) {
+                    log.info("[PortalTrace] CHANGE_MAP reject-distance chr={} map={} packetTarget={} packetPortal={} playerPos={} portal={} distanceSq={}",
+                            chr.getName(), chr.getMapId(), targetMapId, portalName, chr.getPosition(), describePortal(portal), distanceSq);
                     c.sendPacket(PacketCreator.enableActions());
                     return;
                 }
 
+                logPortalTrace(chr, targetMapId, portalName, portal, "enter");
                 portal.enterPortal(c);
             } else {
+                logPortalTrace(chr, targetMapId, portalName, null, "missing-portal");
                 c.sendPacket(PacketCreator.enableActions());
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("[PortalTrace] CHANGE_MAP error chr={} map={} pos={}",
+                    chr.getName(), chr.getMapId(), chr.getPosition(), e);
+            c.sendPacket(PacketCreator.enableActions());
         }
 
     }
@@ -225,5 +234,26 @@ public final class ChangeMapHandler extends AbstractPacketHandler {
             sj.add(String.format("%s (%d)", MapName, mapid));
         }
         return sj.toString();
+    }
+
+    private static void logPortalTrace(Character chr, int packetTargetMapId, String packetPortalName, Portal portal, String stage) {
+        log.info("[PortalTrace] CHANGE_MAP {} chr={} map={} packetTarget={} packetPortal={} playerPos={} portal={}",
+                stage, chr.getName(), chr.getMapId(), packetTargetMapId, packetPortalName, chr.getPosition(), describePortal(portal));
+    }
+
+    private static String describePortal(Portal portal) {
+        if (portal == null) {
+            return "null";
+        }
+        return String.format("id=%d name=%s type=%d tm=%d tn=%s script=%s pos=%s status=%s state=%s",
+                portal.getId(),
+                portal.getName(),
+                portal.getType(),
+                portal.getTargetMapId(),
+                portal.getTarget(),
+                portal.getScriptName(),
+                portal.getPosition(),
+                portal.getPortalStatus(),
+                portal.getPortalState());
     }
 }

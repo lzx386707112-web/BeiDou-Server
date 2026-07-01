@@ -30,12 +30,14 @@ public enum MobSkillType {
     STOP_POTION(134),
     STOP_MOTION(135),
     FEAR(136),
+    CYGNUS_UNSUPPORTED_138(138),
     PHYSICAL_IMMUNE(140),
     MAGIC_IMMUNE(141),
     HARD_SKIN(142),
     PHYSICAL_COUNTER(143),
     MAGIC_COUNTER(144),
     PHYSICAL_AND_MAGIC_COUNTER(145),
+    CYGNUS_UNSUPPORTED_146(146),
     PAD(150),
     MAD(151),
     PDR(152),
@@ -44,6 +46,8 @@ public enum MobSkillType {
     EVA(155),
     SPEED(156),
     SEAL_SKILL(157),
+    CYGNUS_UNSUPPORTED_171(171),
+    CYGNUS_UNSUPPORTED_172(172),
     SUMMON(200);
 
     private final int id;

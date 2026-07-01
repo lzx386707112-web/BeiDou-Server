@@ -106,6 +106,12 @@ public class Expedition {
             MobId.CHAOS_HORNTAIL_TAIL,
             MobId.CHAOS_HORNTAIL,
             MobId.CHAOS_HORNTAIL_5,
+            MobId.CYGNUS_MIHILE,
+            MobId.CYGNUS_OZ,
+            MobId.CYGNUS_IRENA,
+            MobId.CYGNUS_ECKHART,
+            MobId.CYGNUS_HAWKEYE,
+            MobId.CYGNUS,
             MobId.SCARLION_STATUE,
             MobId.SCARLION,
             MobId.ANGRY_SCARLION,
@@ -322,13 +328,22 @@ public class Expedition {
     }
 
     public void monsterKilled(Character chr, Monster mob) {
+        if (MobId.isCygnusBoss(mob.getId())) {
+            logBossKill(mob);
+            return;
+        }
+
         for (int expeditionBoss : EXPEDITION_BOSSES) {
             if (mob.getId() == expeditionBoss) { //If the monster killed was a boss
-                String timeStamp = new SimpleDateFormat("HH:mm:ss").format(new Date());
-                bossLogs.add(I18nUtil.getMessage("Expedition.monsterKilled.message1", mob.getName(), getTimeString(startTime), timeStamp) + "\r\n");
+                logBossKill(mob);
                 return;
             }
         }
+    }
+
+    private void logBossKill(Monster mob) {
+        String timeStamp = new SimpleDateFormat("HH:mm:ss").format(new Date());
+        bossLogs.add(I18nUtil.getMessage("Expedition.monsterKilled.message1", mob.getName(), getTimeString(startTime), timeStamp) + "\r\n");
     }
 
     public void setProperty(String key, String value) {

@@ -87,6 +87,15 @@ public class MobId {
     public static final int CHAOS_HORNTAIL_5 = 8810122;
     public static final int SUMMON_CHAOS_HORNTAIL = 8810130;
 
+    public static final int CYGNUS_BOSS_MIN = 8850000;
+    public static final int CYGNUS_BOSS_MAX = 8850013;
+    public static final int CYGNUS_MIHILE = 8850000;
+    public static final int CYGNUS_OZ = 8850001;
+    public static final int CYGNUS_IRENA = 8850002;
+    public static final int CYGNUS_ECKHART = 8850003;
+    public static final int CYGNUS_HAWKEYE = 8850004;
+    public static final int CYGNUS = 8850011;
+
     public static boolean isDeadHorntailPart(int mobId) {
         return mobId >= DEAD_HORNTAIL_MIN && mobId <= DEAD_HORNTAIL_MAX;
     }
@@ -97,6 +106,10 @@ public class MobId {
 
     public static boolean isRevivingChaosHorntailBody(int mobId) {
         return mobId >= CHAOS_HORNTAIL && mobId < CHAOS_HORNTAIL_5;
+    }
+
+    public static boolean isCygnusBoss(int mobId) {
+        return mobId >= CYGNUS_BOSS_MIN && mobId <= CYGNUS_BOSS_MAX;
     }
 
     public static final int SCARLION_STATUE = 9420546;
