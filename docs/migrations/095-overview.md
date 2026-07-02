@@ -151,9 +151,10 @@ rtk tool/scripts/package/pack_img_wz.sh
 已迁入 095 的未来之门 / 骑士团要塞闭环资源与入口逻辑。范围包括 51 张 `271xxxxxx` 服务端地图和客户端地图、地图依赖的 `Back/Obj/Tile` 资源、`8600000-8600006`、`8610000-8610022`、`8850000-8850012`、NPC `2142000-2142010`、`2143000/2143001/2143003/2143004`，并补齐 `String/Map`、`String/Mob`、`String/Npc` 与 `MobSkill` 引用。
 
 - 入口 NPC `2143004` 使用当前远征系统创建 `CYGNUS`，事件 `CygnusBattle` 进入 `271040100`，按 095 顺序刷 `8850000 -> 8850001 -> 8850002 -> 8850003 -> 8850004 -> 8850011`。
-- 新增并同步 `scripts-zh-CN` 的 Cygnus event、NPC、portal 和 map hook 脚本；portal 保留 095 的任务入口和道具门槛，但改用当前脚本 API。
+- 新增并同步 `scripts-zh-CN` 的 Cygnus event、NPC、portal 和 map hook 脚本；任务入口按当前脚本 API 兼容，测试期已去掉 `4032922` 这类任务道具门槛，避免传送链被未完成任务卡住。
 - Java 侧补 `CYGNUS` 远征、bosslog enum、`8850000-8850013` boss 击杀日志范围，以及 095 希纳斯会引用但当前逻辑暂不实现的 `MobSkill 138/146/171/172` 枚举，避免加载怪物时因未知技能 ID 崩溃。
 - 已审计 271 地图引用的 portal/map 脚本、life、back/obj/tile、885 技能 ID。已知兼容警告：`Tile/darkEreb.img` 被 095 地图引用，但 095 来源客户端和当前客户端均没有该文件；本批不伪造该资源，后续进图实测如确认黑块/崩溃再按实际节点补兼容素材。
+- 已补 311xx 任务 action `4/5` 回落到 WZ start/complete、四个 095 quest script、`q31102e` infoex 进度、任务 ETC/普通 ETC 物品资源，以及 860/861/885 相关任务掉落 SQL。任务/掉落审计脚本见 `tool/scripts/migration/audit_095_cygnus_quests.py`。
 - `8850012` 是 095 中 4x4 canvas 的希纳斯 revive/占位怪，不是导出失败；`8850013` 当前项目原有并保留。
 - 客户端弹出“不正确的游戏数据”时，已确认 095 `Map/Obj/acc14.img` 等素材存在负宽高/异常 fmt canvas。迁移脚本现在会把 EMS canvas 解码后重编码为 GMS payload，无法解码的节点降级为 1x1 透明 canvas。
 - `Map/Obj/connect.img` 是当前客户端已有资源，但本身也残留 67 个不可解码/负宽高 canvas。271 地图新增引用 `oS=connect` 后会触发整包加载，所以迁移脚本会对修改后的 `connect.img` 整包重编码并把坏节点降级为 1x1 透明 canvas。

@@ -130,7 +130,12 @@ public final class QuestActionHandler extends AbstractPacketHandler {
                     return;
                 }
                 if (quest.canStart(player, npc)) {
-                    QuestScriptManager.getInstance().start(c, questid, npc);
+                    boolean success = QuestScriptManager.getInstance().checkFunctionExists(c, questid, npc, "start");
+                    if (success) {
+                        QuestScriptManager.getInstance().start(c, questid, npc);
+                    } else {
+                        quest.start(player, npc);
+                    }
                 }
                 break;
             }
@@ -140,7 +145,15 @@ public final class QuestActionHandler extends AbstractPacketHandler {
                     return;
                 }
                 if (quest.canComplete(player, npc)) {
-                    QuestScriptManager.getInstance().end(c, questid, npc);
+                    boolean success = QuestScriptManager.getInstance().checkFunctionExists(c, questid, npc, "end");
+                    if (success) {
+                        QuestScriptManager.getInstance().end(c, questid, npc);
+                    } else if (p.available() >= 2) {
+                        int selection = p.readShort();
+                        quest.complete(player, npc, selection);
+                    } else {
+                        quest.complete(player, npc);
+                    }
                 }
                 break;
             }

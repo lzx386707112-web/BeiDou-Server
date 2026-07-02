@@ -332,13 +332,21 @@ HP 超过 21 亿时，服务端 XML 的 HP 需要使用 `string` 标记，客户
 - `in_knights/in_knights01` 原先要求 `4032922` 皇家骑士团勋章。该门槛是任务道具式限制，不适合当前传送测试和迁移闭环；当前已去掉道具检查，直接进入 `271030100`。
 - 未来之门任务入口使用 095 的 `31100-31160`，来源实际缺 `31157`，所以本批迁移 60 个 quest id。服务端按 split XML 原节点复制到 `QuestInfo/Check/Act/Say`；客户端从 095 `Quest.wz` 克隆同一批节点到当前散 IMG。
 - `tool/wz-python/wzpy/writer.py` 的 ASCII 长字符串编码必须使用 `-128 + length` 作为长串哨兵，长度 127 的 ASCII 字符串仍是普通 `-127`。旧 writer 使用 `-127 + length` 会让 `QuestInfo/Act/Say` 重编码后出现 `unknown string-block marker`、`truncated=true`，客户端资源会处于高风险状态。
+- 未来之门地图缺地板、缺绳子、光圈下方断层时，不能只看节点名是否存在。需要扫描 271 地图实际引用到的 tile/obj/back canvas，重点查“能解析但实际是 1x1 透明”的节点。本批修复了实际引用的透明占位：`acc14/threeDoors/center/4/0`、`threeDoors/left/15/0`、`threeDoors/right/15/0`、`darkEreb/bridge/1/0`、`destructionTown/houseInside/1/0`、`darkErebKnights/tile/8-12/0`，以及 `Tile/destructionField/enV0/2`、`enV1/2`。同时 `decode_prefixed_argb4444_canvas()` 改为扫描最多 512 字节 zlib 前缀，并要求解码长度不小于预期尺寸，避免再次把包装过的真实素材落成 1x1。
+- 头顶灯泡/任务 UI 发来的 quest action 可能是 `4/5`，不是普通 NPC 对话的 `1/2`。当前 `QuestActionHandler` 已让 action `4/5` 在脚本不存在时回落到 WZ `quest.start()` / `quest.complete()`；已有脚本仍优先执行。这个兼容点是 311xx 任务“有 WZ 节点但点了没反应/交不了”的关键。
+- 095 明确标了脚本的 311xx 任务只有 `31105`、`31119`、`31146`、`31158`，已补 `scripts/quest` 和 `scripts-zh-CN/quest` 的同名脚本。来源脚本语义是感谢文本后 `forceCompleteQuest()`，不是杀怪或收集逻辑。
+- `31102` 完成条件是 `infoNumber=31102` 且 `infoex=end`，地图 `271000000` 挂的 `q31102e` 不能留空；当前进入未来之门时会写入该进度，让玩家可回 NPC 完成。`31124/31144/31149` 继续由 portal 脚本按当前兼容策略直接完成，绕开 infoex 卡点。
+- 任务物品不是只补 `Quest.wz` 就够。311xx 检查和奖励涉及 `2050004`、`2270021`、`4000642-4000659`、`4020013`、`4032921/2922/2924-2928/2930/2940/2941` 等；当前已从 095 客户端 `Item.wz` 和源服务端 XML 补到客户端散 IMG 与服务端 `Item.wz` XML。补 drop 之前必须先确认这些物品两端资源都存在，否则会变成新的客户端资源错误。
+- 掉落只补任务闭环和未来之门普通 ETC，不整批带入 095 的配方/装备掉落。`V2.1.20__add_cygnus_future_gate_quest_drops.sql` 覆盖 860/861/885 相关普通 ETC 和 311xx 任务 ETC；`4032924` 原本是 31117 用 `2270021` 捕捉后的结果，但当前项目没有对应捕捉 item script，因此兼容成 `8600003` 的任务掉落，并在 SQL 注释中保留迁移意图。
 
 本批验证：
 
 - 逐节点结构审计：`rtk python3 tool/scripts/audit/audit_095_cygnus_maps.py` 通过。51 张 271 客户端地图位于 `clien/Data/Map/Map/Map2/` 并可解析；tile/obj/back/life/portal/hook/bgm/mapMark 引用缺失数为 0；当前客户端旧地图未出现过的字段签名数为 0。
 - 任务资源验证：服务端 `QuestInfo/Check/Act/Say.img.xml` 均有 60 个 `311xx` 节点，且和 095 split XML 源节点一致；客户端 `QuestInfo/Check/Act/Say.img` 均可用 GMS key 解析，`311xx count=60`、`warnings=0`、`truncated=false`。`Check/Act` 的 311xx 子节点在当前 Quest 枚举中 unsupported 数为 0。
+- 任务与掉落审计：`rtk python3 tool/scripts/migration/audit_095_cygnus_quests.py` 通过。311xx 任务检查/奖励涉及的物品均为 `server=1 client=1`；新增掉落 SQL 引用的 `4000642-4000659` 和 `4032921/2922/2924-2928/2930/2940/2941` 均有服务端 XML 和客户端 IMG；任务怪关键掉落已覆盖。
 - 271 系列地图中所有怪物 `skill/level` 引用在服务端 `Skill.wz/MobSkill.img.xml` 已闭合。客户端 `Skill/MobSkill.img` 不新增未知顶层技能类型；当前保留的客户端新增 level 会连续补到所需最高等级：`100/24-25`、`114/35-43`、`120/17-19`、`129/13`、`133/7-8`、`145/9`、`200/215-233`，且已确认不存在 `123/35` 和顶层 `138/146/171/172`。
 - 客户端目标资源 canvas 解码扫描：本批 `connect` 新补/兼容的 `ladder/71`、`rope/14`、`rope/27` 节点均可解码且非透明；`Tile/destructionTown1/destructionTown2/destructionField` 的 prefixed ARGB4444 修复节点、`Tile/darkEreb.img` 实际引用的 20 个 tile canvas、`MapHelper` 新补 2 个 mark canvas 均为 `bad=0`。
+- 271 全引用素材扫描：修复后 referenced tile/obj/back canvas 的 expanded blank/tiny/decode problems 为 0；再次运行 `audit_095_cygnus_maps.py` 结果为 `parse_errors=0`、`MISSING UNIQUE=0`、`UNSUPPORTED FIELD SIGNATURES=0`。
 - 按用户反馈复查后，已扩大为全量扫描：41 个修改过的客户端 IMG、88 个新增/新增目录下客户端 IMG 均可解析且 canvas `bad_files=0`。
 - 已知 warning：`clien/Data/Map/Map2/` 旧错误目录里仍有 51 张 271 副本；客户端实际读取的是 `clien/Data/Map/Map/Map2/`，这些副本不参与加载。
 - `git diff --check` 通过。
