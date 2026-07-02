@@ -26,3 +26,7 @@ rtk tool/scripts/wz/wzpy.sh
 
 - [095 内容迁移概览](docs/migrations/095-overview.md)
 - [095 内容迁移手册](docs/migrations/095-migration.md)
+
+## 排障经验
+
+- 迁移地图、怪物、Boss 后出现黑屏、崩溃或怪物外形不对时，先看 [095 内容迁移手册](docs/migrations/095-migration.md)。其中记录了地图资源审计、召唤 Boss 后崩溃、Boss 血条 UI、MobSkill、阿卡伊勒 `8860000` 兼容修复，以及 `9300301/9300302/9300304` 占位怪资源替换等经验。

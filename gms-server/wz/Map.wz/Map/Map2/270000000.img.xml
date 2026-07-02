@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<imgdir name="270000000.img" indent="2" media="NONE">
+<imgdir indent="2" media="NONE" name="270000000.img">
   <imgdir name="info">
     <int name="version" value="10"/>
     <int name="cloud" value="0"/>
@@ -1905,7 +1905,7 @@
   </imgdir>
   <imgdir name="ladderRope"/>
   <imgdir name="miniMap">
-    <canvas name="canvas" format="1" scale="0"/>
+    <canvas format="1" height="59" name="canvas" scale="0" width="281"/>
     <int name="width" value="4496"/>
     <int name="height" value="956"/>
     <int name="centerX" value="3109"/>
@@ -1914,18 +1914,18 @@
   </imgdir>
   <imgdir name="portal">
     <imgdir name="0">
-      <string name="pn" value="sp"/>
-      <int name="pt" value="0"/>
-      <int name="x" value="0"/>
-      <int name="y" value="0"/>
-      <int name="tm" value="999999999"/>
-      <string name="tn" value=""/>
+      <string name="pn" value="in01"/>
+      <int name="pt" value="2"/>
+      <int name="x" value="-1247"/>
+      <int name="y" value="177"/>
+      <int name="tm" value="271000000"/>
+      <string name="tn" value="out00"/>
     </imgdir>
     <imgdir name="1">
       <string name="pn" value="sp"/>
       <int name="pt" value="0"/>
-      <int name="x" value="-2387"/>
-      <int name="y" value="2"/>
+      <int name="x" value="-803"/>
+      <int name="y" value="177"/>
       <int name="tm" value="999999999"/>
       <string name="tn" value=""/>
     </imgdir>

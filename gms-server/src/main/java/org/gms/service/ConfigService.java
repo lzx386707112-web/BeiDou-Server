@@ -2,7 +2,6 @@ package org.gms.service;
 
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
-import com.alibaba.fastjson2.TypeReference;
 import com.mybatisflex.core.paginate.Page;
 import com.mybatisflex.core.query.QueryWrapper;
 import lombok.AllArgsConstructor;
@@ -305,8 +304,7 @@ public class ConfigService {
     public Collector<GameConfigDO, ?, Map<String, Object>> toMap() {
         return Collectors.toMap(GameConfigDO::getConfigCode, config -> {
             if ("java.util.Map".equals(config.getConfigClazz())) {
-                return JSONObject.parseObject(config.getConfigValue(), new TypeReference<Map<Integer, Object>>() {
-                });
+                return JSONObject.parseObject(config.getConfigValue(), Map.class);
             } else if ("java.lang.Float".equals(config.getConfigClazz()) || "java.lang.Double".equals(config.getConfigClazz())) {
                 // 为避免科学计数，用BigDecimal
                 return new BigDecimal(config.getConfigValue());
