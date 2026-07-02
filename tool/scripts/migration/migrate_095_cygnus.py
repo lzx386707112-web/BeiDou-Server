@@ -525,6 +525,11 @@ def patch_client_mob_skill_overrides() -> None:
 
 
 def patch_client_connect() -> None:
+    # The migrated 271 maps now remap ladder/rope visuals to existing
+    # connect.img pages. Rewriting this global Obj package can corrupt the
+    # client WZ image and break unrelated maps such as Temple of Time.
+    return
+
     def ensure_subproperty(root: WzSubProperty, path: str) -> WzSubProperty:
         node = root
         for part in path.split("/"):
@@ -608,16 +613,18 @@ def patch_client_dark_ereb_tile() -> None:
 def decode_prefixed_argb4444_canvas(canvas: WzCanvasProperty, width: int, height: int) -> Image.Image:
     raw = _read_canvas_bytes(canvas)
     decoded = None
-    for skip in range(0, 50):
+    expected_len = width * height * 2
+    for skip in range(0, 512):
         try:
-            decoded = _zlib_lenient(raw[skip:])
+            candidate = _zlib_lenient(raw[skip:])
         except Exception:
             continue
-        if decoded:
+        if candidate and len(candidate) >= expected_len:
+            decoded = candidate
             break
     if not decoded:
         raise RuntimeError(f"cannot decode prefixed ARGB4444 canvas {canvas.name}")
-    if len(decoded) < width * height * 2:
+    if len(decoded) < expected_len:
         raise RuntimeError(f"decoded canvas {canvas.name} is too short: {len(decoded)}")
 
     out = bytearray(width * height * 4)
@@ -653,7 +660,8 @@ def patch_client_wrapped_tile_canvases() -> None:
             "enH0/2": (90, 40), "enH0/3": (90, 39),
             "edU/0": (57, 38), "edU/1": (53, 37),
             "enV0/0": (29, 60), "enV0/1": (29, 60),
-            "enV1/0": (29, 60), "enV1/1": (29, 60),
+            "enV0/2": (33, 60),
+            "enV1/0": (29, 60), "enV1/1": (29, 60), "enV1/2": (29, 60),
             "slLU/0": (90, 94), "slRU/0": (90, 94),
         },
     }
@@ -690,10 +698,132 @@ def patch_client_wrapped_tile_canvases() -> None:
             atomic_write_bytes(dst_path, encode_image_body(dst_img, gms_reader()))
 
 
+def patch_client_allblack_tile() -> None:
+    repairs = {
+        "bsc/0": (90, 60),
+        "enH0/0": (90, 25),
+        "enH1/0": (90, 25),
+        "enV0/0": (60, 25),
+        "enV1/0": (60, 25),
+        "edU/0": (50, 25),
+        "edD/0": (50, 25),
+        "slLU/0": (90, 85),
+        "slRU/0": (90, 85),
+        "slLD/0": (90, 85),
+        "slRD/0": (90, 85),
+    }
+
+    dst_path = ROOT / "clien/Data/Map/Tile/allblackTile.img"
+    dst_img = WzImage.from_bytes(dst_path.read_bytes(), key=TARGET_KEY, name=dst_path.name)
+    dst_img.parse()
+    for node_path, (width, height) in repairs.items():
+        target = dst_img.get(node_path)
+        if not isinstance(target, WzCanvasProperty):
+            raise RuntimeError(f"missing allblackTile canvas {node_path}")
+        image = Image.new("RGBA", (width, height), (0, 0, 0, 255))
+        target.width = width
+        target.height = height
+        target.format = 1
+        target.format2 = 0
+        target._png_data = encode_canvas_payload(
+            image,
+            1,
+            width,
+            height,
+            key=TARGET_KEY,
+            listwz=False,
+        )
+        target._png_length = len(target._png_data)
+    backup(dst_path)
+    atomic_write_bytes(dst_path, encode_image_body(dst_img, gms_reader()))
+
+
+def remap_connect_obj_ref(l0: str, l1: str) -> str | None:
+    if l0 == "rope" and l1 in {"14", "27"}:
+        return "0"
+    if l0 == "ladder" and l1 == "71":
+        return "16"
+    return None
+
+
+def patch_server_map_connect_refs() -> None:
+    for map_id in MAP_IDS:
+        path = ROOT / f"gms-server/wz/Map.wz/Map/Map2/{map_id}.img.xml"
+        if not path.exists():
+            continue
+        root = ET.parse(path).getroot()
+        changed = False
+        for layer in root:
+            if layer.tag != "imgdir" or not layer.get("name", "").isdigit():
+                continue
+            obj_root = next((c for c in layer if c.tag == "imgdir" and c.get("name") == "obj"), None)
+            if obj_root is None:
+                continue
+            for obj in obj_root:
+                values = {c.get("name"): c for c in obj}
+                if values.get("oS") is None or values["oS"].get("value") != "connect":
+                    continue
+                l0_node = values.get("l0")
+                l1_node = values.get("l1")
+                if l0_node is None or l1_node is None:
+                    continue
+                mapped = remap_connect_obj_ref(l0_node.get("value", ""), l1_node.get("value", ""))
+                if mapped is not None and l1_node.get("value") != mapped:
+                    l1_node.set("value", mapped)
+                    changed = True
+        if changed:
+            backup(path)
+            atomic_write_text(path, ET.tostring(root, encoding="unicode"))
+
+
+def patch_client_map_connect_refs() -> None:
+    for map_id in MAP_IDS:
+        path = ROOT / f"clien/Data/Map/Map/Map2/{map_id}.img"
+        if not path.exists():
+            continue
+        img = WzImage.from_bytes(path.read_bytes(), key=TARGET_KEY, name=path.name)
+        img.parse()
+        changed = False
+        for layer in img.root.children():
+            if not layer.name.isdigit():
+                continue
+            obj_root = layer.child("obj")
+            if obj_root is None:
+                continue
+            for obj in obj_root.children():
+                o_s = obj.child("oS")
+                l0 = obj.child("l0")
+                l1 = obj.child("l1")
+                if not (
+                    isinstance(o_s, WzStringProperty)
+                    and isinstance(l0, WzStringProperty)
+                    and isinstance(l1, WzStringProperty)
+                    and o_s.value == "connect"
+                ):
+                    continue
+                mapped = remap_connect_obj_ref(str(l0.value), str(l1.value))
+                if mapped is not None and l1.value != mapped:
+                    l1._value = mapped
+                    changed = True
+        if changed:
+            backup(path)
+            atomic_write_bytes(path, encode_image_body(img, gms_reader()))
+
+
 def patch_client_acc14_wrapped_canvases() -> None:
     repairs = {
+        "threeDoors/center/4/0": (340, 224),
+        "threeDoors/left/15/0": (619, 132),
+        "threeDoors/right/15/0": (617, 95),
+        "darkEreb/bridge/1/0": (514, 457),
+        "destructionTown/houseInside/1/0": (1024, 150),
         "darkErebKnights/cygnusGarden/1/0": (1827, 155),
         "darkErebKnights/cygnusGarden/2/0": (1192, 155),
+        "darkErebKnights/tile/8/0": (34, 30),
+        "darkErebKnights/tile/9/0": (129, 30),
+        "darkErebKnights/tile/10/0": (129, 30),
+        "darkErebKnights/tile/11/0": (129, 30),
+        "darkErebKnights/tile/12/0": (35, 30),
     }
 
     with WzFile.open(str(SRC_CLIENT / "Map.wz"), region="EMS", version=95) as src_wz:
@@ -850,8 +980,11 @@ def main() -> int:
             export_wz_image(map_wz, entry, dst)
 
     patch_client_wrapped_tile_canvases()
+    patch_client_allblack_tile()
     patch_client_acc14_wrapped_canvases()
     patch_client_dark_ereb_tile()
+    patch_server_map_connect_refs()
+    patch_client_map_connect_refs()
     patch_client_maphelper_marks()
 
     with WzFile.open(str(SRC_CLIENT / "Mob.wz"), region="EMS", version=95) as mob_wz:
