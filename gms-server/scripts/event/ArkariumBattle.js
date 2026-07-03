@@ -7,6 +7,7 @@ var minPlayers = 1, maxPlayers = 6;
 var minLevel = 1, maxLevel = 255;
 var entryMap = 272020200;
 var exitMap = 272020110;
+var reviveMap = 272020400;
 var recruitMap = 272020110;
 var clearMap = 272020110;
 
@@ -29,6 +30,7 @@ function getEventMaps() {
     var maps = new ArrayList();
     maps.add(exitMap);
     maps.add(entryMap);
+    maps.add(reviveMap);
     return maps;
 }
 
@@ -75,7 +77,7 @@ function disposeIfEmpty(eim) {
 }
 
 function isEventMap(mapid) {
-    return mapid == exitMap || mapid == entryMap;
+    return mapid == exitMap || mapid == entryMap || mapid == reviveMap;
 }
 
 function changedMap(eim, player, mapid) {
@@ -123,8 +125,7 @@ function playerUnregistered(eim, player) {}
 function changedLeader(eim, leader) {}
 function playerDead(eim, player) {}
 function playerRevive(eim, player) {
-    player.respawn(exitMap);
-    return false;
+    return true;
 }
 function playerDisconnected(eim, player) {
     eim.unregisterPlayer(player);
