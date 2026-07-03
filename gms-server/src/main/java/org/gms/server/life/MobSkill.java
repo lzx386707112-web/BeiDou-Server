@@ -27,6 +27,7 @@ import org.gms.client.status.MonsterStatus;
 import org.gms.constants.id.MapId;
 import org.gms.constants.id.MobId;
 import org.gms.constants.skills.Bishop;
+import org.gms.server.TimerManager;
 import org.gms.net.server.services.task.channel.OverallService;
 import org.gms.net.server.services.type.ChannelServices;
 import org.slf4j.Logger;
@@ -50,6 +51,15 @@ import java.util.Map;
  */
 public class MobSkill {
     private static final Logger log = LoggerFactory.getLogger(MobSkill.class);
+    private static final int AKAYRUM_SCREEN_CRACK_DAMAGE_DELAY_MS = 1100;
+    private static final int AKAYRUM_SCREEN_CRACK_PRONE_RADIUS_REDUCTION = 55;
+    private static final int[][] AKAYRUM_SCREEN_CRACK_VORTEXES = {
+            {-610, -181, 115},
+            {-305, -181, 110},
+            {0, -181, 150},
+            {315, -181, 110},
+            {610, -181, 115},
+    };
 
     private final MobSkillId id;
     private final int mpCon;
@@ -254,7 +264,7 @@ public class MobSkill {
             case SEAL_SKILL -> stats.put(MonsterStatus.SEAL_SKILL, x);
             case AKAYRUM_SCREEN_CRACK_VISUAL -> {
                 monster.getMap().broadcastMessage(PacketCreator.showEffect("customBoss/akayrum/screenCrack"));
-                applyAkayrumScreenCrackDamage(monster);
+                scheduleAkayrumScreenCrackDamage(monster);
             }
             case AKAYRUM_BLACK_HOLE_VISUAL, AKAYRUM_GREEN_ORB_VISUAL -> {
                 // Visual-only Akayrum compatibility skills; damage/rules are handled separately.
@@ -298,11 +308,16 @@ public class MobSkill {
         }
     }
 
+    private void scheduleAkayrumScreenCrackDamage(Monster monster) {
+        TimerManager.getInstance().schedule(() -> applyAkayrumScreenCrackDamage(monster),
+                AKAYRUM_SCREEN_CRACK_DAMAGE_DELAY_MS);
+    }
+
     private void applyAkayrumScreenCrackDamage(Monster monster) {
         MapleMap map = monster.getMap();
         int damage = Math.max(1, getX());
         for (Character character : map.getAllPlayers()) {
-            if (!character.isAlive()) {
+            if (!character.isAlive() || !isInsideAkayrumScreenCrackVortex(character)) {
                 continue;
             }
             character.addHP(-damage);
@@ -313,6 +328,29 @@ public class MobSkill {
                     false
             );
         }
+    }
+
+    private boolean isInsideAkayrumScreenCrackVortex(Character character) {
+        Point position = character.getPosition();
+        boolean prone = isProne(character);
+
+        for (int[] vortex : AKAYRUM_SCREEN_CRACK_VORTEXES) {
+            int radius = vortex[2];
+            if (prone) {
+                radius = Math.max(1, radius - AKAYRUM_SCREEN_CRACK_PRONE_RADIUS_REDUCTION);
+            }
+            int dx = position.x - vortex[0];
+            int dy = position.y - vortex[1];
+            if (dx * dx + dy * dy <= radius * radius) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean isProne(Character character) {
+        int stance = Math.abs(character.getStance());
+        return stance == 4 || stance == 5;
     }
 
     private void spawnMonsterMist(Monster monster) {

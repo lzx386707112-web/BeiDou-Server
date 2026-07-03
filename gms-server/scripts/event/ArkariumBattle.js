@@ -10,7 +10,7 @@ var exitMap = 272020110;
 var recruitMap = 272020110;
 var clearMap = 272020110;
 
-var minMapId = 272020200;
+var minMapId = 272020110;
 var maxMapId = 272020200;
 
 var eventTime = 30;
@@ -22,6 +22,14 @@ function init() {
 
 function getMaxLobbies() {
     return maxLobbies;
+}
+
+function getEventMaps() {
+    var ArrayList = Java.type('java.util.ArrayList');
+    var maps = new ArrayList();
+    maps.add(exitMap);
+    maps.add(entryMap);
+    return maps;
 }
 
 function setEventRequirements() {
@@ -60,24 +68,35 @@ function scheduledTimeout(eim) {
     end(eim);
 }
 
+function disposeIfEmpty(eim) {
+    if (eim.getPlayers().isEmpty()) {
+        eim.dispose();
+    }
+}
+
+function isEventMap(mapid) {
+    return mapid == exitMap || mapid == entryMap;
+}
+
 function changedMap(eim, player, mapid) {
-    if (mapid < minMapId || mapid > maxMapId) {
+    if (!isEventMap(mapid)) {
         eim.unregisterPlayer(player);
-        if (eim.getPlayers().isEmpty()) {
-            end(eim);
-        }
+        disposeIfEmpty(eim);
     }
 }
 
 function playerExit(eim, player) {
     eim.unregisterPlayer(player);
     player.changeMap(exitMap, 0);
+    disposeIfEmpty(eim);
 }
 
 function end(eim) {
     var party = eim.getPlayers();
     for (var i = 0; i < party.size(); i++) {
-        playerExit(eim, party.get(i));
+        var player = party.get(i);
+        eim.unregisterPlayer(player);
+        player.changeMap(exitMap, 0);
     }
     eim.dispose();
 }
@@ -103,8 +122,14 @@ function monsterKilled(mob, eim) {
 function playerUnregistered(eim, player) {}
 function changedLeader(eim, leader) {}
 function playerDead(eim, player) {}
-function playerRevive(eim, player) { playerExit(eim, player); }
-function playerDisconnected(eim, player) { changedMap(eim, player, exitMap); }
+function playerRevive(eim, player) {
+    player.respawn(exitMap);
+    return false;
+}
+function playerDisconnected(eim, player) {
+    eim.unregisterPlayer(player);
+    disposeIfEmpty(eim);
+}
 function leftParty(eim, player) {}
 function disbandParty(eim) {}
 function giveRandomEventReward(eim, player) {}

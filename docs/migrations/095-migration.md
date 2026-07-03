@@ -220,13 +220,14 @@ HP 超过 21 亿时，服务端 XML 的 HP 需要使用 `string` 标记，客户
 - 客户端 `clien/Data/Skill/MobSkill.img` 新增 `174/level/1`、`176/level/1` 和 `177/level/1`，把 273 JSON 规则字段和 273 canvas 视觉节点合并到同一个 level 下。之前为了验证触发频率临时复制过 `176/1..6`，最终 Boss 技能池只引用 `176/1`。
 - 服务端 `gms-server/wz/Skill.wz/MobSkill.img.xml` 同步新增 `174/1`、`176/1`、`177/1` 规则字段；`176/1` 按 273 源恢复为 `hp=80`、`interval=10`、`x=999999`。
 - `8860000/info/skill` 新增 `174/1 -> skill1`、`176/1 -> skill2`、`177/1 -> skill2`，同时恢复魅惑、反伤、召唤和反向控制等旧端可用技能，不恢复 273 的高版本 `skill7/skill9/skill11`。
-- 服务端 `MobSkillType` 新增 `174`、`176`、`177`。`174/177` 只作为视觉兼容技能；`176` 额外由服务端广播全屏场景特效并按 `x=999999` 对当前地图所有存活玩家扣血，避免旧客户端不认新版 `screen/lua` 机制导致只有动画没有伤害。
+- 服务端 `MobSkillType` 新增 `174`、`176`、`177`。`174/177` 只作为视觉兼容技能；`176` 额外由服务端广播全屏场景特效并按 `x=999999` 做漩涡命中判定伤害，避免旧客户端不认新版 `screen/lua` 机制导致只有动画没有伤害。
 - 验证结果：`174/1` 共有 16 张 canvas、`176/1` 的 `screen` 有 25 张大帧、最大约 `1043x782`，`177/1` 共有 11 张 canvas，全部可用 GMS key 解码；服务端 XML 可解析；`272020110/272020200` 地图审计缺失资源 0。
 - 视觉定位：`174/1` 本身不是大屏动画，最大 canvas 约 `232x176`，更像 Boss 身边的黑洞/命中特效；`176/1` 才包含大裂隙 `screen` 帧。原始普通阿卡伊勒表里是 `176/5 -> skill11`，但这份 273 canvas 没有 `level/5` 的实际帧，因此用 `176/1` 做视觉替代测试。
 - 触发概率坑：服务端 Boss 技能集合是 `Set<MobSkillId>`，重复写同一个 `skill/level` 会被去重，不能提高概率；把 `176/1` 复制成 `176/1..6` 虽然能提高随机命中率，但也会把全屏技能频率变成测试态。最终只保留一条 `176/1`，并恢复源包 `hp=80`、`interval=10`。
 - `MobSkill.screen` 兼容坑：实机验证只剩 `176/1..6` 时，Boss 会释放 `skill2` 动作，但旧客户端不会渲染 `MobSkill.img/<skill>/level/<level>/screen`。反汇编确认 `BeiDou.exe` 只有 `Skill/MobSkill.img/%03d/level/%d/affected` 和 `.../tile` 的硬编码路径，没有 `.../screen`。直接补 exe 不只是加字符串，还要新增加载字段和绘制逻辑，风险较高。
 - 最终全屏表现方案：把 `176/1/screen` 的 25 帧迁到旧客户端已支持的 `clien/Data/Map/Effect.img/customBoss/akayrum/screenCrack`，在 `MobSkill 176` 生效时由服务端广播 `PacketCreator.showEffect("customBoss/akayrum/screenCrack")`。`showEffect` 实际读取的是 `Map/Effect.img`，不是 `Effect/BasicEff.img`；误放到 `BasicEff.img` 时客户端日志不会访问该文件。
 - 全屏定位坑：273 的 `screen` 帧缺 `origin/delay`，直接按通用 canvas 元数据补 `origin=(width/2,height)` 会让场景特效偏上。最终对 `Map/Effect` 版本单独设置 `origin_y=height-450`，使裂屏覆盖当前 1024x768 视野的主体区域。
+- 全屏伤害优化：`176` 不能再在特效一播放就全图秒杀。当前 `MobSkill.java` 在广播 `customBoss/akayrum/screenCrack` 后延迟约 1.1 秒，等视觉进入黑红漩涡阶段再结算；结算时只检测 `272020200` 祭坛地面上 5 个漩涡圆形区域，玩家站在漩涡缝隙不会受伤。趴下姿态按更小半径判定，所以趴下时如果碰撞点没有压进漩涡圆，也可以躲过。这个方案是服务端地图坐标近似，不是客户端逐像素碰撞；如果实机看到漩涡位置偏差，优先微调 `AKAYRUM_SCREEN_CRACK_VORTEXES` 和 `AKAYRUM_SCREEN_CRACK_DAMAGE_DELAY_MS`。
 - 暂不把 `269/1` 做成真实 MobSkill。它超过当前 byte 协议的安全 ID 范围，需要先映射到 `201..255` 的空闲 ID，并同步客户端 `MobSkill.img`、Boss 技能引用、服务端枚举和处理逻辑；当前只保留 `attack4` fallback 视觉。
 
 ## 阿卡伊勒次元缝隙怪物外形错误记录
@@ -471,6 +472,7 @@ HP 超过 21 亿时，服务端 XML 的 HP 需要使用 `string` 标记，客户
 - `31102` 完成条件是 `infoNumber=31102` 且 `infoex=end`，地图 `271000000` 挂的 `q31102e` 不能留空；当前进入未来之门时会写入该进度，让玩家可回 NPC 完成。`31124/31144/31149` 继续由 portal 脚本按当前兼容策略直接完成，绕开 infoex 卡点。
 - 任务物品不是只补 `Quest.wz` 就够。311xx 检查和奖励涉及 `2050004`、`2270021`、`4000642-4000659`、`4020013`、`4032921/2922/2924-2928/2930/2940/2941` 等；当前已从 095 客户端 `Item.wz` 和源服务端 XML 补到客户端散 IMG 与服务端 `Item.wz` XML。补 drop 之前必须先确认这些物品两端资源都存在，否则会变成新的客户端资源错误。
 - 掉落只补任务闭环和未来之门普通 ETC，不整批带入 095 的配方/装备掉落。`V2.1.20__add_cygnus_future_gate_quest_drops.sql` 覆盖 860/861/885 相关普通 ETC 和 311xx 任务 ETC；`4032924` 原本是 31117 用 `2270021` 捕捉后的结果，但当前项目没有对应捕捉 item script，因此兼容成 `8600003` 的任务掉落，并在 SQL 注释中保留迁移意图。
+- 阿卡伊勒死亡后如果通过高级传送回祭坛入口，提示“祭坛的时空还没有稳定，请稍后再试”，问题不在客户端资源，而是 `ArkariumBattle` 只有 `maxLobbies=1`，旧死亡流程会把玩家注销出 EIM 或留下空 EIM，导致唯一 lobby 被占用；客户端重启不会释放服务端 lobby。最终兼容语义应区分“死亡回入口”和“真正离场”：`playerRevive()` 使用 `player.respawn(exitMap)` 并返回 `false`，保留玩家身上的 EIM；入口地图 `272020110` 纳入事件范围，入口 portal/NPC 如果发现玩家仍挂着未结算的 `ArkariumBattle`，直接送回同一个 `272020200` 实例图继续打 Boss，不新开副本；玩家离开入口/战斗范围、主动退出或断线时才注销并在空场时 `dispose()`。同时补 `getEventMaps()`，让入口和战斗图都没人时下一次 `startInstance()` 可以通过 `isNobodyInPQ()` 自动视旧锁失效。若线上已经被旧脚本卡住，需要重载/重启服务端或等旧锁超时，新脚本只能防止后续再次留下异常 EIM。
 
 本批验证：
 

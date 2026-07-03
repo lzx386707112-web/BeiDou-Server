@@ -39,6 +39,14 @@ function action(mode, type, selection) {
 
     if (status == 1) {
         if (modeType == "enter") {
+            var currentEim = cm.getPlayer().getEventInstance();
+            if (currentEim != null && currentEim.getName().startsWith("ArkariumBattle") && !currentEim.isEventCleared()) {
+                var map = currentEim.getMapInstance(272020200);
+                cm.getPlayer().changeMap(map, map.getPortal(0));
+                cm.dispose();
+                return;
+            }
+
             var em = cm.getEventManager("ArkariumBattle");
             if (em == null || !em.startInstance(cm.getPlayer())) {
                 cm.sendOk("祭坛的时空还没有稳定，请稍后再试。");
