@@ -314,6 +314,9 @@ public class MobSkill {
     }
 
     private void applyAkayrumScreenCrackDamage(Monster monster) {
+        if (!monster.isAlive()) {
+            return;
+        }
         MapleMap map = monster.getMap();
         int damage = Math.max(1, getX());
         for (Character character : map.getAllPlayers()) {
