@@ -28,6 +28,7 @@ import org.gms.client.inventory.InventoryType;
 import org.gms.config.GameConfig;
 import org.gms.constants.game.GameConstants;
 import org.gms.constants.id.NpcId;
+import org.gms.constants.inventory.ItemConstants;
 import org.gms.dao.entity.PlayernpcsDO;
 import org.gms.dao.entity.PlayernpcsEquipDO;
 import org.gms.manager.ServerManager;
@@ -76,7 +77,6 @@ public class PlayerNPC extends AbstractMapObject {
     private int scriptId;
     @Getter
     private int face;
-    @Getter
     private int hair;
     @Getter
     private int gender;
@@ -102,8 +102,8 @@ public class PlayerNPC extends AbstractMapObject {
         this.equips = equips;
         this.scriptId = scriptId;
         this.face = face;
-        this.hair = hair;
         this.gender = gender;
+        this.hair = ItemConstants.normalizeHair(gender, hair);
         this.skin = skin;
         this.name = name;
         this.dir = dir;
@@ -120,10 +120,10 @@ public class PlayerNPC extends AbstractMapObject {
     public PlayerNPC(PlayernpcsDO npcDO, List<PlayernpcsEquipDO> equipDOList) {
         CY = Optional.ofNullable(npcDO.getCy()).orElse(0);
         name = Optional.ofNullable(npcDO.getName()).orElse("");
-        hair = Optional.ofNullable(npcDO.getHair()).orElse(0);
         face = Optional.ofNullable(npcDO.getFace()).orElse(0);
         skin = Optional.ofNullable(npcDO.getSkin()).map(Integer::byteValue).orElse((byte) 0);
         gender = Optional.ofNullable(npcDO.getGender()).orElse(0);
+        hair = ItemConstants.normalizeHair(gender, Optional.ofNullable(npcDO.getHair()).orElse(0));
         dir = Optional.ofNullable(npcDO.getDir()).orElse(0);
         FH = Optional.ofNullable(npcDO.getFh()).orElse(0);
         RX0 = Optional.ofNullable(npcDO.getRx0()).orElse(0);
@@ -138,6 +138,10 @@ public class PlayerNPC extends AbstractMapObject {
         int id = Optional.ofNullable(npcDO.getId()).orElse(0);
         setObjectId(id);
         equipDOList.forEach(equipDO -> equips.put(Optional.ofNullable(equipDO.getEquippos()).orElse((short) 0), equipDO.getEquipid()));
+    }
+
+    public int getHair() {
+        return ItemConstants.normalizeHair(gender, hair);
     }
 
     public static void loadRunningRankData(int worlds) {

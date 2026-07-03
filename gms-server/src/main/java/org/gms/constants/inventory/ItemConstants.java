@@ -50,6 +50,18 @@ public final class ItemConstants {
     public final static short MERGE_UNTRADEABLE = 0x200;
 
     public final static Set<Integer> permanentItemids = new HashSet<>();
+    private static final int DEFAULT_MALE_HAIR = 40070;
+    private static final int DEFAULT_FEMALE_HAIR = 43270;
+    private static final Set<Integer> NEW_HAIR_BASE_IDS = Set.of(
+            40070, 40080, 42100,
+            43270, 44440, 44450,
+            46540, 46550, 47140,
+            48670, 48680, 48690,
+            48700, 48710, 48720, 48730, 42200, 48740,
+            42210, 42220,
+            48750, 42230, 42240, 42250, 48760, 48770,
+            42260, 42270
+    );
 
     static {
         // i ain't going to open one gigantic itemid cache just for 4 perma itemids, no way!
@@ -278,6 +290,23 @@ public final class ItemConstants {
         return itemType == 3 || itemType == 4 || itemType == 6;
     }
 
+    public static boolean isNewHair(int hairId) {
+        int color = hairId % 10;
+        return color >= 0 && color <= 7 && NEW_HAIR_BASE_IDS.contains(hairId - color);
+    }
+
+    public static int normalizeHair(int gender, int hairId) {
+        if (isNewHair(hairId)) {
+            return hairId;
+        }
+
+        int color = hairId % 10;
+        if (color < 0 || color > 7) {
+            color = 0;
+        }
+        return (gender == 1 ? DEFAULT_FEMALE_HAIR : DEFAULT_MALE_HAIR) + color;
+    }
+
     public static boolean isNewCharDefaultFace(int job, int gender, int faceId) {
         if (job == 0 || job == 1) {
             return switch (gender) {
@@ -298,8 +327,8 @@ public final class ItemConstants {
 
     public static boolean isNewCharDefaultHair(int gender, int hairId) {
         return switch (gender) {
-            case 0 -> hairId == 30000 || hairId == 30020 || hairId == 30030;
-            case 1 -> hairId == 31000 || hairId == 31040 || hairId == 31050;
+            case 0 -> hairId == 40070 || hairId == 40080 || hairId == 42100;
+            case 1 -> hairId == 43270 || hairId == 44440 || hairId == 44450;
             default -> false;
         };
     }

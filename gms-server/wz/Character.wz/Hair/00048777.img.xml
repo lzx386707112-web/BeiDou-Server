@@ -4,61 +4,61 @@
     <string name="islot" value="Hr"/>
     <string name="vslot" value="H1H2H3H4H5H6HfHsHb"/>
     <int name="cash" value="1"/>
-    <string name="collabo" value="1"/>
   </imgdir>
   <imgdir name="default">
-    <canvas name="hairOverHead" width="61" height="36">
-      <vector name="origin" x="21" y="21"/>
+    <canvas name="hairOverHead" width="49" height="35">
+      <vector name="origin" x="20" y="22"/>
       <string name="z" value="hairOverHead"/>
       <imgdir name="map">
         <vector name="brow" x="0" y="0"/>
       </imgdir>
-      <string name="_outlink" value="Character/Hair/_Canvas/00048777.img/default/hairOverHead"/>
     </canvas>
-    <canvas name="hair" width="35" height="22">
+    <canvas name="hair" width="35" height="25">
       <vector name="origin" x="14" y="12"/>
       <string name="z" value="hair"/>
       <imgdir name="map">
         <vector name="brow" x="0" y="0"/>
       </imgdir>
-      <string name="_outlink" value="Character/Hair/_Canvas/00048777.img/default/hair"/>
     </canvas>
-    <canvas name="hairBelowBody" width="48" height="36">
-      <vector name="origin" x="19" y="12"/>
+    <canvas name="hairBelowBody" width="1" height="1">
+      <vector name="origin" x="0" y="0"/>
       <imgdir name="map">
         <vector name="brow" x="0" y="0"/>
       </imgdir>
       <string name="z" value="hairBelowBody"/>
-      <string name="_outlink" value="Character/Hair/_Canvas/00048777.img/default/hairBelowBody"/>
     </canvas>
     <imgdir name="hairShade">
-      <canvas name="0" width="35" height="21">
-        <vector name="origin" x="14" y="12"/>
+      <canvas name="0" width="1" height="1">
+        <vector name="origin" x="0" y="0"/>
         <imgdir name="map">
           <vector name="brow" x="0" y="0"/>
         </imgdir>
         <string name="z" value="hairShade"/>
         <string name="group" value="skin"/>
-        <string name="_outlink" value="Character/Hair/_Canvas/00048770.img/default/hairShade/0"/>
       </canvas>
+      <uol name="1" value="0"/>
+      <uol name="2" value="0"/>
+      <uol name="3" value="0"/>
+      <uol name="4" value="0"/>
+      <uol name="9" value="0"/>
+      <uol name="10" value="0"/>
+      <uol name="11" value="0"/>
     </imgdir>
   </imgdir>
   <imgdir name="backDefault">
-    <canvas name="backHair" width="61" height="45">
-      <vector name="origin" x="31" y="21"/>
+    <canvas name="backHair" width="49" height="44">
+      <vector name="origin" x="20" y="22"/>
       <string name="z" value="backHair"/>
       <imgdir name="map">
         <vector name="brow" x="0" y="0"/>
       </imgdir>
-      <string name="_outlink" value="Character/Hair/_Canvas/00048777.img/backDefault/backHair"/>
     </canvas>
-    <canvas name="backHairBelowCap" width="47" height="36">
-      <vector name="origin" x="19" y="12"/>
+    <canvas name="backHairBelowCap" width="39" height="34">
+      <vector name="origin" x="15" y="12"/>
       <string name="z" value="backHairBelowCap"/>
       <imgdir name="map">
         <vector name="brow" x="0" y="0"/>
       </imgdir>
-      <string name="_outlink" value="Character/Hair/_Canvas/00048777.img/backDefault/backHairBelowCap"/>
     </canvas>
   </imgdir>
   <imgdir name="walk1">
@@ -596,8 +596,8 @@
   <imgdir name="proneStab">
     <imgdir name="0">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
-      <uol name="hair" value="../../default/hair"/>
       <uol name="hairShade" value="../../default/hairShade"/>
+      <uol name="hair" value="../../default/hair"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
     </imgdir>
     <imgdir name="1">
@@ -609,9 +609,9 @@
   </imgdir>
   <imgdir name="prone">
     <imgdir name="0">
+      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
     </imgdir>
   </imgdir>

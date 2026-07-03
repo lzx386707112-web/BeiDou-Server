@@ -33,7 +33,7 @@ function action(mode, type, selection) {
 function 发色展示() {
     newHairs = Array();
     var currentBaseHair = parseInt(cm.getPlayer().getHair() / 10) * 10;
-    for (var i = 0; i < 10; i++) {
+    for (var i = 0; i <= 7; i++) {
         let newHairsId = currentBaseHair + i;
         if (cm.itemExists(newHairsId)) {
             if (当前发色不显示 && cm.isCosmeticEquipped(newHairsId)) {
@@ -53,6 +53,11 @@ function 发色展示() {
 
 function 设置发色(selection) {
     const player = cm.getPlayer();
+    if (selection < 0 || selection >= newHairs.length) {
+        cm.sendOk("该发色不可用，请重新选择。");
+        cm.dispose();
+        return;
+    }
     // 1.检查点卷是否足够
     if (cm.getPlayer().getCashShop().getCash(1) < DRAW_COST) {
         cm.sendOk("你的点卷不足" + DRAW_COST + "。");

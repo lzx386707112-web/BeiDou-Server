@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import base64
+import copy
 import io
 import json
 import re
@@ -58,10 +59,93 @@ TRANSPARENT_PIXEL = Image.new("RGBA", (1, 1), (0, 0, 0, 0))
 AKAYRUM_BOSS_ID = 8860000
 AKAYRUM_SUMMON_TEMPLATE_ID = 9900002
 FORCE_SOURCE_MOB_IDS = {9300301, 9300302, 9300304}
-AKAYRUM_BOSS_SKILLS = [
+AKAYRUM_COMPAT_ATTACKS = [
+    {
+        "name": "attack2",
+        "effect_skill": 174,
+        "info": {"attackAfter": 12000, "conMP": 10, "effectAfter": 80, "PADamage": 850, "type": 3},
+        "range": {"lt": (-100, -430), "rb": (100, 0), "start": -3, "areaCount": 7, "attackCount": 4},
+        "effects": [
+            ("areaWarning", "level/1/affected_after"),
+            ("effect", "level/1/hit"),
+            ("hit", "level/1/affected_after"),
+        ],
+    },
+    {
+        "name": "attack3",
+        "effect_skill": 177,
+        "info": {"attackAfter": 9000, "conMP": 10, "effectAfter": 0, "PADamage": 650, "type": 0},
+        "range": {"lt": (-450, -320), "rb": (450, 50)},
+        "effects": [("effect", "level/1/affected"), ("hit", "level/1/affected")],
+    },
+    {
+        "name": "attack4",
+        "effect_skill": 269,
+        "info": {"attackAfter": 15000, "conMP": 10, "effectAfter": 0, "PADamage": 100, "type": 0},
+        "range": {"lt": (-250, -260), "rb": (250, 50)},
+        "effects": [("effect", "level/1/effect/start"), ("hit", "level/1/effect/start")],
+    },
+]
+AKAYRUM_SCREEN_CRACK_ATTACK = {
+    "name": "attack2",
+    "effect_skill": 176,
+    "info": {"attackAfter": 5000, "conMP": 0, "effectAfter": 0, "PADamage": 100, "type": 0},
+    "range": {"lt": (-1000, -800), "rb": (1000, 50)},
+    "effects": [
+        ("areaWarning", "level/1/screen"),
+        ("effect", "level/1/screen"),
+        ("hit", "level/1/screen"),
+    ],
+}
+AKAYRUM_VISUAL_MOBSKILLS = [
+    {"skill": 174, "level": 1, "action": 1},
+    *[
+        {
+            "skill": 176,
+            "level": level,
+            "source_level": 1,
+            "action": 2,
+            "overrides": {"hp": 100, "interval": 5},
+        }
+        for level in range(1, 7)
+    ],
+    {"skill": 177, "level": 1, "action": 2},
+]
+AKAYRUM_SUMMON_SKILL_LEVEL = 234
+AKAYRUM_SUMMON_SKILL_MOBS = [
+    8610010,
+    8610010,
+    8610011,
+    8610011,
+    8610012,
+    8610012,
+    8610013,
+    8610013,
+    8610014,
+    8610014,
+]
+AKAYRUM_SCREEN_CRACK_TEST_ONLY = True
+AKAYRUM_SCREEN_CRACK_ATTACK_COMPAT_TEST = True
+AKAYRUM_SCREEN_CRACK_TEST_DISABLED_ATTACKS = ["attack3", "attack4"]
+AKAYRUM_STANDARD_BOSS_SKILLS = [
     {"skill": 140, "action": 1, "level": 9, "effectAfter": 0},
     {"skill": 141, "action": 2, "level": 10, "effectAfter": 0},
+    {"skill": 128, "action": 1, "level": 18, "effectAfter": 0},
+    {"skill": 145, "action": 2, "level": 9, "effectAfter": 0},
+    {"skill": 200, "action": 1, "level": AKAYRUM_SUMMON_SKILL_LEVEL, "effectAfter": 0},
+    {"skill": 200, "action": 1, "level": 229, "effectAfter": 0},
+    {"skill": 200, "action": 1, "level": 230, "effectAfter": 0},
+    {"skill": 200, "action": 1, "level": 231, "effectAfter": 0},
+    {"skill": 132, "action": 2, "level": 8, "effectAfter": 0},
+    {"skill": 174, "action": 1, "level": 1, "effectAfter": 0},
+    *[{"skill": 176, "action": 2, "level": level, "effectAfter": 0} for level in range(1, 7)],
+    {"skill": 177, "action": 2, "level": 1, "effectAfter": 0},
 ]
+AKAYRUM_SCREEN_CRACK_TEST_SKILLS = [
+    {"skill": 176, "action": 2, "level": level, "effectAfter": 0}
+    for level in range(1, 7)
+]
+AKAYRUM_BOSS_SKILLS = AKAYRUM_SCREEN_CRACK_TEST_SKILLS if AKAYRUM_SCREEN_CRACK_TEST_ONLY else AKAYRUM_STANDARD_BOSS_SKILLS
 AKAYRUM_BOSS_EXTRA_ACTIONS: list[str] = []
 AKAYRUM_BOSS_ATTACK_INFO_FIELDS = ["hit", "range", "attackAfter"]
 AKAYRUM_BOSS_CLIENT_INFO = [
@@ -1328,6 +1412,8 @@ def patch_akayrum_boss_compat(dry_run: bool) -> str:
         "skill10",
         "skill11",
     ]:
+        if old_name == AKAYRUM_SCREEN_CRACK_ATTACK["name"] and AKAYRUM_SCREEN_CRACK_ATTACK_COMPAT_TEST:
+            continue
         if old_name not in AKAYRUM_BOSS_EXTRA_ACTIONS:
             changed |= remove_xml_child(root, old_name)
     changed |= set_compatible_akayrum_extra_action_xml(root, source_json)
@@ -1372,6 +1458,472 @@ def patch_akayrum_boss_gauge_compat(dry_run: bool) -> str:
     backup(ui_path)
     atomic_write_bytes(ui_path, encode_image_body(img, gms_reader()), dry_run)
     return "write"
+
+
+def build_akayrum_summon_level_xml() -> ET.Element:
+    node = ET.Element("imgdir", {"name": str(AKAYRUM_SUMMON_SKILL_LEVEL)})
+    for name, value in [
+        ("interval", 30),
+        ("hp", 80),
+        ("limit", 80),
+        ("summonEffect", 35),
+    ]:
+        ET.SubElement(node, "int", {"name": name, "value": str(value)})
+    for idx, mob_id in enumerate(AKAYRUM_SUMMON_SKILL_MOBS):
+        ET.SubElement(node, "int", {"name": str(idx), "value": str(mob_id)})
+    ET.SubElement(node, "vector", {"name": "lt", "x": "-200", "y": "-86"})
+    ET.SubElement(node, "vector", {"name": "rb", "x": "200", "y": "0"})
+    return node
+
+
+def akayrum_summon_level_xml_text() -> str:
+    return ET.tostring(build_akayrum_summon_level_xml(), encoding="unicode", short_empty_elements=True)
+
+
+def build_akayrum_summon_level_property(parent: WzSubProperty) -> WzSubProperty:
+    node = WzSubProperty(str(AKAYRUM_SUMMON_SKILL_LEVEL), parent)
+    for name, value in [
+        ("interval", 30),
+        ("hp", 80),
+        ("limit", 80),
+        ("summonEffect", 35),
+    ]:
+        node.add(WzIntProperty(name, value, node))
+    for idx, mob_id in enumerate(AKAYRUM_SUMMON_SKILL_MOBS):
+        node.add(WzIntProperty(str(idx), mob_id, node))
+    node.add(WzVectorProperty("lt", -200, -86, node))
+    node.add(WzVectorProperty("rb", 200, 0, node))
+    return node
+
+
+def patch_akayrum_summon_mobskill_compat(dry_run: bool) -> str:
+    xml_path = ROOT / "gms-server" / "wz" / "Skill.wz" / "MobSkill.img.xml"
+    client_path = ROOT / "clien" / "Data" / "Skill" / "MobSkill.img"
+    old_xml_text = xml_path.read_text(encoding="utf-8")
+    level_text = akayrum_summon_level_xml_text()
+    changed = False
+    if f'<imgdir name="{AKAYRUM_SUMMON_SKILL_LEVEL}">' in old_xml_text:
+        new_xml_text = re.sub(
+            rf'<imgdir name="{AKAYRUM_SUMMON_SKILL_LEVEL}">.*?</imgdir>',
+            level_text,
+            old_xml_text,
+            count=1,
+        )
+        changed = new_xml_text != old_xml_text
+    else:
+        previous_level = '<imgdir name="233">'
+        previous_start = old_xml_text.find(previous_level)
+        if previous_start < 0:
+            raise RuntimeError(f"{xml_path} missing MobSkill 200/level/233 insertion point")
+        previous_end = old_xml_text.find("</imgdir>", previous_start)
+        if previous_end < 0:
+            raise RuntimeError(f"{xml_path} missing MobSkill 200/level/233 closing node")
+        previous_end += len("</imgdir>")
+        new_xml_text = old_xml_text[:previous_end] + level_text + old_xml_text[previous_end:]
+        changed = True
+    if changed:
+        backup(xml_path)
+        if dry_run:
+            print(f"[dry-run] patch {xml_path}")
+        else:
+            with tempfile.NamedTemporaryFile(prefix=f".{xml_path.name}.", suffix=".tmp", dir=xml_path.parent, delete=False) as tmp:
+                tmp.write(new_xml_text.encode("utf-8"))
+                tmp_path = Path(tmp.name)
+            tmp_path.replace(xml_path)
+
+    img = WzImage.from_bytes(client_path.read_bytes(), key=TARGET_KEY, name=client_path.name)
+    img.parse()
+    client_level_root = img.get("200/level")
+    if not isinstance(client_level_root, WzSubProperty):
+        raise RuntimeError(f"{client_path} missing MobSkill 200/level")
+    existing_prop = img.get(f"200/level/{AKAYRUM_SUMMON_SKILL_LEVEL}")
+    new_prop = build_akayrum_summon_level_property(client_level_root)
+    client_changed = property_signature(existing_prop) != property_signature(new_prop)
+    if client_changed:
+        client_level_root.add(new_prop)
+        backup(client_path)
+        atomic_write_bytes(client_path, encode_image_body(img, gms_reader()), dry_run)
+
+    return "write" if changed or client_changed else "skip-existing"
+
+
+IMGDIR_TAG_RE = re.compile(r"<(/?)imgdir\b([^>]*)>")
+
+
+def visual_mobskill_source_level(spec: dict) -> str:
+    return str(spec.get("source_level", spec["level"]))
+
+
+def apply_visual_mobskill_overrides(level_data: dict, spec: dict) -> dict:
+    out = copy.deepcopy(level_data)
+    for name, value in spec.get("overrides", {}).items():
+        out[name] = {"_dirType": "int", "_value": str(int(value))}
+    return out
+
+
+def find_imgdir_span_at(text: str, start: int) -> tuple[int, int]:
+    depth = 0
+    for match in IMGDIR_TAG_RE.finditer(text, start):
+        tag_start = match.start()
+        tag_end = match.end()
+        closing = bool(match.group(1))
+        self_closing = text[tag_end - 2:tag_end] == "/>"
+        if closing:
+            depth -= 1
+            if depth == 0:
+                return start, tag_end
+        elif self_closing:
+            if tag_start == start:
+                return start, tag_end
+        else:
+            depth += 1
+    raise RuntimeError("unclosed imgdir tag")
+
+
+def find_direct_imgdir_span(text: str, content_start: int, content_end: int, name: str) -> tuple[int, int] | None:
+    depth = 0
+    for match in IMGDIR_TAG_RE.finditer(text, content_start, content_end):
+        tag_end = match.end()
+        closing = bool(match.group(1))
+        self_closing = text[tag_end - 2:tag_end] == "/>"
+        if closing:
+            depth -= 1
+            continue
+        child_name_match = re.search(r'name="([^"]+)"', match.group(2))
+        child_name = child_name_match.group(1) if child_name_match else ""
+        if depth == 0 and child_name == name:
+            return find_imgdir_span_at(text, match.start())
+        if not self_closing:
+            depth += 1
+    return None
+
+
+def build_akayrum_visual_mobskill_level_xml_text(spec: dict) -> str:
+    skill_id = str(spec["skill"])
+    level_name = str(spec["level"])
+    source_level = visual_mobskill_source_level(spec)
+    src_path = SRC_273_JSON / "Skill" / "MobSkill" / f"{skill_id}.json"
+    data = json.loads(src_path.read_text(encoding="utf-8"))
+    level_data = data.get("level", {}).get(source_level)
+    if not isinstance(level_data, dict):
+        raise RuntimeError(f"missing source MobSkill JSON {skill_id}/{source_level}")
+    level_data = apply_visual_mobskill_overrides(level_data, spec)
+    return ET.tostring(json_wz_to_xml_element(level_name, level_data), encoding="unicode", short_empty_elements=True)
+
+
+def build_akayrum_visual_mobskill_xml_text(spec: dict) -> str:
+    skill_id = str(spec["skill"])
+    skill = ET.Element("imgdir", {"name": skill_id})
+    levels = ET.SubElement(skill, "imgdir", {"name": "level"})
+    levels.append(ET.fromstring(build_akayrum_visual_mobskill_level_xml_text(spec)))
+    return ET.tostring(skill, encoding="unicode", short_empty_elements=True)
+
+
+def upsert_akayrum_visual_mobskill_xml_level(text: str, spec: dict) -> tuple[str, bool]:
+    skill_id = str(spec["skill"])
+    level_name = str(spec["level"])
+    level_xml = build_akayrum_visual_mobskill_level_xml_text(spec)
+    skill_prefix = f'<imgdir name="{skill_id}"><imgdir name="level">'
+    skill_start = text.find(skill_prefix)
+    if skill_start < 0:
+        idx = text.rfind("</imgdir>")
+        if idx < 0:
+            raise RuntimeError("MobSkill XML missing root closing imgdir")
+        return text[:idx] + build_akayrum_visual_mobskill_xml_text(spec) + text[idx:], True
+
+    skill_span = find_imgdir_span_at(text, skill_start)
+    level_start = skill_start + len(f'<imgdir name="{skill_id}">')
+    level_span = find_imgdir_span_at(text, level_start)
+    level_content_start = level_start + len('<imgdir name="level">')
+    level_content_end = level_span[1] - len("</imgdir>")
+    existing_level_span = find_direct_imgdir_span(text, level_content_start, level_content_end, level_name)
+    if existing_level_span is not None:
+        if text[existing_level_span[0]:existing_level_span[1]] == level_xml:
+            return text, False
+        return text[:existing_level_span[0]] + level_xml + text[existing_level_span[1]:], True
+    return text[:level_content_end] + level_xml + text[level_content_end:], True
+
+
+def merge_missing_children(dst: WzSubProperty, src: WzSubProperty) -> None:
+    for child in src.children():
+        existing = dst.child(child.name)
+        if existing is None:
+            dst.add(clone_property(child, child.name, dst))
+        elif isinstance(existing, WzSubProperty) and isinstance(child, WzSubProperty):
+            merge_missing_children(existing, child)
+
+
+def clone_property_from_region_argb(prop, source_region: str, name: str | None = None, parent=None):
+    new_name = prop.name if name is None else name
+    if isinstance(prop, WzCanvasProperty):
+        return clone_canvas_from_region_argb(prop, source_region, new_name, parent)
+    if isinstance(prop, WzSubProperty):
+        out = WzSubProperty(new_name, parent)
+        for child in prop.children():
+            out.add(clone_property_from_region_argb(child, source_region, parent=out))
+        return out
+    return clone_property_from_region(prop, source_region, new_name, parent)
+
+
+def build_akayrum_visual_mobskill_level_property(spec: dict, parent: WzSubProperty) -> WzSubProperty:
+    skill_id = str(spec["skill"])
+    level_name = str(spec["level"])
+    source_level = visual_mobskill_source_level(spec)
+    json_path = SRC_273_JSON / "Skill" / "MobSkill" / f"{skill_id}.json"
+    canvas_path = SRC_273_CANVAS / "Skill" / "MobSkill" / "_Canvas" / f"{skill_id}.img"
+    data = json.loads(json_path.read_text(encoding="utf-8"))
+    level_data = data.get("level", {}).get(source_level)
+    if not isinstance(level_data, dict):
+        raise RuntimeError(f"missing source MobSkill JSON {skill_id}/{source_level}")
+    level_data = apply_visual_mobskill_overrides(level_data, spec)
+    level_prop = xml_to_property(json_wz_to_xml_element(level_name, level_data), parent)
+
+    canvas_img = WzImage.from_bytes(
+        canvas_path.read_bytes(),
+        key=WzKey.for_region(SOURCE_273_REGION),
+        name=canvas_path.name,
+    )
+    canvas_img.parse()
+    visual_level = canvas_img.get(f"level/{source_level}")
+    if not isinstance(visual_level, WzSubProperty):
+        raise RuntimeError(f"missing source MobSkill canvas {skill_id}/{source_level}")
+
+    for child in visual_level.children():
+        cloned = clone_property_from_region_argb(child, SOURCE_273_REGION, child.name, level_prop)
+        existing = level_prop.child(child.name)
+        if existing is not None and isinstance(cloned, WzSubProperty) and isinstance(existing, WzSubProperty):
+            merge_missing_children(cloned, existing)
+        level_prop.add(cloned)
+    return level_prop
+
+
+def patch_akayrum_visual_mobskills(dry_run: bool) -> str:
+    xml_path = ROOT / "gms-server" / "wz" / "Skill.wz" / "MobSkill.img.xml"
+    client_path = ROOT / "clien" / "Data" / "Skill" / "MobSkill.img"
+    text = xml_path.read_text(encoding="utf-8")
+    xml_changed = False
+    for spec in AKAYRUM_VISUAL_MOBSKILLS:
+        text, changed = upsert_akayrum_visual_mobskill_xml_level(text, spec)
+        xml_changed = xml_changed or changed
+    if xml_changed:
+        backup(xml_path)
+        if dry_run:
+            print(f"[dry-run] patch {xml_path}")
+        else:
+            with tempfile.NamedTemporaryFile(prefix=f".{xml_path.name}.", suffix=".tmp", dir=xml_path.parent, delete=False) as tmp:
+                tmp.write(text.encode("utf-8"))
+                tmp_path = Path(tmp.name)
+            tmp_path.replace(xml_path)
+
+    img = WzImage.from_bytes(client_path.read_bytes(), key=TARGET_KEY, name=client_path.name)
+    img.parse()
+    client_changed = False
+    for spec in AKAYRUM_VISUAL_MOBSKILLS:
+        skill_id = str(spec["skill"])
+        level_name = str(spec["level"])
+        skill = img.get(skill_id)
+        if not isinstance(skill, WzSubProperty):
+            skill = WzSubProperty(skill_id, img.root)
+            img.root.add(skill)
+            client_changed = True
+        levels = img.get(f"{skill_id}/level")
+        if not isinstance(levels, WzSubProperty):
+            levels = WzSubProperty("level", skill)
+            skill.add(levels)
+            client_changed = True
+        new_level = build_akayrum_visual_mobskill_level_property(spec, levels)
+        existing = img.get(f"{skill_id}/level/{level_name}")
+        if property_signature(existing) == property_signature(new_level):
+            continue
+        levels.add(new_level)
+        client_changed = True
+    if client_changed:
+        backup(client_path)
+        atomic_write_bytes(client_path, encode_image_body(img, gms_reader()), dry_run)
+
+    return "write" if xml_changed or client_changed else "skip-existing"
+
+
+def build_akayrum_compat_attack_info_xml(spec: dict) -> ET.Element:
+    info = ET.Element("imgdir", {"name": "info"})
+    for name, value in spec["info"].items():
+        ET.SubElement(info, "int", {"name": name, "value": str(value)})
+    range_node = ET.SubElement(info, "imgdir", {"name": "range"})
+    for name, value in spec["range"].items():
+        if isinstance(value, tuple):
+            ET.SubElement(range_node, "vector", {"name": name, "x": str(value[0]), "y": str(value[1])})
+        else:
+            ET.SubElement(range_node, "int", {"name": name, "value": str(value)})
+    return info
+
+
+def build_akayrum_compat_attack_info_property(
+    parent: WzSubProperty,
+    source_effect: WzImage,
+    spec: dict,
+) -> WzSubProperty:
+    info = WzSubProperty("info", parent)
+    for name, value in spec["info"].items():
+        info.add(WzIntProperty(name, value, info))
+
+    range_node = WzSubProperty("range", info)
+    for name, value in spec["range"].items():
+        if isinstance(value, tuple):
+            range_node.add(WzVectorProperty(name, value[0], value[1], range_node))
+        else:
+            range_node.add(WzIntProperty(name, value, range_node))
+    info.add(range_node)
+
+    for name, source_path in spec["effects"]:
+        add_akayrum_effect_sequence(info, source_effect, spec["name"], name, source_path)
+    return info
+
+
+def add_akayrum_effect_sequence(
+    info: WzSubProperty,
+    source_effect: WzImage,
+    action_name: str,
+    name: str,
+    source_path: str,
+) -> None:
+    source = source_effect.get(source_path)
+    if source is None:
+        raise RuntimeError(f"missing Akayrum fullscreen effect source {source_path}")
+    seq = WzSubProperty(name, info)
+    for child in source.children():
+        if not isinstance(child, WzCanvasProperty):
+            continue
+        canvas = clone_canvas_from_region_argb(child, SOURCE_273_REGION, child.name, seq)
+        patch_canvas_frame_metadata(canvas, f"{action_name}/info/{name}/{child.name}")
+        seq.add(canvas)
+    info.add(seq)
+
+
+def clone_canvas_from_region_argb(
+    prop: WzCanvasProperty,
+    source_region: str,
+    name: str,
+    parent: WzSubProperty,
+) -> WzCanvasProperty:
+    out = WzCanvasProperty(name, parent)
+    try:
+        image = decode_canvas(prop, region=source_region)
+        width = int(prop.width)
+        height = int(prop.height)
+    except Exception:
+        image = TRANSPARENT_PIXEL
+        width = 1
+        height = 1
+    out.width = width
+    out.height = height
+    out.format = 2
+    out.format2 = 0
+    out._png_data = encode_canvas_payload(image, 2, width, height, key=TARGET_KEY, listwz=False)
+    out._png_length = len(out._png_data)
+    for child in prop.children():
+        out.add(clone_property_from_region(child, source_region, parent=out))
+    return out
+
+
+def build_akayrum_compat_attack_property(
+    template_action: WzSubProperty,
+    source_effect: WzImage,
+    spec: dict,
+    parent: WzSubProperty,
+) -> WzSubProperty:
+    action = WzSubProperty(spec["name"], parent)
+    action.add(build_akayrum_compat_attack_info_property(action, source_effect, spec))
+    for child in template_action.children():
+        if child.name == "info" or not isinstance(child, (WzCanvasProperty, WzUolProperty)):
+            continue
+        frame = clone_property(child, child.name, action)
+        if isinstance(frame, WzCanvasProperty):
+            patch_canvas_frame_metadata(frame, f"{spec['name']}/{child.name}")
+        action.add(frame)
+    return action
+
+
+def patch_akayrum_compat_attacks(dry_run: bool) -> str:
+    xml_path = ROOT / "gms-server" / "wz" / "Mob.wz" / f"{AKAYRUM_BOSS_ID}.img.xml"
+    client_path = ROOT / "clien" / "Data" / "Mob" / f"{AKAYRUM_BOSS_ID}.img"
+
+    root = ET.parse(xml_path).getroot()
+    xml_changed = False
+    compat_attacks = [AKAYRUM_SCREEN_CRACK_ATTACK] if AKAYRUM_SCREEN_CRACK_ATTACK_COMPAT_TEST else AKAYRUM_COMPAT_ATTACKS
+    if AKAYRUM_SCREEN_CRACK_TEST_ONLY:
+        for action_name in AKAYRUM_SCREEN_CRACK_TEST_DISABLED_ATTACKS:
+            existing = direct_xml_child(root, action_name)
+            if existing is not None:
+                root.remove(existing)
+                xml_changed = True
+    if not AKAYRUM_SCREEN_CRACK_TEST_ONLY or AKAYRUM_SCREEN_CRACK_ATTACK_COMPAT_TEST:
+        for spec in compat_attacks:
+            existing = direct_xml_child(root, spec["name"])
+            old_xml = ET.tostring(existing, encoding="unicode") if existing is not None else ""
+            new_action = ET.Element("imgdir", {"name": spec["name"]})
+            new_action.append(build_akayrum_compat_attack_info_xml(spec))
+            if old_xml == ET.tostring(new_action, encoding="unicode"):
+                continue
+            if existing is None:
+                root.append(new_action)
+            else:
+                existing.clear()
+                existing.tag = "imgdir"
+                existing.set("name", spec["name"])
+                for child in new_action:
+                    existing.append(child)
+            xml_changed = True
+    if xml_changed:
+        backup(xml_path)
+        if dry_run:
+            print(f"[dry-run] patch {xml_path}")
+        else:
+            tree = ET.ElementTree(root)
+            ET.indent(tree, space="  ")
+            with tempfile.NamedTemporaryFile(prefix=f".{xml_path.name}.", suffix=".tmp", dir=xml_path.parent, delete=False) as tmp:
+                tmp.write(b'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n')
+                tree.write(tmp, encoding="utf-8", xml_declaration=False, short_empty_elements=True)
+                tmp_path = Path(tmp.name)
+            tmp_path.replace(xml_path)
+
+    img = WzImage.from_bytes(client_path.read_bytes(), key=TARGET_KEY, name=client_path.name)
+    img.parse()
+    client_changed = False
+    if AKAYRUM_SCREEN_CRACK_TEST_ONLY:
+        for action_name in AKAYRUM_SCREEN_CRACK_TEST_DISABLED_ATTACKS:
+            if img.root.child(action_name) is not None:
+                img.root._children.pop(action_name, None)
+                client_changed = True
+        if not AKAYRUM_SCREEN_CRACK_ATTACK_COMPAT_TEST:
+            if client_changed:
+                backup(client_path)
+                atomic_write_bytes(client_path, encode_image_body(img, gms_reader()), dry_run)
+            return "write" if xml_changed or client_changed else "skip-existing"
+
+    template_action = img.get("skill2") or img.get("attack1")
+    if not isinstance(template_action, WzSubProperty):
+        raise RuntimeError(f"{client_path} missing attack template action")
+    for spec in compat_attacks:
+        source_effect_path = SRC_273_CANVAS / "Skill" / "MobSkill" / "_Canvas" / f"{spec['effect_skill']}.img"
+        if not source_effect_path.exists():
+            return "skip-missing"
+        source_effect = WzImage.from_bytes(
+            source_effect_path.read_bytes(),
+            key=WzKey.for_region(SOURCE_273_REGION),
+            name=source_effect_path.name,
+        )
+        source_effect.parse()
+        existing_action = img.get(spec["name"])
+        new_action_prop = build_akayrum_compat_attack_property(template_action, source_effect, spec, img.root)
+        if property_signature(existing_action) == property_signature(new_action_prop):
+            continue
+        img.root.add(new_action_prop)
+        client_changed = True
+    if client_changed:
+        backup(client_path)
+        atomic_write_bytes(client_path, encode_image_body(img, gms_reader()), dry_run)
+
+    return "write" if xml_changed or client_changed else "skip-existing"
 
 
 def patch_akayrum_boss_extra_actions_compat(dry_run: bool) -> str:
@@ -1664,6 +2216,8 @@ def migrate_273_boss(dry_run: bool) -> dict[str, int]:
             dry_run,
         )
     )
+    count(patch_akayrum_summon_mobskill_compat(dry_run))
+    count(patch_akayrum_visual_mobskills(dry_run))
     count(patch_akayrum_boss_compat(dry_run))
     count(
         reencode_region_img(
@@ -1676,6 +2230,7 @@ def migrate_273_boss(dry_run: bool) -> dict[str, int]:
     count(patch_akayrum_boss_visual_template_compat(dry_run))
     count(patch_akayrum_boss_extra_actions_compat(dry_run))
     count(patch_akayrum_boss_client_info_compat(dry_run))
+    count(patch_akayrum_compat_attacks(dry_run))
     count(patch_akayrum_boss_gauge_compat(dry_run))
     count(patch_string_mob(dry_run))
     return stats

@@ -251,6 +251,9 @@ public class MobSkill {
             case EVA -> stats.put(MonsterStatus.AVOID, x);
             case SPEED -> stats.put(MonsterStatus.SPEED, x);
             case SEAL_SKILL -> stats.put(MonsterStatus.SEAL_SKILL, x);
+            case AKAYRUM_BLACK_HOLE_VISUAL, AKAYRUM_SCREEN_CRACK_VISUAL, AKAYRUM_GREEN_ORB_VISUAL -> {
+                // Visual-only Akayrum compatibility skills; damage/rules are handled separately.
+            }
             case SUMMON -> summonMonsters(monster);
         }
         if (stats.size() > 0) {

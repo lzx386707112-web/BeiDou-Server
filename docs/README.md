@@ -12,6 +12,7 @@
 - [攻击上限和突破记录](patches/attack-cap-limitbreak.md)
 - [2121006 群攻补丁分析记录](patches/2121006-aoe-analysis.md)
 - [新增技能与 EXE 识别记录](patches/new-skills-exe-notes.md)
+- [Boss 视觉资源与 MobSkill 兼容记录](patches/boss-mobskill-visual-migration.md)
 
 ## 工具说明
 

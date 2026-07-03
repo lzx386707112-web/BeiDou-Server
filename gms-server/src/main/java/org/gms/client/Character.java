@@ -119,9 +119,16 @@ public class Character extends AbstractCharacterObject {
     @Setter
     @Getter
     private int gender;
-    @Setter
-    @Getter
     private int hair;
+
+    public int getHair() {
+        return ItemConstants.normalizeHair(gender, hair);
+    }
+
+    public void setHair(int hair) {
+        this.hair = ItemConstants.normalizeHair(gender, hair);
+    }
+
     @Setter
     @Getter
     private int face;
@@ -6428,7 +6435,7 @@ public class Character extends AbstractCharacterObject {
             ret.gender = rs.getInt("gender");
             ret.skinColor = SkinColor.getById(rs.getInt("skincolor"));
             ret.face = rs.getInt("face");
-            ret.hair = rs.getInt("hair");
+            ret.setHair(rs.getInt("hair"));
             // skipping pets, probably unneeded here
 
             ret.level = rs.getInt("level");
@@ -7560,7 +7567,7 @@ public class Character extends AbstractCharacterObject {
                     ps.setInt(6, skinColor.getId());
                     ps.setInt(7, gender);
                     ps.setInt(8, getJob().getId());
-                    ps.setInt(9, hair);
+                    ps.setInt(9, getHair());
                     ps.setInt(10, face);
                     ps.setInt(11, mapId);
                     ps.setInt(12, Math.abs(meso.get()));
@@ -7740,7 +7747,7 @@ public class Character extends AbstractCharacterObject {
                     ps.setInt(16, skinColor.getId());
                     ps.setInt(17, gender);
                     ps.setInt(18, job.getId());
-                    ps.setInt(19, hair);
+                    ps.setInt(19, getHair());
                     ps.setInt(20, face);
                     if (map == null || (cashShop != null && cashShop.isOpened())) {
                         ps.setInt(21, mapId);

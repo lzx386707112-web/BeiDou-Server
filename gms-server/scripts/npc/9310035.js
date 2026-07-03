@@ -51,12 +51,12 @@ function action(mode, type, selection) {
         if (mode === 1 && selection === -1 && type === 1) { // Player chose Yes
             //Determine gender
             let baldHair;// Bald hair style ID
-            // Turn player into bald head 30437 Boy with big bald head
+            // Turn player into bald head 40087 Boy with big bald head
             if (cm.getPlayer().getGender() === 0) {
-                baldHair = 30437;
+                baldHair = 40087;
             } else {
-                // Turn player into bald head 31437 Girl with big bald head
-                baldHair = 31437;
+                // Turn player into bald head 42237 Girl with big bald head
+                baldHair = 42237;
             }
             cm.setHair(baldHair);
             cm.sendNext("Amitabha! The ritual is complete! Your worldly worries have been severed, and your mind is now as clear as a polished mirror.");

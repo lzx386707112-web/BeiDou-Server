@@ -58,8 +58,8 @@ public class BotCosmeticPool {
 
     private static final double WILD_CHANCE = 0.01; // 0.5% = 1 in 200
 
-    private static final int[] WILD_MALE_HAIR   = new int[]{30040, 30100, 30140, 30150, 30190, 30220, 30230, 30240, 30250, 30270, 30290, 30300, 30310, 30320, 30400, 30420, 30450, 30470, 30480, 30510, 30520, 30530, 30540, 30570, 30580, 30590, 30640, 30670, 30680, 30760, 30840, 30860, 30870, 30880};
-    private static final int[] WILD_FEMALE_HAIR = new int[]{31010, 31030, 31060, 31080, 31160, 31180, 31200, 31250, 31260, 31270, 31280, 31320, 31330, 31350, 31400, 31460, 31600, 31670, 31700, 31720, 31810, 31840};
+    private static final int[] WILD_MALE_HAIR   = new int[]{46540, 46550, 47140, 48670, 48680, 48690, 42210, 42220, 42260, 42270};
+    private static final int[] WILD_FEMALE_HAIR = new int[]{46540, 46550, 47140, 48670, 48680, 48690, 42210, 42220, 42260, 42270};
     private static final int[] WILD_MALE_EYES   = new int[]{20012};
     private static final int[] WILD_FEMALE_EYES = new int[]{21009};
 
@@ -69,9 +69,9 @@ public class BotCosmeticPool {
     private static final Map<CosmeticTier, int[]> MALE_HAIR = new EnumMap<>(CosmeticTier.class);
 
     static {
-        MALE_HAIR.put(CosmeticTier.PREMIUM,  new int[]{30050, 30060, 30110, 30120, 30130, 30180, 30200, 30210, 30260, 30280, 30330, 30340, 30350, 30360, 30370, 30410, 30440, 30460, 30490, 30560, 30610, 30630, 30650, 30660, 30700, 30720, 30730, 30790, 30780, 30800, 30810, 30820, 30830, 30920});
-        MALE_HAIR.put(CosmeticTier.STANDARD, new int[]{30020});
-        MALE_HAIR.put(CosmeticTier.BASIC,    new int[]{30000, 30030});
+        MALE_HAIR.put(CosmeticTier.PREMIUM,  new int[]{48700, 48710, 48720, 48730, 42200, 48740, 48750, 42230, 42240, 42250, 48760, 48770});
+        MALE_HAIR.put(CosmeticTier.STANDARD, new int[]{40070, 40080, 42100, 42210, 42220});
+        MALE_HAIR.put(CosmeticTier.BASIC,    new int[]{40070, 40080, 42100});
     }
 
     // ─── Female Hair Pools ───
@@ -79,9 +79,9 @@ public class BotCosmeticPool {
     private static final Map<CosmeticTier, int[]> FEMALE_HAIR = new EnumMap<>(CosmeticTier.class);
 
     static {
-        FEMALE_HAIR.put(CosmeticTier.PREMIUM,  new int[]{31020, 31120, 31150, 31100, 31110, 31140, 31220, 31230, 31240, 31290, 31310, 31340, 31420, 31440, 31490, 31480, 31510, 31520, 31530, 31540, 31550, 31560, 31570, 31580, 31590, 31610, 31620, 31640, 31630, 31650, 31690, 31710, 31740, 31750, 31760, 31780, 31800, 31820, 31830, 31850, 31890, 31910, 31940, 31950, 33000, 34020, 34030, 34110});
-        FEMALE_HAIR.put(CosmeticTier.STANDARD, new int[]{31000, 31040});
-        FEMALE_HAIR.put(CosmeticTier.BASIC,    new int[]{31050});
+        FEMALE_HAIR.put(CosmeticTier.PREMIUM,  new int[]{46540, 46550, 47140, 48670, 48680, 48690, 48700, 48710, 48720, 48730, 42200, 48740});
+        FEMALE_HAIR.put(CosmeticTier.STANDARD, new int[]{43270, 44440, 44450, 42210, 42220});
+        FEMALE_HAIR.put(CosmeticTier.BASIC,    new int[]{43270, 44440, 44450});
     }
 
     // ─── Male Eye Pools ───

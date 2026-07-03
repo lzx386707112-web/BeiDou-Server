@@ -6,245 +6,269 @@
     <int name="cash" value="1"/>
   </imgdir>
   <imgdir name="default">
-    <canvas name="hairOverHead" width="49" height="42">
-      <vector name="origin" x="17" y="15"/>
+    <canvas name="hairOverHead" width="50" height="38">
+      <vector name="origin" x="20" y="18"/>
       <string name="z" value="hairOverHead"/>
       <imgdir name="map">
         <vector name="brow" x="0" y="0"/>
       </imgdir>
-      <string name="_hash" value="77243088a9448c8b96e5b961d8f4bffd977b31eee56ebcae58e9ed213b163913"/>
     </canvas>
-    <canvas name="hair" width="36" height="30">
-      <vector name="origin" x="15" y="12"/>
+    <canvas name="hair" width="47" height="32">
+      <vector name="origin" x="19" y="12"/>
       <string name="z" value="hair"/>
       <imgdir name="map">
         <vector name="brow" x="0" y="0"/>
       </imgdir>
-      <string name="_hash" value="3b5e3f66755e26fbb1263768d4f0ad8bbbbfd9d547b8dd1bd74bf25367fdb0cf"/>
     </canvas>
-    <canvas name="hairBelowBody" width="55" height="39">
-      <vector name="origin" x="23" y="12"/>
+    <canvas name="hairBelowBody" width="47" height="37">
+      <vector name="origin" x="19" y="12"/>
+      <string name="z" value="hairBelowBody"/>
       <imgdir name="map">
         <vector name="brow" x="0" y="0"/>
       </imgdir>
-      <string name="z" value="hairBelowBody"/>
-      <string name="_hash" value="152aacfb360962e68eb0818c73f735ada078d4c1a18217cb387c51cf5ed03992"/>
     </canvas>
     <imgdir name="hairShade">
-      <canvas name="0" width="35" height="21">
-        <vector name="origin" x="14" y="12"/>
+      <canvas name="0" width="33" height="22">
+        <vector name="origin" x="13" y="11"/>
+        <string name="z" value="hairShade"/>
         <imgdir name="map">
           <vector name="brow" x="0" y="0"/>
         </imgdir>
-        <string name="z" value="hairShade"/>
         <string name="group" value="skin"/>
-        <string name="_hash" value="32163bb01f3869e24d549b99b11c2c6542720a8e3a113c79b8b2280c165c3e43"/>
       </canvas>
       <uol name="1" value="0"/>
       <uol name="2" value="0"/>
       <uol name="3" value="0"/>
       <uol name="4" value="0"/>
+      <uol name="5" value="0"/>
+      <uol name="6" value="0"/>
+      <uol name="7" value="0"/>
+      <uol name="8" value="0"/>
       <uol name="9" value="0"/>
       <uol name="10" value="0"/>
       <uol name="11" value="0"/>
     </imgdir>
   </imgdir>
   <imgdir name="backDefault">
-    <canvas name="backHair" width="57" height="42">
-      <vector name="origin" x="27" y="14"/>
+    <canvas name="backHair" width="48" height="43">
+      <vector name="origin" x="20" y="18"/>
       <string name="z" value="backHair"/>
       <imgdir name="map">
         <vector name="brow" x="0" y="0"/>
       </imgdir>
-      <string name="_hash" value="e4e218ab4380e507033d7c1f1a329311aaff0fe60f4ce1c37ebe6f2862fed90c"/>
     </canvas>
-    <canvas name="backHairBelowCap" width="55" height="39">
-      <vector name="origin" x="26" y="11"/>
+    <canvas name="backHairBelowCap" width="46" height="37">
+      <vector name="origin" x="19" y="12"/>
       <string name="z" value="backHairBelowCap"/>
       <imgdir name="map">
         <vector name="brow" x="0" y="0"/>
       </imgdir>
-      <string name="_hash" value="f524f81621f412cdf67c626b027aee0d78527218957faf66390ada369aae3bdd"/>
     </canvas>
+  </imgdir>
+  <imgdir name="prone">
+    <imgdir name="0">
+      <canvas name="hairOverHead" width="50" height="38">
+        <vector name="origin" x="20" y="18"/>
+        <string name="z" value="hairOverHead"/>
+        <imgdir name="map">
+          <vector name="brow" x="0" y="0"/>
+        </imgdir>
+      </canvas>
+      <canvas name="hair" width="47" height="32">
+        <vector name="origin" x="19" y="12"/>
+        <string name="z" value="hair"/>
+        <imgdir name="map">
+          <vector name="brow" x="0" y="0"/>
+        </imgdir>
+      </canvas>
+      <canvas name="hairBelowBody" width="39" height="35">
+        <vector name="origin" x="15" y="12"/>
+        <string name="z" value="hairBelowBody"/>
+        <imgdir name="map">
+          <vector name="brow" x="0" y="0"/>
+        </imgdir>
+      </canvas>
+      <uol name="hairShade" value="../../default/hairShade"/>
+    </imgdir>
   </imgdir>
   <imgdir name="walk1">
     <imgdir name="0">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
     <imgdir name="1">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
     <imgdir name="2">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
     <imgdir name="3">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
   </imgdir>
   <imgdir name="walk2">
     <imgdir name="0">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
     <imgdir name="1">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
     <imgdir name="2">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
     <imgdir name="3">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
   </imgdir>
   <imgdir name="stand1">
     <imgdir name="0">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
     <imgdir name="1">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
     <imgdir name="2">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
   </imgdir>
   <imgdir name="stand2">
     <imgdir name="0">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
     <imgdir name="1">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
     <imgdir name="2">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
   </imgdir>
   <imgdir name="alert">
     <imgdir name="0">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
     <imgdir name="1">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
     <imgdir name="2">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
   </imgdir>
   <imgdir name="swingO1">
     <imgdir name="0">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
     <imgdir name="1">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
     <imgdir name="2">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
   </imgdir>
   <imgdir name="swingO2">
     <imgdir name="0">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
     <imgdir name="1">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
     <imgdir name="2">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
   </imgdir>
   <imgdir name="swingO3">
     <imgdir name="0">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
     <imgdir name="1">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
     <imgdir name="2">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
   </imgdir>
   <imgdir name="swingOF">
     <imgdir name="0">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
     <imgdir name="1">
       <uol name="backHair" value="../../backDefault/backHair"/>
@@ -253,74 +277,74 @@
     <imgdir name="2">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
     <imgdir name="3">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
   </imgdir>
   <imgdir name="swingT1">
     <imgdir name="0">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
     <imgdir name="1">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
     <imgdir name="2">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
   </imgdir>
   <imgdir name="swingT2">
     <imgdir name="0">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
     <imgdir name="1">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
     <imgdir name="2">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
   </imgdir>
   <imgdir name="swingT3">
     <imgdir name="0">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
     <imgdir name="1">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
     <imgdir name="2">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
   </imgdir>
   <imgdir name="swingTF">
@@ -331,344 +355,336 @@
     <imgdir name="1">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
     <imgdir name="2">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
     <imgdir name="3">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
   </imgdir>
   <imgdir name="swingP1">
     <imgdir name="0">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
     <imgdir name="1">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
     <imgdir name="2">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
   </imgdir>
   <imgdir name="swingP2">
     <imgdir name="0">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
     <imgdir name="1">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
     <imgdir name="2">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
   </imgdir>
   <imgdir name="swingPF">
     <imgdir name="0">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
     <imgdir name="1">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
     <imgdir name="2">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
     <imgdir name="3">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
   </imgdir>
   <imgdir name="stabO1">
     <imgdir name="0">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
     <imgdir name="1">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
   </imgdir>
   <imgdir name="stabO2">
     <imgdir name="0">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
     <imgdir name="1">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
   </imgdir>
   <imgdir name="stabOF">
     <imgdir name="0">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
     <imgdir name="1">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
     <imgdir name="2">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
   </imgdir>
   <imgdir name="stabT1">
     <imgdir name="0">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
     <imgdir name="1">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
     <imgdir name="2">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
   </imgdir>
   <imgdir name="stabT2">
     <imgdir name="0">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
     <imgdir name="1">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
     <imgdir name="2">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
   </imgdir>
   <imgdir name="stabTF">
     <imgdir name="0">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
     <imgdir name="1">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
     <imgdir name="2">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
     <imgdir name="3">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
   </imgdir>
   <imgdir name="shoot1">
     <imgdir name="0">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
     <imgdir name="1">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
     <imgdir name="2">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
   </imgdir>
   <imgdir name="shoot2">
     <imgdir name="0">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
     <imgdir name="1">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
     <imgdir name="2">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
     <imgdir name="3">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
     <imgdir name="4">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
   </imgdir>
   <imgdir name="shootF">
     <imgdir name="0">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
     <imgdir name="1">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
     <imgdir name="2">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
   </imgdir>
   <imgdir name="proneStab">
     <imgdir name="0">
-      <uol name="hairOverHead" value="../../default/hairOverHead"/>
-      <uol name="hair" value="../../default/hair"/>
+      <uol name="hairOverHead" value="../../prone/0/hairOverHead"/>
+      <uol name="hair" value="../../prone/0/hair"/>
+      <uol name="hairBelowBody" value="../../prone/0/hairBelowBody"/>
       <uol name="hairShade" value="../../default/hairShade"/>
-      <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
     </imgdir>
     <imgdir name="1">
-      <uol name="hairOverHead" value="../../default/hairOverHead"/>
-      <uol name="hair" value="../../default/hair"/>
+      <uol name="hairOverHead" value="../../prone/0/hairOverHead"/>
+      <uol name="hair" value="../../prone/0/hair"/>
+      <uol name="hairBelowBody" value="../../prone/0/hairBelowBody"/>
       <uol name="hairShade" value="../../default/hairShade"/>
-      <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
-    </imgdir>
-  </imgdir>
-  <imgdir name="prone">
-    <imgdir name="0">
-      <uol name="hairOverHead" value="../../default/hairOverHead"/>
-      <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
-      <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
     </imgdir>
   </imgdir>
   <imgdir name="heal">
     <imgdir name="0">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
     <imgdir name="1">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
     <imgdir name="2">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
   </imgdir>
   <imgdir name="fly">
     <imgdir name="0">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
     <imgdir name="1">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
   </imgdir>
   <imgdir name="jump">
     <imgdir name="0">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
   </imgdir>
   <imgdir name="sit">
     <imgdir name="0">
       <uol name="hairOverHead" value="../../default/hairOverHead"/>
       <uol name="hair" value="../../default/hair"/>
-      <uol name="hairShade" value="../../default/hairShade"/>
       <uol name="hairBelowBody" value="../../default/hairBelowBody"/>
+      <uol name="hairShade" value="../../default/hairShade"/>
     </imgdir>
   </imgdir>
   <imgdir name="ladder">

@@ -202,6 +202,31 @@ HP 超过 21 亿时，服务端 XML 的 HP 需要使用 `string` 标记，客户
 
 兼容实验失败记录：按现有旧端 boss 节点结构重建 `attack2-attack4` 和 `skill5` 后仍然召唤崩溃。实验版已把客户端动作帧裁剪为 canvas-only，并统一补 `origin/head/lt/rb/delay`；攻击动作的 `info` 也只保留旧端常见的 `hit/range/attackAfter`，不再带入 273 源里的 `ball/effect/areaWarning/randDelayAttack/effectAfter`。即使这样仍不稳定，因此当前默认迁移已回退到模板动作集合，不启用 `145/9 -> skill5`。
 
+机制拆解版：不要恢复 `skill3-skill11` 或额外攻击动作，而是让阿卡伊勒复用当前客户端已经支持的 `MobSkill` 等级和 `skill1/skill2` 动作。当前实验配置为：
+
+- `128/18 -> skill1`：用现有魅惑等级近似原版 `128/21-23`。
+- `145/9 -> skill2`：用现有反伤等级近似原版 `145/10`，不再使用不稳定的 `skill5`。
+- `200/234 -> skill1`：新增阿卡伊勒专用旧结构召唤等级，字段只用 `interval/hp/limit/summonEffect/0..9/lt/rb`，一次召唤 `8610010-8610014` 共 10 只，`interval=30`，不带 `mobGroup/summonOnce/exchangeAttack` 等高版本字段。
+- `200/229`、`200/230`、`200/231 -> skill1`：复用现有召唤等级作为额外随机入口，提高召唤技能在技能池里的占比；不要重复写同一 `skill/level`，服务端技能集合会去重，不能提高概率。
+- `132/8 -> skill2`：替代 `129/13` 作为全屏控制类测试入口。`129` 是 banish/放逐，不会呈现预期的全屏攻击观感；`132/8` 是当前客户端已有等级，范围为 `lt/rb=-800..800`。
+- `attack2`：按扎昆 `attack3` 的旧端分区攻击思路新增全屏攻击容器，服务端 XML 只写 `attackAfter/conMP/effectAfter/PADamage/type/range` 等旧字段；客户端 `attack2/info/areaWarning/effect/hit` 抽 `MobSkill 174/1` 的黑洞光效 canvas，动作帧复用当前稳定动作。
+- `attack3`：按旧端普通范围攻击容器补 `MobSkill 177/1 affected` 绿色光效，服务端只写旧字段；同时另行新增顶层 `MobSkill 177/1` 做真实技能视觉测试。
+- `attack4`：按旧端普通范围攻击容器补 `MobSkill 269/1 effect/start` 蓝色法阵光效，先作为低伤害、长冷却视觉攻击验证；真正屏障/安全区逻辑暂不实现。这里没有新增客户端顶层 `MobSkill 269`，也没有恢复 `skill7-skill11`。
+
+这一版不新增高版本 `skill7-skill11`，`8860000` 客户端根动作只额外加入旧结构 `attack2/attack3/attack4`。需要实机验证召唤后是否稳定，以及各技能触发时是否符合预期。
+
+真实 MobSkill 视觉节点实验：阅读 `docs/patches/boss-mobskill-visual-migration.md` 后，确认 BeiDou 客户端的 `Skill/MobSkill.img/<skillId>/level/<level>` 可以承载 273 的 `_Canvas/<skillId>.img/level/<level>` 视觉节点。已先选择不需要协议重映射的 `174/1`、`176/1..6` 和 `177/1`：
+
+- 客户端 `clien/Data/Skill/MobSkill.img` 新增 `174/level/1`、`176/level/1..6` 和 `177/level/1`，把 273 JSON 规则字段和 273 canvas 视觉节点合并到同一个 level 下。
+- 服务端 `gms-server/wz/Skill.wz/MobSkill.img.xml` 同步新增 `174/1`、`176/1..6`、`177/1` 规则字段。
+- `8860000/info/skill` 新增 `174/1 -> skill1`、`176/1..6 -> skill2`、`177/1 -> skill2`，仍复用当前稳定动作，不恢复 273 的高版本 `skill7/skill9/skill11`。
+- 服务端 `MobSkillType` 新增 `174`、`176`、`177`，`MobSkill` 中按 visual-only 处理，不额外套伤害、秒杀、lua 或状态逻辑；实际伤害/范围仍由旧结构 `attack2/attack3` fallback 负责。
+- 验证结果：`174/1` 共有 16 张 canvas、`176/1..6` 每个 level 共有 31 张 canvas，其中 `screen` 25 张、最大 `1043x770`，`177/1` 共有 11 张 canvas，全部可用 GMS key 解码；服务端 XML 可解析；`272020110/272020200` 地图审计缺失资源 0。
+- 视觉定位：`174/1` 本身不是大屏动画，最大 canvas 约 `232x176`，更像 Boss 身边的黑洞/命中特效；`176/1` 才包含大裂隙 `screen` 帧。原始普通阿卡伊勒表里是 `176/5 -> skill11`，但这份 273 canvas 没有 `level/5` 的实际帧，因此用 `176/1` 做视觉替代测试。
+- 触发概率坑：服务端 Boss 技能集合是 `Set<MobSkillId>`，重复写同一个 `skill/level` 会被去重，不能提高概率；而 273 源 `176/1` 自带 `hp=80`，满血阶段会被服务端过滤。当前测试版把同一套 `176/1 screen` 复制为 `176/1..6`，并覆盖为 `hp=100`、`interval=5`，让召唤后满血也能更快抽到裂隙全屏。
+- `MobSkill.screen` 兼容坑：实机验证只剩 `176/1..6` 技能后，Boss 只普攻，不播放 `screen`。这说明旧客户端不处理 `MobSkill.img/<skill>/level/<level>/screen`。当前不优先改 exe，改走旧结构兼容：新增 `attack2`，把 `176/1/screen` 的 25 张大帧同时挂到 `attack2/info/areaWarning`、`attack2/info/effect`、`attack2/info/hit`，服务端 `attack2/info` 只保留旧字段 `attackAfter/conMP/effectAfter/PADamage/type/range`。这条路径由旧客户端已支持的攻击特效播放。
+- 暂不把 `269/1` 做成真实 MobSkill。它超过当前 byte 协议的安全 ID 范围，需要先映射到 `201..255` 的空闲 ID，并同步客户端 `MobSkill.img`、Boss 技能引用、服务端枚举和处理逻辑；当前只保留 `attack4` fallback 视觉。
+
 ## 阿卡伊勒次元缝隙怪物外形错误记录
 
 ### 1. 现象和定位

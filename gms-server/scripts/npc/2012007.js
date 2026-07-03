@@ -28,12 +28,12 @@ var status = 0;
 var beauty = 0;
 var hairprice = 1000000;
 var haircolorprice = 1000000;
-var mhair_d = Array(30030, 30020, 30000, 30270, 30230);
-var fhair_d = Array(31040, 31000, 31250, 31220, 31260);
-var mhair_r = Array(30230, 30260, 30280, 30340, 30490, 30530, 30630, 30740);
-var fhair_r = Array(31110, 31220, 31230, 31630, 31650, 31710, 31790, 31890, 31930);
-var mhair_e = Array(30230, 30280, 30340, 30490, 30530, 30740);
-var fhair_e = Array(31110, 31220, 31230, 31710, 31790, 31890, 31930);
+var mhair_d = Array(48720, 44440, 48700, 42100, 42210);
+var fhair_d = Array(42200, 44440, 42100, 40070, 48700);
+var mhair_r = Array(42210, 48750, 48700, 42200, 42260, 48680, 48760);
+var fhair_r = Array(42100, 40070, 48680, 42210, 48720, 42260);
+var mhair_e = Array(42210, 48700, 42200, 42260, 48680, 48760);
+var fhair_e = Array(42100, 40070, 48680, 48720, 42260);
 var hairnew = Array();
 
 function pushIfItemExists(array, itemid) {
