@@ -99,16 +99,7 @@ AKAYRUM_SCREEN_CRACK_ATTACK = {
 }
 AKAYRUM_VISUAL_MOBSKILLS = [
     {"skill": 174, "level": 1, "action": 1},
-    *[
-        {
-            "skill": 176,
-            "level": level,
-            "source_level": 1,
-            "action": 2,
-            "overrides": {"hp": 100, "interval": 5},
-        }
-        for level in range(1, 7)
-    ],
+    {"skill": 176, "level": 1, "action": 2, "overrides": {"hp": 80, "interval": 10}},
     {"skill": 177, "level": 1, "action": 2},
 ]
 AKAYRUM_SUMMON_SKILL_LEVEL = 234
@@ -124,9 +115,11 @@ AKAYRUM_SUMMON_SKILL_MOBS = [
     8610014,
     8610014,
 ]
-AKAYRUM_SCREEN_CRACK_TEST_ONLY = True
-AKAYRUM_SCREEN_CRACK_ATTACK_COMPAT_TEST = True
+AKAYRUM_SCREEN_CRACK_TEST_ONLY = False
+AKAYRUM_SCREEN_CRACK_ATTACK_COMPAT_TEST = False
 AKAYRUM_SCREEN_CRACK_TEST_DISABLED_ATTACKS = ["attack3", "attack4"]
+AKAYRUM_SCREEN_CRACK_FIELD_EFFECT = "customBoss/akayrum/screenCrack"
+AKAYRUM_SCREEN_CRACK_FIELD_EFFECT_Y_SHIFT = 450
 AKAYRUM_STANDARD_BOSS_SKILLS = [
     {"skill": 140, "action": 1, "level": 9, "effectAfter": 0},
     {"skill": 141, "action": 2, "level": 10, "effectAfter": 0},
@@ -138,7 +131,7 @@ AKAYRUM_STANDARD_BOSS_SKILLS = [
     {"skill": 200, "action": 1, "level": 231, "effectAfter": 0},
     {"skill": 132, "action": 2, "level": 8, "effectAfter": 0},
     {"skill": 174, "action": 1, "level": 1, "effectAfter": 0},
-    *[{"skill": 176, "action": 2, "level": level, "effectAfter": 0} for level in range(1, 7)],
+    {"skill": 176, "action": 2, "level": 1, "effectAfter": 0},
     {"skill": 177, "action": 2, "level": 1, "effectAfter": 0},
 ]
 AKAYRUM_SCREEN_CRACK_TEST_SKILLS = [
@@ -1197,6 +1190,19 @@ def patch_canvas_frame_metadata(canvas: WzCanvasProperty, path: str) -> bool:
     return changed
 
 
+def patch_akayrum_field_effect_frame_metadata(canvas: WzCanvasProperty) -> None:
+    width = int(canvas.width or 1)
+    height = int(canvas.height or 1)
+    origin_x = max(0, width // 2)
+    origin_y = max(0, height - AKAYRUM_SCREEN_CRACK_FIELD_EFFECT_Y_SHIFT)
+    canvas.add(WzVectorProperty("origin", origin_x, origin_y, canvas))
+    canvas.add(WzVectorProperty("head", -1, -min(80, origin_y), canvas))
+    canvas.add(WzVectorProperty("lt", -origin_x, -origin_y, canvas))
+    canvas.add(WzVectorProperty("rb", width - origin_x, height - origin_y, canvas))
+    if canvas.child("delay") is None:
+        canvas.add(WzIntProperty("delay", 120, canvas))
+
+
 def patch_action_zero_frame(action: WzSubProperty) -> bool:
     frame_names = sorted(int(child.name) for child in action.children() if child.name.isdigit())
     if not frame_names or frame_names[0] == 0:
@@ -1362,6 +1368,40 @@ def patch_akayrum_mob_type_compat(dry_run: bool) -> str:
                 changed = True
                 backup(client_path)
                 atomic_write_bytes(client_path, encode_image_body(img, gms_reader()), dry_run)
+    return "write" if changed else "skip-existing"
+
+
+def patch_akayrum_link_shell_compat(dry_run: bool) -> str:
+    changed = False
+    for mob_id in [9300304]:
+        xml_path = ROOT / "gms-server" / "wz" / "Mob.wz" / f"{mob_id}.img.xml"
+        if xml_path.exists():
+            root = ET.parse(xml_path).getroot()
+            info = direct_xml_child(root, "info")
+            if info is not None and remove_xml_child(info, "attack"):
+                changed = True
+                backup(xml_path)
+                if dry_run:
+                    print(f"[dry-run] patch {xml_path}")
+                else:
+                    tree = ET.ElementTree(root)
+                    ET.indent(tree, space="  ")
+                    with tempfile.NamedTemporaryFile(prefix=f".{xml_path.name}.", suffix=".tmp", dir=xml_path.parent, delete=False) as tmp:
+                        tmp.write(b'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n')
+                        tree.write(tmp, encoding="utf-8", xml_declaration=False, short_empty_elements=True)
+                        tmp_path = Path(tmp.name)
+                    tmp_path.replace(xml_path)
+
+        client_path = ROOT / "clien" / "Data" / "Mob" / f"{mob_id}.img"
+        if not client_path.exists():
+            continue
+        img = WzImage.from_bytes(client_path.read_bytes(), key=TARGET_KEY, name=client_path.name)
+        img.parse()
+        info = img.get("info")
+        if isinstance(info, WzSubProperty) and remove_wz_child(info, "attack"):
+            changed = True
+            backup(client_path)
+            atomic_write_bytes(client_path, encode_image_body(img, gms_reader()), dry_run)
     return "write" if changed else "skip-existing"
 
 
@@ -1742,6 +1782,55 @@ def patch_akayrum_visual_mobskills(dry_run: bool) -> str:
         atomic_write_bytes(client_path, encode_image_body(img, gms_reader()), dry_run)
 
     return "write" if xml_changed or client_changed else "skip-existing"
+
+
+def ensure_wz_sub_path(root: WzSubProperty, path: str) -> WzSubProperty:
+    node = root
+    for name in path.split("/"):
+        child = node.child(name)
+        if not isinstance(child, WzSubProperty):
+            child = WzSubProperty(name, node)
+            node.add(child)
+        node = child
+    return node
+
+
+def build_akayrum_screen_crack_field_effect(parent: WzSubProperty) -> WzSubProperty:
+    source_path = SRC_273_CANVAS / "Skill" / "MobSkill" / "_Canvas" / "176.img"
+    if not source_path.exists():
+        raise RuntimeError(f"missing Akayrum screen crack source {source_path}")
+    source = WzImage.from_bytes(
+        source_path.read_bytes(),
+        key=WzKey.for_region(SOURCE_273_REGION),
+        name=source_path.name,
+    )
+    source.parse()
+    screen = source.get("level/1/screen")
+    if not isinstance(screen, WzSubProperty):
+        raise RuntimeError(f"{source_path} missing level/1/screen")
+
+    effect = WzSubProperty(parent.name, parent.parent)
+    for idx, child in enumerate(c for c in screen.children() if isinstance(c, WzCanvasProperty)):
+        canvas = clone_canvas_from_region_argb(child, SOURCE_273_REGION, str(idx), effect)
+        patch_akayrum_field_effect_frame_metadata(canvas)
+        effect.add(canvas)
+    return effect
+
+
+def patch_akayrum_screen_crack_field_effect(dry_run: bool) -> str:
+    client_path = ROOT / "clien" / "Data" / "Map" / "Effect.img"
+    img = WzImage.from_bytes(client_path.read_bytes(), key=TARGET_KEY, name=client_path.name)
+    img.parse()
+    parent_path, effect_name = AKAYRUM_SCREEN_CRACK_FIELD_EFFECT.rsplit("/", 1)
+    parent = ensure_wz_sub_path(img.root, parent_path)
+    existing = parent.child(effect_name)
+    new_effect = build_akayrum_screen_crack_field_effect(WzSubProperty(effect_name, parent))
+    if property_signature(existing) == property_signature(new_effect):
+        return "skip-existing"
+    parent.add(new_effect)
+    backup(client_path)
+    atomic_write_bytes(client_path, encode_image_body(img, gms_reader()), dry_run)
+    return "write"
 
 
 def build_akayrum_compat_attack_info_xml(spec: dict) -> ET.Element:
@@ -2218,6 +2307,7 @@ def migrate_273_boss(dry_run: bool) -> dict[str, int]:
     )
     count(patch_akayrum_summon_mobskill_compat(dry_run))
     count(patch_akayrum_visual_mobskills(dry_run))
+    count(patch_akayrum_screen_crack_field_effect(dry_run))
     count(patch_akayrum_boss_compat(dry_run))
     count(
         reencode_region_img(
@@ -2274,6 +2364,7 @@ def migrate(dry_run: bool, overwrite_existing_common: bool) -> None:
         count(xml_to_img(src_xml, ROOT / f"clien/Data/Mob/{mob_id}.img", dry_run, overwrite=overwrite))
     count(patch_mob_delay_compat(dry_run))
     count(patch_akayrum_mob_type_compat(dry_run))
+    count(patch_akayrum_link_shell_compat(dry_run))
 
     for npc_id in NPC_IDS:
         src_xml = SRC / "npc" / f"{npc_id}.img.xml"

@@ -35,6 +35,7 @@ import org.gms.server.maps.MapObject;
 import org.gms.server.maps.MapObjectType;
 import org.gms.server.maps.MapleMap;
 import org.gms.server.maps.Mist;
+import org.gms.util.PacketCreator;
 import org.gms.util.Randomizer;
 
 import java.awt.*;
@@ -251,7 +252,11 @@ public class MobSkill {
             case EVA -> stats.put(MonsterStatus.AVOID, x);
             case SPEED -> stats.put(MonsterStatus.SPEED, x);
             case SEAL_SKILL -> stats.put(MonsterStatus.SEAL_SKILL, x);
-            case AKAYRUM_BLACK_HOLE_VISUAL, AKAYRUM_SCREEN_CRACK_VISUAL, AKAYRUM_GREEN_ORB_VISUAL -> {
+            case AKAYRUM_SCREEN_CRACK_VISUAL -> {
+                monster.getMap().broadcastMessage(PacketCreator.showEffect("customBoss/akayrum/screenCrack"));
+                applyAkayrumScreenCrackDamage(monster);
+            }
+            case AKAYRUM_BLACK_HOLE_VISUAL, AKAYRUM_GREEN_ORB_VISUAL -> {
                 // Visual-only Akayrum compatibility skills; damage/rules are handled separately.
             }
             case SUMMON -> summonMonsters(monster);
@@ -290,6 +295,23 @@ public class MobSkill {
             banishPlayersOutput.addAll(getPlayersInRange(monster));
         } else {
             banishPlayersOutput.add(player);
+        }
+    }
+
+    private void applyAkayrumScreenCrackDamage(Monster monster) {
+        MapleMap map = monster.getMap();
+        int damage = Math.max(1, getX());
+        for (Character character : map.getAllPlayers()) {
+            if (!character.isAlive()) {
+                continue;
+            }
+            character.addHP(-damage);
+            map.broadcastMessage(
+                    character,
+                    PacketCreator.damagePlayer(0, monster.getId(), character.getId(), damage, 0, 0, false, 0, true,
+                            monster.getObjectId(), 0, 0),
+                    false
+            );
         }
     }
 

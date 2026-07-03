@@ -217,14 +217,16 @@ HP 超过 21 亿时，服务端 XML 的 HP 需要使用 `string` 标记，客户
 
 真实 MobSkill 视觉节点实验：阅读 `docs/patches/boss-mobskill-visual-migration.md` 后，确认 BeiDou 客户端的 `Skill/MobSkill.img/<skillId>/level/<level>` 可以承载 273 的 `_Canvas/<skillId>.img/level/<level>` 视觉节点。已先选择不需要协议重映射的 `174/1`、`176/1..6` 和 `177/1`：
 
-- 客户端 `clien/Data/Skill/MobSkill.img` 新增 `174/level/1`、`176/level/1..6` 和 `177/level/1`，把 273 JSON 规则字段和 273 canvas 视觉节点合并到同一个 level 下。
-- 服务端 `gms-server/wz/Skill.wz/MobSkill.img.xml` 同步新增 `174/1`、`176/1..6`、`177/1` 规则字段。
-- `8860000/info/skill` 新增 `174/1 -> skill1`、`176/1..6 -> skill2`、`177/1 -> skill2`，仍复用当前稳定动作，不恢复 273 的高版本 `skill7/skill9/skill11`。
-- 服务端 `MobSkillType` 新增 `174`、`176`、`177`，`MobSkill` 中按 visual-only 处理，不额外套伤害、秒杀、lua 或状态逻辑；实际伤害/范围仍由旧结构 `attack2/attack3` fallback 负责。
-- 验证结果：`174/1` 共有 16 张 canvas、`176/1..6` 每个 level 共有 31 张 canvas，其中 `screen` 25 张、最大 `1043x770`，`177/1` 共有 11 张 canvas，全部可用 GMS key 解码；服务端 XML 可解析；`272020110/272020200` 地图审计缺失资源 0。
+- 客户端 `clien/Data/Skill/MobSkill.img` 新增 `174/level/1`、`176/level/1` 和 `177/level/1`，把 273 JSON 规则字段和 273 canvas 视觉节点合并到同一个 level 下。之前为了验证触发频率临时复制过 `176/1..6`，最终 Boss 技能池只引用 `176/1`。
+- 服务端 `gms-server/wz/Skill.wz/MobSkill.img.xml` 同步新增 `174/1`、`176/1`、`177/1` 规则字段；`176/1` 按 273 源恢复为 `hp=80`、`interval=10`、`x=999999`。
+- `8860000/info/skill` 新增 `174/1 -> skill1`、`176/1 -> skill2`、`177/1 -> skill2`，同时恢复魅惑、反伤、召唤和反向控制等旧端可用技能，不恢复 273 的高版本 `skill7/skill9/skill11`。
+- 服务端 `MobSkillType` 新增 `174`、`176`、`177`。`174/177` 只作为视觉兼容技能；`176` 额外由服务端广播全屏场景特效并按 `x=999999` 对当前地图所有存活玩家扣血，避免旧客户端不认新版 `screen/lua` 机制导致只有动画没有伤害。
+- 验证结果：`174/1` 共有 16 张 canvas、`176/1` 的 `screen` 有 25 张大帧、最大约 `1043x782`，`177/1` 共有 11 张 canvas，全部可用 GMS key 解码；服务端 XML 可解析；`272020110/272020200` 地图审计缺失资源 0。
 - 视觉定位：`174/1` 本身不是大屏动画，最大 canvas 约 `232x176`，更像 Boss 身边的黑洞/命中特效；`176/1` 才包含大裂隙 `screen` 帧。原始普通阿卡伊勒表里是 `176/5 -> skill11`，但这份 273 canvas 没有 `level/5` 的实际帧，因此用 `176/1` 做视觉替代测试。
-- 触发概率坑：服务端 Boss 技能集合是 `Set<MobSkillId>`，重复写同一个 `skill/level` 会被去重，不能提高概率；而 273 源 `176/1` 自带 `hp=80`，满血阶段会被服务端过滤。当前测试版把同一套 `176/1 screen` 复制为 `176/1..6`，并覆盖为 `hp=100`、`interval=5`，让召唤后满血也能更快抽到裂隙全屏。
-- `MobSkill.screen` 兼容坑：实机验证只剩 `176/1..6` 技能后，Boss 只普攻，不播放 `screen`。这说明旧客户端不处理 `MobSkill.img/<skill>/level/<level>/screen`。当前不优先改 exe，改走旧结构兼容：新增 `attack2`，把 `176/1/screen` 的 25 张大帧同时挂到 `attack2/info/areaWarning`、`attack2/info/effect`、`attack2/info/hit`，服务端 `attack2/info` 只保留旧字段 `attackAfter/conMP/effectAfter/PADamage/type/range`。这条路径由旧客户端已支持的攻击特效播放。
+- 触发概率坑：服务端 Boss 技能集合是 `Set<MobSkillId>`，重复写同一个 `skill/level` 会被去重，不能提高概率；把 `176/1` 复制成 `176/1..6` 虽然能提高随机命中率，但也会把全屏技能频率变成测试态。最终只保留一条 `176/1`，并恢复源包 `hp=80`、`interval=10`。
+- `MobSkill.screen` 兼容坑：实机验证只剩 `176/1..6` 时，Boss 会释放 `skill2` 动作，但旧客户端不会渲染 `MobSkill.img/<skill>/level/<level>/screen`。反汇编确认 `BeiDou.exe` 只有 `Skill/MobSkill.img/%03d/level/%d/affected` 和 `.../tile` 的硬编码路径，没有 `.../screen`。直接补 exe 不只是加字符串，还要新增加载字段和绘制逻辑，风险较高。
+- 最终全屏表现方案：把 `176/1/screen` 的 25 帧迁到旧客户端已支持的 `clien/Data/Map/Effect.img/customBoss/akayrum/screenCrack`，在 `MobSkill 176` 生效时由服务端广播 `PacketCreator.showEffect("customBoss/akayrum/screenCrack")`。`showEffect` 实际读取的是 `Map/Effect.img`，不是 `Effect/BasicEff.img`；误放到 `BasicEff.img` 时客户端日志不会访问该文件。
+- 全屏定位坑：273 的 `screen` 帧缺 `origin/delay`，直接按通用 canvas 元数据补 `origin=(width/2,height)` 会让场景特效偏上。最终对 `Map/Effect` 版本单独设置 `origin_y=height-450`，使裂屏覆盖当前 1024x768 视野的主体区域。
 - 暂不把 `269/1` 做成真实 MobSkill。它超过当前 byte 协议的安全 ID 范围，需要先映射到 `201..255` 的空闲 ID，并同步客户端 `MobSkill.img`、Boss 技能引用、服务端枚举和处理逻辑；当前只保留 `attack4` fallback 视觉。
 
 ## 阿卡伊勒次元缝隙怪物外形错误记录
