@@ -464,14 +464,20 @@ def _parse_extended(
             for child in parse_property_list(reader, base_offset, sub, wz_image):
                 sub.add(child)
             return sub
-        # Convex
+        # Convex children are anonymous extended objects. They do not carry a
+        # property name or tag byte; each entry is just the extended type string
+        # followed by that type's payload.
         convex = WzConvexProperty(name, parent)
         count = reader.read_compressed_int()
-        for _ in range(count):
-            sub_name = reader.read_string_block(base_offset)
-            child = _parse_extended_or_basic(reader, base_offset, sub_name, convex, wz_image)
-            if isinstance(child, WzVectorProperty):
-                convex.points.append(child)
+        for idx in range(count):
+            child_type = reader.read_string_block(base_offset)
+            if child_type != "Shape2D#Vector2D":
+                raise ValueError(
+                    f"unsupported convex child type {child_type!r} at 0x{reader.position:X}"
+                )
+            x = reader.read_compressed_int()
+            y = reader.read_compressed_int()
+            convex.points.append(WzVectorProperty(str(idx), x, y, convex))
         return convex
 
     if ext_type == "Canvas":
