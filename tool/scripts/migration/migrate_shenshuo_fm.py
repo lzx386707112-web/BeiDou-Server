@@ -71,6 +71,13 @@ SOURCE_MAP = SRC / "Map/Map9/910000000.img"
 SOURCE_OBJ = SRC / "Obj/chewchewIsland.img"
 SOURCE_BACK = SRC / "Back/chewchewIsland.img"
 
+LIFE_GROUND_POSITIONS = {
+    "9030000": {"x": 83, "y": 23, "fh": 123, "rx0": 33, "rx1": 133},
+    "9030100": {"x": 288, "y": 23, "fh": 143, "rx0": 238, "rx1": 338},
+    "9250025": {"x": -71, "y": 23, "fh": 1, "rx0": -121, "rx1": -21},
+    "9000069": {"x": 97, "y": 23, "fh": 123, "rx0": 47, "rx1": 147},
+}
+
 
 class BuiltImage:
     def __init__(self, name: str, root: WzSubProperty):
@@ -165,6 +172,11 @@ def set_int(parent: WzSubProperty, name: str, value: int) -> None:
     parent.add(WzIntProperty(name, int(value), parent))
 
 
+def replace_int(parent: WzSubProperty, name: str, value: int) -> None:
+    remove_child(parent, name)
+    set_int(parent, name, value)
+
+
 def child(parent, name: str):
     return parent.child(name) if parent is not None and hasattr(parent, "child") else None
 
@@ -256,6 +268,20 @@ def sanitize_map(root: WzSubProperty, project_map: WzImage, report: dict) -> Non
         for life in project_life.children():
             source_life.add(clone_prop(life, source_life))
         report["life_nodes_preserved"] = len(source_life.children())
+        for life in source_life.children():
+            life_id = child(life, "id")
+            if not isinstance(life_id, WzStringProperty):
+                continue
+            position = LIFE_GROUND_POSITIONS.get(str(life_id.value))
+            if position is None:
+                continue
+            replace_int(life, "x", position["x"])
+            replace_int(life, "y", position["y"])
+            replace_int(life, "cy", position["y"])
+            replace_int(life, "fh", position["fh"])
+            replace_int(life, "rx0", position["rx0"])
+            replace_int(life, "rx1", position["rx1"])
+            report.setdefault("life_nodes_grounded", []).append(str(life_id.value))
 
 
 def encode_img(root: WzSubProperty, name: str) -> bytes:
