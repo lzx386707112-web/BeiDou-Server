@@ -14,6 +14,7 @@ import org.gms.exception.BizException;
 import org.gms.model.dto.ConfigTypeDTO;
 import org.gms.model.dto.GameConfigReqDTO;
 import org.gms.net.server.Server;
+import org.gms.net.server.task.TianmoZombieSpawnTask;
 import org.gms.property.ServiceProperty;
 import org.gms.util.DatabaseConnection;
 import org.gms.util.I18nUtil;
@@ -110,6 +111,7 @@ public class ConfigService {
         condition.setUpdateTime(new Date());
         gameConfigMapper.insertSelective(condition);
         GameConfig.add(condition);
+        refreshSpecialConfig(condition.getConfigCode());
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -144,12 +146,24 @@ public class ConfigService {
                 .build());
         gameConfigMapper.deleteById(id);
         GameConfig.remove(gameConfigDO);
+        refreshSpecialConfig(gameConfigDO.getConfigCode());
     }
 
     @Transactional(rollbackFor = Exception.class)
     public void deleteConfigList(List<Long> ids) {
         RequireUtil.requireNotEmpty(ids, I18nUtil.getExceptionMessage("PARAMETER_SHOULD_NOT_EMPTY", "ids"));
         ids.forEach(this::deleteConfig);
+    }
+
+    private void refreshSpecialConfig(String configCode) {
+        switch (configCode) {
+            case "tianmo_zombie_spawn_enabled":
+            case "tianmo_zombie_spawn_interval_minutes":
+                TianmoZombieSpawnTask.getInstance().reload();
+                break;
+            default:
+                break;
+        }
     }
 
     public int importYml(MultipartFile file) {

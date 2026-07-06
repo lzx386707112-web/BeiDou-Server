@@ -18,6 +18,7 @@ export default {
   'config.subType.Net': 'Net',
   'config.subType.Debug': 'Debug',
   'config.subType.GM': 'GM',
+  'config.subType.BossEvents': 'Boss Events',
 
   'config.clz.int': 'Integer',
   'config.clz.float': 'Decimal',

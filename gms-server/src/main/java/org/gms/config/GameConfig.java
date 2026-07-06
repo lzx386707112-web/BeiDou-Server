@@ -7,6 +7,7 @@ import com.alibaba.fastjson2.TypeReference;
 import org.gms.dao.entity.GameConfigDO;
 import org.gms.manager.ServerManager;
 import org.gms.net.server.Server;
+import org.gms.net.server.task.TianmoZombieSpawnTask;
 import org.gms.net.server.world.World;
 import org.gms.server.life.MonsterInformationProvider;
 import org.gms.service.ConfigService;
@@ -126,6 +127,10 @@ public class GameConfig {
         switch (gameConfigDO.getConfigCode()) {
             case "allow_steal_quest_item":
                 MonsterInformationProvider.getInstance().clearDrops();
+                break;
+            case "tianmo_zombie_spawn_enabled":
+            case "tianmo_zombie_spawn_interval_minutes":
+                TianmoZombieSpawnTask.getInstance().reload();
                 break;
         }
     }

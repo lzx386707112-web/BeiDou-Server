@@ -17,6 +17,7 @@ export default {
   'config.subType.Net': '网络',
   'config.subType.Debug': '调试',
   'config.subType.GM': 'GM',
+  'config.subType.BossEvents': 'Boss 事件',
 
   'config.clz.int': '整数',
   'config.clz.float': '小数',
