@@ -29,7 +29,6 @@ import org.gms.config.GameConfig;
 import org.gms.constants.skills.Brawler;
 import org.gms.constants.skills.Corsair;
 import org.gms.constants.skills.DarkKnight;
-import org.gms.constants.skills.Hero;
 import org.gms.constants.skills.Paladin;
 import org.gms.constants.skills.Priest;
 import org.gms.constants.skills.SuperGM;
@@ -93,7 +92,7 @@ public final class SpecialMoveHandler extends AbstractPacketHandler {
                 chr.addCooldown(skillid, currentServerTime(), SECONDS.toMillis(cooldownTime));
             }
         }
-        if (skillid == Hero.MONSTER_MAGNET || skillid == Paladin.MONSTER_MAGNET || skillid == DarkKnight.MONSTER_MAGNET) { // Monster Magnet
+        if (skillid == Paladin.MONSTER_MAGNET || skillid == DarkKnight.MONSTER_MAGNET) { // Monster Magnet
             int num = p.readInt();
             for (int i = 0; i < num; i++) {
                 int mobOid = p.readInt();

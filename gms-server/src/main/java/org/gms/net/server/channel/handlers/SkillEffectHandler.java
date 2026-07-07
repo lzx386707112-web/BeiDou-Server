@@ -32,7 +32,6 @@ import org.gms.constants.skills.Evan;
 import org.gms.constants.skills.FPArchMage;
 import org.gms.constants.skills.FPMage;
 import org.gms.constants.skills.Gunslinger;
-import org.gms.constants.skills.Hero;
 import org.gms.constants.skills.ILArchMage;
 import org.gms.constants.skills.Marksman;
 import org.gms.constants.skills.NightWalker;
@@ -71,7 +70,6 @@ public final class SkillEffectHandler extends AbstractPacketHandler {
             case ThunderBreaker.CORKSCREW_BLOW:
             case Paladin.MONSTER_MAGNET:
             case DarkKnight.MONSTER_MAGNET:
-            case Hero.MONSTER_MAGNET:
             case Evan.FIRE_BREATH:
             case Evan.ICE_BREATH:
                 c.getPlayer().getMap().broadcastMessage(c.getPlayer(), PacketCreator.skillEffect(c.getPlayer(), skillId, level, flags, speed, aids), false);

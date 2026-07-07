@@ -1003,6 +1003,341 @@ root
 6. 服务端目录下 wz/Skill.wz/232.img.xml 和 wz/String.wz/Skill.img.xml 是否也是新文件。
 ```
 
+## 实战记录：1121001 磁石改造成轻舞飞扬式攻击
+
+这次目标不是新增一个空白技能，而是复用英雄 4 转已有技能位：
+
+```text
+原技能：1121001，英雄 Monster Magnet / 磁石
+目标：改造成轻舞飞扬式近战攻击
+显示名：测试
+行为参考：1121008，轻舞飞扬 / Brandish
+最终验证：技能面板可见，双击/按键可释放，有技能动作、攻击表现和伤害
+```
+
+### 最终结论
+
+这次真正的问题不在 WZ 数据层，而在 `BeiDou.exe` 的技能分派逻辑。
+
+```text
+1. 只把 1121001 的 WZ 节点复制成 1121008，不够。
+   客户端技能面板可以显示，但释放时仍可能按原磁石逻辑走。
+
+2. 只把 1121001 从磁石 hardcode 中移除，也不够。
+   这一步只能阻止它继续被当成 Monster Magnet，
+   但不会自动让它进入 Brandish / 轻舞飞扬分支。
+
+3. 必须把 1121001 追加进 1121008 已验证可用的 exe 分支。
+   不能把 1121008 替换成 1121001，否则原轻舞飞扬会坏。
+   正确做法是 code cave 追加判断：
+   if skill == 1121001 or skill == 1121008 -> 走同一个分支。
+```
+
+### 数据层改造
+
+客户端技能数据：
+
+```text
+clien/Data/Skill/112.img
+```
+
+把 `skill/1121001` 克隆为 `skill/1121008` 的结构，最终关键节点一致：
+
+```text
+children:
+  action
+  effect
+  hit
+  icon
+  iconDisabled
+  iconMouseOver
+  level
+  masterLevel
+
+action:
+  0 = brandish1
+  1 = brandish2
+
+level/30:
+  attackCount = 2
+  damage = 280
+  lt = (-250, -110)
+  mobCount = 4
+  mpCon = 25
+  rb = (100, 50)
+
+masterLevel = 10
+```
+
+客户端 String：
+
+```text
+clien/Data/String/Skill.img
+```
+
+把 `1121001` 改成：
+
+```text
+name = 测试
+desc = 连续攻击2次前面的敌人。
+h30 = 消耗MP 25 , 伤害 280%, 4名攻击
+```
+
+服务端 XML 同步：
+
+```text
+gms-server/wz/Skill.wz/112.img.xml
+gms-server/wz/String.wz/Skill.img.xml
+gms-server/wz-zh-CN/String.wz/Skill.img.xml
+```
+
+服务端 XML 也要确保 `1121001` 和 `1121008` 的攻击参数一致，否则客户端能释放，
+服务端也可能因为 `mobCount/attackCount/lt/rb` 不一致而校验失败。
+
+### 服务端逻辑改造
+
+原来服务端多处把 `Hero.MONSTER_MAGNET` 当成磁石特殊技能处理。
+既然 `1121001` 已经被改成普通近战攻击，就要从这些磁石分支移除：
+
+```text
+gms-server/src/main/java/org/gms/client/SkillFactory.java
+gms-server/src/main/java/org/gms/net/server/channel/handlers/SpecialMoveHandler.java
+gms-server/src/main/java/org/gms/net/server/channel/handlers/SkillEffectHandler.java
+```
+
+最终状态：
+
+```text
+SkillFactory:
+  Monster Magnet 相关 hardcode 只保留 Paladin / DarkKnight。
+
+SpecialMoveHandler:
+  Monster Magnet 特殊处理只保留 1221001 / 1321001。
+
+SkillEffectHandler:
+  1121001 不再作为 SKILL_EFFECT 特殊技能处理。
+  如果测试时仍出现 entered SkillEffectHandler without being handled using 1121001，
+  说明客户端还没有走近战攻击包。
+```
+
+近战攻击服务端校验中，把 1121001 加到 Brandish 同类距离余量：
+
+```java
+attack.skill == Hero.BRANDISH || attack.skill == Hero.MONSTER_MAGNET
+```
+
+注意：这里仍然沿用常量名 `Hero.MONSTER_MAGNET`，因为常量文件里 ID 名称未改。
+语义上它现在代表被改造后的 `1121001` 测试技能。
+
+### exe 编码检查
+
+技能 ID 在 `BeiDou.exe` 中通常是 32 位小端整数：
+
+```text
+1121001 = 0x111ae9 = e9 1a 11 00
+1121008 = 0x111af0 = f0 1a 11 00
+1121099 = 0x111b4b = 4b 1b 11 00
+1221001 = 0x12a189
+1321001 = 0x142829
+```
+
+扫描命令：
+
+```bash
+rtk node -e 'const fs=require("fs"); const b=fs.readFileSync("clien/BeiDou.exe"); for(const id of [1121001,1121008,1121099,1221001,1321001]){const p=Buffer.alloc(4); p.writeUInt32LE(id>>>0,0); const a=[]; for(let i=0;(i=b.indexOf(p,i))>=0;i++) a.push(i); console.log(id,a.length,a.map(x=>"0x"+x.toString(16)).join(" "));}'
+```
+
+修复前的关键现象：
+
+```text
+1121001 原本只出现在磁石三职业硬编码附近。
+1121008 另外有 5 个 Brandish / 轻舞飞扬分支。
+把 1121001 改成 1121099 后，1121001 在 exe 里为 0 次。
+这说明它不再是磁石，但也没有被加入轻舞飞扬逻辑。
+```
+
+这就是“数据像轻舞飞扬，但逻辑不像轻舞飞扬”的根因。
+
+### exe 第一阶段：移除英雄磁石分支
+
+脚本：
+
+```text
+tool/scripts/patch-client/patch_1121001_not_magnet.py
+```
+
+作用：
+
+```text
+把 Hero 1121001 的 14 个 Monster Magnet 判断改成 1121099。
+Paladin 1221001 和 DarkKnight 1321001 保持不变。
+```
+
+这样做的目的不是让 1121001 变成攻击技能，而是先让客户端不要再把它当成磁石。
+
+验证结果应该类似：
+
+```text
+1121001 LE 0
+1121099 LE 14
+1221001 LE 13/14，保持存在
+1321001 LE 13/14，保持存在
+```
+
+### exe 第二阶段：追加进 Brandish 分支
+
+脚本：
+
+```text
+tool/scripts/patch-client/patch_1121001_as_brandish.py
+```
+
+作用：
+
+```text
+把 1121001 追加到 1121008 的 5 个客户端分支。
+保留 1121008 原逻辑，不替换原技能。
+```
+
+本次识别到的 1121008 分支：
+
+```text
+0x933ABF  Brandish skill branch
+0x950DE5  Brandish action type
+0x95255A  Brandish visual offset
+0x967A10  Brandish state switch
+0x78E9D6  Brandish hit randomization
+```
+
+补丁使用 code cave：
+
+```text
+code cave VA     = 0x00AEFB00
+code cave offset = 0x006EFB00
+```
+
+避开已有 cave：
+
+```text
+0x00AEF602  2121006 AoE hook 使用
+0x00AEFA20  WzFileLogger startup hook 使用
+```
+
+补丁逻辑示例：
+
+```asm
+cmp esi, 1121001
+je  brandish_target
+cmp esi, 1121008
+je  brandish_target
+jmp original_continue
+```
+
+其中 `0x967A10` 这一处要特别注意：
+
+```text
+原逻辑里有跨较远地址的 jg。
+不能用 2 字节 short jg，否则跳转距离装不下，会跳到错误位置。
+脚本必须使用 6 字节 near jg：0F 8F rel32。
+```
+
+这个坑已经踩过一次。反汇编正确结果应看到：
+
+```asm
+aefb66: 0f 8f 08 7f e7 ff    jg 0x967a74
+```
+
+### exe 补丁验证
+
+执行 dry-run：
+
+```bash
+rtk python3 tool/scripts/patch-client/patch_1121001_as_brandish.py --dry-run
+```
+
+已补好时输出：
+
+```text
+BeiDou.exe already routes 1121001 through Brandish logic.
+```
+
+扫描 ID：
+
+```text
+1121001 5  只出现在新 code cave 里
+1121008 5  同样在新 code cave 里保留
+1121099 14 原英雄磁石分支哨兵
+```
+
+反汇编关键位置：
+
+```bash
+rtk objdump -d --triple=i386-pc-windows-msvc --x86-asm-syntax=intel \
+  --start-address=0xaefb00 --stop-address=0xaefbb8 clien/BeiDou.exe
+```
+
+应能看到 `0x111ae9` 和 `0x111af0` 都跳向同一个 Brandish 目标。
+
+### 成功前后的症状对照
+
+失败阶段 1：技能面板不显示。
+
+```text
+优先查 WZ/String/服务端 skills 数据库。
+本次后来已确认面板显示不是核心问题。
+```
+
+失败阶段 2：面板显示，双击只走两步，没有攻击和特效。
+
+```text
+服务端日志出现：
+entered SkillEffectHandler without being handled using 1121001
+
+含义：
+客户端发的是 SKILL_EFFECT，不是 CLOSE_RANGE_ATTACK。
+这说明它仍然不在普通近战攻击释放路径里。
+服务端无法从 SKILL_EFFECT 包里得到目标和伤害列表。
+```
+
+失败阶段 3：服务端兜底能进，但 targets=0。
+
+```text
+这只能证明服务端收到 1121001 了，不代表客户端逻辑正确。
+服务端伪造伤害可以临时验证，但不应该作为最终方案。
+最终要让 exe 发 CLOSE_RANGE_ATTACK。
+```
+
+最终成功判断：
+
+```text
+1. 不再出现 SkillEffectHandler 未处理 1121001。
+2. 客户端释放时有 brandish1/brandish2 动作。
+3. 客户端上报近战攻击包。
+4. 服务端 CloseRangeDamageHandler 正常 applyAttack。
+5. 怪物出现 hit/伤害/扣血。
+```
+
+### 这次最重要的经验
+
+```text
+1. WZ 决定技能长什么样、参数是什么；exe 决定客户端把技能当成什么类型释放。
+
+2. 把磁石数据改成攻击技能，只解决数据层，不会自动改变 exe 中的技能类型。
+
+3. 解除旧类型和接入新类型是两件事：
+   - 1121001_not_magnet：解除 Monster Magnet。
+   - 1121001_as_brandish：接入 Brandish。
+
+4. 服务端兜底可以帮助定位包流向，但最终要删除或停用。
+   否则会掩盖 exe 是否真的发了正确攻击包。
+
+5. 修改 exe 时必须保留旧技能。
+   1121008 仍然要能用，所以只能追加 1121001 判断，不能直接替换 1121008。
+
+6. 每一个 hook 都要 dry-run、检查原始字节、反汇编验证跳转目标。
+   特别是 short jump 和 near jump 的区别，不能靠感觉。
+```
+
 ## 踩坑清单
 
 这次比较值得记住的坑：

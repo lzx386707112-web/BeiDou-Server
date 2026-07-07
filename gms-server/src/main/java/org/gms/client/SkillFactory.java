@@ -166,7 +166,6 @@ public class SkillFactory {
                 case Bandit.STEAL:
                 case Shadower.SMOKE_SCREEN:
                 case SuperGM.HEAL_PLUS_DISPEL:
-                case Hero.MONSTER_MAGNET:
                 case Paladin.MONSTER_MAGNET:
                 case DarkKnight.MONSTER_MAGNET:
                 case Evan.ICE_BREATH:

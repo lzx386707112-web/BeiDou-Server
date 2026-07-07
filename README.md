@@ -30,3 +30,4 @@ rtk tool/scripts/wz/wzpy.sh
 ## 排障经验
 
 - 迁移地图、怪物、Boss 后出现黑屏、崩溃或怪物外形不对时，先看 [095 内容迁移手册](docs/migrations/095-migration.md)。其中记录了地图资源审计、召唤 Boss 后崩溃、Boss 血条 UI、MobSkill、阿卡伊勒 `8860000` 兼容修复，以及 `9300301/9300302/9300304` 占位怪资源替换等经验。
+- 新增或改造技能时，先看 [新增技能与 BeiDou.exe 识别记录](docs/patches/new-skills-exe-notes.md)。其中记录了龙神技能、矩形 AoE、以及 `1121001` 磁石改造成轻舞飞扬式攻击的完整排查过程：WZ 数据、服务端技能类型、EXE 小端编码、code cave 追加判断、以及为什么“解除旧类型”和“接入新类型”是两件事。
