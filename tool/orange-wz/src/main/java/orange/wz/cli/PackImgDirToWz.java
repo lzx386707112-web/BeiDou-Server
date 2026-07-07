@@ -25,15 +25,15 @@ public final class PackImgDirToWz {
 
         WzFolder folder = new WzFolder(
                 config.input.toString(),
-                "GMS",
-                WzAESConstant.WZ_GMS_IV,
+                config.region.keyBoxName,
+                config.region.iv,
                 WzAESConstant.DEFAULT_KEY
         );
         WzFile wzFile = WzFile.createNewFile(
                 config.output.toString(),
                 config.version,
-                "GMS",
-                WzAESConstant.WZ_GMS_IV,
+                config.region.keyBoxName,
+                config.region.iv,
                 WzAESConstant.DEFAULT_KEY
         );
 
@@ -50,11 +50,12 @@ public final class PackImgDirToWz {
         }
 
         System.out.printf(Locale.ROOT,
-                "已打包 %d 个 .img，%d 个目录 -> %s (version=%d)%n",
+                "已打包 %d 个 .img，%d 个目录 -> %s (version=%d, region=%s)%n",
                 counter.images,
                 counter.directories,
                 config.output,
-                (int) config.version);
+                (int) config.version,
+                config.region.optionName);
     }
 
     private static long countImgFiles(Path input) throws Exception {
@@ -112,11 +113,38 @@ public final class PackImgDirToWz {
         }
     }
 
-    private record Config(Path input, Path output, short version) {
+    private enum Region {
+        GMS("gms", "GMS", WzAESConstant.WZ_GMS_IV),
+        CMS("cms", "CMS", WzAESConstant.WZ_CMS_IV),
+        LATEST("latest", "LATEST", WzAESConstant.WZ_LATEST_IV),
+        EMPTY("empty", "EMPTY", WzAESConstant.WZ_EMPTY_IV);
+
+        final String optionName;
+        final String keyBoxName;
+        final byte[] iv;
+
+        Region(String optionName, String keyBoxName, byte[] iv) {
+            this.optionName = optionName;
+            this.keyBoxName = keyBoxName;
+            this.iv = iv;
+        }
+
+        static Region parse(String value) {
+            for (Region region : values()) {
+                if (region.optionName.equalsIgnoreCase(value)) {
+                    return region;
+                }
+            }
+            throw new IllegalArgumentException("未知 region: " + value + "，可选: gms, cms, latest, empty");
+        }
+    }
+
+    private record Config(Path input, Path output, short version, Region region) {
         static Config parse(String[] args) {
             Path input = null;
             Path output = null;
             short version = 83;
+            Region region = Region.GMS;
 
             for (int i = 0; i < args.length; i++) {
                 String arg = args[i];
@@ -124,6 +152,7 @@ public final class PackImgDirToWz {
                     case "--input", "-i" -> input = Path.of(requireValue(args, ++i, arg)).toAbsolutePath().normalize();
                     case "--output", "-o" -> output = Path.of(requireValue(args, ++i, arg)).toAbsolutePath().normalize();
                     case "--version" -> version = Short.parseShort(requireValue(args, ++i, arg));
+                    case "--region" -> region = Region.parse(requireValue(args, ++i, arg));
                     case "--help", "-h" -> {
                         usage();
                         System.exit(0);
@@ -139,7 +168,7 @@ public final class PackImgDirToWz {
             if (!Files.isDirectory(input)) {
                 throw new IllegalArgumentException("输入必须是客户端 .img 目录: " + input);
             }
-            return new Config(input, output, version);
+            return new Config(input, output, version, region);
         }
 
         private static String requireValue(String[] args, int index, String option) {
@@ -158,6 +187,7 @@ public final class PackImgDirToWz {
                       -i, --input    客户端 Data 下包含 .img 的目录，例如 clien/Data/Character
                       -o, --output   输出 .wz 文件
                       --version      WZ 版本，默认 83
+                      --region       WZ 编码/IV: gms, cms, latest, empty，默认 gms
                     """);
         }
     }

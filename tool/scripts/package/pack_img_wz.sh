@@ -16,6 +16,7 @@ usage() {
 用法:
   rtk tool/scripts/package/pack_img_wz.sh
   rtk tool/scripts/package/pack_img_wz.sh --input clien/Data/Character --output "$HOME/Downloads/Character.wz" --version 83
+  rtk tool/scripts/package/pack_img_wz.sh --input "/Users/lizixian/Documents/mxd/神说/Data/Character" --output "$HOME/Downloads/Character.wz" --version <实际WZ版本> --region cms
   rtk tool/scripts/package/pack_img_wz.sh -i clien/Data/Character -o "$HOME/Downloads/Character.wz"
 
 不带参数会进入交互式操作。
@@ -24,6 +25,7 @@ usage() {
   JAVA_HOME_21       自动检测失败时，手动指定 JDK 21 路径
   ORZ_REPACKER_HOME  OrzRepacker 目录，默认:
                      /Users/lizixian/Documents/mxd/OrzRepacker-v1.157.48
+  --region           WZ 编码/IV: gms, cms, latest, empty，默认 gms
   PACK_IMG_WZ_JAVA_OPTS
                      打包进程 JVM 参数，默认:
                      -Xms512m -Xmx8g -XX:+UseG1GC

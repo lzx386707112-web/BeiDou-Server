@@ -1,0 +1,312 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<imgdir indent="2" media="NONE" name="obj_login.img">
+  <imgdir name="Common">
+    <imgdir name="frame">
+      <imgdir name="0">
+        <canvas format="1" height="1" name="0" scale="0" width="1">
+          <vector name="origin" x="400" y="300"/>
+          <int name="z" value="0"/>
+          <string name="_outlink" value="Map/Obj/_Canvas/obj_login.img/Common/frame/0/0"/>
+        </canvas>
+      </imgdir>
+      <imgdir name="1">
+        <canvas format="1" height="1" name="0" scale="0" width="1">
+          <vector name="origin" x="28" y="4"/>
+          <int name="z" value="0"/>
+          <string name="_outlink" value="Map/Obj/_Canvas/obj_login.img/Common/frame/1/0"/>
+        </canvas>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="Title">
+    <imgdir name="signboard">
+      <imgdir name="0">
+        <canvas format="1" height="1" name="0" scale="0" width="1">
+          <vector name="origin" x="246" y="156"/>
+          <int name="z" value="0"/>
+          <string name="_outlink" value="Map/Obj/_Canvas/obj_login.img/Title/signboard/0/0"/>
+        </canvas>
+      </imgdir>
+    </imgdir>
+    <imgdir name="logo">
+      <imgdir name="0">
+        <canvas format="1" height="1" name="0" scale="0" width="1">
+          <vector name="origin" x="198" y="109"/>
+          <int name="z" value="0"/>
+          <int name="a0" value="0"/>
+          <int name="a1" value="255"/>
+          <int name="delay" value="8000"/>
+          <string name="_outlink" value="Map/Obj/_Canvas/obj_login.img/Title/logo/0/0"/>
+        </canvas>
+        <canvas format="1" height="1" name="1" scale="0" width="1">
+          <vector name="origin" x="198" y="109"/>
+          <int name="z" value="0"/>
+          <int name="a0" value="255"/>
+          <string name="_outlink" value="Map/Obj/_Canvas/obj_login.img/Title/logo/0/0"/>
+        </canvas>
+        <int name="repeat" value="-1"/>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="WorldSelect">
+    <imgdir name="signboard">
+      <imgdir name="0">
+        <canvas format="1" height="1" name="0" scale="0" width="1">
+          <vector name="origin" x="337" y="83"/>
+          <string name="_outlink" value="Map/Obj/_Canvas/obj_login.img/WorldSelect/signboard/0/0"/>
+        </canvas>
+      </imgdir>
+      <imgdir name="1">
+        <canvas format="1" height="1" name="0" scale="0" width="1">
+          <vector name="origin" x="197" y="73"/>
+          <string name="_outlink" value="Map/Obj/_Canvas/obj_login.img/WorldSelect/signboard/1/0"/>
+        </canvas>
+      </imgdir>
+      <imgdir name="2">
+        <canvas format="1" height="1" name="0" scale="0" width="1">
+          <vector name="origin" x="256" y="76"/>
+          <int name="z" value="0"/>
+          <string name="_outlink" value="Map/Obj/_Canvas/obj_login.img/WorldSelect/signboard/2/0"/>
+        </canvas>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="CharSelect">
+    <imgdir name="signboard">
+      <imgdir name="0">
+        <canvas format="1" height="1" name="0" scale="0" width="1">
+          <vector name="origin" x="85" y="136"/>
+          <int name="z" value="0"/>
+          <string name="_outlink" value="Map/Obj/_Canvas/obj_login.img/CharSelect/signboard/0/0"/>
+        </canvas>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="NewChar">
+    <imgdir name="signboard">
+      <imgdir name="0">
+        <canvas format="1" height="1" name="0" scale="0" width="1">
+          <vector name="origin" x="128" y="212"/>
+          <int name="z" value="0"/>
+          <string name="_outlink" value="Map/Obj/_Canvas/obj_login.img/NewChar/signboard/0/0"/>
+        </canvas>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="temp">
+    <imgdir name="effect">
+      <imgdir name="0">
+        <canvas format="1" height="1" name="0" scale="0" width="1">
+          <vector name="origin" x="24" y="-205"/>
+          <int name="z" value="0"/>
+          <int name="delay" value="300"/>
+          <int name="a0" value="0"/>
+          <string name="_outlink" value="Map/Obj/_Canvas/obj_login.img/temp/effect/0/0"/>
+        </canvas>
+        <canvas format="1" height="1" name="1" scale="0" width="1">
+          <vector name="origin" x="24" y="-191"/>
+          <int name="z" value="0"/>
+          <int name="delay" value="120"/>
+          <int name="a0" value="255"/>
+          <string name="_outlink" value="Map/Obj/_Canvas/obj_login.img/temp/effect/0/0"/>
+        </canvas>
+        <canvas format="1" height="1" name="2" scale="0" width="1">
+          <vector name="origin" x="24" y="-175"/>
+          <int name="z" value="0"/>
+          <int name="delay" value="120"/>
+          <string name="_outlink" value="Map/Obj/_Canvas/obj_login.img/temp/effect/0/2"/>
+        </canvas>
+        <canvas format="1" height="1" name="3" scale="0" width="1">
+          <vector name="origin" x="24" y="-157"/>
+          <int name="z" value="0"/>
+          <int name="delay" value="120"/>
+          <string name="_outlink" value="Map/Obj/_Canvas/obj_login.img/temp/effect/0/3"/>
+        </canvas>
+        <canvas format="1" height="1" name="4" scale="0" width="1">
+          <vector name="origin" x="22" y="-146"/>
+          <int name="z" value="0"/>
+          <int name="delay" value="120"/>
+          <string name="_outlink" value="Map/Obj/_Canvas/obj_login.img/temp/effect/0/4"/>
+        </canvas>
+        <canvas format="1" height="1" name="5" scale="0" width="1">
+          <vector name="origin" x="24" y="-132"/>
+          <int name="z" value="0"/>
+          <int name="a0" value="255"/>
+          <int name="a1" value="0"/>
+          <int name="delay" value="0"/>
+          <string name="_outlink" value="Map/Obj/_Canvas/obj_login.img/temp/effect/0/5"/>
+        </canvas>
+      </imgdir>
+      <imgdir name="1">
+        <canvas format="1" height="1" name="0" scale="0" width="1">
+          <vector name="origin" x="0" y="0"/>
+          <int name="z" value="0"/>
+          <int name="delay" value="150"/>
+          <string name="_outlink" value="Map/Obj/_Canvas/obj_login.img/temp/effect/1/0"/>
+        </canvas>
+        <canvas format="1" height="1" name="1" scale="0" width="1">
+          <vector name="origin" x="6" y="0"/>
+          <int name="z" value="0"/>
+          <int name="delay" value="100"/>
+          <string name="_outlink" value="Map/Obj/_Canvas/obj_login.img/temp/effect/1/1"/>
+        </canvas>
+        <canvas format="1" height="1" name="2" scale="0" width="1">
+          <vector name="origin" x="22" y="0"/>
+          <int name="z" value="0"/>
+          <int name="delay" value="100"/>
+          <string name="_outlink" value="Map/Obj/_Canvas/obj_login.img/temp/effect/1/2"/>
+        </canvas>
+        <canvas format="1" height="1" name="3" scale="0" width="1">
+          <vector name="origin" x="28" y="0"/>
+          <int name="z" value="0"/>
+          <int name="delay" value="100"/>
+          <string name="_outlink" value="Map/Obj/_Canvas/obj_login.img/temp/effect/1/3"/>
+        </canvas>
+        <canvas format="1" height="1" name="4" scale="0" width="1">
+          <vector name="origin" x="36" y="0"/>
+          <int name="z" value="0"/>
+          <int name="delay" value="6000"/>
+          <string name="_outlink" value="Map/Obj/_Canvas/obj_login.img/temp/effect/1/4"/>
+        </canvas>
+      </imgdir>
+    </imgdir>
+    <imgdir name="effect2">
+      <imgdir name="0">
+        <canvas format="1" height="1" name="0" scale="0" width="1">
+          <vector name="origin" x="0" y="0"/>
+          <int name="z" value="0"/>
+          <int name="a0" value="0"/>
+          <int name="a1" value="255"/>
+          <int name="delay" value="1500"/>
+          <string name="_outlink" value="Map/Obj/_Canvas/obj_login.img/temp/effect2/0/0"/>
+        </canvas>
+        <canvas format="1" height="1" name="1" scale="0" width="1">
+          <vector name="origin" x="0" y="0"/>
+          <int name="z" value="0"/>
+          <int name="a0" value="255"/>
+          <int name="a1" value="0"/>
+          <int name="delay" value="1500"/>
+          <string name="_outlink" value="Map/Obj/_Canvas/obj_login.img/temp/effect2/0/0"/>
+        </canvas>
+        <canvas format="1" height="1" name="2" scale="0" width="1">
+          <vector name="origin" x="0" y="0"/>
+          <int name="z" value="0"/>
+          <int name="a0" value="0"/>
+          <int name="delay" value="1000"/>
+          <string name="_outlink" value="Map/Obj/_Canvas/obj_login.img/temp/effect2/0/0"/>
+        </canvas>
+      </imgdir>
+      <imgdir name="1">
+        <canvas format="1" height="1" name="0" scale="0" width="1">
+          <vector name="origin" x="152" y="37"/>
+          <int name="z" value="0"/>
+          <int name="a0" value="10"/>
+          <int name="a1" value="255"/>
+          <int name="delay" value="2500"/>
+          <string name="_outlink" value="Map/Obj/_Canvas/obj_login.img/temp/effect2/1/0"/>
+        </canvas>
+        <canvas format="1" height="1" name="1" scale="0" width="1">
+          <vector name="origin" x="152" y="37"/>
+          <int name="z" value="0"/>
+          <int name="a0" value="255"/>
+          <int name="a1" value="10"/>
+          <int name="delay" value="2500"/>
+          <string name="_outlink" value="Map/Obj/_Canvas/obj_login.img/temp/effect2/1/0"/>
+        </canvas>
+      </imgdir>
+      <imgdir name="2">
+        <canvas format="1" height="1" name="0" scale="0" width="1">
+          <vector name="origin" x="187" y="29"/>
+          <int name="z" value="0"/>
+          <int name="a0" value="0"/>
+          <int name="a1" value="255"/>
+          <int name="delay" value="1700"/>
+          <string name="_outlink" value="Map/Obj/_Canvas/obj_login.img/temp/effect2/2/0"/>
+        </canvas>
+        <canvas format="1" height="1" name="1" scale="0" width="1">
+          <vector name="origin" x="187" y="29"/>
+          <int name="z" value="0"/>
+          <int name="a0" value="255"/>
+          <int name="a1" value="0"/>
+          <int name="delay" value="1700"/>
+          <string name="_outlink" value="Map/Obj/_Canvas/obj_login.img/temp/effect2/2/0"/>
+        </canvas>
+        <canvas format="1" height="1" name="2" scale="0" width="1">
+          <vector name="origin" x="187" y="29"/>
+          <int name="z" value="0"/>
+          <int name="a0" value="0"/>
+          <int name="delay" value="1700"/>
+          <string name="_outlink" value="Map/Obj/_Canvas/obj_login.img/temp/effect2/2/0"/>
+        </canvas>
+      </imgdir>
+      <imgdir name="3">
+        <canvas format="1" height="1" name="0" scale="0" width="1">
+          <vector name="origin" x="9" y="14"/>
+          <int name="z" value="0"/>
+          <int name="a0" value="10"/>
+          <int name="a1" value="255"/>
+          <int name="delay" value="3000"/>
+          <string name="_outlink" value="Map/Obj/_Canvas/obj_login.img/temp/effect2/3/0"/>
+        </canvas>
+        <canvas format="1" height="1" name="1" scale="0" width="1">
+          <vector name="origin" x="9" y="14"/>
+          <int name="z" value="0"/>
+          <int name="a0" value="255"/>
+          <int name="a1" value="10"/>
+          <int name="delay" value="3000"/>
+          <string name="_outlink" value="Map/Obj/_Canvas/obj_login.img/temp/effect2/3/0"/>
+        </canvas>
+      </imgdir>
+      <imgdir name="4">
+        <canvas format="1" height="1" name="0" scale="0" width="1">
+          <vector name="origin" x="147" y="26"/>
+          <int name="z" value="0"/>
+          <int name="a0" value="10"/>
+          <int name="a1" value="255"/>
+          <int name="delay" value="2800"/>
+          <string name="_outlink" value="Map/Obj/_Canvas/obj_login.img/temp/effect2/4/0"/>
+        </canvas>
+        <canvas format="1" height="1" name="1" scale="0" width="1">
+          <vector name="origin" x="147" y="26"/>
+          <int name="z" value="0"/>
+          <int name="a0" value="255"/>
+          <int name="a1" value="10"/>
+          <int name="delay" value="2800"/>
+          <string name="_outlink" value="Map/Obj/_Canvas/obj_login.img/temp/effect2/4/0"/>
+        </canvas>
+      </imgdir>
+      <imgdir name="5">
+        <canvas format="1" height="1" name="0" scale="0" width="1">
+          <vector name="origin" x="116" y="35"/>
+          <int name="z" value="0"/>
+          <int name="a0" value="0"/>
+          <int name="a1" value="255"/>
+          <int name="delay" value="1000"/>
+          <string name="_outlink" value="Map/Obj/_Canvas/obj_login.img/temp/effect2/5/0"/>
+        </canvas>
+        <canvas format="1" height="1" name="1" scale="0" width="1">
+          <vector name="origin" x="116" y="35"/>
+          <int name="z" value="0"/>
+          <int name="a0" value="255"/>
+          <int name="a1" value="0"/>
+          <int name="delay" value="1000"/>
+          <string name="_outlink" value="Map/Obj/_Canvas/obj_login.img/temp/effect2/5/0"/>
+        </canvas>
+        <canvas format="1" height="1" name="2" scale="0" width="1">
+          <vector name="origin" x="116" y="35"/>
+          <int name="z" value="0"/>
+          <int name="a0" value="0"/>
+          <int name="delay" value="2500"/>
+          <string name="_outlink" value="Map/Obj/_Canvas/obj_login.img/temp/effect2/5/0"/>
+        </canvas>
+      </imgdir>
+    </imgdir>
+    <imgdir name="temp">
+      <canvas format="1" height="1" name="0" scale="0" width="1">
+        <vector name="origin" x="606" y="2"/>
+        <int name="z" value="-1"/>
+        <string name="_outlink" value="Map/Obj/_Canvas/obj_login.img/temp/temp/0"/>
+      </canvas>
+    </imgdir>
+  </imgdir>
+</imgdir>

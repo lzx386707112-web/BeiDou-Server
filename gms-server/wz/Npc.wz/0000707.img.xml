@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<imgdir indent="2" media="NONE" name="0000707.img">
+  <imgdir name="info">
+    <imgdir name="script">
+      <imgdir name="0">
+        <string name="script" value="nyroth_707"/>
+      </imgdir>
+    </imgdir>
+    <imgdir name="speak">
+      <string name="0" value="s0"/>
+      <string name="1" value="s1"/>
+    </imgdir>
+  </imgdir>
+  <imgdir name="stand">
+    <canvas format="1" height="78" name="0" scale="0" width="60">
+      <vector name="origin" x="26" y="80"/>
+      <int name="z" value="0"/>
+      <string name="_outlink" value="Npc/_Canvas/0000707.img/stand/0"/>
+    </canvas>
+  </imgdir>
+  <imgdir name="say">
+    <canvas format="1" height="78" name="0" scale="0" width="60">
+      <vector name="origin" x="26" y="80"/>
+      <int name="z" value="0"/>
+      <string name="_outlink" value="Npc/_Canvas/0000707.img/stand/0"/>
+    </canvas>
+    <canvas format="1" height="78" name="1" scale="0" width="60">
+      <vector name="origin" x="26" y="80"/>
+      <int name="z" value="0"/>
+      <string name="_outlink" value="Npc/_Canvas/0000707.img/say/1"/>
+    </canvas>
+  </imgdir>
+  <imgdir name="eye">
+    <canvas format="1" height="78" name="0" scale="0" width="60">
+      <vector name="origin" x="26" y="80"/>
+      <int name="z" value="0"/>
+      <string name="_outlink" value="Npc/_Canvas/0000707.img/stand/0"/>
+    </canvas>
+    <canvas format="1" height="78" name="1" scale="0" width="60">
+      <vector name="origin" x="26" y="80"/>
+      <int name="z" value="0"/>
+      <string name="_outlink" value="Npc/_Canvas/0000707.img/eye/1"/>
+    </canvas>
+    <canvas format="1" height="78" name="2" scale="0" width="60">
+      <vector name="origin" x="26" y="80"/>
+      <int name="z" value="0"/>
+      <string name="_outlink" value="Npc/_Canvas/0000707.img/eye/2"/>
+    </canvas>
+    <canvas format="1" height="78" name="3" scale="0" width="60">
+      <vector name="origin" x="26" y="80"/>
+      <int name="z" value="0"/>
+      <string name="_outlink" value="Npc/_Canvas/0000707.img/stand/0"/>
+    </canvas>
+  </imgdir>
+</imgdir>

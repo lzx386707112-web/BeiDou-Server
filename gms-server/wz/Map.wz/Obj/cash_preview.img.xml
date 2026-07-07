@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<imgdir indent="2" media="NONE" name="cash_preview.img">
+  <imgdir name="foothold">
+    <imgdir name="vertical">
+      <imgdir name="0">
+        <canvas format="1" height="1" name="0" scale="0" width="1">
+          <vector name="origin" x="0" y="0"/>
+          <int name="z" value="0"/>
+          <extended name="ladder">
+            <vector name="ladder" x="0" y="2"/>
+          </extended>
+        </canvas>
+      </imgdir>
+    </imgdir>
+    <imgdir name="across">
+      <imgdir name="0">
+        <canvas format="1" height="1" name="0" scale="0" width="1">
+          <vector name="origin" x="0" y="0"/>
+          <int name="z" value="0"/>
+          <extended name="foothold">
+            <vector name="foothold" x="2" y="0"/>
+          </extended>
+        </canvas>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="Auctionfoothold">
+    <imgdir name="ladder">
+      <imgdir name="0">
+        <canvas format="1" height="1" name="0" scale="0" width="1">
+          <vector name="origin" x="0" y="0"/>
+          <int name="z" value="0"/>
+          <extended name="ladder">
+            <vector name="ladder" x="0" y="0"/>
+          </extended>
+        </canvas>
+      </imgdir>
+    </imgdir>
+    <imgdir name="foothold">
+      <imgdir name="0">
+        <canvas format="1" height="1" name="0" scale="0" width="1">
+          <vector name="origin" x="0" y="0"/>
+          <int name="z" value="0"/>
+          <extended name="foothold">
+            <vector name="foothold" x="0" y="0"/>
+          </extended>
+        </canvas>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+</imgdir>

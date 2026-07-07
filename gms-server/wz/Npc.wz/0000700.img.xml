@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<imgdir indent="2" media="NONE" name="0000700.img">
+  <imgdir name="info"/>
+  <imgdir name="stand">
+    <canvas format="1" height="71" name="0" scale="0" width="66">
+      <vector name="origin" x="27" y="73"/>
+      <int name="z" value="0"/>
+      <string name="_outlink" value="Npc/_Canvas/0000700.img/stand/0"/>
+    </canvas>
+  </imgdir>
+  <imgdir name="eye">
+    <canvas format="1" height="71" name="0" scale="0" width="66">
+      <vector name="origin" x="27" y="73"/>
+      <int name="delay" value="1000"/>
+      <string name="_outlink" value="Npc/_Canvas/0000700.img/stand/0"/>
+    </canvas>
+    <canvas format="1" height="71" name="1" scale="0" width="66">
+      <vector name="origin" x="27" y="73"/>
+      <int name="delay" value="100"/>
+      <string name="_outlink" value="Npc/_Canvas/0000700.img/eye/1"/>
+    </canvas>
+    <canvas format="1" height="71" name="2" scale="0" width="66">
+      <vector name="origin" x="27" y="73"/>
+      <int name="delay" value="100"/>
+      <string name="_outlink" value="Npc/_Canvas/0000700.img/eye/2"/>
+    </canvas>
+    <canvas format="1" height="71" name="3" scale="0" width="66">
+      <vector name="origin" x="27" y="73"/>
+      <int name="delay" value="100"/>
+      <string name="_outlink" value="Npc/_Canvas/0000700.img/stand/0"/>
+    </canvas>
+    <canvas format="1" height="71" name="4" scale="0" width="66">
+      <vector name="origin" x="27" y="73"/>
+      <int name="delay" value="100"/>
+      <string name="_outlink" value="Npc/_Canvas/0000700.img/eye/1"/>
+    </canvas>
+    <canvas format="1" height="71" name="5" scale="0" width="66">
+      <vector name="origin" x="27" y="73"/>
+      <int name="delay" value="100"/>
+      <string name="_outlink" value="Npc/_Canvas/0000700.img/eye/2"/>
+    </canvas>
+  </imgdir>
+  <imgdir name="say">
+    <canvas format="1" height="71" name="0" scale="0" width="66">
+      <vector name="origin" x="27" y="73"/>
+      <int name="delay" value="150"/>
+      <string name="_outlink" value="Npc/_Canvas/0000700.img/stand/0"/>
+    </canvas>
+    <canvas format="1" height="71" name="1" scale="0" width="66">
+      <vector name="origin" x="27" y="73"/>
+      <int name="delay" value="150"/>
+      <string name="_outlink" value="Npc/_Canvas/0000700.img/say/1"/>
+    </canvas>
+    <canvas format="1" height="71" name="2" scale="0" width="66">
+      <vector name="origin" x="27" y="73"/>
+      <int name="delay" value="150"/>
+      <string name="_outlink" value="Npc/_Canvas/0000700.img/stand/0"/>
+    </canvas>
+    <uol name="3" value="1"/>
+    <uol name="4" value="2"/>
+    <uol name="5" value="1"/>
+    <uol name="6" value="2"/>
+    <uol name="7" value="1"/>
+    <uol name="8" value="2"/>
+    <uol name="9" value="1"/>
+    <uol name="10" value="2"/>
+    <uol name="11" value="1"/>
+    <uol name="12" value="2"/>
+    <uol name="13" value="1"/>
+    <uol name="14" value="2"/>
+    <uol name="15" value="1"/>
+    <uol name="16" value="2"/>
+    <uol name="17" value="1"/>
+    <uol name="18" value="2"/>
+    <uol name="19" value="1"/>
+    <uol name="20" value="2"/>
+    <uol name="21" value="1"/>
+    <uol name="22" value="2"/>
+    <uol name="23" value="1"/>
+    <uol name="24" value="2"/>
+    <uol name="25" value="1"/>
+    <uol name="26" value="2"/>
+    <uol name="27" value="1"/>
+    <uol name="28" value="2"/>
+    <uol name="29" value="1"/>
+    <uol name="30" value="2"/>
+    <uol name="31" value="1"/>
+    <uol name="32" value="2"/>
+    <imgdir name="speak">
+      <string name="0" value="s0"/>
+      <string name="1" value="s1"/>
+      <string name="2" value="s2"/>
+      <string name="3" value="s3"/>
+      <string name="4" value="s4"/>
+    </imgdir>
+  </imgdir>
+</imgdir>

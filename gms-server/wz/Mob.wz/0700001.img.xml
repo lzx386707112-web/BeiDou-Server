@@ -1,0 +1,384 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<imgdir indent="2" media="NONE" name="0700001.img">
+  <imgdir name="info">
+    <int name="level" value="59"/>
+    <int name="exp" value="205"/>
+    <int name="maxHP" value="5040"/>
+    <int name="maxMP" value="150"/>
+    <int name="speed" value="-70"/>
+    <int name="bodyAttack" value="1"/>
+    <int name="PADamage" value="421"/>
+    <int name="PDDamage" value="0"/>
+    <int name="MADamage" value="690"/>
+    <int name="MDDamage" value="0"/>
+    <int name="acc" value="130"/>
+    <int name="eva" value="29"/>
+    <int name="undead" value="1"/>
+    <int name="pushed" value="1000"/>
+    <int name="hpRecovery" value="55"/>
+    <int name="mpRecovery" value="10"/>
+    <string name="elemAttr" value="F3H3S2"/>
+    <float name="fs" value="10.0"/>
+    <int name="summonType" value="1"/>
+    <int name="hideLevel" value="1"/>
+    <imgdir name="attack">
+      <imgdir name="0">
+        <int name="action" value="1"/>
+        <int name="attackRatio" value="100"/>
+        <int name="type" value="1"/>
+        <int name="afterDelay" value="3000"/>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="stand">
+    <canvas format="1" height="185" name="0" scale="0" width="149">
+      <vector name="origin" x="63" y="183"/>
+      <int name="delay" value="150"/>
+      <vector name="lt" x="-64" y="-174"/>
+      <vector name="rb" x="83" y="2"/>
+      <vector name="head" x="-16" y="-99"/>
+      <string name="_outlink" value="Mob/_Canvas/0000063.img/stand/0"/>
+    </canvas>
+    <canvas format="1" height="185" name="1" scale="0" width="150">
+      <vector name="origin" x="64" y="183"/>
+      <int name="delay" value="150"/>
+      <vector name="lt" x="-65" y="-172"/>
+      <vector name="rb" x="83" y="2"/>
+      <vector name="head" x="-16" y="-97"/>
+      <string name="_outlink" value="Mob/_Canvas/0000063.img/stand/1"/>
+    </canvas>
+    <canvas format="1" height="184" name="2" scale="0" width="151">
+      <vector name="origin" x="65" y="182"/>
+      <int name="delay" value="150"/>
+      <vector name="lt" x="-66" y="-172"/>
+      <vector name="rb" x="83" y="2"/>
+      <vector name="head" x="-16" y="-95"/>
+      <string name="_outlink" value="Mob/_Canvas/0000063.img/stand/2"/>
+    </canvas>
+    <canvas format="1" height="185" name="3" scale="0" width="150">
+      <vector name="origin" x="64" y="183"/>
+      <int name="delay" value="150"/>
+      <vector name="lt" x="-65" y="-172"/>
+      <vector name="rb" x="83" y="2"/>
+      <vector name="head" x="-16" y="-97"/>
+      <string name="_outlink" value="Mob/_Canvas/0000063.img/stand/3"/>
+    </canvas>
+    <canvas format="1" height="185" name="4" scale="0" width="149">
+      <vector name="origin" x="63" y="183"/>
+      <int name="delay" value="150"/>
+      <vector name="lt" x="-64" y="-174"/>
+      <vector name="rb" x="83" y="2"/>
+      <vector name="head" x="-16" y="-99"/>
+      <string name="_outlink" value="Mob/_Canvas/0000063.img/stand/4"/>
+    </canvas>
+    <canvas format="1" height="185" name="5" scale="0" width="148">
+      <vector name="origin" x="62" y="183"/>
+      <int name="delay" value="150"/>
+      <vector name="lt" x="-63" y="-176"/>
+      <vector name="rb" x="80" y="2"/>
+      <vector name="head" x="-16" y="-100"/>
+      <string name="_outlink" value="Mob/_Canvas/0000063.img/stand/5"/>
+    </canvas>
+  </imgdir>
+  <imgdir name="move">
+    <canvas format="1" height="185" name="0" scale="0" width="149">
+      <vector name="origin" x="63" y="183"/>
+      <int name="delay" value="120"/>
+      <vector name="lt" x="-64" y="-174"/>
+      <vector name="rb" x="82" y="2"/>
+      <vector name="head" x="-16" y="-99"/>
+      <string name="_outlink" value="Mob/_Canvas/0000063.img/move/0"/>
+    </canvas>
+    <canvas format="1" height="187" name="1" scale="0" width="150">
+      <vector name="origin" x="64" y="185"/>
+      <int name="delay" value="120"/>
+      <vector name="lt" x="-65" y="-175"/>
+      <vector name="rb" x="82" y="2"/>
+      <vector name="head" x="-16" y="-100"/>
+      <string name="_outlink" value="Mob/_Canvas/0000063.img/move/1"/>
+    </canvas>
+    <canvas format="1" height="188" name="2" scale="0" width="151">
+      <vector name="origin" x="65" y="186"/>
+      <int name="delay" value="120"/>
+      <vector name="lt" x="-66" y="-176"/>
+      <vector name="rb" x="83" y="2"/>
+      <vector name="head" x="-16" y="-101"/>
+      <string name="_outlink" value="Mob/_Canvas/0000063.img/move/2"/>
+    </canvas>
+    <canvas format="1" height="187" name="3" scale="0" width="152">
+      <vector name="origin" x="66" y="185"/>
+      <int name="delay" value="120"/>
+      <vector name="lt" x="-90" y="-151"/>
+      <vector name="rb" x="85" y="0"/>
+      <vector name="head" x="-16" y="-100"/>
+      <string name="_outlink" value="Mob/_Canvas/0000063.img/move/3"/>
+    </canvas>
+    <canvas format="1" height="182" name="4" scale="0" width="152">
+      <vector name="origin" x="66" y="180"/>
+      <int name="delay" value="120"/>
+      <vector name="lt" x="-67" y="-171"/>
+      <vector name="rb" x="84" y="2"/>
+      <vector name="head" x="-16" y="-96"/>
+      <string name="_outlink" value="Mob/_Canvas/0000063.img/move/4"/>
+    </canvas>
+    <canvas format="1" height="183" name="5" scale="0" width="152">
+      <vector name="origin" x="66" y="181"/>
+      <int name="delay" value="120"/>
+      <vector name="lt" x="-67" y="-173"/>
+      <vector name="rb" x="84" y="2"/>
+      <vector name="head" x="-16" y="-97"/>
+      <string name="_outlink" value="Mob/_Canvas/0000063.img/move/5"/>
+    </canvas>
+    <canvas format="1" height="185" name="6" scale="0" width="151">
+      <vector name="origin" x="65" y="183"/>
+      <int name="delay" value="120"/>
+      <vector name="lt" x="-66" y="-174"/>
+      <vector name="rb" x="83" y="2"/>
+      <vector name="head" x="-16" y="-98"/>
+      <string name="_outlink" value="Mob/_Canvas/0000063.img/move/6"/>
+    </canvas>
+    <canvas format="1" height="187" name="7" scale="0" width="150">
+      <vector name="origin" x="64" y="185"/>
+      <int name="delay" value="120"/>
+      <vector name="lt" x="-65" y="-176"/>
+      <vector name="rb" x="82" y="2"/>
+      <vector name="head" x="-16" y="-99"/>
+      <string name="_outlink" value="Mob/_Canvas/0000063.img/move/7"/>
+    </canvas>
+    <canvas format="1" height="188" name="8" scale="0" width="149">
+      <vector name="origin" x="63" y="186"/>
+      <int name="delay" value="120"/>
+      <vector name="lt" x="-65" y="-176"/>
+      <vector name="rb" x="82" y="2"/>
+      <vector name="head" x="-16" y="-100"/>
+      <string name="_outlink" value="Mob/_Canvas/0000063.img/move/8"/>
+    </canvas>
+    <canvas format="1" height="187" name="9" scale="0" width="148">
+      <vector name="origin" x="62" y="185"/>
+      <int name="delay" value="120"/>
+      <vector name="lt" x="-63" y="-175"/>
+      <vector name="rb" x="81" y="2"/>
+      <vector name="head" x="-16" y="-99"/>
+      <string name="_outlink" value="Mob/_Canvas/0000063.img/move/9"/>
+    </canvas>
+    <canvas format="1" height="182" name="10" scale="0" width="148">
+      <vector name="origin" x="62" y="180"/>
+      <int name="delay" value="120"/>
+      <vector name="lt" x="-63" y="-171"/>
+      <vector name="rb" x="81" y="2"/>
+      <vector name="head" x="-16" y="-96"/>
+      <string name="_outlink" value="Mob/_Canvas/0000063.img/move/10"/>
+    </canvas>
+    <canvas format="1" height="183" name="11" scale="0" width="148">
+      <vector name="origin" x="62" y="181"/>
+      <int name="delay" value="120"/>
+      <vector name="lt" x="-63" y="-174"/>
+      <vector name="rb" x="80" y="2"/>
+      <vector name="head" x="-16" y="-97"/>
+      <string name="_outlink" value="Mob/_Canvas/0000063.img/move/11"/>
+    </canvas>
+  </imgdir>
+  <imgdir name="attack1">
+    <imgdir name="info">
+      <imgdir name="range">
+        <vector name="sp" x="-22" y="-90"/>
+        <int name="r" value="175"/>
+      </imgdir>
+      <imgdir name="hit">
+        <canvas format="1" height="110" name="0" scale="0" width="113">
+          <vector name="origin" x="51" y="60"/>
+          <int name="z" value="0"/>
+          <int name="delay" value="150"/>
+          <string name="_outlink" value="Mob/_Canvas/0000063.img/attack1/info/hit/0"/>
+        </canvas>
+        <canvas format="1" height="113" name="1" scale="0" width="116">
+          <vector name="origin" x="53" y="60"/>
+          <int name="z" value="0"/>
+          <int name="delay" value="150"/>
+          <string name="_outlink" value="Mob/_Canvas/0000063.img/attack1/info/hit/1"/>
+        </canvas>
+        <canvas format="1" height="118" name="2" scale="0" width="130">
+          <vector name="origin" x="60" y="58"/>
+          <int name="z" value="0"/>
+          <int name="delay" value="150"/>
+          <string name="_outlink" value="Mob/_Canvas/0000063.img/attack1/info/hit/2"/>
+        </canvas>
+        <canvas format="1" height="123" name="3" scale="0" width="117">
+          <vector name="origin" x="63" y="60"/>
+          <int name="z" value="0"/>
+          <int name="delay" value="150"/>
+          <string name="_outlink" value="Mob/_Canvas/0000063.img/attack1/info/hit/3"/>
+        </canvas>
+        <canvas format="1" height="123" name="4" scale="0" width="121">
+          <vector name="origin" x="65" y="60"/>
+          <int name="z" value="0"/>
+          <int name="delay" value="150"/>
+          <string name="_outlink" value="Mob/_Canvas/0000063.img/attack1/info/hit/4"/>
+        </canvas>
+        <canvas format="1" height="118" name="5" scale="0" width="118">
+          <vector name="origin" x="63" y="58"/>
+          <int name="z" value="0"/>
+          <int name="delay" value="150"/>
+          <string name="_outlink" value="Mob/_Canvas/0000063.img/attack1/info/hit/5"/>
+        </canvas>
+      </imgdir>
+      <int name="attackAfter" value="900"/>
+    </imgdir>
+    <canvas format="1" height="226" name="0" scale="0" width="200">
+      <vector name="origin" x="104" y="182"/>
+      <int name="delay" value="150"/>
+      <vector name="lt" x="-62" y="-172"/>
+      <vector name="rb" x="80" y="1"/>
+      <vector name="head" x="-16" y="-95"/>
+      <string name="_outlink" value="Mob/_Canvas/0000063.img/attack1/0"/>
+    </canvas>
+    <canvas format="1" height="217" name="1" scale="0" width="193">
+      <vector name="origin" x="101" y="178"/>
+      <int name="delay" value="150"/>
+      <vector name="lt" x="-61" y="-169"/>
+      <vector name="rb" x="78" y="1"/>
+      <vector name="head" x="-16" y="-92"/>
+      <string name="_outlink" value="Mob/_Canvas/0000063.img/attack1/1"/>
+    </canvas>
+    <canvas format="1" height="201" name="2" scale="0" width="179">
+      <vector name="origin" x="93" y="177"/>
+      <int name="delay" value="150"/>
+      <vector name="lt" x="-61" y="-169"/>
+      <vector name="rb" x="78" y="1"/>
+      <vector name="head" x="-16" y="-91"/>
+      <string name="_outlink" value="Mob/_Canvas/0000063.img/attack1/2"/>
+    </canvas>
+    <canvas format="1" height="195" name="3" scale="0" width="172">
+      <vector name="origin" x="86" y="178"/>
+      <int name="delay" value="150"/>
+      <vector name="lt" x="-61" y="-169"/>
+      <vector name="rb" x="78" y="1"/>
+      <vector name="head" x="-16" y="-91"/>
+      <string name="_outlink" value="Mob/_Canvas/0000063.img/attack1/3"/>
+    </canvas>
+    <canvas format="1" height="190" name="4" scale="0" width="146">
+      <vector name="origin" x="60" y="179"/>
+      <int name="delay" value="150"/>
+      <vector name="lt" x="-61" y="-169"/>
+      <vector name="rb" x="78" y="1"/>
+      <vector name="head" x="-16" y="-91"/>
+      <string name="_outlink" value="Mob/_Canvas/0000063.img/attack1/4"/>
+    </canvas>
+    <canvas format="1" height="182" name="5" scale="0" width="146">
+      <vector name="origin" x="60" y="179"/>
+      <int name="delay" value="150"/>
+      <vector name="lt" x="-61" y="-169"/>
+      <vector name="rb" x="78" y="1"/>
+      <vector name="head" x="-16" y="-91"/>
+      <string name="_outlink" value="Mob/_Canvas/0000063.img/attack1/5"/>
+    </canvas>
+    <canvas format="1" height="278" name="6" scale="0" width="325">
+      <vector name="origin" x="237" y="250"/>
+      <int name="delay" value="150"/>
+      <vector name="lt" x="-61" y="-197"/>
+      <vector name="rb" x="85" y="1"/>
+      <vector name="head" x="-14" y="-120"/>
+      <string name="_outlink" value="Mob/_Canvas/0000063.img/attack1/6"/>
+    </canvas>
+    <canvas format="1" height="275" name="7" scale="0" width="323">
+      <vector name="origin" x="234" y="247"/>
+      <int name="delay" value="150"/>
+      <vector name="lt" x="-61" y="-198"/>
+      <vector name="rb" x="87" y="1"/>
+      <vector name="head" x="-14" y="-122"/>
+      <string name="_outlink" value="Mob/_Canvas/0000063.img/attack1/7"/>
+    </canvas>
+    <canvas format="1" height="275" name="8" scale="0" width="319">
+      <vector name="origin" x="231" y="246"/>
+      <int name="delay" value="150"/>
+      <vector name="lt" x="-61" y="-197"/>
+      <vector name="rb" x="85" y="1"/>
+      <vector name="head" x="-14" y="-120"/>
+      <string name="_outlink" value="Mob/_Canvas/0000063.img/attack1/8"/>
+    </canvas>
+    <canvas format="1" height="273" name="9" scale="0" width="320">
+      <vector name="origin" x="231" y="243"/>
+      <int name="delay" value="150"/>
+      <vector name="lt" x="-61" y="-198"/>
+      <vector name="rb" x="87" y="1"/>
+      <vector name="head" x="-14" y="-122"/>
+      <string name="_outlink" value="Mob/_Canvas/0000063.img/attack1/9"/>
+    </canvas>
+    <canvas format="1" height="268" name="10" scale="0" width="325">
+      <vector name="origin" x="237" y="241"/>
+      <int name="delay" value="150"/>
+      <vector name="lt" x="-61" y="-197"/>
+      <vector name="rb" x="85" y="1"/>
+      <vector name="head" x="-14" y="-120"/>
+      <string name="_outlink" value="Mob/_Canvas/0000063.img/attack1/10"/>
+    </canvas>
+    <canvas format="1" height="264" name="11" scale="0" width="319">
+      <vector name="origin" x="233" y="239"/>
+      <int name="delay" value="150"/>
+      <vector name="lt" x="-66" y="-183"/>
+      <vector name="rb" x="82" y="1"/>
+      <vector name="head" x="-16" y="-105"/>
+      <string name="_outlink" value="Mob/_Canvas/0000063.img/attack1/11"/>
+    </canvas>
+  </imgdir>
+  <imgdir name="hit1">
+    <canvas format="1" height="195" name="0" scale="0" width="155">
+      <vector name="origin" x="64" y="193"/>
+      <int name="delay" value="600"/>
+      <vector name="lt" x="-90" y="-151"/>
+      <vector name="rb" x="85" y="0"/>
+      <vector name="head" x="-16" y="-105"/>
+      <string name="_outlink" value="Mob/_Canvas/0000063.img/hit1/0"/>
+    </canvas>
+  </imgdir>
+  <imgdir name="die1">
+    <canvas format="1" height="186" name="0" scale="0" width="149">
+      <vector name="origin" x="63" y="184"/>
+      <int name="delay" value="150"/>
+      <vector name="head" x="-10" y="-155"/>
+      <string name="_outlink" value="Mob/_Canvas/0000063.img/die1/0"/>
+    </canvas>
+    <canvas format="1" height="195" name="1" scale="0" width="155">
+      <vector name="origin" x="54" y="193"/>
+      <int name="delay" value="150"/>
+      <vector name="head" x="-10" y="-155"/>
+      <string name="_outlink" value="Mob/_Canvas/0000063.img/hit1/0"/>
+    </canvas>
+    <canvas format="1" height="195" name="2" scale="0" width="150">
+      <vector name="origin" x="50" y="193"/>
+      <int name="delay" value="150"/>
+      <vector name="head" x="-10" y="-155"/>
+      <string name="_outlink" value="Mob/_Canvas/0000063.img/die1/2"/>
+    </canvas>
+    <canvas format="1" height="198" name="3" scale="0" width="216">
+      <vector name="origin" x="81" y="184"/>
+      <int name="delay" value="150"/>
+      <vector name="head" x="-10" y="-155"/>
+      <string name="_outlink" value="Mob/_Canvas/0000063.img/die1/3"/>
+    </canvas>
+    <canvas format="1" height="196" name="4" scale="0" width="231">
+      <vector name="origin" x="88" y="182"/>
+      <int name="delay" value="150"/>
+      <vector name="head" x="-10" y="-155"/>
+      <string name="_outlink" value="Mob/_Canvas/0000063.img/die1/4"/>
+    </canvas>
+    <canvas format="1" height="191" name="5" scale="0" width="233">
+      <vector name="origin" x="89" y="178"/>
+      <int name="delay" value="150"/>
+      <vector name="head" x="-10" y="-155"/>
+      <string name="_outlink" value="Mob/_Canvas/0000063.img/die1/5"/>
+    </canvas>
+    <canvas format="1" height="189" name="6" scale="0" width="233">
+      <vector name="origin" x="89" y="177"/>
+      <int name="delay" value="150"/>
+      <vector name="head" x="-10" y="-155"/>
+      <string name="_outlink" value="Mob/_Canvas/0000063.img/die1/6"/>
+    </canvas>
+    <canvas format="1" height="189" name="7" scale="0" width="233">
+      <vector name="origin" x="89" y="178"/>
+      <int name="delay" value="300"/>
+      <vector name="head" x="-10" y="-155"/>
+      <string name="_outlink" value="Mob/_Canvas/0000063.img/die1/7"/>
+    </canvas>
+  </imgdir>
+</imgdir>
