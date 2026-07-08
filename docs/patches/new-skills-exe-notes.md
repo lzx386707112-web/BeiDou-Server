@@ -33,6 +33,143 @@
 
 这种情况下，可以把新技能 ID 追加到已有客户端分支中，而不是替换旧技能 ID。
 
+## 备选方案：消耗品热键触发服务端技能
+
+如果暂时不想继续补 `BeiDou.exe` 的主动技能 ID 分支，可以把消耗品当作技能触发器：
+客户端按道具快捷键发送 `USE_ITEM` 或 `SCRIPTED_ITEM`，服务端读取道具配置后自行组装一次技能释放。
+
+这个方案的关键不是“消耗品天然能释放主动技能”，而是绕开客户端按技能键释放时的 EXE 分派，
+改由服务端模拟攻击流程。适合先做五转、六转或自定义技能验证。
+
+基本流程：
+
+```text
+1. 新技能仍然要维护到客户端 Skill/String WZ 和服务端 Skill/String XML。
+   例如技能 ID 1321018。
+
+2. 新增一个或多个消耗品作为入口。
+   例如 2430125 触发六转技能，2430126 触发五转技能。
+
+3. 消耗品放到键位上执行。
+   这里绑定的是道具快捷键，不是传统技能快捷键。
+
+4. 服务端在道具使用入口识别技能 ID。
+   可以复用 spec/script 存技能 ID 或脚本标识，例如 script=1321018。
+
+5. GM 命令和道具入口都调用同一套自定义释放逻辑。
+   例如：
+   !sx <技能ID> <等级>
+   !six <类型> <技能ID> <等级>
+
+6. 自定义释放逻辑按固定顺序执行：
+   构造攻击上下文
+   播放 explosion / 技能表现包
+   广播攻击包
+   结算前飘字
+   结算真实伤害
+   结算后补飘字
+   发送 enableActions 解锁动作
+```
+
+需要注意的边界：
+
+```text
+1. 这是服务端接管释放，不等价于客户端真正认识新主动技能。
+2. 技能是否能显示、图标是否正常，仍取决于客户端 WZ 和 String。
+3. 技能表现能多像原生技能，取决于服务端能否正确广播对应攻击包、特效包和飘字。
+4. 弹道、链式、召唤协同、持续引导、客户端本地命中帧强依赖的技能风险更高。
+5. 冷却、MP/HP 消耗、目标数、攻击范围、反伤、无敌、死亡和掉落时序都要由服务端补齐。
+6. 道具脚本入口必须做白名单，避免玩家通过改包传任意技能 ID。
+7. 消耗品热键本身不会自动触发 Skill WZ 里的 screen/effect/hit。
+   如果客户端不认可 skillId，服务端发送 SKILL_EFFECT/攻击包也可能只有伤害没有动画。
+   这类全屏表现可以优先把 screen 资源移植到 clien/Data/Map/Effect.img，
+   再通过 FIELD_EFFECT，也就是 PacketCreator.showEffect("路径") 播放。
+```
+
+如果只是用消耗品作为入口，客户端不一定要新增 `Skill/*.img`。消耗品方案绕开的是“按技能键释放”的客户端主动技能分派；
+真正需要客户端 Skill 资源的，是服务端广播 `skillEffect`、`magicAttack` 等包时使用的视觉 `skillId`。
+
+当前客户端会在启动时扫描 `clien/Data/Skill`，直接新增 `40001.img` 可能触发“错误的游戏数据”弹窗。
+因此第一阶段建议不要把 273 的 `40001.img` 直接写进客户端 Skill 目录。更稳的做法是：
+
+```text
+1. 客户端只新增/修改消耗品和 String，让 2430125 可以放键位并携带 script=400011027。
+2. 服务端保留 400011027 的 Skill XML 或直接在自定义释放逻辑里维护数值，用于范围、段数、伤害、MP 和冷却。
+3. 技能动画先用已有客户端能识别的技能 ID 做 visualSkillId，或者把 400011027 的视觉资源移植到现有合法 Skill IMG 的安全测试 ID。
+4. 等确认客户端允许的 Skill IMG/ID 结构后，再考虑恢复真正的 40001.img 客户端资源。
+```
+
+后续如果落地，建议先选一个矩形范围或全屏类技能试验。目标是验证：
+
+```text
+1. 道具能放快捷键并触发服务端入口。
+2. 服务端能从技能 WZ/XML 读到 level、damage、attackCount、mobCount、lt/rb。
+3. 能选中预期范围内的怪物。
+4. 自己视角和他人视角能看到技能表现或攻击表现。
+5. 飘字和真实扣血一致。
+6. 击杀、掉落、经验、反伤、冷却和 enableActions 都正常。
+```
+
+### 当前试验：273 的 400011027 斗气死亡断层
+
+本次选用 273 导出的 `_Canvas/40001.img` 里的 `400011027` 做第一条链路测试。技能名为“斗气死亡断层”，描述为“用剑分割空间”。
+
+上一轮把 400011027 伪装成 2321020/1121018，再走 `skillEffect`、`magicAttack` 或 EXE hook 的路线，结果都是“有伤害但没有原技能动画”。因此当前版本先回到更小的验证目标：
+
+```text
+不新增 Skill WZ
+不修改 BeiDou.exe
+不广播 skillEffect / magicAttack
+只保留消耗品入口 + 服务端选怪结算
+把 400011027/screen 迁到 Map/Effect.img
+通过 FIELD_EFFECT 播放全屏动画
+```
+
+当前实现先复刻 400011027 的 `screen` 全屏动画，不处理 `effect/hit`。参考阿卡伊勒迁移的成功路径，把客户端能识别的资源放到 `clien/Data/Map/Effect.img/customSkill/deathFault/screen`，服务端广播 `PacketCreator.showEffect("customSkill/deathFault/screen")`。由于原始 `screen` 帧只有约 684x268 到 684x384，迁移时会封进与客户端分辨率一致的透明画布，并按统一比例等比缩放居中，避免旧客户端按局部范围效果显示，也避免每帧独立拉伸导致变形或跳动。脚本默认读取 `clien/config.ini` 的 `width/height`，也可以用 `--canvas-width/--canvas-height` 覆盖。源帧从 `19` 开始，迁移时按源帧编号推导时间轴：先补 1 个透明帧，delay 为 `19 * 30ms = 570ms`；后续可见帧 delay 按相邻源帧编号差值计算，例如 `20 -> 23` 会得到 `90ms`。伤害延迟约 800ms 后结算，用来对齐动画节奏。
+
+```text
+源技能 ID: 400011027
+技能名: 斗气死亡断层
+触发道具: 2430125
+道具 script: 400011027
+MP 消耗: 500
+伤害: 416%
+攻击段数: 14
+最大目标: 15
+冷却时间: 5 秒
+说明: 施展动作中无敌
+范围: lt=(-3000,-2000), rb=(3000,2000)
+当前视觉测试: FIELD_EFFECT customSkill/deathFault/screen
+画布尺寸: 默认读取 clien/config.ini，也可命令行覆盖
+起始透明帧: 1 帧，delay 按源首帧编号计算，当前 570ms
+伤害延迟: 800ms
+```
+
+相关落地点：
+
+```text
+clien/Data/Item/Consume/0243.img
+clien/Data/String/Consume.img
+clien/Data/Map/Effect.img
+gms-server/wz/Item.wz/Consume/0243.img.xml
+gms-server/wz/String.wz/Consume.img.xml
+gms-server/src/main/java/org/gms/server/skills/CustomSkillCastService.java
+gms-server/src/main/java/org/gms/client/command/commands/gm3/CustomSkillCommand.java
+tool/scripts/patch-skill/patch_400011027_consumable_test.py
+```
+
+测试顺序：
+
+```text
+1. 重启服务端，让 Java 入口和 WZ XML 重新加载。
+2. 重启客户端，让 0243.img、Consume.img 和 Map/Effect.img 更新生效。
+3. 先用 GM 命令验证服务端释放链路：!sx 400011027 1
+4. 再发放 2430125，把道具放到键位上使用。
+5. 观察是否先播放全屏“斗气死亡断层”screen 动画，再约 800ms 后扣血。
+6. 如果有动画但位置偏高/偏低，优先调 `patch_400011027_consumable_test.py` 里 paste 的 y 偏移或 `origin_y`。
+7. 如果仍然没有动画，下一步检查客户端是否实际读取 `Map/Effect.img/customSkill/deathFault/screen`，以及 FIELD_EFFECT 的路径名是否被旧客户端限制。
+```
+
 ## 工具与库
 
 本次主要用到这些工具：
