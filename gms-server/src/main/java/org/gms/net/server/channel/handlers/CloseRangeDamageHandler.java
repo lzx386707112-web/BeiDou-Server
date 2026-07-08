@@ -39,6 +39,7 @@ import org.gms.constants.skills.Rogue;
 import org.gms.constants.skills.WindArcher;
 import org.gms.net.packet.InPacket;
 import org.gms.server.StatEffect;
+import org.gms.server.TimerManager;
 import org.gms.util.PacketCreator;
 import org.gms.util.Pair;
 
@@ -49,6 +50,7 @@ import java.util.List;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
+    private static final int SWORD_ILLUSION_HIT_DELAY_MS = 1000;
 
     @Override
     public final void handlePacket(InPacket p, Client c) {
@@ -191,6 +193,11 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
             chr.cancelBuffStats(BuffStat.WIND_WALK);
         }
 
-        applyAttack(attack, chr, attackCount);
+        if (attack.skill == Hero.MONSTER_MAGNET) {
+            final int delayedAttackCount = attackCount;
+            TimerManager.getInstance().schedule(() -> applyAttack(attack, chr, delayedAttackCount), SWORD_ILLUSION_HIT_DELAY_MS);
+        } else {
+            applyAttack(attack, chr, attackCount);
+        }
     }
 }

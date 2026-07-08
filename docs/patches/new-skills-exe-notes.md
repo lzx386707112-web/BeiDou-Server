@@ -1338,6 +1338,489 @@ entered SkillEffectHandler without being handled using 1121001
    特别是 short jump 和 near jump 的区别，不能靠感觉。
 ```
 
+## 实战记录：1121001 从轻舞飞扬式攻击继续迁移为剑影分身
+
+这次是在上一节基础上继续做的二次改造。`1121001` 已经不是原生磁石，
+而是一个能够进入 Brandish / 轻舞飞扬近战攻击路径的测试技能。
+新目标是把它做成英雄 5 转技能 `剑影分身` 的表现和参数。
+
+```text
+源技能：40001.img / 400011124
+来源目录：/Users/lizixian/Documents/mxd/skill-273-export/
+目标技能：112.img / 1121001
+目标职业：英雄 112
+目标名称：剑影分身
+原始技能位：Hero.MONSTER_MAGNET / 1121001
+最终路径：继续复用 Brandish 攻击包路径，额外播放剑影分身 effect0 二段表现
+```
+
+### 最终涉及文件
+
+```text
+客户端技能 WZ：
+  clien/Data/Skill/112.img
+  clien/Data/String/Skill.img
+
+服务端技能 XML：
+  gms-server/wz/Skill.wz/112.img.xml
+  gms-server/wz/String.wz/Skill.img.xml
+
+客户端 EXE 补丁：
+  clien/BeiDou.exe
+  tool/scripts/patch-client/patch_1121001_as_brandish.py
+
+资源同步脚本：
+  tool/scripts/patch-skill/patch_1121001_sword_illusion.py
+
+服务端命中时序和反伤处理：
+  gms-server/src/main/java/org/gms/net/server/channel/handlers/CloseRangeDamageHandler.java
+  gms-server/src/main/java/org/gms/net/server/channel/handlers/AbstractDealDamageHandler.java
+```
+
+### 参数来源
+
+用户提供的是 1 级官方文本：
+
+```text
+MP消耗700，发动12次以130%的伤害最多攻击8名敌人4次的斩击后，
+发动5次以260%的伤害攻击5次的爆炸
+斗气集中激活期间，在8秒内，和增加6个斗气点数的最终伤害相同数值的最终伤害增加，
+与斗气点数增加的最终伤害合计应用
+```
+
+实际数据层采用脚本生成：
+
+```text
+等级：1-30
+MP：700
+damage：130 + (level - 1) * 5
+attackCount：4
+mobCount：8
+描述文字：每级 +5% 递增
+```
+
+注意：官方文本里还有第二段爆炸 `260% * 5`，但当前旧客户端和服务端的 1121001
+仍然走 Brandish 近战攻击包，只有一组 `damage/attackCount/mobCount/lt/rb`。
+所以目前服务端实际伤害使用第一段 `damage/attackCount`，第二段主要通过视觉和命中时序还原。
+如果后续要严格拆成两段不同倍率，需要继续改攻击包或服务端二段结算模型。
+
+### WZ 节点结构
+
+源 `400011124` 不是旧 4 转技能结构，关键表现节点是：
+
+```text
+effect   = 前摇特效，本身不应该造成伤害
+effect0  = 攻击特效，真正的斩击/爆炸视觉
+```
+
+目标 `1121001` 最终整理成：
+
+```text
+action:
+  0 = brandish1
+  1 = brandish2
+  2 = brandish1
+
+effect:
+  0 = 源 effect 的 Brandish 兼容 variant
+  1 = 源 effect 的 Brandish 兼容 variant
+  2 = 源 effect0 的兼容镜像
+
+effect0:
+  保留源 effect0，作为资源真实来源和后续参考
+```
+
+为什么要把 `effect0` 镜像到 `effect/2`：
+
+```text
+1. 老客户端没有直接按字符串 "effect0" 自动加载新增节点。
+2. 直接新增 skill/1121001/effect0 不代表释放时会播放。
+3. Brandish 路径会按 action/effect index 选择 effect/%d。
+4. 所以把 effect0 镜像成 effect/2，再让 EXE 额外选择 index=2 播放。
+```
+
+### effect0 延迟
+
+剑影分身的正常观感是：
+
+```text
+先播放 effect 前摇
+约 1 秒后播放 effect0 攻击特效
+第二段出现时才命中
+```
+
+EXE hook 当前是在 Brandish 视觉出口立即播放 `effect/2`。
+为了不继续扩大 EXE 改动，延迟放在 WZ 资源层实现：
+
+```text
+effect0/0  = 1x1 透明 canvas，delay=1000
+effect0/1  = 原 effect0 第 0 帧
+effect0/2  = 原 effect0 第 1 帧
+...
+
+effect/2/0 = 同样的 1x1 透明 delay 帧
+effect/2/1 = 原 effect0 第 0 帧
+...
+```
+
+当前验证结果：
+
+```text
+effect0 frames 48
+  0 1x1 origin (0, 0) delay 1000
+  1 720x448 origin (40, 344) delay 30
+
+effect/2 frames 48
+  0 1x1 origin (0, 0) delay 1000
+  1 720x448 origin (40, 344) delay 30
+```
+
+这能让 EXE 继续立即启动 `effect/2`，但真实可见的二段动画晚 1 秒出现。
+
+### EXE 兼容路径
+
+脚本：
+
+```text
+tool/scripts/patch-client/patch_1121001_as_brandish.py
+```
+
+上一阶段已经把 `1121001` 接入 Brandish 攻击逻辑。
+剑影分身阶段继续在同一个脚本里追加了 `effect/2` 攻击视觉：
+
+```text
+code cave VA     = 0x00AEFB00
+code cave size   = 0x180
+关键 hook        = 0x00934720 Brandish visual exit effect0
+```
+
+逻辑概要：
+
+```text
+1. 正常 Brandish 保持原出口。
+2. 如果 skill id 是 1121001：
+   - 释放当前 effect 资源。
+   - 调用 0x00932D40，选择 effect index = 2。
+   - 把 effect/2 播放到普通角色 effect layer。
+   - 方向用 xor 1 修正，因为源 effect0 和旧客户端朝向相反。
+3. 回到原 Brandish 视觉出口。
+```
+
+踩过的坑：
+
+```text
+1. 直接搜索 ASCII "effect0" 没用。
+   老客户端这条路径不是按字符串找 effect0，而是按固定资源槽/编号 effect/%d。
+
+2. 直接尝试播放 [ebx+0x1144] 的 effect0 不稳定。
+   资源可能没有按预期加载，曾经出现数据错误和崩溃。
+
+3. 最稳定方案是让 WZ 自己提供 effect/2，
+   EXE 只负责选择 index=2，这样沿用原有 effect 播放结构。
+
+4. 方向一开始反了。
+   最后在 EXE 播放前对方向参数 xor 1。
+
+5. 位置一开始挡角色、偏下、离角色太远。
+   最后在资源脚本里统一改 effect0 origin，而不是在 EXE 里继续猜坐标。
+```
+
+当前 dry-run 成功提示：
+
+```text
+BeiDou.exe already routes 1121001 through Brandish attack logic and effect/2 attack visual.
+```
+
+### effect0 位置
+
+位置调整集中在资源脚本常量：
+
+```text
+MERGED_EFFECT0_FORWARD_OFFSET = -40
+MERGED_EFFECT0_UP_OFFSET = 120
+```
+
+脚本会遍历二段直接动画帧，修改每一帧 origin：
+
+```text
+origin.x = origin.x - forward_offset
+origin.y = origin.y + up_offset
+```
+
+最终当前二段真实帧前几项：
+
+```text
+frame 1 origin = (40, 344)
+frame 2 origin = (40, 348)
+```
+
+效果调试过程中的现象：
+
+```text
+1. 能攻击但没有技能效果：
+   说明攻击逻辑通了，视觉资源没被正确播放。
+
+2. effect 可见，effect0 不可见：
+   说明普通 effect 路径通了，但 effect0 没有被客户端分支读取。
+
+3. 第二段特效方向相反：
+   源 effect0 面向和当前 Brandish 播放方向相反，需要 EXE xor 1。
+
+4. 第二段离人物太远：
+   不是攻击框问题，而是 canvas origin 和播放层锚点问题。
+```
+
+### 伤害时序
+
+视觉修好后又出现一个语义问题：
+
+```text
+effect 是前摇，本身不应该命中。
+effect0 才是攻击特效，应该在二段出现时命中。
+```
+
+客户端仍然走 Brandish 攻击包，攻击包发送时机更接近一段动作。
+为了让实际扣血、死亡和掉落尽量落在二段窗口，服务端对 `1121001` 做了 1 秒延迟：
+
+```java
+private static final int SWORD_ILLUSION_HIT_DELAY_MS = 1000;
+
+if (attack.skill == Hero.MONSTER_MAGNET) {
+    final int delayedAttackCount = attackCount;
+    TimerManager.getInstance().schedule(() -> applyAttack(attack, chr, delayedAttackCount), SWORD_ILLUSION_HIT_DELAY_MS);
+} else {
+    applyAttack(attack, chr, attackCount);
+}
+```
+
+文件：
+
+```text
+gms-server/src/main/java/org/gms/net/server/channel/handlers/CloseRangeDamageHandler.java
+```
+
+注意边界：
+
+```text
+1. 这解决的是服务端真实伤害时机。
+2. 如果旧客户端本地提前显示了某些命中数字，那是客户端本地表现问题。
+3. 要完全从客户端层面改变攻击包发送时机，需要更深的 EXE 攻击动作/命中帧改造。
+```
+
+### 反伤免疫
+
+官方说明里写明：
+
+```text
+剑影分身即使攻击反射状态的敌人也不会受到伤害。
+```
+
+服务端因此对 `1121001` 跳过反伤扣血：
+
+```java
+if (monster.isBuffed(MonsterStatus.WEAPON_REFLECT) && !attack.magic && attack.skill != Hero.MONSTER_MAGNET) {
+    ...
+}
+
+if (monster.isBuffed(MonsterStatus.MAGIC_REFLECT) && attack.magic && attack.skill != Hero.MONSTER_MAGNET) {
+    ...
+}
+```
+
+文件：
+
+```text
+gms-server/src/main/java/org/gms/net/server/channel/handlers/AbstractDealDamageHandler.java
+```
+
+这里仍然使用 `Hero.MONSTER_MAGNET` 常量名，因为常量文件还没有重命名。
+语义上它现在是英雄测试技能 `1121001`。
+
+### 攻击范围
+
+一开始攻击范围沿用了迁移时的粗大范围：
+
+```text
+lt = (-530, -370)
+rb = (930, 280)
+```
+
+后面确认用户想要“攻击范围是整个二段动画的范围”，于是按 `effect0` 所有真实帧计算 union。
+透明 delay 帧不参与范围：
+
+```text
+effect0 union = (-40, -366, 700, 126)
+```
+
+最终写入：
+
+```text
+level/*/lt = (-40, -366)
+level/*/rb = (700, 126)
+```
+
+当前抽查：
+
+```text
+level/1 lt = (-40, -366)
+level/1 rb = (700, 126)
+effect0 union = (-40, -366, 700, 126)
+```
+
+这个范围同时写入客户端 `112.img` 和服务端 `112.img.xml`。
+服务端距离校验会使用同一组 `lt/rb`，避免客户端能打到但服务端判越界。
+
+### 为什么没有继续改成 Meteor / 天降落星路径
+
+调试时参考过 `2121007` 天降落星：
+
+```text
+action = meteor
+effect
+effect0
+hit
+tile
+```
+
+它更像“先播前摇，再播真正攻击效果”的技能。
+但是完全切换到 Meteor 路径风险更高：
+
+```text
+1. 1121001 当前已经验证能走 Brandish 近战攻击包。
+2. Meteor 是魔法/范围技能路径，目标选择、封包结构和表现层都不同。
+3. 直接换路径可能重新引入 targets=0、SkillEffectHandler、或服务端校验不一致的问题。
+```
+
+所以本次最终选择：
+
+```text
+攻击包：继续 Brandish 近战路径
+前摇视觉：effect/0、effect/1
+攻击视觉：effect0 镜像到 effect/2
+二段延迟：WZ 透明 delay 帧
+真实伤害：服务端 applyAttack 延迟 1000ms
+范围：effect0 真实帧 union
+```
+
+### 调试顺序建议
+
+以后再迁移类似“新版本技能到旧客户端职业技能位”，按这个顺序排查：
+
+```text
+1. 先确认技能面板和字符串。
+   clien/Data/String/Skill.img
+   gms-server/wz/String.wz/Skill.img.xml
+
+2. 再确认服务端技能参数。
+   level/damage/attackCount/mobCount/mpCon/lt/rb
+
+3. 确认客户端发的是哪类包。
+   如果进 SkillEffectHandler，说明不是攻击包。
+   如果进 CloseRangeDamageHandler 但 targets=0，说明客户端选择目标失败。
+
+4. 确认 EXE 是否把目标 ID 接入了正确的技能分支。
+   WZ 数据改对不等于 EXE 分派改对。
+
+5. 视觉缺失时先判断是 effect 不显示，还是 effect0 不显示。
+   effect 显示而 effect0 不显示，通常是客户端没有读取 effect0。
+
+6. effect0 不显示时，不要先猜 WZ 坏了。
+   先找已有会播放 effect0 的技能或把 effect0 做成 effect/%d 兼容分支。
+
+7. 有特效但崩溃或数据错误时，优先回退到旧客户端已经会加载的资源结构。
+   本次就是从直接 effect0 槽位回退到 effect/2。
+
+8. 有特效但位置不对时，优先调 canvas origin。
+   EXE 坐标层更难确认，资源层更可控。
+
+9. 视觉时序和伤害时序分开处理。
+   视觉可以通过 WZ delay 解决，真实伤害可以通过服务端 TimerManager 延迟。
+
+10. 攻击范围最后按最终攻击视觉重新计算。
+    先做视觉，再定 lt/rb，否则很容易范围和画面不一致。
+```
+
+### 验证命令
+
+资源补丁：
+
+```bash
+rtk python3 tool/scripts/patch-skill/patch_1121001_sword_illusion.py --dry-run
+rtk python3 tool/scripts/patch-skill/patch_1121001_sword_illusion.py
+```
+
+EXE 补丁：
+
+```bash
+rtk python3 tool/scripts/patch-client/patch_1121001_as_brandish.py --dry-run
+```
+
+客户端 WZ 抽查重点：
+
+```text
+skill/1121001/effect/0
+skill/1121001/effect/1
+skill/1121001/effect/2
+skill/1121001/effect0
+skill/1121001/action/2
+skill/1121001/level/1/lt
+skill/1121001/level/1/rb
+```
+
+期望状态：
+
+```text
+effect0 frames = 48
+effect0/0      = 1x1 transparent delay 1000
+effect/2       = effect0 compat mirror
+action/2       = brandish1
+level/*/lt     = (-40, -366)
+level/*/rb     = (700, 126)
+```
+
+编译检查注意：
+
+```text
+如果本机是 Java 17，而 Maven target 是 21，会报：
+无效的目标发行版：21
+
+这不是本次代码改动导致的语法错误，需要 Java 21 环境才能完整 compile。
+```
+
+### 本次踩坑总结
+
+```text
+1. 不要在错误资源包里找太久。
+   神说的 5 转技能面板是独立体系，ID 和 UI 体系不同；
+   后续明确用 skill-273-export / 40001.img / 400011124 作为源。
+
+2. 新增 effect0 节点不会自动播放。
+   客户端必须有对应技能逻辑读取它。
+
+3. 直接改 EXE 播 effect0 容易崩。
+   资源没加载、槽位不对、引用为空，都可能导致数据错误。
+
+4. 兼容旧客户端时，effect/%d 比 effect0 字符串路径更稳。
+   本次用 effect/2 作为二段攻击视觉入口。
+
+5. 方向和位置是两个问题。
+   方向在 EXE 播放参数里修，位置在 WZ origin 里修。
+
+6. 延迟不能全部做到 effect 上。
+   effect 是前摇，effect0 才是攻击特效；
+   把二段硬合并到 effect 会让语义和调试都变混乱。
+
+7. 视觉延迟和伤害延迟要同时处理。
+   只延迟 effect0，真实伤害仍可能提前；
+   只延迟服务端伤害，玩家可能看不到对应二段表现。
+
+8. 攻击范围必须跟最终二段视觉对齐。
+   不能用迁移初期的大概范围长期保留。
+
+9. 反伤免疫是技能语义的一部分。
+   只迁移视觉和伤害，不处理反伤，会和官方说明不一致。
+```
+
 ## 踩坑清单
 
 这次比较值得记住的坑：

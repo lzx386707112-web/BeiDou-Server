@@ -37,6 +37,7 @@ public final class PreviewImgServer {
     private final Region region;
     private final List<String> imgPaths;
     private final Set<String> imgPathSet;
+    private final boolean skillMode;
     private final Map<String, Integer> categoryCounts;
     private final Map<String, String> thumbnailCache = new HashMap<>();
     private final Map<String, Boolean> cashCache = new HashMap<>();
@@ -56,6 +57,8 @@ public final class PreviewImgServer {
         this.region = region;
         this.imgPaths = indexImages(this.input);
         this.imgPathSet = new HashSet<>(imgPaths);
+        this.skillMode = this.input.getFileName() != null
+                && "Skill".equalsIgnoreCase(this.input.getFileName().toString());
         this.categoryCounts = countCategories(imgPaths);
     }
 
@@ -110,6 +113,7 @@ public final class PreviewImgServer {
                 writeJson(exchange, Map.of(
                         "input", input.toString(),
                         "region", region.optionName,
+                        "mode", skillMode ? "skill" : "equip",
                         "count", imgPaths.size()
                 ));
             } else if (path.equals("/api/search")) {
@@ -172,6 +176,10 @@ public final class PreviewImgServer {
     }
 
     private void handleCategories(HttpExchange exchange) throws IOException {
+        if (skillMode) {
+            handleSkillCategories(exchange);
+            return;
+        }
         List<Map<String, Object>> categories = categoryCounts.entrySet().stream()
                 .sorted((a, b) -> Integer.compare(categoryOrder(a.getKey()), categoryOrder(b.getKey())) != 0
                         ? Integer.compare(categoryOrder(a.getKey()), categoryOrder(b.getKey()))
@@ -210,6 +218,10 @@ public final class PreviewImgServer {
     }
 
     private void handleItems(HttpExchange exchange) throws IOException {
+        if (skillMode) {
+            handleSkillItems(exchange);
+            return;
+        }
         Map<String, String> query = query(exchange);
         String category = query.getOrDefault("category", "Body");
         String q = query.getOrDefault("q", "").toLowerCase(Locale.ROOT);
@@ -255,6 +267,87 @@ public final class PreviewImgServer {
                 "limit", limit,
                 "matched", matched
         ));
+    }
+
+    private void handleSkillCategories(HttpExchange exchange) throws IOException {
+        List<Map<String, Object>> categories = new ArrayList<>();
+        for (String img : imgPaths) {
+            int count = countSkillItems(img);
+            if (count == 0) {
+                continue;
+            }
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("id", idOf(img));
+            item.put("name", idOf(img));
+            item.put("count", count);
+            categories.add(item);
+        }
+        writeJson(exchange, Map.of("items", categories));
+    }
+
+    private void handleSkillItems(HttpExchange exchange) throws IOException {
+        Map<String, String> query = query(exchange);
+        String category = query.getOrDefault("category", imgPaths.isEmpty() ? "" : idOf(imgPaths.get(0)));
+        String img = category.endsWith(".img") ? category : category + ".img";
+        if (!imgPathSet.contains(img)) {
+            throw new IllegalArgumentException("找不到 Skill img: " + category);
+        }
+        String q = query.getOrDefault("q", "").toLowerCase(Locale.ROOT);
+        int offset = parseInt(query.get("offset"), 0);
+        int limit = Math.min(parseInt(query.get("limit"), 360), 800);
+        WzImageFile image = loadImage(img);
+        List<Map<String, Object>> items = new ArrayList<>();
+        int matched = 0;
+        synchronized (image) {
+            WzImageProperty skillRoot = image.getChild("skill");
+            List<WzImageProperty> skills = skillRoot == null ? image.getChildren() : skillRoot.getChildren();
+            String basePath = skillRoot == null ? "" : "skill/";
+            for (WzImageProperty child : skills) {
+                SkillIcon icon = skillIcon(child, basePath);
+                if (icon == null) {
+                    continue;
+                }
+                String id = child.getName();
+                if (!q.isEmpty()
+                        && !id.toLowerCase(Locale.ROOT).contains(q)
+                        && !img.toLowerCase(Locale.ROOT).contains(q)) {
+                    continue;
+                }
+                if (matched >= offset && items.size() < limit) {
+                    Map<String, Object> item = new LinkedHashMap<>();
+                    item.put("img", img);
+                    item.put("id", id);
+                    item.put("category", category);
+                    item.put("key", category + "/" + id);
+                    item.put("icon", "/api/png?img=" + urlEncode(img) + "&path=" + urlEncode(icon.path()));
+                    items.add(item);
+                }
+                matched++;
+            }
+        }
+        writeJson(exchange, Map.of(
+                "items", items,
+                "category", category,
+                "offset", offset,
+                "limit", limit,
+                "matched", matched
+        ));
+    }
+
+    private int countSkillItems(String img) {
+        WzImageFile image = loadImage(img);
+        int count = 0;
+        synchronized (image) {
+            WzImageProperty skillRoot = image.getChild("skill");
+            List<WzImageProperty> skills = skillRoot == null ? image.getChildren() : skillRoot.getChildren();
+            String basePath = skillRoot == null ? "" : "skill/";
+            for (WzImageProperty child : skills) {
+                if (skillIcon(child, basePath) != null) {
+                    count++;
+                }
+            }
+        }
+        return count;
     }
 
     private void handleTree(HttpExchange exchange) throws IOException {
@@ -520,7 +613,32 @@ public final class PreviewImgServer {
         return null;
     }
 
+    private static SkillIcon skillIcon(WzImageProperty skill, String basePath) {
+        for (String candidate : List.of("icon", "iconMouseOver", "info/icon")) {
+            WzImageProperty property = findChildPropertyOrNull(skill, candidate);
+            if (property instanceof WzCanvasProperty canvas && canvas.getWidth() > 0 && canvas.getHeight() > 0) {
+                return new SkillIcon(basePath + skill.getName() + "/" + candidate);
+            }
+        }
+        return null;
+    }
+
+    private static WzImageProperty findChildPropertyOrNull(WzImageProperty parent, String propPath) {
+        String[] parts = propPath.split("/");
+        WzImageProperty current = parent;
+        for (String part : parts) {
+            current = current == null ? null : current.getChild(part);
+            if (current == null) {
+                return null;
+            }
+        }
+        return current;
+    }
+
     private record CanvasCandidate(String path) {
+    }
+
+    private record SkillIcon(String path) {
     }
 
     private record WearLayer(String path, int width, int height, int originX, int originY, String z) {
@@ -691,7 +809,7 @@ public final class PreviewImgServer {
                   </style>
                 </head>
                 <body>
-                  <header><h1>Character IMG Browser</h1><div id="meta" class="meta"></div></header>
+                  <header><h1 id="title">IMG Browser</h1><div id="meta" class="meta"></div></header>
                   <main class="app">
                     <section class="browser">
                       <div class="toolbar">
@@ -722,7 +840,7 @@ public final class PreviewImgServer {
                   <script>
                     const $ = id => document.getElementById(id);
                     const enc = encodeURIComponent;
-                    const state = { categories: [], category: "", q: "", cash: "all", offset: 0, limit: 360, matched: 0, items: [], selected: {}, loadSeq: 0 };
+                    const state = { mode: "equip", categories: [], category: "", q: "", cash: "all", offset: 0, limit: 360, matched: 0, items: [], selected: {}, loadSeq: 0 };
                     const layerOrder = ["Body","Hair","Face","Coat","Longcoat","Pants","Shoes","Glove","Cape","Accessory","Cap","Shield","Weapon","Ring","PetEquip","TamingMob"];
                     const previewAnchor = { x: 110, y: 178 };
 
@@ -737,7 +855,10 @@ public final class PreviewImgServer {
 
                     async function boot() {
                       const [meta, cats] = await Promise.all([api("/api/meta"), api("/api/categories")]);
+                      state.mode = meta.mode || "equip";
+                      $("title").textContent = state.mode === "skill" ? "Skill IMG Browser" : "Character IMG Browser";
                       $("meta").textContent = `${meta.input} · ${meta.region} · ${meta.count} images`;
+                      $("cashFilters").style.display = state.mode === "skill" ? "none" : "flex";
                       state.categories = cats.items;
                       state.category = state.categories[0]?.id || "Body";
                       renderTabs();
@@ -766,7 +887,7 @@ public final class PreviewImgServer {
                         state.items = state.items.concat(data.items);
                         state.offset += data.items.length;
                         renderGrid(data.items, !reset);
-                        $("resultMeta").textContent = `${state.category} · ${cashLabel(state.cash)} · ${state.items.length}/${state.matched}`;
+                        $("resultMeta").textContent = resultLabel();
                         $("more").style.display = state.offset < state.matched ? "block" : "none";
                       } catch (e) {
                         if (seq !== state.loadSeq) return;
@@ -777,8 +898,8 @@ public final class PreviewImgServer {
 
                     function renderGrid(items, append) {
                       const html = items.map(item => `
-                        <button class="card" data-img="${escapeAttr(item.img)}" data-id="${escapeAttr(item.id)}" data-category="${escapeAttr(item.category)}" title="${escapeAttr(item.img)}">
-                          <span class="thumb"><span class="badge ${item.cash ? "cash" : ""}">${item.cash ? "现金" : "普通"}</span><img loading="lazy" src="${thumbUrl(item.img)}" alt="" onerror="this.style.display='none'"></span>
+                        <button class="card" data-img="${escapeAttr(item.img)}" data-id="${escapeAttr(item.id)}" data-category="${escapeAttr(item.category)}" data-key="${escapeAttr(item.key || item.category)}" data-icon="${escapeAttr(item.icon || "")}" title="${escapeAttr(item.img + " / " + item.id)}">
+                          <span class="thumb">${state.mode === "skill" ? "" : `<span class="badge ${item.cash ? "cash" : ""}">${item.cash ? "现金" : "普通"}</span>`}<img loading="lazy" src="${item.icon || thumbUrl(item.img)}" alt="" onerror="this.style.display='none'"></span>
                           <span class="id">${escapeHtml(item.id)}</span>
                         </button>`).join("");
                       if (append) $("grid").insertAdjacentHTML("beforeend", html);
@@ -787,20 +908,20 @@ public final class PreviewImgServer {
                     }
 
                     async function selectItem(card) {
-                      const item = { img: card.dataset.img, id: card.dataset.id, category: card.dataset.category };
-                      state.selected[item.category] = { ...item, loading: true, layers: [] };
+                      const item = { img: card.dataset.img, id: card.dataset.id, category: card.dataset.category, key: card.dataset.key, icon: card.dataset.icon };
+                      state.selected[item.key] = { ...item, loading: true, layers: [] };
                       renderPreview();
                       markActiveCards();
                       try {
                         const data = await api(`/api/wear?img=${enc(item.img)}&category=${enc(item.category)}`);
-                        state.selected[item.category] = {
+                        state.selected[item.key] = {
                           ...item,
                           loading: false,
                           layers: data.layers || [],
                           note: data.layers && data.layers.length ? "" : "无穿戴帧"
                         };
                       } catch (e) {
-                        state.selected[item.category] = { ...item, loading: false, error: e.message, layers: [] };
+                        state.selected[item.key] = { ...item, loading: false, error: e.message, layers: [] };
                       }
                       renderPreview();
                       markActiveCards();
@@ -828,15 +949,21 @@ public final class PreviewImgServer {
                       $("selectedList").innerHTML = selected.length ? selected.map(item => `
                         <div class="selected-row">
                           <div class="cat">${escapeHtml(item.category)}</div>
-                          <img src="${thumbUrl(item.img)}" alt="" onerror="this.style.display='none'">
+                          <img src="${item.icon || thumbUrl(item.img)}" alt="" onerror="this.style.display='none'">
                           <div class="name" title="${escapeAttr(item.img)}">${escapeHtml(item.id)}${item.loading ? " · 加载中" : ""}${item.note ? " · " + escapeHtml(item.note) : ""}${item.error ? " · " + escapeHtml(item.error) : ""}</div>
-                          <button data-remove="${escapeAttr(item.category)}">移除</button>
+                          <button data-remove="${escapeAttr(item.key)}">移除</button>
                         </div>`).join("") : `<div class="empty">未选择装备</div>`;
                     }
 
                     function markActiveCards() {
-                      const selectedImgs = new Set(Object.values(state.selected).map(item => item.img));
-                      document.querySelectorAll(".card").forEach(card => card.classList.toggle("active", selectedImgs.has(card.dataset.img)));
+                      const selectedKeys = new Set(Object.values(state.selected).map(item => item.key));
+                      document.querySelectorAll(".card").forEach(card => card.classList.toggle("active", selectedKeys.has(card.dataset.key)));
+                    }
+
+                    function resultLabel() {
+                      return state.mode === "skill"
+                        ? `${state.category} · ${state.items.length}/${state.matched}`
+                        : `${state.category} · ${cashLabel(state.cash)} · ${state.items.length}/${state.matched}`;
                     }
 
                     function cashLabel(value) {
