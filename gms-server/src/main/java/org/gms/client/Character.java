@@ -1047,6 +1047,7 @@ public class Character extends AbstractCharacterObject {
             skills[0] = Hero.ACHILLES;
             skills[1] = Hero.MONSTER_MAGNET;
             skills[2] = Hero.BRANDISH;
+            skills[3] = Hero.RAGING_BLOW_VI;
         } else if (jobId == 122) {
             skills[0] = Paladin.ACHILLES;
             skills[1] = Paladin.MONSTER_MAGNET;
@@ -1107,12 +1108,19 @@ public class Character extends AbstractCharacterObject {
         for (Integer skillId : skills) {
             if (skillId != 0) {
                 Skill skill = SkillFactory.getSkill(skillId);
+                if (skill == null) {
+                    continue;
+                }
                 final int skilllevel = getSkillLevel(skill);
                 if (skilllevel > 0) {
                     continue;
                 }
 
-                changeSkillLevel(skill, (byte) 0, 10, -1);
+                if (skillId == Hero.RAGING_BLOW_VI) {
+                    changeSkillLevel(skill, (byte) 30, 30, -1);
+                } else {
+                    changeSkillLevel(skill, (byte) 0, 10, -1);
+                }
             }
         }
     }

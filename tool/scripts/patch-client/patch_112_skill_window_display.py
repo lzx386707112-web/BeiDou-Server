@@ -150,6 +150,16 @@ def patch_exe(dry_run: bool) -> None:
     if current_bishop_add_cave not in accepted_bishop_caves:
         raise RuntimeError(f"unexpected bishop-add cave bytes: {current_bishop_add_cave.hex()}")
 
+    already = (
+        current_skill_job_hook == skill_job_hook
+        and current_skill_job_cave == skill_job_cave
+        and current_bishop_add_hook == bishop_add_hook
+        and current_bishop_add_cave == bishop_add_cave
+    )
+    if already:
+        print("BeiDou.exe already allows job 112 custom skills on the 4th-job skill-window path.")
+        return
+
     if dry_run:
         print("Would patch BeiDou.exe skill window display: allow job 112 on tab 5 like job 232.")
         return

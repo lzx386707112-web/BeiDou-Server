@@ -72,7 +72,7 @@ level 参数:
 
 clien/Data/Map/Effect.img
   customSkill/deathFault/full   : 28 帧 screen FIELD_EFFECT 资源，先空等再播放 screen
-  customSkill/deathFault/screen : 28 帧旧全屏 screen 资源，当前不再由服务端广播
+  customSkill/deathFault/screen : 旧全屏 screen 资源，已由优化脚本移除；当前不再由服务端广播
 ```
 
 源 `400011027` 的 canvas 没有 `origin/delay` 子节点，迁移脚本会给 `screen/special/hit` 补默认动画元数据，避免旧客户端播放时一闪而过。这是迁移兼容处理，不是源 WZ 原始数据。`effect` 是人物技能层，不能套用 `1121001` 的手工 origin，也不能用场景中心点伪造源参数；当前 effect 以旧客户端无 origin 时的默认中心锚点为基准，只补 `delay=30`，再按 Brandish 两个动作变体做水平微调：`effect/0 origin=(frame.width/2-200, frame.height/2)` 让视觉右移 200px，`effect/1 origin=(frame.width/2+160, frame.height/2)` 让视觉左移 160px。之前写成固定 `origin=(-200,0)` / `(160,0)` 会覆盖每帧的默认 Y 锚点，导致两个方向一起偏下；现在每帧保留自身中心 Y，只改水平挂点。由于当前 EXE 让 `1121012` 走 Brandish 正常角色视觉路径，WZ 结构也必须匹配 Brandish：源 effect 直接帧会复制成 `effect/0`、`effect/1` 两组，否则客户端找不到可播放 effect。
@@ -83,7 +83,7 @@ clien/Data/Map/Effect.img
 
 `patch_1121012_death_fault.py` 默认读取 `clien/config.ini` 的 `width/height`，当前配置是 `1280x720`。源 `effect` 是人物放技能的前置动画，不能放进 `Map/Effect` 做居中或全屏放大，否则会丢失人物锚点；它保留在 `skill/1121012/effect/0` 和 `skill/1121012/effect/1`，由客户端 Brandish 技能 effect 层按角色位置播放。只有源 `screen` 被迁到 `customSkill/deathFault/full`，每一帧生成成 1280x720 透明 FIELD_EFFECT canvas，并按 alpha 内容区域 cover 到全屏场景层。命令行可用 `--canvas-width/--canvas-height` 临时覆盖分辨率。
 
-`customSkill/deathFault/full` 当前生成结果是 28 帧：第 0 帧是 1280x720 透明帧，delay 为源 screen 起始帧 `19 * 30ms = 570ms`；后 27 帧是源 `screen` 全屏化，按源 screen 帧名恢复时间轴，可见 screen 部分总计 `2610ms`。整个 FIELD_EFFECT 总计 `3180ms`，当前 payload 约 `10.4MB`。实测 `skill/1121012/effect` 只有 `0`、`1` 两个子组，每组 24 帧源尺寸，例如 `284x224`、`564x268`、`1152x444`、`792x256`；`effect/0` 每帧 `origin.x=frame.width/2-200`、`origin.y=frame.height/2`，`effect/1` 每帧 `origin.x=frame.width/2+160`、`origin.y=frame.height/2`，`delay=30`；`skill/1121012/effect/90` 不存在。
+`customSkill/deathFault/full` 当前生成结果是 28 帧：第 0 帧是 1280x720 透明帧，delay 为源 screen 起始帧 `19 * 30ms = 570ms`；后 27 帧是源 `screen` 全屏化，按源 screen 帧名恢复时间轴，可见 screen 部分总计 `2610ms`。整个 FIELD_EFFECT 总计 `3180ms`，经过 `tool/scripts/patch-skill/optimize_112_skill_assets.py --canvas-format 1` 转成 ARGB4444 后，当前 payload 约 `1.76MB`，encoded raw 从约 `98.4MB` 降到约 `49.2MB`。实测 `skill/1121012/effect` 只有 `0`、`1` 两个子组，每组 24 帧源尺寸，例如 `284x224`、`564x268`、`1152x444`、`792x256`；`effect/0` 每帧 `origin.x=frame.width/2-200`、`origin.y=frame.height/2`，`effect/1` 每帧 `origin.x=frame.width/2+160`、`origin.y=frame.height/2`，`delay=30`；`skill/1121012/effect/90` 不存在。
 
 快捷栏图标还需要旧端常见 icon 元数据：`icon/iconMouseOver/iconDisabled` 都是 `32x32`，并设置 `origin=(0,32)`、`z=0`。`1121001` 和 `1121012` 的来源 icon 原本没有这些子节点，放到键盘上会偏位；对应迁移脚本现在都会补齐。
 
@@ -119,7 +119,7 @@ effect/1 视觉左移 160px: origin=(frame.width/2+160, frame.height/2)
 
 全屏效果要按客户端分辨率生成画布，但这只适用于 `screen` 的 FIELD_EFFECT 版本。当前脚本读取 `clien/config.ini` 的 `width/height`，生成 `1280x720` 透明画布，再把 screen alpha 内容区域按 cover 放进去。`effect` 不参与这个分辨率逻辑，不能被放大；否则角色起手动画会失真并且失去人物位置。
 
-第一次释放技能明显卡顿时，优先怀疑大体积 WZ canvas 首次解码/加载，而不是先改帧数。`customSkill/deathFault/full` 是 28 帧、1280x720、payload 约 `10.4MB`，首次播放有加载成本是合理风险。当前没有做通用预热机制；后续如果要优化，应优先考虑资源预加载或降低 FIELD_EFFECT payload，而不是改变源 screen 时间轴或 effect 坐标。
+第一次释放技能明显卡顿时，优先怀疑大体积 WZ canvas 首次解码/加载，而不是先改帧数。第一版 256 色量化只降低 payload，没有降低解压后的像素尺寸，实测首放卡顿改善不明显；当前改用 ARGB4444 (`format=1`) 来降低运行时像素流。`customSkill/deathFault/full` 的 encoded raw 从约 `98.4MB` 降到约 `49.2MB`；`112.img` 中 `1121001/1121012/1121013` 的目标 canvas encoded raw 从约 `480.1MB` 降到约 `240.0MB`，同时移除了 `1121013/effect0`、`1121013/effect1` 两个已合入可播放 `effect/0`、`effect/1` 的冗余顶层组。当前仍没有做通用预热机制；后续如果要继续优化，应优先考虑资源预加载或更激进的 UOL/_inlink 复用，而不是改变源 screen 时间轴或 effect 坐标。
 
 新增技能面板显示和技能实际释放是两件事。`1121012` 能出现在四转技能面板，依赖 `0x4F0751`、`0xA0A3D6` 的职业过滤 patch；但能显示不代表能按正确攻击类型、动作、视觉路径和伤害结算释放。`1121012` 还需要 Brandish 兼容攻击识别 patch，以及服务端 `Hero.DEATH_FAULT` 分支来广播 FIELD_EFFECT、延迟结算伤害。
 

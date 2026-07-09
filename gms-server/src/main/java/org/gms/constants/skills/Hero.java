@@ -35,5 +35,6 @@ public class Hero {
     public static final int ENRAGE = 1121010;
     public static final int HEROS_WILL = 1121011;
     public static final int DEATH_FAULT = 1121012;
+    public static final int RAGING_BLOW_VI = 1121013;
     public static final int BRANDISH = 1121008;
 }

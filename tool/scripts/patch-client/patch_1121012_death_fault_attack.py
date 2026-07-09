@@ -33,6 +33,15 @@ CAVE_VA = legacy.CAVE_VA
 CAVE_OFFSET = legacy.CAVE_OFFSET
 CAVE_SIZE = legacy.CAVE_SIZE
 
+RAGING_BLOW_VI_CAVE_STARTS = {
+    "Brandish skill branch": 0x00AEFE30,
+    "Brandish action type": 0x00AEFE65,
+    "Brandish visual offset": 0x00AEFE96,
+    "Brandish state switch": 0x00AEFEC7,
+    "Brandish hit randomization": 0x00AEFF03,
+    "Brandish visual exit effect0": 0x00AEFF44,
+}
+
 def build_cave(death_fault_visual_target: int = legacy.BRANDISH_VISUAL_TARGET) -> tuple[bytes, dict[str, int]]:
     out = bytearray()
     starts: dict[str, int] = {}
@@ -289,6 +298,8 @@ def accepted_legacy_caves() -> set[bytes]:
 
 def accepted_hook_patches(hook: legacy.Hook) -> set[bytes]:
     patches = {hook.original}
+    if hook.name in RAGING_BLOW_VI_CAVE_STARTS:
+        patches.add(legacy.hook_patch(hook, RAGING_BLOW_VI_CAVE_STARTS[hook.name]))
     for death_fault_visual_target in (legacy.DEFAULT_VISUAL_TARGET, legacy.BRANDISH_VISUAL_TARGET):
         _, starts = build_cave(death_fault_visual_target=death_fault_visual_target)
         if hook.name in starts:
@@ -312,6 +323,14 @@ def patch_exe(dry_run: bool) -> None:
     current_cave = bytes(data[CAVE_OFFSET : CAVE_OFFSET + CAVE_SIZE])
     if current_cave != cave and current_cave not in accepted_legacy_caves() and any(current_cave):
         raise RuntimeError(f"unexpected code cave bytes at VA 0x{CAVE_VA:x}")
+
+    if all(
+        bytes(data[hook.offset : hook.offset + len(hook.original)])
+        == legacy.hook_patch(hook, RAGING_BLOW_VI_CAVE_STARTS[hook.name])
+        for hook in legacy.HOOKS
+    ):
+        print("BeiDou.exe already recognizes 1121012 through the newer 1121013 Raging Blow VI attack patch.")
+        return
 
     already = current_cave == cave
     for hook in legacy.HOOKS:

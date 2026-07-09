@@ -29,7 +29,9 @@ import org.gms.client.Client;
 import org.gms.client.Disease;
 import org.gms.client.Family;
 import org.gms.client.FamilyEntry;
+import org.gms.client.Job;
 import org.gms.client.Mount;
+import org.gms.client.Skill;
 import org.gms.client.SkillFactory;
 import org.gms.client.inventory.Equip;
 import org.gms.client.inventory.Inventory;
@@ -39,6 +41,7 @@ import org.gms.client.inventory.Pet;
 import org.gms.client.keybind.KeyBinding;
 import org.gms.config.GameConfig;
 import org.gms.constants.game.GameConstants;
+import org.gms.constants.skills.Hero;
 import org.gms.manager.ServerManager;
 import org.gms.net.AbstractPacketHandler;
 import org.gms.net.packet.InPacket;
@@ -248,6 +251,7 @@ public final class PlayerLoggedinHandler extends AbstractPacketHandler {
                 player.silentApplyDiseases(diseases);
             }
 
+            grantRagingBlowVi(player);
             c.sendPacket(PacketCreator.getCharInfo(player));    //这里发送登录成功封包
             if (player.isHidden()) {
                 if (!GameConfig.getServerBoolean("use_auto_hide_gm")) {
@@ -511,5 +515,19 @@ public final class PlayerLoggedinHandler extends AbstractPacketHandler {
         timedBuffs.sort((p1, p2) -> p1.getLeft().compareTo(p2.getLeft()));
 
         return timedBuffs;
+    }
+
+    private static void grantRagingBlowVi(Character player) {
+        if (!player.getJob().isA(Job.HERO)) {
+            return;
+        }
+        if (player.getSkillLevel(Hero.RAGING_BLOW_VI) >= 30 && player.getMasterLevel(Hero.RAGING_BLOW_VI) >= 30) {
+            return;
+        }
+        Skill skill = SkillFactory.getSkill(Hero.RAGING_BLOW_VI);
+        if (skill == null) {
+            return;
+        }
+        player.changeSkillLevel(skill, (byte) 30, 30, -1);
     }
 }
