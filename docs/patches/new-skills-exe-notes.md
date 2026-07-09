@@ -940,8 +940,8 @@ tool/scripts/patch-skill/patch_bishop_dragon_manual_attacks.py
 0x7AD4F8  召唤技能路径 hook，支持 2321003/2321010/2331010。
 0x967EE6  释放分类 hook，支持 2321010/2331010 召唤与 232/233 攻击范围。
 0x955D0E  AoE 分类 hook，支持 2321011-2321018 与 2331011-2331018。
-0x4F0751  技能窗口职业分类 hook。
-0xA0A3D6  Bishop 技能列表子分支 hook，避免 233 进入后又被 232 判断过滤。
+0x4F0751  技能窗口职业分类 hook。当前确认 112 新增四转技能也要在这里放行到第 5 页。
+0xA0A3D6  Bishop/四转技能列表子分支 hook，避免 233/112 进入后又被 232 判断过滤。
 0x4E6679  技能窗口 tab 循环上限，当前从 5 改为 6。
 0x4B071E  技能窗口 tab 布局槽位上限，当前从 5 改为 6。
 0x4EFDE8  当前职业 4 转 tab 分支，尝试拆成 232 第 5 页、233 第 6 页。
@@ -1015,6 +1015,102 @@ hit 存在，delay 总和为 0。
 ```text
 优先维护 232 组技能、4 转 tab 排序、180 级服务端门槛。
 不要再为了显示页签优先改 EXE UI，除非后续明确要完整实现第 5/V tab。
+```
+
+## 实战记录：112 新增四转技能不显示
+
+本次验证目标是解释为什么同样新增技能节点，放在 `232.img` 里能显示，放在 `112.img` 里不显示。
+
+最终确认不是 WZ/String/服务端发放链路问题，而是 `BeiDou.exe` 的技能窗口职业过滤。
+测试方式是在 `112.img` 中复制已有技能：
+
+```text
+来源技能：1121011
+测试技能：1121012
+显示名称：测试
+文件：
+  clien/Data/Skill/112.img
+  clien/Data/String/Skill.img
+  gms-server/wz/Skill.wz/112.img.xml
+  gms-server/wz/String.wz/Skill.img.xml
+脚本：
+  tool/scripts/patch-skill/patch_1121012_test_skill.py
+```
+
+补 EXE 前，`1121012` 即使资源和字符串存在，技能面板仍不显示。补 EXE 后，测试技能可以在 112 四转技能页显示。
+
+关键原因有两处：
+
+```text
+1. 0x4F0751
+   技能窗口按 skillId / 10000 得到职业段。
+   现有 cave 原来只特殊放行：
+     232 -> tab 5
+     233 -> tab 6
+   没有 112，所以 1121012 这类新增技能会被过滤掉。
+
+2. 0xA0A3D6
+   创建技能窗口条目时又按 skillId / 10000 做二次判断。
+   原 cave 只允许 232/233 继续创建技能条目。
+   即使 0x4F0751 放行，112 不补这里也可能进不去真正的 UI 列表。
+```
+
+当前补丁做法：
+
+```text
+0x4F0751 -> 新 cave 0xAEFA80
+  112 -> 当前 tab == 5 时跳到 0x4F0758
+  232 -> 当前 tab == 5 时跳到 0x4F0758
+  233 -> 当前 tab == 6 时跳到 0x4F0758
+
+0xA0A3D6 -> cave 0xAEF980
+  112/232/233 都跳到 0xA0A3E1 创建技能条目
+  其他职业跳到 0xA0A49B 拒绝
+```
+
+对应脚本：
+
+```text
+tool/scripts/patch-client/patch_112_skill_window_display.py
+```
+
+验证命令：
+
+```bash
+rtk python3 tool/scripts/patch-client/patch_112_skill_window_display.py --dry-run
+rtk objdump -D -Mintel --start-address=0xaefa80 --stop-address=0xaefae0 clien/BeiDou.exe
+rtk objdump -D -Mintel --start-address=0xaef980 --stop-address=0xaef9b0 clien/BeiDou.exe
+```
+
+期望能看到：
+
+```text
+0xAEFA80 cave:
+  cmp eax, 0x70   ; 112
+  cmp [ecx+0x18], 5
+  je 0x4F0758
+  cmp eax, 0xE8   ; 232
+  cmp [ecx+0x18], 5
+  je 0x4F0758
+  cmp eax, 0xE9   ; 233
+  cmp [ecx+0x18], 6
+  je 0x4F0758
+
+0xAEF980 cave:
+  cmp eax, 0x70   ; 112
+  je 0xA0A3E1
+  cmp eax, 0xE8   ; 232
+  je 0xA0A3E1
+  cmp eax, 0xE9   ; 233
+  je 0xA0A3E1
+```
+
+结论：
+
+```text
+给 112.img 新增四转技能时，仅补客户端 Skill/String 和服务端 XML 不够。
+如果技能节点 ID 超出旧客户端原本的 112 技能窗口分支，必须把 112 加进技能窗口职业过滤。
+当前已实测：补 0x4F0751 + 0xA0A3D6 后，1121012 测试技能可见。
 ```
 
 ## 完成后技能栏仍看不到：补数据库
@@ -2016,6 +2112,77 @@ level/*/rb     = (700, 126)
 - 全新封包结构。
 - 全新 UI/技能学习/状态图标/冷却逻辑。
 - 自定义 WZ 节点名，例如 `myCustomEffect`。
+
+## Skill screen 节点兼容
+
+目标：让老客户端能吃到技能 WZ 里的 `screen` 类节点，并继续走当前稳定的技能 effect 播放链路。
+
+结论：
+
+```text
+老 BeiDou.exe 没有现代客户端那套 skill screen 字符串/资源槽。
+直接给技能对象扩 screen/screen0/screen1/screen2 槽位，需要改加载结构和析构引用计数，风险太高。
+当前采用兼容镜像：
+
+screen  -> effect/90
+screen0 -> effect/91
+screen1 -> effect/92
+screen2 -> effect/93
+```
+
+EXE hook：
+
+```text
+脚本：tool/scripts/patch-client/patch_skill_screen_effect_slots.py
+hook：0x009358EE
+cave：0x00AEFD80
+
+普通技能 effect 播放完成后，依次尝试 effect/90..93。
+资源不存在就跳过；存在则调用旧客户端已有的 effect selector 0x00932D40，
+再走原本稳定的角色 effect layer 播放路径。
+```
+
+资源镜像：
+
+```text
+脚本：tool/scripts/patch-skill/patch_skill_screen_effect_slots.py
+
+默认不会扫描所有 Skill/*.img，必须指定技能。
+确实要全量扫描时再显式加 `--all`：
+
+rtk python3 tool/scripts/patch-skill/patch_skill_screen_effect_slots.py 1121001
+rtk python3 tool/scripts/patch-skill/patch_skill_screen_effect_slots.py --all
+```
+
+当前仓库实际命中的旧 screen 技能：
+
+```text
+0001009, 0001020
+10001009, 10001020
+20001009, 20001020
+
+这些是现有流星竹雨/法老王技能，本来已经能正常释放。
+它们的 effect 下已有普通动画帧 10..13，不能拿这些编号做 screen 镜像。
+已回滚对这些既有技能的 WZ 镜像改动；后续只对目标新技能显式执行脚本。
+```
+
+验证：
+
+```text
+rtk python3 tool/scripts/patch-client/patch_skill_screen_effect_slots.py --dry-run
+=> BeiDou.exe already plays migrated skill screen effect slots.
+
+rtk python3 tool/scripts/patch-skill/patch_skill_screen_effect_slots.py --dry-run
+=> no skill ids supplied; pass explicit ids or --all to mirror screen nodes
+```
+
+限制：
+
+```text
+这不是现代客户端的原生 screen 对象布局，而是 screen 节点的兼容镜像。
+播放层复用旧客户端当前稳定的 effect layer；如果某个 screen 资源必须严格按屏幕坐标/全屏遮罩表现，
+仍可能需要把资源做成适合 effect layer 的全屏画布，或继续走 Map/Effect.img + FIELD_EFFECT 的服务端广播方案。
+```
 
 ## 当前参考文件
 

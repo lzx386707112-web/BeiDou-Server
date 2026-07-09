@@ -265,6 +265,21 @@ def ensure_canvas_animation_metadata(prop) -> int:
     return changed
 
 
+def ensure_skill_icon_metadata(prop) -> int:
+    if not isinstance(prop, WzCanvasProperty):
+        return 0
+    changed = 0
+    origin = prop.child("origin")
+    if not isinstance(origin, WzVectorProperty) or (int(origin.x), int(origin.y)) != (0, int(prop.height)):
+        set_vector(prop, "origin", (0, int(prop.height)))
+        changed += 1
+    z = prop.child("z")
+    if not isinstance(z, WzIntProperty) or int(z.value) != 0:
+        set_int(prop, "z", 0)
+        changed += 1
+    return changed
+
+
 def renumber_direct_animation_frames(prop) -> int:
     if not isinstance(prop, WzSubProperty):
         return 0
@@ -435,10 +450,14 @@ def patch_client_skill(path: Path, dry_run: bool) -> int:
         replace_child(target, copied)
         copied_children.append(source_child.name)
     metadata_patches = 0
+    icon_metadata_patches = 0
     for visual_name in ("effect", "effect0"):
         node = target.child(visual_name)
         if node is not None:
             metadata_patches += ensure_canvas_animation_metadata(node)
+    for visual_name in ("icon", "iconMouseOver", "iconDisabled"):
+        node = target.child(visual_name)
+        icon_metadata_patches += ensure_skill_icon_metadata(node)
     delayed_effect0 = prepend_effect0_start_delay(target.child("effect0"), target_key)
     compat_frames = add_effect0_compat_variant(target.child("effect"), target.child("effect0"))
     compat_action = ensure_effect0_compat_action(target)
@@ -463,6 +482,7 @@ def patch_client_skill(path: Path, dry_run: bool) -> int:
             f"[dry-run] would copy source nodes {','.join(copied_children)} "
             f"remove stale nodes {','.join(removed_children) or '-'} "
             f"patch animation metadata {metadata_patches} "
+            f"patch icon metadata {icon_metadata_patches} "
             f"renumber effect0 frames {renumbered_frames} "
             f"move effect0 frames {moved_effect0_frames} "
             f"prepend effect0 delay frames {delayed_effect0} "
@@ -478,6 +498,7 @@ def patch_client_skill(path: Path, dry_run: bool) -> int:
         f"copied source nodes {','.join(copied_children)}, "
         f"removed stale nodes {','.join(removed_children) or '-'} "
         f"patched animation metadata {metadata_patches} "
+        f"patched icon metadata {icon_metadata_patches} "
         f"renumbered effect0 frames {renumbered_frames} "
         f"moved effect0 frames {moved_effect0_frames} "
         f"prepended effect0 delay frames {delayed_effect0} "
@@ -708,6 +729,7 @@ def patch_server_skill(path: Path, dry_run: bool) -> int:
 
     copied_children: list[str] = []
     metadata_patches = 0
+    icon_metadata_patches = 0
     renumbered_frames = 0
     moved_effect0_frames = 0
     delayed_effect0 = 0
@@ -724,6 +746,8 @@ def patch_server_skill(path: Path, dry_run: bool) -> int:
             )
         if source_child.name in {"effect", "effect0"}:
             metadata_patches += ensure_canvas_animation_metadata(xml_child)
+        if source_child.name in {"icon", "iconMouseOver", "iconDisabled"}:
+            icon_metadata_patches += ensure_skill_icon_metadata(xml_child)
         if source_child.name == "effect0":
             delayed_effect0 += prepend_effect0_start_delay(xml_child)
         child_xml = property_to_xml(xml_child, 2)
@@ -756,6 +780,7 @@ def patch_server_skill(path: Path, dry_run: bool) -> int:
             f"[dry-run] would copy source nodes {','.join(copied_children)}, "
             f"remove stale nodes {','.join(removed_children) or '-'} "
             f"patch animation metadata {metadata_patches} "
+            f"patch icon metadata {icon_metadata_patches} "
             f"renumber effect0 frames {renumbered_frames} "
             f"move effect0 frames {moved_effect0_frames} "
             f"prepend effect0 delay frames {delayed_effect0} "
@@ -771,6 +796,7 @@ def patch_server_skill(path: Path, dry_run: bool) -> int:
             f"copied source nodes {','.join(copied_children)}, "
             f"removed stale nodes {','.join(removed_children) or '-'} "
             f"patched animation metadata {metadata_patches} "
+            f"patched icon metadata {icon_metadata_patches} "
             f"renumbered effect0 frames {renumbered_frames} "
             f"moved effect0 frames {moved_effect0_frames} "
             f"prepended effect0 delay frames {delayed_effect0} "

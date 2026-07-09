@@ -51,6 +51,8 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 
 public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
     private static final int SWORD_ILLUSION_HIT_DELAY_MS = 1000;
+    private static final int DEATH_FAULT_HIT_DELAY_MS = 1000;
+    private static final String DEATH_FAULT_FIELD_EFFECT = "customSkill/deathFault/full";
 
     @Override
     public final void handlePacket(InPacket p, Client c) {
@@ -196,6 +198,10 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
         if (attack.skill == Hero.MONSTER_MAGNET) {
             final int delayedAttackCount = attackCount;
             TimerManager.getInstance().schedule(() -> applyAttack(attack, chr, delayedAttackCount), SWORD_ILLUSION_HIT_DELAY_MS);
+        } else if (attack.skill == Hero.DEATH_FAULT) {
+            chr.getMap().broadcastMessage(PacketCreator.showEffect(DEATH_FAULT_FIELD_EFFECT));
+            final int delayedAttackCount = attackCount;
+            TimerManager.getInstance().schedule(() -> applyAttack(attack, chr, delayedAttackCount), DEATH_FAULT_HIT_DELAY_MS);
         } else {
             applyAttack(attack, chr, attackCount);
         }
