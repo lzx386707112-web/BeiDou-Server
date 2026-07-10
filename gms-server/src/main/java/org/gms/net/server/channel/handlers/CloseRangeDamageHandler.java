@@ -52,7 +52,6 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
     private static final int SWORD_ILLUSION_HIT_DELAY_MS = 1000;
     private static final int DEATH_FAULT_HIT_DELAY_MS = 1000;
-    private static final int RAGING_BLOW_VI_HIT_DELAY_MS = 2200;
     private static final String DEATH_FAULT_FIELD_EFFECT = "customSkill/deathFault/full";
 
     @Override
@@ -83,14 +82,7 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
             c.sendPacket(PacketCreator.getEnergy("energy", chr.getDojoEnergy()));
         }
 
-        if (attack.skill == Hero.RAGING_BLOW_VI) {
-            TimerManager.getInstance().schedule(
-                    () -> chr.getMap().broadcastMessage(chr, PacketCreator.closeRangeAttack(chr, attack.skill, attack.skilllevel, attack.stance, attack.numAttackedAndDamage, attack.allDamage, attack.speed, attack.direction, attack.display), false, true),
-                    RAGING_BLOW_VI_HIT_DELAY_MS
-            );
-        } else {
-            chr.getMap().broadcastMessage(chr, PacketCreator.closeRangeAttack(chr, attack.skill, attack.skilllevel, attack.stance, attack.numAttackedAndDamage, attack.allDamage, attack.speed, attack.direction, attack.display), false, true);
-        }
+        chr.getMap().broadcastMessage(chr, PacketCreator.closeRangeAttack(chr, attack.skill, attack.skilllevel, attack.stance, attack.numAttackedAndDamage, attack.allDamage, attack.speed, attack.direction, attack.display), false, true);
         int numFinisherOrbs = 0;
         Integer comboBuff = chr.getBuffedValue(BuffStat.COMBO);
         if (GameConstants.isFinisherSkill(attack.skill)) {
@@ -210,9 +202,6 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
             chr.getMap().broadcastMessage(PacketCreator.showEffect(DEATH_FAULT_FIELD_EFFECT));
             final int delayedAttackCount = attackCount;
             TimerManager.getInstance().schedule(() -> applyAttack(attack, chr, delayedAttackCount), DEATH_FAULT_HIT_DELAY_MS);
-        } else if (attack.skill == Hero.RAGING_BLOW_VI) {
-            final int delayedAttackCount = attackCount;
-            TimerManager.getInstance().schedule(() -> applyAttack(attack, chr, delayedAttackCount), RAGING_BLOW_VI_HIT_DELAY_MS);
         } else {
             applyAttack(attack, chr, attackCount);
         }

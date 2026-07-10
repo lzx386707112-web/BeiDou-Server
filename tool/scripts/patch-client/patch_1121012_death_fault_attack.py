@@ -320,10 +320,6 @@ def accepted_hook_patches(hook: legacy.Hook) -> set[bytes]:
 def patch_exe(dry_run: bool) -> None:
     data = bytearray(EXE.read_bytes())
     cave, starts = build_cave()
-    current_cave = bytes(data[CAVE_OFFSET : CAVE_OFFSET + CAVE_SIZE])
-    if current_cave != cave and current_cave not in accepted_legacy_caves() and any(current_cave):
-        raise RuntimeError(f"unexpected code cave bytes at VA 0x{CAVE_VA:x}")
-
     if all(
         bytes(data[hook.offset : hook.offset + len(hook.original)])
         == legacy.hook_patch(hook, RAGING_BLOW_VI_CAVE_STARTS[hook.name])
@@ -331,6 +327,10 @@ def patch_exe(dry_run: bool) -> None:
     ):
         print("BeiDou.exe already recognizes 1121012 through the newer 1121013 Raging Blow VI attack patch.")
         return
+
+    current_cave = bytes(data[CAVE_OFFSET : CAVE_OFFSET + CAVE_SIZE])
+    if current_cave != cave and current_cave not in accepted_legacy_caves() and any(current_cave):
+        raise RuntimeError(f"unexpected code cave bytes at VA 0x{CAVE_VA:x}")
 
     already = current_cave == cave
     for hook in legacy.HOOKS:

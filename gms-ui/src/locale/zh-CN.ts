@@ -16,6 +16,7 @@ export default {
   // 左侧菜单
   'menu.dashboard': '仪表盘',
   'menu.dashboard.workplace': '工作台',
+  'menu.dashboard.operationTools': '运营工具',
   'menu.dashboard.informationSearch': '资料查询',
   'menu.game': '游戏管理',
   'menu.game.config': '参数管理',
@@ -25,6 +26,7 @@ export default {
   'menu.game.drop.global': '全局爆率',
   'menu.game.inventory': '背包管理',
   'menu.game.gachapon': '百宝箱',
+  'menu.game.operationTools': '运营工具',
   'menu.game.command': 'GM指令',
   'menu.game.file': '文件管理',
   'menu.game.autoban': '自动封禁',

@@ -3,8 +3,8 @@
 
 The .img canvas payloads are raw WZ pixel formats compressed with zlib, not
 normal PNG files.  This applies a TinyPNG-like palette quantization step before
-re-encoding the selected new skill assets, and removes duplicate/obsolete
-visual groups that are no longer used by the current client/server path.
+re-encoding the selected new skill assets, and removes obsolete map visual
+groups that are no longer used by the current client/server path.
 """
 
 from __future__ import annotations
@@ -35,7 +35,6 @@ CLIENT_MAP_EFFECT = ROOT / "clien" / "Data" / "Map" / "Effect.img"
 TARGET_SKILLS = ("1121001", "1121012", "1121013")
 MAP_EFFECT_PATH = "customSkill/deathFault/full"
 OBSOLETE_MAP_EFFECT_PATH = "customSkill/deathFault/screen"
-OBSOLETE_1121013_GROUPS = ("effect0", "effect1")
 
 
 def atomic_write(path: Path, data: bytes) -> None:
@@ -167,13 +166,6 @@ def optimize_skill_img(path: Path, colors: int, zlib_level: int, canvas_format: 
     image = WzImage.from_bytes(path.read_bytes(), key=WzKey.for_region("GMS"), name=path.name)
     root = image.parse()
 
-    removed = []
-    raging = root.get("skill/1121013")
-    if isinstance(raging, WzSubProperty):
-        for group in OBSOLETE_1121013_GROUPS:
-            if remove_child(raging, group):
-                removed.append(f"skill/1121013/{group}")
-
     canvases: list[tuple[str, WzCanvasProperty]] = []
     for skill_id in TARGET_SKILLS:
         node = root.get(f"skill/{skill_id}")
@@ -188,12 +180,10 @@ def optimize_skill_img(path: Path, colors: int, zlib_level: int, canvas_format: 
     after_payload, after_raw = canvas_totals(canvases)
     print(
         f"{path.name}: canvases={len(canvases)}, duplicates={duplicate_groups}, "
-        f"removed={len(removed)}, payload {before_payload / 1024 / 1024:.2f}MB -> "
+        f"payload {before_payload / 1024 / 1024:.2f}MB -> "
         f"{after_payload / 1024 / 1024:.2f}MB, encodedRaw {before_raw / 1024 / 1024:.1f}MB -> "
         f"{after_raw / 1024 / 1024:.1f}MB, format={canvas_format}"
     )
-    for node_path in removed:
-        print(f"removed obsolete duplicate node: {node_path}")
 
     if dry_run:
         return 1

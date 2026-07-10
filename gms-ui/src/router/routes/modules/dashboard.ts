@@ -23,6 +23,16 @@ const DASHBOARD: AppRouteRecordRaw = {
       },
     },
     {
+      path: 'operationTools',
+      name: 'OperationTools',
+      component: () => import('@/views/dashboard/operationTools/index.vue'),
+      meta: {
+        locale: 'menu.dashboard.operationTools',
+        requiresAuth: true,
+        roles: ['admin'],
+      },
+    },
+    {
       path: 'informationSearch',
       name: 'informationSearch',
       component: () => import('@/views/dashboard/informationSearch/index.vue'),

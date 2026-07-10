@@ -16,6 +16,17 @@ interface StopServerParams {
   showChatMsg: boolean;
 }
 
+interface BroadcastParams {
+  message: string;
+}
+
+interface MonsterSiegeParams {
+  monsterIds: number[];
+  count: number;
+  message: string;
+  broadcast: boolean;
+}
+
 export function stopServer(params: StopServerParams) {
   return axios.post('/server/v1/stopServerWithMsgAndInternal', params);
 }
@@ -30,4 +41,12 @@ export function shutdown() {
 
 export function getVersion() {
   return axios.get('/server/v1/version');
+}
+
+export function sendServerBroadcast(params: BroadcastParams) {
+  return axios.post('/server/v1/broadcast', params);
+}
+
+export function startMonsterSiege(params: MonsterSiegeParams) {
+  return axios.post<number>('/server/v1/monsterSiege', params);
 }

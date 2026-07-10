@@ -8,7 +8,9 @@ import lombok.AllArgsConstructor;
 import org.gms.constants.api.ApiConstant;
 import org.gms.constants.net.ServerConstants;
 import org.gms.model.dto.ChannelListRtnDTO;
+import org.gms.model.dto.MonsterSiegeDTO;
 import org.gms.model.dto.ResultBody;
+import org.gms.model.dto.ServerBroadcastDTO;
 import org.gms.model.dto.ServerShutdownDTO;
 import org.gms.model.dto.SubmitBody;
 import org.gms.net.server.Server;
@@ -100,5 +102,20 @@ public class ServerController {
     @GetMapping("/" + ApiConstant.LATEST + "/version")
     public ResultBody<String> version() {
         return ResultBody.success(ServerConstants.BEI_DOU_VERSION);
+    }
+
+    @Tag(name = "/server/" + ApiConstant.LATEST)
+    @Operation(summary = "全服中央广播")
+    @PostMapping("/" + ApiConstant.LATEST + "/broadcast")
+    public ResultBody<Object> broadcast(@RequestBody SubmitBody<ServerBroadcastDTO> request) {
+        serverService.broadcastMapEffect(request.getData());
+        return ResultBody.success();
+    }
+
+    @Tag(name = "/server/" + ApiConstant.LATEST)
+    @Operation(summary = "自由市场怪物攻城")
+    @PostMapping("/" + ApiConstant.LATEST + "/monsterSiege")
+    public ResultBody<Integer> monsterSiege(@RequestBody SubmitBody<MonsterSiegeDTO> request) {
+        return ResultBody.success(serverService.summonMonsterSiege(request.getData()));
     }
 }

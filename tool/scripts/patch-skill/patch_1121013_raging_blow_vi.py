@@ -19,7 +19,7 @@ sys.path.insert(0, str(PATCH_SKILL))
 
 from wzpy import WzImage, WzKey  # noqa: E402
 from wzpy.canvas import decode_canvas, encode_canvas_payload  # noqa: E402
-from wzpy.properties import WzCanvasProperty, WzIntProperty, WzStringProperty, WzSubProperty  # noqa: E402
+from wzpy.properties import WzCanvasProperty, WzIntProperty, WzStringProperty, WzSubProperty, WzVectorProperty  # noqa: E402
 from wzpy.writer import encode_image_body  # noqa: E402
 
 from patch_1121001_sword_illusion import (  # noqa: E402
@@ -59,14 +59,16 @@ MOB_COUNT = 10
 ATTACK_COUNT = 8
 COOLTIME = 10
 PASSIVE_ULTIMATE_STRIKE_DAMAGE = 41
-ACTION_NAMES = ("brandish1", "brandish2")
-PLAYABLE_EFFECT_VARIANTS = ("0", "1")
-PLAYABLE_EFFECT_GROUPS = ("effect", "effect0", "effect1")
+ACTION_NAMES = ("brandish1",)
+INDEPENDENT_EFFECT_SLOTS = (
+    ("90", "effect0"),
+    ("91", "effect1"),
+)
 SKILL_EFFECT_DELAY = 100
-EFFECT_VISIBLE_BOTTOM_DOWN_OFFSET = 70
-HIT_START_DELAY_MS = 2200
-LT = (-800, -350)
-RB = (800, 250)
+VISUAL_SCALE = 0.70
+EFFECT_VISIBLE_BOTTOM_DOWN_OFFSET = round(70 * VISUAL_SCALE)
+LT = (round(-800 * VISUAL_SCALE), round(-350 * VISUAL_SCALE))
+RB = (round(800 * VISUAL_SCALE), round(250 * VISUAL_SCALE))
 
 VISUAL_CHILDREN = {
     "affected",
@@ -152,6 +154,53 @@ def replace_child(parent: WzSubProperty, prop) -> None:
     parent._children[prop.name] = prop
 
 
+def scale_xy(x: int, y: int, scale: float) -> tuple[int, int]:
+    return round(int(x) * scale), round(int(y) * scale)
+
+
+def scale_canvas_property(prop: WzCanvasProperty, region: str, target_key: WzKey | None, scale: float) -> int:
+    image = decode_canvas(prop, region=region).convert("RGBA")
+    width = max(1, round(image.width * scale))
+    height = max(1, round(image.height * scale))
+    resampling = getattr(Image, "Resampling", Image)
+    resample = getattr(resampling, "LANCZOS", Image.LANCZOS)
+    image = image.resize((width, height), resample)
+
+    prop.width = width
+    prop.height = height
+    prop.format = 2
+    prop.format2 = 0
+    prop._png_data = encode_canvas_payload(
+        image,
+        2,
+        width,
+        height,
+        key=target_key or WzKey.for_region("GMS"),
+        listwz=False,
+    )
+    prop._png_length = len(prop._png_data)
+
+    changed = 1
+    for child in prop.children():
+        if isinstance(child, WzVectorProperty):
+            expected = scale_xy(child.x, child.y, scale)
+            if (int(child.x), int(child.y)) != expected:
+                set_vector(prop, child.name, expected)
+                changed += 1
+    return changed
+
+
+def scale_visual_canvases(prop, region: str, target_key: WzKey | None, scale: float = VISUAL_SCALE) -> int:
+    if isinstance(prop, WzCanvasProperty):
+        return scale_canvas_property(prop, region, target_key, scale)
+    if isinstance(prop, WzSubProperty):
+        changed = 0
+        for child in prop.children():
+            changed += scale_visual_canvases(child, region, target_key, scale)
+        return changed
+    return 0
+
+
 def visible_bottom(prop: WzCanvasProperty, region: str) -> int:
     try:
         image = decode_canvas(prop, region=region).convert("RGBA")
@@ -199,72 +248,31 @@ def ensure_skill_delay_without_origin(prop) -> int:
     return changed
 
 
-def make_transparent_delay_canvas(name: str, parent, target_key: WzKey | None) -> WzCanvasProperty:
-    canvas = WzCanvasProperty(name, parent)
-    canvas.width = 1
-    canvas.height = 1
-    canvas.format = 2
-    canvas.format2 = 0
-    if target_key is not None:
-        image = Image.new("RGBA", (1, 1), (0, 0, 0, 0))
-        canvas._png_data = encode_canvas_payload(image, 2, 1, 1, key=target_key, listwz=False)
-        canvas._png_length = len(canvas._png_data)
-    set_int(canvas, "delay", HIT_START_DELAY_MS)
-    return canvas
-
-
-def prepend_hit_start_delay(prop: WzSubProperty, target_key: WzKey | None) -> int:
-    changed = 0
-    for group in list(prop.children()):
-        if not isinstance(group, WzSubProperty):
-            continue
-        frames = sorted_canvas_frames(group)
-        if not frames:
-            continue
-        new_children = {"0": make_transparent_delay_canvas("0", group, target_key)}
-        for index, frame in enumerate(frames, start=1):
-            new_children[str(index)] = clone_property(frame, str(index), group)
-        group._children = new_children
-        changed += 1
-    return changed
-
-
 def sorted_canvas_frames(prop: WzSubProperty) -> list[WzCanvasProperty]:
     frames = [child for child in prop.children() if isinstance(child, WzCanvasProperty) and child.name.isdigit()]
     return sorted(frames, key=lambda child: int(child.name))
 
 
-def make_playable_effect_variants(skill: WzSubProperty) -> int:
-    """Put all source visual stages into Brandish-readable effect/0 and effect/1.
+def add_independent_effect_slots(skill: WzSubProperty) -> int:
+    """Mirror extra top-level effects into effect/90..91 for independent playback."""
 
-    The old client does not automatically play top-level effect0/effect1 for a
-    new Hero Brandish-compatible attack.  It does reliably play effect/%d based
-    on the action index, so both Brandish variants carry the full source
-    sequence: effect -> effect0 -> effect1.
-    """
-
-    groups: list[WzSubProperty] = []
-    for group_name in PLAYABLE_EFFECT_GROUPS:
-        group = skill.child(group_name)
-        if isinstance(group, WzSubProperty):
-            frames = sorted_canvas_frames(group)
-            if frames:
-                groups.append(group)
-    if not groups:
+    effect = skill.child("effect")
+    if not isinstance(effect, WzSubProperty):
         return 0
 
-    effect = WzSubProperty("effect", skill)
     total_frames = 0
-    for variant_name in PLAYABLE_EFFECT_VARIANTS:
-        variant = WzSubProperty(variant_name, effect)
-        frame_index = 0
-        for group in groups:
-            for frame in sorted_canvas_frames(group):
-                variant.add(clone_property(frame, str(frame_index), variant))
-                frame_index += 1
-        total_frames += frame_index
-        effect.add(variant)
-    replace_child(skill, effect)
+    for slot_name, source_name in INDEPENDENT_EFFECT_SLOTS:
+        source = skill.child(source_name)
+        if not isinstance(source, WzSubProperty):
+            continue
+        frames = sorted_canvas_frames(source)
+        if not frames:
+            continue
+        slot = WzSubProperty(slot_name, effect)
+        for frame in frames:
+            slot.add(clone_property(frame, frame.name, slot))
+        replace_child(effect, slot)
+        total_frames += len(frames)
     return total_frames
 
 
@@ -275,6 +283,7 @@ def make_skill_node(parent: WzSubProperty, target_key: WzKey | None) -> tuple[Wz
     metadata_patches = 0
     icon_metadata_patches = 0
     renumbered_frames = 0
+    scaled_canvases = 0
     visual_region = "GMS" if target_key is not None else SOURCE_REGION
 
     for child in source_visual_children(source):
@@ -284,10 +293,10 @@ def make_skill_node(parent: WzSubProperty, target_key: WzKey | None) -> tuple[Wz
             else clone_property(child, child.name, target)
         )
         if child.name in {"effect", "effect0", "effect1", "hit"}:
+            scaled_canvases += scale_visual_canvases(copied_child, visual_region, target_key)
             renumbered_frames += renumber_direct_animation_frames(copied_child)
             if child.name == "hit":
                 metadata_patches += ensure_skill_delay_without_origin(copied_child)
-                metadata_patches += prepend_hit_start_delay(copied_child, target_key)
             else:
                 metadata_patches += ensure_skill_effect_visible_bottom_origin(copied_child, visual_region)
         if child.name in {"icon", "iconMouseOver", "iconDisabled"}:
@@ -295,7 +304,7 @@ def make_skill_node(parent: WzSubProperty, target_key: WzKey | None) -> tuple[Wz
         target.add(copied_child)
         copied.append(child.name)
 
-    playable_effect_frames = make_playable_effect_variants(target)
+    independent_effect_frames = add_independent_effect_slots(target)
     target.add(make_action_node(target))
     target.add(make_level_node(target))
     target.add(WzIntProperty("masterLevel", MASTER_LEVEL, target))
@@ -305,7 +314,8 @@ def make_skill_node(parent: WzSubProperty, target_key: WzKey | None) -> tuple[Wz
         "metadata": metadata_patches,
         "icon_metadata": icon_metadata_patches,
         "renumbered": renumbered_frames,
-        "playable_effect_frames": playable_effect_frames,
+        "scaled_canvases": scaled_canvases,
+        "independent_effect_frames": independent_effect_frames,
     }
 
 
@@ -329,7 +339,9 @@ def patch_client_skill(path: Path, dry_run: bool, sync_existing: bool) -> int:
         print(
             f"[dry-run] would {'sync' if sync_existing else 'add'} client skill/{TARGET_SKILL_ID}: copied {stats['copied']}, "
             f"metadata {stats['metadata']}, icon metadata {stats['icon_metadata']}, "
-            f"renumbered {stats['renumbered']}, playable effect frames {stats['playable_effect_frames']}"
+            f"renumbered top-level effect frames {stats['renumbered']}, "
+            f"scaled visual updates {stats['scaled_canvases']}, "
+            f"independent effect slot frames {stats['independent_effect_frames']}"
         )
         return 1
 
@@ -338,7 +350,9 @@ def patch_client_skill(path: Path, dry_run: bool, sync_existing: bool) -> int:
     print(
         f"{'synced' if sync_existing else 'added'} client skill/{TARGET_SKILL_ID}: copied {stats['copied']}, "
         f"metadata {stats['metadata']}, icon metadata {stats['icon_metadata']}, "
-        f"renumbered {stats['renumbered']}, playable effect frames {stats['playable_effect_frames']}"
+        f"renumbered top-level effect frames {stats['renumbered']}, "
+        f"scaled visual updates {stats['scaled_canvases']}, "
+        f"independent effect slot frames {stats['independent_effect_frames']}"
     )
     return 1
 
@@ -399,7 +413,9 @@ def patch_server_skill(path: Path, dry_run: bool, sync_existing: bool) -> int:
         print(
             f"[dry-run] would {'sync' if sync_existing else 'add'} server skill/{TARGET_SKILL_ID}: copied {stats['copied']}, "
             f"metadata {stats['metadata']}, icon metadata {stats['icon_metadata']}, "
-            f"renumbered {stats['renumbered']}, playable effect frames {stats['playable_effect_frames']}"
+            f"renumbered top-level effect frames {stats['renumbered']}, "
+            f"scaled visual updates {stats['scaled_canvases']}, "
+            f"independent effect slot frames {stats['independent_effect_frames']}"
         )
         return 1
     backup(path, ".bak-1121013-raging-blow-vi", dry_run=False)
@@ -407,7 +423,9 @@ def patch_server_skill(path: Path, dry_run: bool, sync_existing: bool) -> int:
     print(
         f"{'synced' if sync_existing else 'added'} server skill/{TARGET_SKILL_ID}: copied {stats['copied']}, "
         f"metadata {stats['metadata']}, icon metadata {stats['icon_metadata']}, "
-        f"renumbered {stats['renumbered']}, playable effect frames {stats['playable_effect_frames']}"
+        f"renumbered top-level effect frames {stats['renumbered']}, "
+        f"scaled visual updates {stats['scaled_canvases']}, "
+        f"independent effect slot frames {stats['independent_effect_frames']}"
     )
     return 1
 

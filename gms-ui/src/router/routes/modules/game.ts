@@ -83,6 +83,16 @@ const GAME: AppRouteRecordRaw = {
       },
     },
     {
+      path: 'operationTools',
+      name: 'GameOperationTools',
+      component: () => import('@/views/dashboard/operationTools/index.vue'),
+      meta: {
+        locale: 'menu.game.operationTools',
+        requiresAuth: true,
+        roles: ['admin'],
+      },
+    },
+    {
       path: 'commandInfo',
       name: 'commandInfo',
       component: () => import('@/views/game/commandInfo/index.vue'),

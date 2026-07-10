@@ -1,4 +1,15 @@
 #!/usr/bin/env bash
+
+if [ -z "${BASH_VERSION:-}" ]; then
+  echo "请使用 bash 执行此脚本，例如: rtk tool/scripts/package/package_server_jar.sh" >&2
+  exit 2
+fi
+
+if shopt -qo posix; then
+  echo "请不要用 sh 执行此脚本，请改用: rtk tool/scripts/package/package_server_jar.sh" >&2
+  exit 2
+fi
+
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"

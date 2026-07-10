@@ -15,6 +15,7 @@ import base from './en-US/base';
 export default {
   'menu.dashboard': 'Dashboard',
   'menu.dashboard.workplace': 'Workplace',
+  'menu.dashboard.operationTools': 'Operation Tools',
   'menu.dashboard.informationSearch': 'Information Search',
   'menu.game': 'Game',
   'menu.game.config': 'Config',
@@ -24,6 +25,7 @@ export default {
   'menu.game.drop.global': 'Global Drop',
   'menu.game.inventory': 'Inventory',
   'menu.game.gachapon': 'Gachapon',
+  'menu.game.operationTools': 'Operation Tools',
   'menu.game.command': 'Command',
   'menu.game.file': 'File',
   'menu.game.autoban': 'Autoban',

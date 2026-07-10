@@ -119,7 +119,7 @@ effect/1 视觉左移 160px: origin=(frame.width/2+160, frame.height/2)
 
 全屏效果要按客户端分辨率生成画布，但这只适用于 `screen` 的 FIELD_EFFECT 版本。当前脚本读取 `clien/config.ini` 的 `width/height`，生成 `1280x720` 透明画布，再把 screen alpha 内容区域按 cover 放进去。`effect` 不参与这个分辨率逻辑，不能被放大；否则角色起手动画会失真并且失去人物位置。
 
-第一次释放技能明显卡顿时，优先怀疑大体积 WZ canvas 首次解码/加载，而不是先改帧数。第一版 256 色量化只降低 payload，没有降低解压后的像素尺寸，实测首放卡顿改善不明显；当前改用 ARGB4444 (`format=1`) 来降低运行时像素流。`customSkill/deathFault/full` 的 encoded raw 从约 `98.4MB` 降到约 `49.2MB`；`112.img` 中 `1121001/1121012/1121013` 的目标 canvas encoded raw 从约 `480.1MB` 降到约 `240.0MB`，同时移除了 `1121013/effect0`、`1121013/effect1` 两个已合入可播放 `effect/0`、`effect/1` 的冗余顶层组。当前仍没有做通用预热机制；后续如果要继续优化，应优先考虑资源预加载或更激进的 UOL/_inlink 复用，而不是改变源 screen 时间轴或 effect 坐标。
+第一次释放技能明显卡顿时，优先怀疑大体积 WZ canvas 首次解码/加载，而不是先改帧数。第一版 256 色量化只降低 payload，没有降低解压后的像素尺寸，实测首放卡顿改善不明显；当前改用 ARGB4444 (`format=1`) 来降低运行时像素流。`customSkill/deathFault/full` 的 encoded raw 从约 `98.4MB` 降到约 `49.2MB`；`112.img` 中 `1121001/1121012/1121013` 的目标 canvas encoded raw 从约 `480.1MB` 降到约 `240.0MB`。`1121013` 的源 `effect`、`effect0`、`effect1` 是三条同时播放的视觉轨道，但旧客户端实际可播放入口是 `effect/%d`；当前结构是 `effect/0` 镜像源 `effect`、`effect/1` 镜像源 `effect0`、`effect/2` 镜像源 `effect1`。`BeiDou.exe` 让 `1121013` 的主视觉走默认平铺 effect 出口以播放 `effect/0`，再在 screen-effect cave 尾部追加启动 `effect/1` 和 `effect/2`；每次 selector 调用都使用独立栈临时资源引用并恢复播放参数，避免后启动的效果覆盖或破坏前一条轨道的上下文。当前仍没有做通用预热机制；后续如果要继续优化，应优先考虑资源预加载或更激进的 UOL/_inlink 复用，而不是改变源 screen 时间轴或 effect 坐标。
 
 新增技能面板显示和技能实际释放是两件事。`1121012` 能出现在四转技能面板，依赖 `0x4F0751`、`0xA0A3D6` 的职业过滤 patch；但能显示不代表能按正确攻击类型、动作、视觉路径和伤害结算释放。`1121012` 还需要 Brandish 兼容攻击识别 patch，以及服务端 `Hero.DEATH_FAULT` 分支来广播 FIELD_EFFECT、延迟结算伤害。
 
