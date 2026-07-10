@@ -932,6 +932,17 @@ public class AbstractPlayerInteraction {
         return c.getPlayer().getMap().isAllReactorState(reactorId, state);
     }
 
+    public void removeNpc(int mapid, int npcid) {
+        getMap(mapid).destroyNPC(npcid);
+    }
+
+    public void forceStartReactor(int mapid, int reactorId) {
+        var reactor = getMap(mapid).getReactorById(reactorId);
+        if (reactor != null) {
+            reactor.hitReactor(c);
+        }
+    }
+
     public void resetMap(int mapid) {
         getMap(mapid).resetReactors();
         getMap(mapid).killAllMonsters();

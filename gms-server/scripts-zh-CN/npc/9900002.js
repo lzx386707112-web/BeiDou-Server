@@ -18,8 +18,7 @@ var DEBUG = false;
 // spawnX / spawnY: 出生坐标
 var BOSS_CONFIGS = [
     { mapId: 211070100, bossId: 8840000, bossName: "班·雷昂",  ticketId: 4001254, dailyLimit: 3, spawnX: -300, spawnY: -192 },
-    // { mapId: 703011000, bossId: 9600086, bossName: "钻机BOSS", ticketId: 4001254, dailyLimit: 3, spawnX: -120, spawnY: 83 },
-    { mapId: 703011000, bossId: 9600087, bossName: "钻机BOSS", ticketId: 4001254, dailyLimit: 3, spawnX: -120, spawnY: 83 }
+    { mapId: 703011000, bossId: 9600086, bossName: "钻机BOSS", ticketId: 4001254, dailyLimit: 3, spawnX: -120, spawnY: 83 }
 ];
 
 var FREE_MARKET_ID = 910000000;
