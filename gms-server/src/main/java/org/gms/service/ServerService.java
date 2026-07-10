@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 
 import java.awt.Point;
 import java.awt.Rectangle;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -79,10 +80,11 @@ public class ServerService {
             }
 
             Point basePoint = getFreeMarketSpawnPoint(map);
+            List<Point> spawnAnchors = getFreeMarketSpawnAnchors(map, basePoint);
             for (Integer monsterId : request.getMonsterIds()) {
                 for (int i = 0; i < count; i++) {
                     Monster monster = LifeFactory.getMonster(monsterId);
-                    Point spawnPoint = getRandomGroundSpawnPoint(map, basePoint);
+                    Point spawnPoint = getRandomGroundSpawnPoint(map, spawnAnchors, basePoint);
                     map.spawnMonsterOnGroundBelow(monster, spawnPoint);
                     siegeMonsters.add(monster);
                     spawned++;
@@ -136,6 +138,24 @@ public class ServerService {
         return portal == null ? new Point(0, 0) : portal.getPosition();
     }
 
+    private List<Point> getFreeMarketSpawnAnchors(MapleMap map, Point fallback) {
+        List<Point> anchors = new ArrayList<>();
+        for (int portalId = 0; portalId < 200; portalId++) {
+            Portal portal = map.getPortal(portalId);
+            if (portal == null) {
+                continue;
+            }
+            String name = portal.getName();
+            if (name != null && (name.startsWith("in") || name.startsWith("pt_floor"))) {
+                anchors.add(portal.getPosition());
+            }
+        }
+        if (anchors.isEmpty()) {
+            anchors.add(fallback);
+        }
+        return anchors;
+    }
+
     private List<Channel> getSiegeChannels() {
         return Server.getInstance().getWorlds().stream()
                 .map(world -> world.getChannel(1))
@@ -143,14 +163,17 @@ public class ServerService {
                 .toList();
     }
 
-    private Point getRandomGroundSpawnPoint(MapleMap map, Point fallback) {
+    private Point getRandomGroundSpawnPoint(MapleMap map, List<Point> anchors, Point fallback) {
         Rectangle mapArea = map.getMapArea();
-        if (mapArea == null || mapArea.width <= 0) {
+        if (mapArea == null || mapArea.width <= 0 || anchors.isEmpty()) {
             return fallback;
         }
 
-        int randomX = ThreadLocalRandom.current().nextInt(mapArea.x, mapArea.x + mapArea.width + 1);
-        Point randomPoint = new Point(randomX, fallback.y);
+        ThreadLocalRandom random = ThreadLocalRandom.current();
+        Point anchor = anchors.get(random.nextInt(anchors.size()));
+        int randomX = anchor.x + random.nextInt(-30, 31);
+        randomX = Math.max(mapArea.x, Math.min(mapArea.x + mapArea.width, randomX));
+        Point randomPoint = new Point(randomX, anchor.y);
         Point groundPoint = map.calcDropPos(randomPoint, fallback);
         return groundPoint == null ? fallback : groundPoint;
     }

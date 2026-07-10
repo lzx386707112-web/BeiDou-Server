@@ -884,7 +884,7 @@ public class InventoryManipulator {
             }
 
             if (isDisappearingItemDrop(target)) {
-                map.disappearingItemDrop(chr, chr, target, dropPos);
+                map.disappearingItemDrop(chr, chr, target, dropPos, true);
             } else {
                 map.spawnItemDrop(chr, chr, target, dropPos, true, true);
             }
@@ -915,7 +915,7 @@ public class InventoryManipulator {
             }
 
             if (isDisappearingItemDrop(source)) {
-                map.disappearingItemDrop(chr, chr, source, dropPos);
+                map.disappearingItemDrop(chr, chr, source, dropPos, true);
             } else {
                 map.spawnItemDrop(chr, chr, source, dropPos, true, true);
             }
