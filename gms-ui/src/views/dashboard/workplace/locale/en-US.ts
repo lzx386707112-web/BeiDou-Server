@@ -26,6 +26,7 @@ export default {
   'workplace.operationTools': 'Operation Tools',
   'workplace.button.broadcast': 'Server Broadcast',
   'workplace.button.monsterSiege': 'Monster Siege',
+  'workplace.button.clearMonsterSiege': 'Clear Bosses',
   'workplace.broadcast.message': 'Broadcast Message',
   'workplace.broadcast.message.required': 'Please enter a broadcast message',
   'workplace.siege.monsterIds': 'Monster IDs',
@@ -40,6 +41,7 @@ export default {
   'workplace.siege.bossId': 'Monster ID',
   'workplace.siege.useBossId': 'Use',
   'workplace.siege.success': 'Monster siege started. Spawned {count} monsters',
+  'workplace.siege.clearSuccess': 'Cleared {count} siege bosses',
   'workplace.stop.shutdownInProgress':
     'Initiating server shutdown, please wait...',
   'common.operationSuccess': 'Operation successful',

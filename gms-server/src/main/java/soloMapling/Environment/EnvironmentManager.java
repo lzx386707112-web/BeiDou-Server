@@ -17,7 +17,6 @@ import soloMapling.ArtificialPlayer.BotTypeManager;
 import soloMapling.ArtificialPlayer.BotTypes.Blackjack.BlackjackDealerBot;
 import soloMapling.ArtificialPlayer.ConversationManager;
 import soloMapling.ArtificialPlayer.SocialHotPotatoManager;
-import soloMapling.Casino.CasinoChipConfig;
 import soloMapling.SoloMaplingConfig;
 import soloMapling.server.ExecutorServiceManager;
 import soloMapling.server.NpcSpawner;
@@ -233,9 +232,6 @@ public class EnvironmentManager {
     public static void ensureMarketServiceNpcs(MapleMap map) {
         if (map == null || map.getId() != FM_ENTRANCE) {
             return;
-        }
-        if (map.getNPCById(CasinoChipConfig.CASINO_NPC_ID) == null) {
-            NpcSpawner.spawnNpc(CasinoChipConfig.CASINO_NPC_ID, map, new Point(180, 34));
         }
         if (SoloMaplingConfig.rpsNpcEnabled() && map.getNPCById(NpcId.RPS_ADMIN) == null) {
             NpcSpawner.spawnNpc(NpcId.RPS_ADMIN, map, new Point(320, 34));

@@ -82,6 +82,17 @@
             </template>
             {{ $t('workplace.button.monsterSiege') }}
           </a-button>
+          <a-button
+            type="primary"
+            status="danger"
+            :loading="loading"
+            @click="handleClearSiege"
+          >
+            <template #icon>
+              <icon-stop />
+            </template>
+            {{ $t('workplace.button.clearMonsterSiege') }}
+          </a-button>
         </a-space>
       </a-card>
 
@@ -278,6 +289,7 @@
 <script lang="ts" setup>
   import { onMounted, reactive, ref } from 'vue';
   import {
+    clearMonsterSiege,
     getServerStatus,
     restartServer,
     sendServerBroadcast,
@@ -586,6 +598,19 @@
       setLoading(false);
     }
     return true;
+  };
+
+  const handleClearSiege = async () => {
+    try {
+      setLoading(true);
+      const { data } = await clearMonsterSiege();
+      Message.success(t('workplace.siege.clearSuccess', { count: data }));
+    } catch (err) {
+      console.error(err);
+      Message.error(t('common.requestFailed'));
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSiegeCancel = () => {

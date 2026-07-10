@@ -122,11 +122,11 @@ public class Character extends AbstractCharacterObject {
     private int hair;
 
     public int getHair() {
-        return ItemConstants.normalizeHair(gender, hair);
+        return hair;
     }
 
     public void setHair(int hair) {
-        this.hair = ItemConstants.normalizeHair(gender, hair);
+        this.hair = hair;
     }
 
     @Setter

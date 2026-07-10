@@ -44,17 +44,30 @@
                 show-word-limit
               />
             </a-form-item>
-            <a-button
-              type="primary"
-              status="warning"
-              :loading="loading"
-              @click="handleSiege"
-            >
-              <template #icon>
-                <icon-thunderbolt />
-              </template>
-              {{ $t('workplace.button.monsterSiege') }}
-            </a-button>
+            <a-space>
+              <a-button
+                type="primary"
+                status="warning"
+                :loading="loading"
+                @click="handleSiege"
+              >
+                <template #icon>
+                  <icon-thunderbolt />
+                </template>
+                {{ $t('workplace.button.monsterSiege') }}
+              </a-button>
+              <a-button
+                type="primary"
+                status="danger"
+                :loading="loading"
+                @click="handleClearSiege"
+              >
+                <template #icon>
+                  <icon-stop />
+                </template>
+                {{ $t('workplace.button.clearMonsterSiege') }}
+              </a-button>
+            </a-space>
           </a-form>
 
           <a-divider />
@@ -107,7 +120,11 @@
   import { Message } from '@arco-design/web-vue';
   import { useI18n } from 'vue-i18n';
   import useLoading from '@/hooks/loading';
-  import { sendServerBroadcast, startMonsterSiege } from '@/api/dashboard';
+  import {
+    clearMonsterSiege,
+    sendServerBroadcast,
+    startMonsterSiege,
+  } from '@/api/dashboard';
 
   const { t } = useI18n();
   const { loading, setLoading } = useLoading(false);
@@ -193,6 +210,19 @@
         broadcast: true,
         message: '怪物攻城开始！请前往自由市场入口迎战！',
       });
+    } catch (err) {
+      console.error(err);
+      Message.error(t('common.requestFailed'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleClearSiege = async () => {
+    try {
+      setLoading(true);
+      const { data } = await clearMonsterSiege();
+      Message.success(t('workplace.siege.clearSuccess', { count: data }));
     } catch (err) {
       console.error(err);
       Message.error(t('common.requestFailed'));

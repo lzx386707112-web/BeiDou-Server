@@ -230,11 +230,6 @@ public class NPCConversationManager extends AbstractPlayerInteraction {
     public void sendStyle(String text, int[] styles) {
         if (styles.length > 0) {
             nextLevelContext.clear();
-            for (int i = 0; i < styles.length; i++) {
-                if (ItemConstants.isHair(styles[i]) && !ItemConstants.isNewHair(styles[i])) {
-                    styles[i] = ItemConstants.normalizeHair(getPlayer().getGender(), styles[i]);
-                }
-            }
             getClient().sendPacket(PacketCreator.getNPCTalkStyle(npc, text, styles));
         } else {    // thanks Conrad for noticing empty styles crashing players
             sendOk("Sorry, there are no options of cosmetics available for you here at the moment.");
@@ -336,7 +331,6 @@ public class NPCConversationManager extends AbstractPlayerInteraction {
     }
 
     public void setHair(int hair) {
-        hair = ItemConstants.normalizeHair(getPlayer().getGender(), hair);
         getPlayer().setHair(hair);
         getPlayer().updateSingleStat(Stat.HAIR, hair);
         getPlayer().equipChanged();

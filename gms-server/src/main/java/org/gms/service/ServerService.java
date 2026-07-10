@@ -17,14 +17,18 @@ import org.gms.util.RequireUtil;
 import org.springframework.stereotype.Service;
 
 import java.awt.Point;
+import java.awt.Rectangle;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ThreadLocalRandom;
 
 @Service
 public class ServerService {
     private static final int MAP_EFFECT_ITEM_ID = 5121009;
-    private static final int SPAWN_GAP_X = 80;
     private static final int DEFAULT_SIEGE_COUNT = 1;
     private static final String DEFAULT_SIEGE_MESSAGE = "怪物攻城开始！请前往自由市场入口迎战！";
+    private final Set<Monster> siegeMonsters = ConcurrentHashMap.newKeySet();
 
     public List<WorldListRtnDTO> worldList() {
         List<World> worlds = Server.getInstance().getWorlds();
@@ -68,21 +72,20 @@ public class ServerService {
         }
 
         int spawned = 0;
-        for (Channel channel : Server.getInstance().getAllChannels()) {
+        for (Channel channel : getSiegeChannels()) {
             MapleMap map = channel.getMapFactory().getMap(MapId.FM_ENTRANCE);
             if (map == null) {
                 continue;
             }
 
             Point basePoint = getFreeMarketSpawnPoint(map);
-            int totalIndex = 0;
             for (Integer monsterId : request.getMonsterIds()) {
                 for (int i = 0; i < count; i++) {
                     Monster monster = LifeFactory.getMonster(monsterId);
-                    Point spawnPoint = new Point(basePoint.x + (totalIndex * SPAWN_GAP_X), basePoint.y);
+                    Point spawnPoint = getRandomGroundSpawnPoint(map, basePoint);
                     map.spawnMonsterOnGroundBelow(monster, spawnPoint);
+                    siegeMonsters.add(monster);
                     spawned++;
-                    totalIndex++;
                 }
             }
         }
@@ -93,6 +96,26 @@ public class ServerService {
         }
 
         return spawned;
+    }
+
+    public int clearMonsterSiege() {
+        int cleared = 0;
+        for (Channel channel : getSiegeChannels()) {
+            MapleMap map = channel.getMapFactory().getMap(MapId.FM_ENTRANCE);
+            if (map == null) {
+                continue;
+            }
+
+            for (Monster monster : map.getAllMonsters()) {
+                if (siegeMonsters.contains(monster) || monster.isBoss()) {
+                    map.killMonster(monster, null, false);
+                    siegeMonsters.remove(monster);
+                    cleared++;
+                }
+            }
+        }
+        siegeMonsters.removeIf(monster -> monster.getMap() == null || monster.getMap().getMonsterByOid(monster.getObjectId()) == null);
+        return cleared;
     }
 
     private void broadcastMapEffect(String message) {
@@ -111,5 +134,24 @@ public class ServerService {
             portal = map.findClosestPlayerSpawnpoint(new Point(0, 0));
         }
         return portal == null ? new Point(0, 0) : portal.getPosition();
+    }
+
+    private List<Channel> getSiegeChannels() {
+        return Server.getInstance().getWorlds().stream()
+                .map(world -> world.getChannel(1))
+                .filter(channel -> channel != null)
+                .toList();
+    }
+
+    private Point getRandomGroundSpawnPoint(MapleMap map, Point fallback) {
+        Rectangle mapArea = map.getMapArea();
+        if (mapArea == null || mapArea.width <= 0) {
+            return fallback;
+        }
+
+        int randomX = ThreadLocalRandom.current().nextInt(mapArea.x, mapArea.x + mapArea.width + 1);
+        Point randomPoint = new Point(randomX, fallback.y);
+        Point groundPoint = map.calcDropPos(randomPoint, fallback);
+        return groundPoint == null ? fallback : groundPoint;
     }
 }

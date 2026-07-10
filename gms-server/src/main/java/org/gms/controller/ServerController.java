@@ -118,4 +118,11 @@ public class ServerController {
     public ResultBody<Integer> monsterSiege(@RequestBody SubmitBody<MonsterSiegeDTO> request) {
         return ResultBody.success(serverService.summonMonsterSiege(request.getData()));
     }
+
+    @Tag(name = "/server/" + ApiConstant.LATEST)
+    @Operation(summary = "清除自由市场怪物攻城")
+    @PostMapping("/" + ApiConstant.LATEST + "/monsterSiege/clear")
+    public ResultBody<Integer> clearMonsterSiege() {
+        return ResultBody.success(serverService.clearMonsterSiege());
+    }
 }
