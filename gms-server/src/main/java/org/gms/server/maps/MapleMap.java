@@ -607,11 +607,13 @@ public class MapleMap {
             ret = calcDropPos(source, fallback);
         }
 
-        if (!mapArea.contains(ret)) {
-            return fallback;
-        }
+        return mapArea.contains(ret) ? ret : fallback;
+    }
 
-        return ret;
+    private Point calcItemDropPos(Point pos, boolean playerDrop) {
+        return playerDrop && mapid == MapId.FM_ENTRANCE
+                ? calcPlayerDropPos(pos, pos)
+                : calcDropPos(pos, pos);
     }
 
     public boolean canDeployDoor(Point pos) {
@@ -1262,12 +1264,7 @@ public class MapleMap {
     }
 
     public final void disappearingItemDrop(final MapObject dropper, final Character owner, final Item item, final Point pos) {
-        disappearingItemDrop(dropper, owner, item, pos, false);
-    }
-
-    public final void disappearingItemDrop(final MapObject dropper, final Character owner, final Item item, final Point pos,
-                                          final boolean playerDrop) {
-        final Point droppos = playerDrop ? calcPlayerDropPos(pos, pos) : calcDropPos(pos, pos);
+        final Point droppos = calcDropPos(pos, pos);
         final MapItem mdrop = new MapItem(item, droppos, dropper, owner, owner.getClient(), (byte) 1, false);
 
         mdrop.lockItem();
@@ -2299,11 +2296,11 @@ public class MapleMap {
 
     public final void spawnItemDrop(final MapObject dropper, final Character owner, final Item item, Point pos, final byte dropType, final boolean playerDrop) {
         if (FieldLimit.DROP_LIMIT.check(this.getFieldLimit())) { // thanks Conrad for noticing some maps shouldn't have loots available
-            this.disappearingItemDrop(dropper, owner, item, pos, playerDrop);
+            this.disappearingItemDrop(dropper, owner, item, pos);
             return;
         }
 
-        final Point droppos = playerDrop ? calcPlayerDropPos(pos, pos) : calcDropPos(pos, pos);
+        final Point droppos = calcItemDropPos(pos, playerDrop);
         final MapItem mdrop = new MapItem(item, droppos, dropper, owner, owner.getClient(), dropType, playerDrop);
         mdrop.setDropTime(Server.getInstance().getCurrentTime());
 
@@ -2330,11 +2327,11 @@ public class MapleMap {
     public final MapItem spawnItemDropNoExpire(final MapObject dropper, final Character owner, final Item item, Point pos,
                                                final boolean ffaDrop, final boolean playerDrop) {
         if (FieldLimit.DROP_LIMIT.check(this.getFieldLimit())) {
-            this.disappearingItemDrop(dropper, owner, item, pos, playerDrop);
+            this.disappearingItemDrop(dropper, owner, item, pos);
             return null;
         }
 
-        final Point droppos = playerDrop ? calcPlayerDropPos(pos, pos) : calcDropPos(pos, pos);
+        final Point droppos = calcItemDropPos(pos, playerDrop);
         final MapItem mdrop = new MapItem(item, droppos, dropper, owner, owner.getClient(), (byte) (ffaDrop ? 2 : 0), playerDrop);
         mdrop.setDropTime(Server.getInstance().getCurrentTime());
 

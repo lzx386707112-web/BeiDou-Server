@@ -327,8 +327,10 @@ public final class ItemConstants {
 
     public static boolean isNewCharDefaultHair(int gender, int hairId) {
         return switch (gender) {
-            case 0 -> hairId == 40070 || hairId == 40080 || hairId == 42100;
-            case 1 -> hairId == 43270 || hairId == 44440 || hairId == 44450;
+            case 0 -> hairId == 40070 || hairId == 40080 || hairId == 42100
+                    || hairId == 30030 || hairId == 30020 || hairId == 30000;
+            case 1 -> hairId == 43270 || hairId == 44440 || hairId == 44450
+                    || hairId == 31000 || hairId == 31040 || hairId == 31050;
             default -> false;
         };
     }

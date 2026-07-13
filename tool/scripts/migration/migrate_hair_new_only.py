@@ -82,6 +82,8 @@ HAIR_ID_REMAP = {
 }
 DEFAULT_MALE_BASES = [40070, 40080, 42100]
 DEFAULT_FEMALE_BASES = [43270, 44440, 44450]
+LEGACY_MALE_BASES = [30030, 30020, 30000]
+LEGACY_FEMALE_BASES = [31000, 31040, 31050]
 
 HAIR_ID_RE = re.compile(r"\b(?:3|4|6)\d{4}\b")
 ARRAY_RE = re.compile(r"(hair\w*\s*=\s*Array\()([^)]+)(\))")
@@ -319,8 +321,10 @@ def patch_item_constants(male: list[int], female: list[int], dry_run: bool) -> b
     block = (
         "isNewCharDefaultHair(int gender, int hairId) {\n"
         "        return switch (gender) {\n"
-        f"            case 0 -> hairId == {male[0]} || hairId == {male[1]} || hairId == {male[2]};\n"
-        f"            case 1 -> hairId == {female[0]} || hairId == {female[1]} || hairId == {female[2]};\n"
+        f"            case 0 -> hairId == {male[0]} || hairId == {male[1]} || hairId == {male[2]}\n"
+        f"                    || hairId == {LEGACY_MALE_BASES[0]} || hairId == {LEGACY_MALE_BASES[1]} || hairId == {LEGACY_MALE_BASES[2]};\n"
+        f"            case 1 -> hairId == {female[0]} || hairId == {female[1]} || hairId == {female[2]}\n"
+        f"                    || hairId == {LEGACY_FEMALE_BASES[0]} || hairId == {LEGACY_FEMALE_BASES[1]} || hairId == {LEGACY_FEMALE_BASES[2]};\n"
         "            default -> false;\n"
         "        };\n"
         "    }"
@@ -430,13 +434,15 @@ def replace_string_children(parent: ET.Element, values: list[int]) -> None:
 def patch_server_make_char(male: list[int], female: list[int], dry_run: bool) -> bool:
     tree = ET.parse(SERVER_MAKE_CHAR)
     root = tree.getroot()
+    compatible_male = male + LEGACY_MALE_BASES
+    compatible_female = female + LEGACY_FEMALE_BASES
     groups = {
-        "Info/CharMale": male,
-        "Info/CharFemale": female,
-        "PremiumCharMale": male,
-        "PremiumCharFemale": female,
-        "OrientCharMale": male,
-        "OrientCharFemale": female,
+        "Info/CharMale": compatible_male,
+        "Info/CharFemale": compatible_female,
+        "PremiumCharMale": compatible_male,
+        "PremiumCharFemale": compatible_female,
+        "OrientCharMale": compatible_male,
+        "OrientCharFemale": compatible_female,
     }
     changed = False
     for path, values in groups.items():
@@ -453,8 +459,8 @@ def patch_server_make_char(male: list[int], female: list[int], dry_run: bool) ->
             replace_int_children(hair_node, values)
             changed = True
     name_groups = {
-        "Name/CharMale": male,
-        "Name/CharFemale": female,
+        "Name/CharMale": compatible_male,
+        "Name/CharFemale": compatible_female,
     }
     for path, values in name_groups.items():
         node = root
@@ -481,13 +487,15 @@ def patch_server_make_char(male: list[int], female: list[int], dry_run: bool) ->
 def patch_client_make_char(male: list[int], female: list[int], dry_run: bool) -> bool:
     image = WzImage.from_bytes(CLIENT_MAKE_CHAR.read_bytes(), key=KEY, name=CLIENT_MAKE_CHAR.name)
     root = image.parse()
+    compatible_male = male + LEGACY_MALE_BASES
+    compatible_female = female + LEGACY_FEMALE_BASES
     groups = {
-        "Info/CharMale": male,
-        "Info/CharFemale": female,
-        "PremiumCharMale": male,
-        "PremiumCharFemale": female,
-        "OrientCharMale": male,
-        "OrientCharFemale": female,
+        "Info/CharMale": compatible_male,
+        "Info/CharFemale": compatible_female,
+        "PremiumCharMale": compatible_male,
+        "PremiumCharFemale": compatible_female,
+        "OrientCharMale": compatible_male,
+        "OrientCharFemale": compatible_female,
     }
     changed = False
     for path, values in groups.items():
@@ -504,8 +512,8 @@ def patch_client_make_char(male: list[int], female: list[int], dry_run: bool) ->
                 hair_node.add(WzIntProperty(str(index), value, hair_node))
             changed = True
     name_groups = {
-        "Name/CharMale/1": male,
-        "Name/CharFemale/1": female,
+        "Name/CharMale/1": compatible_male,
+        "Name/CharFemale/1": compatible_female,
     }
     for path, values in name_groups.items():
         node = root.get(path)

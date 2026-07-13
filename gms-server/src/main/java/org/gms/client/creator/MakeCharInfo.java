@@ -115,26 +115,39 @@ public class MakeCharInfo {
     }
 
     public boolean verifyCharacter(Character character) {
-        if (!verifyFaceId(character.getFace())) return false;
-        if (!verifyHairId(character.getHair())) return false;
-        if (!verifyHairColorId(character.getHair())) return false;
-        if (!verifySkinId(character.getSkinColor().getId())) return false;
+        if (!verifyFaceId(character.getFace())) {
+            return reject("face", character.getFace(), charFaces);
+        }
+        if (!verifyHairId(character.getHair())) {
+            return reject("hair", character.getHair(), charHairs);
+        }
+        if (!verifyHairColorId(character.getHair())) {
+            return reject("hairColor", character.getHair() % 10, charHairColors);
+        }
+        if (!verifySkinId(character.getSkinColor().getId())) {
+            return reject("skin", character.getSkinColor().getId(), charSkins);
+        }
 
         // Here we only verify the equipment if the character that's being created is of type 'Beginner'
         // This is because when the Maple Life A or Maple Life B items are used, the client does not send any data
         // regarding what equipment the character should be wearing (as it's all handled server-side)
         Job characterJob = character.getJob();
         if (characterJob == Job.BEGINNER || characterJob == Job.NOBLESSE || characterJob == Job.LEGEND) {
-            if (!verifyTopId(character.getInventory(InventoryType.EQUIPPED).getItem((short) -5).getItemId()))
-                return false;
-            if (!verifyBottomId(character.getInventory(InventoryType.EQUIPPED).getItem((short) -6).getItemId()))
-                return false;
-            if (!verifyShoeId(character.getInventory(InventoryType.EQUIPPED).getItem((short) -7).getItemId()))
-                return false;
-            if (!verifyWeaponId(character.getInventory(InventoryType.EQUIPPED).getItem((short) -11).getItemId()))
-                return false;
+            int top = character.getInventory(InventoryType.EQUIPPED).getItem((short) -5).getItemId();
+            int bottom = character.getInventory(InventoryType.EQUIPPED).getItem((short) -6).getItemId();
+            int shoes = character.getInventory(InventoryType.EQUIPPED).getItem((short) -7).getItemId();
+            int weapon = character.getInventory(InventoryType.EQUIPPED).getItem((short) -11).getItemId();
+            if (!verifyTopId(top)) return reject("top", top, charTops);
+            if (!verifyBottomId(bottom)) return reject("bottom", bottom, charBottoms);
+            if (!verifyShoeId(shoes)) return reject("shoes", shoes, charShoes);
+            if (!verifyWeaponId(weapon)) return reject("weapon", weapon, charWeapons);
         }
 
         return true;
+    }
+
+    private boolean reject(String field, int actual, Set<Integer> allowed) {
+        log.warn("Character creation MakeCharInfo mismatch: field={}, actual={}, allowed={}", field, actual, allowed);
+        return false;
     }
 }
