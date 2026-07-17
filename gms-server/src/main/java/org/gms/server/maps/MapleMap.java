@@ -1987,8 +1987,15 @@ public class MapleMap {
     }
 
     public void spawnMonsterOnGroundBelow(Monster mob, Point pos) {
-        Point spos = new Point(pos.x, pos.y - 1);
-        spos = calcPointBelow(spos);
+        Point spos;
+        if (mob.getId() >= 8880502 && mob.getId() <= 8880504) {
+            spos = footholds.findLowestAtX(pos.x);
+        } else {
+            spos = null;
+        }
+        if (spos == null) {
+            spos = calcPointBelow(new Point(pos.x, pos.y - 1));
+        }
         spos.y--;
         mob.setPosition(spos);
         spawnMonster(mob);

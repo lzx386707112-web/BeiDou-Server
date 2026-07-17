@@ -84,6 +84,7 @@ run_interactive() {
   local target input default_region region port
   target="$(interactive_choose "请选择要预览的 IMG 目录:" \
     "神说 Character" \
+    "神说 Effect" \
     "神说 Skill" \
     "神说 Item" \
     "本项目 Character" \
@@ -91,6 +92,7 @@ run_interactive() {
 
   case "$target" in
     "神说 Character") input="/Users/lizixian/Documents/mxd/神说/Data/Character" ;;
+    "神说 Effect") input="/Users/lizixian/Documents/mxd/神说/Data/Effect" ;;
     "神说 Skill") input="/Users/lizixian/Documents/mxd/神说/Data/Skill" ;;
     "神说 Item") input="/Users/lizixian/Documents/mxd/神说/Data/Item" ;;
     "本项目 Character") input="$ROOT/clien/Data/Character" ;;

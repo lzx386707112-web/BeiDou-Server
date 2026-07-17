@@ -64,6 +64,11 @@ public class WzCanvasProperty extends WzExtended {
         png.rebuildCompressedBytesUseNewWzKey(wzMutableKey);
     }
 
+    public void optimizeCompression() {
+        png.optimizeCompression();
+        wzImage.setChanged(true);
+    }
+
     public void clearImage() {
         png.clearImage();
     }

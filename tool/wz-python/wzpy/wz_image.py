@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import contextlib
 import io
+import os
 import threading
 from typing import TYPE_CHECKING, List, Optional
 
@@ -39,6 +40,32 @@ class _StandaloneWzFile:
     def __init__(self, reader):
         self.reader = reader
         self.reader_lock = threading.RLock()
+
+
+class _LazyStandaloneWzFile:
+    """File-backed stand-in for loose ``.img`` files.
+
+    The reader is created only when the image is parsed, so opening a
+    directory with thousands of loose IMG files does not eagerly read them
+    all into memory.
+    """
+
+    __slots__ = ("path", "key", "reader_lock", "_reader")
+
+    def __init__(self, path: str, key: "WzKey"):
+        self.path = path
+        self.key = key
+        self.reader_lock = threading.RLock()
+        self._reader = None
+
+    @property
+    def reader(self):
+        if self._reader is None:
+            from .reader import WzBinaryReader
+            with open(self.path, "rb") as f:
+                data = f.read()
+            self._reader = WzBinaryReader(io.BytesIO(data), self.key)
+        return self._reader
 
 
 class WzImage:
@@ -81,6 +108,15 @@ class WzImage:
         reader = WzBinaryReader(io.BytesIO(data), key)
         return cls(name=name, parent=None, offset=0, size=len(data),
                    wz_file=_StandaloneWzFile(reader))
+
+    @classmethod
+    def from_file(cls, path: str, *, key: "WzKey",
+                  name: Optional[str] = None) -> "WzImage":
+        """Create a lazy standalone :class:`WzImage` from a loose IMG file."""
+        img_name = name or os.path.basename(path)
+        return cls(name=img_name, parent=None, offset=0,
+                   size=os.path.getsize(path),
+                   wz_file=_LazyStandaloneWzFile(path, key))
 
     @property
     def wz_file(self) -> "WzFile":

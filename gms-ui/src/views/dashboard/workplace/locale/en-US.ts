@@ -30,6 +30,13 @@ export default {
   'workplace.broadcast.message': 'Broadcast Message',
   'workplace.broadcast.message.required': 'Please enter a broadcast message',
   'workplace.siege.monsterIds': 'Monster IDs',
+  'workplace.siege.map': 'Siege City',
+  'workplace.siege.customMapId': 'Custom Map ID',
+  'workplace.siege.customMapId.placeholder': 'Overrides the selected city when provided',
+  'workplace.siege.rewards': 'Damage Ranking Rewards',
+  'workplace.siege.rankReward': 'Rank {rank}',
+  'workplace.siege.rewardItemId': 'Item ID',
+  'workplace.siege.rewardQuantity': 'Quantity',
   'workplace.siege.monsterIds.placeholder':
     'Separate multiple monster IDs with commas, spaces, or new lines',
   'workplace.siege.monsterIds.required': 'Please enter valid monster IDs',

@@ -23,6 +23,20 @@
 
         <a-card :title="$t('workplace.button.monsterSiege')" :bordered="false">
           <a-form :model="siegeData" layout="vertical">
+            <a-form-item :label="$t('workplace.siege.map')">
+              <a-select v-model="siegeData.mapId">
+                <a-option v-for="map in siegeMapOptions" :key="map.id" :value="map.id">
+                  {{ map.name }}（{{ map.id }}）
+                </a-option>
+              </a-select>
+            </a-form-item>
+            <a-form-item :label="$t('workplace.siege.customMapId')">
+              <a-input-number
+                v-model="siegeData.customMapId"
+                :min="1"
+                :placeholder="$t('workplace.siege.customMapId.placeholder')"
+              />
+            </a-form-item>
             <a-form-item :label="$t('workplace.siege.monsterIds')">
               <a-textarea
                 v-model="siegeData.monsterIds"
@@ -43,6 +57,15 @@
                 :max-length="100"
                 show-word-limit
               />
+            </a-form-item>
+            <a-form-item :label="$t('workplace.siege.rewards')">
+              <a-space direction="vertical" fill>
+                <a-space v-for="reward in siegeData.rewards" :key="reward.rank">
+                  <span>{{ $t('workplace.siege.rankReward', { rank: reward.rank }) }}</span>
+                  <a-input-number v-model="reward.itemId" :min="0" :placeholder="$t('workplace.siege.rewardItemId')" />
+                  <a-input-number v-model="reward.quantity" :min="1" :max="32767" :placeholder="$t('workplace.siege.rewardQuantity')" />
+                </a-space>
+              </a-space>
             </a-form-item>
             <a-space>
               <a-button
@@ -120,6 +143,7 @@
   import { Message } from '@arco-design/web-vue';
   import { useI18n } from 'vue-i18n';
   import useLoading from '@/hooks/loading';
+  import { shenshuoSiegeBossOptions, siegeMapOptions } from '../siege-maps';
   import {
     clearMonsterSiege,
     sendServerBroadcast,
@@ -132,10 +156,13 @@
     message: '',
   });
   const siegeData = reactive({
+    mapId: 910000000,
+    customMapId: undefined as number | undefined,
     monsterIds: '',
     count: 1,
     broadcast: true,
-    message: '怪物攻城开始！请前往自由市场入口迎战！',
+    message: '怪物攻城开始！请前往指定主城迎战！',
+    rewards: [1, 2, 3].map((rank) => ({ rank, itemId: 0, quantity: 1 })),
   });
   const bossOptions = [
     { name: '闹钟王', id: 8500001 },
@@ -153,6 +180,12 @@
     { name: '进阶半半', id: 8910000 },
     { name: '混沌血腥女王', id: 8920000 },
     { name: '进阶贝伦', id: 8930000 },
+    { name: '麦格纳斯', id: 8880000 },
+    { name: '露希妲', id: 8880140 },
+    { name: '威尔', id: 8880300 },
+    { name: '塞伦', id: 8880340 },
+    { name: '黑魔法师', id: 8880502 },
+    { name: '戴斯克', id: 8644630 },
     { name: '愤怒的心疤狮王', id: 9420549 },
     { name: '愤怒的暴力熊', id: 9420544 },
     { name: '克雷塞尔', id: 9420522 },
@@ -169,6 +202,7 @@
     { name: '天皇蟾蜍', id: 9400409 },
     { name: '钻机', id: 9600087 },
     { name: '天魔僵尸', id: 9600318 },
+    ...shenshuoSiegeBossOptions,
   ];
 
   const handleBroadcast = async () => {
@@ -198,17 +232,19 @@
     try {
       setLoading(true);
       const { data } = await startMonsterSiege({
+        mapId: getSiegeMapId(),
         monsterIds,
         count: siegeData.count,
         message: siegeData.message.trim(),
         broadcast: siegeData.broadcast,
+        rewards: siegeData.rewards.filter((reward) => reward.itemId > 0),
       });
       Message.success(t('workplace.siege.success', { count: data }));
       Object.assign(siegeData, {
         monsterIds: '',
         count: 1,
         broadcast: true,
-        message: '怪物攻城开始！请前往自由市场入口迎战！',
+        message: '怪物攻城开始！请前往指定主城迎战！',
       });
     } catch (err) {
       console.error(err);
@@ -221,7 +257,7 @@
   const handleClearSiege = async () => {
     try {
       setLoading(true);
-      const { data } = await clearMonsterSiege();
+      const { data } = await clearMonsterSiege(getSiegeMapId());
       Message.success(t('workplace.siege.clearSuccess', { count: data }));
     } catch (err) {
       console.error(err);
@@ -237,6 +273,8 @@
       .map((id) => Number(id.trim()))
       .filter((id) => Number.isInteger(id) && id > 0);
   };
+
+  const getSiegeMapId = () => siegeData.customMapId || siegeData.mapId;
 
   const appendBossId = (id: number) => {
     const monsterIds = parseMonsterIds(siegeData.monsterIds);

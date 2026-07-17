@@ -511,12 +511,16 @@ from wzpy.wz_file import WzDirectory
 
 
 def _character_supported(wz: "WzFile") -> bool:
-    """A Character.wz is recognized by the equip-shape root: top-level
-    ``Hair``/``Coat``/``Cap`` etc. directories. We probe a couple to avoid
-    false positives on look-alike WZs."""
+    """Recognize full Character.wz packs and equip-only Character subsets."""
     root = wz.root
-    needed = {"Hair", "Coat", "Face"}
-    return needed.issubset(set(root.subdirs))
+    equip_dirs = {
+        "Accessory", "Cap", "Cape", "Coat", "Face", "Glove", "Hair",
+        "Longcoat", "Pants", "Shield", "Shoes", "Weapon",
+    }
+    if equip_dirs.intersection(root.subdirs):
+        return True
+    return any(name.lower().endswith(".img") and name[:8].isdigit()
+               for name in root.images)
 
 
 def _get_character_renderer(app: "Flask", region: str):
@@ -573,6 +577,15 @@ def _auto_detect_region(wz_path: str, version: Optional[int]) -> str:
         candidate = os.path.join(wz_path, f"{base}.wz")
         if os.path.isfile(candidate):
             structure_path = candidate
+        else:
+            loose_img = _first_loose_img(wz_path)
+            if loose_img:
+                from wzpy import detect_region_from_img
+                with open(loose_img, "rb") as f:
+                    detected = detect_region_from_img(f.read(32))
+                if detected:
+                    print(f"  loose IMG header -> using region: {detected}")
+                    return detected
     best: Optional[Tuple[str, float]] = None
     for r in ("BMS", "GMS", "EMS"):
         try:
@@ -593,6 +606,15 @@ def _auto_detect_region(wz_path: str, version: Optional[int]) -> str:
             f"Pass region=GMS/EMS/BMS explicitly."
         )
     return best[0]
+
+
+def _first_loose_img(folder: str) -> Optional[str]:
+    for root, dirs, files in os.walk(folder):
+        dirs.sort()
+        for name in sorted(files):
+            if name.lower().endswith(".img"):
+                return os.path.join(root, name)
+    return None
 
 
 def _find_pack(parent: str, base: str) -> Optional[str]:
@@ -2328,8 +2350,9 @@ def create_app(
         target = _resolve_target(subpath)
 
         def _read_img_bytes(img: WzImage) -> bytes:
-            r = wz.reader
-            with app.config["WZ_READER_LOCK"]:
+            wz_file = img.wz_file
+            r = wz_file.reader
+            with wz_file.reader_lock:
                 keep = r.position
                 r.seek(img.offset)
                 data = r.read(img.size)

@@ -120,17 +120,17 @@ public final class MoveLifeHandler extends AbstractMovementPacketHandler {
         int nextSkillLevel = 0;
         int mobMp = monster.getMp();
         if (nextMovementCouldBeSkill && monster.hasAnySkill()) {
-            MobSkillId skillToUse = monster.getRandomSkill();
-            nextSkillId = skillToUse.type().getId();
-            nextSkillLevel = skillToUse.level();
-            nextUse = MobSkillFactory.getMobSkillOrThrow(skillToUse.type(), skillToUse.level());
-
-            if (!(nextUse != null && monster.canUseSkill(nextUse, false) && nextUse.getHP() >= (int) (((float) monster.getHp() / monster.getMaxHp()) * 100) && mobMp >= nextUse.getMpCon())) {
-                // thanks OishiiKawaiiDesu for noticing mobs trying to cast skills they are not supposed to be able
-
-                nextSkillId = 0;
-                nextSkillLevel = 0;
-                nextUse = null;
+            int hpPercent = (int) (((float) monster.getHp() / monster.getMaxHp()) * 100);
+            for (MobSkillId skillToUse : monster.getSkillsInRandomOrder()) {
+                MobSkill candidate = MobSkillFactory.getMobSkillOrThrow(skillToUse.type(), skillToUse.level());
+                if (monster.canUseSkill(candidate, false)
+                        && candidate.getHP() >= hpPercent
+                        && mobMp >= candidate.getMpCon()) {
+                    nextSkillId = skillToUse.type().getId();
+                    nextSkillLevel = skillToUse.level();
+                    nextUse = candidate;
+                    break;
+                }
             }
         }
 

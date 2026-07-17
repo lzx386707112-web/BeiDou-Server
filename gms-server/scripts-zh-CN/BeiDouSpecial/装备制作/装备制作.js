@@ -665,6 +665,8 @@ function action(mode, type, selection) {
         text += "#L3#鞋子#l\t\r\n\r\n";
         text += "#L4#帽子#l\t\r\n\r\n";
         text += "#L5#武器#l\t\r\n\r\n";
+        text += "#L6#灵魂戒指#l\t\r\n\r\n";
+        text += "#L11#苍穹霸主戒#l\t\r\n\r\n";
         text += "#L9#腰带#l\t\r\n\r\n";
         text += "#L7#披风#l\t\r\n\r\n";
         text += "#L10#项链制作#l\t\r\n\r\n";
@@ -730,6 +732,12 @@ function doSelect(selection) {
             break;
         case 5:
             openNpc("装备制作/武器制作");
+            break;
+        case 6:
+            openNpc("灵魂戒指升级");
+            break;
+        case 11:
+            openNpc("苍穹霸主戒");
             break;
         case 7:
             披风选系列中 = true;
@@ -1085,4 +1093,3 @@ function 获取金币显示(meso) {
         return `${realMeso}`;
     }
 }
-

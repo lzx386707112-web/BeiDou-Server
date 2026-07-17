@@ -1046,7 +1046,11 @@ public class Monster extends AbstractLoadedLife {
     }
 
     public Packet makeBossHPBarPacket() {
-        return PacketCreator.showBossHP(getId(), getHp(), getMaxHp(), getTagColor(), getTagBgColor());
+        int templateId = switch (getId()) {
+            case 8880700, 8880803, 8880820 -> 8870000;
+            default -> getId();
+        };
+        return PacketCreator.showBossHP(templateId, getHp(), getMaxHp(), getTagColor(), getTagBgColor());
     }
 
     public boolean hasBossHPBar() {
@@ -1601,16 +1605,30 @@ public class Monster extends AbstractLoadedLife {
         return this.stats.getNoSkills() > 0;
     }
 
-    public MobSkillId getRandomSkill() {
-        Set<MobSkillId> skills = stats.getSkills();
-        if (skills.size() == 0) {
-            return null;
+    public List<MobSkillId> getSkillsInRandomOrder() {
+        List<MobSkillId> skills = new ArrayList<>(stats.getSkills());
+        Collections.shuffle(skills);
+        if (hasPriorityCompatibilitySkill()) {
+            skills.sort((left, right) -> Boolean.compare(
+                    !isPriorityCompatibilitySkill(left),
+                    !isPriorityCompatibilitySkill(right)
+            ));
         }
-        // There is no simple way of getting a random element from a Set. Have to make do with this.
-        return skills.stream()
-                .skip(Randomizer.nextInt(skills.size()))
-                .findAny()
-                .orElse(null);
+        return skills;
+    }
+
+    private boolean hasPriorityCompatibilitySkill() {
+        return (getId() >= 8880502 && getId() <= 8880504)
+                || getId() == 8880301
+                || getId() == 8880000
+                || getId() == 8880140
+                || getId() == 8644630
+                || getId() == 8880342;
+    }
+
+    private boolean isPriorityCompatibilitySkill(MobSkillId skill) {
+        int skillId = skill.type().getId();
+        return skillId >= 178 && skillId <= 187;
     }
 
     public boolean isFirstAttack() {

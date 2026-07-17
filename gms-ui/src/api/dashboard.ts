@@ -21,10 +21,12 @@ interface BroadcastParams {
 }
 
 interface MonsterSiegeParams {
+  mapId: number;
   monsterIds: number[];
   count: number;
   message: string;
   broadcast: boolean;
+  rewards: Array<{ rank: number; itemId: number; quantity: number }>;
 }
 
 export function stopServer(params: StopServerParams) {
@@ -51,6 +53,6 @@ export function startMonsterSiege(params: MonsterSiegeParams) {
   return axios.post<number>('/server/v1/monsterSiege', params);
 }
 
-export function clearMonsterSiege() {
-  return axios.post<number>('/server/v1/monsterSiege/clear');
+export function clearMonsterSiege(mapId: number) {
+  return axios.post<number>('/server/v1/monsterSiege/clear', { mapId });
 }

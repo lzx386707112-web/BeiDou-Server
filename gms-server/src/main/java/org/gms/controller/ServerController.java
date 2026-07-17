@@ -9,6 +9,7 @@ import org.gms.constants.api.ApiConstant;
 import org.gms.constants.net.ServerConstants;
 import org.gms.model.dto.ChannelListRtnDTO;
 import org.gms.model.dto.MonsterSiegeDTO;
+import org.gms.model.dto.MonsterSiegeClearDTO;
 import org.gms.model.dto.ResultBody;
 import org.gms.model.dto.ServerBroadcastDTO;
 import org.gms.model.dto.ServerShutdownDTO;
@@ -113,16 +114,16 @@ public class ServerController {
     }
 
     @Tag(name = "/server/" + ApiConstant.LATEST)
-    @Operation(summary = "自由市场怪物攻城")
+    @Operation(summary = "主城怪物攻城")
     @PostMapping("/" + ApiConstant.LATEST + "/monsterSiege")
     public ResultBody<Integer> monsterSiege(@RequestBody SubmitBody<MonsterSiegeDTO> request) {
         return ResultBody.success(serverService.summonMonsterSiege(request.getData()));
     }
 
     @Tag(name = "/server/" + ApiConstant.LATEST)
-    @Operation(summary = "清除自由市场怪物攻城")
+    @Operation(summary = "清除指定主城怪物攻城")
     @PostMapping("/" + ApiConstant.LATEST + "/monsterSiege/clear")
-    public ResultBody<Integer> clearMonsterSiege() {
-        return ResultBody.success(serverService.clearMonsterSiege());
+    public ResultBody<Integer> clearMonsterSiege(@RequestBody SubmitBody<MonsterSiegeClearDTO> request) {
+        return ResultBody.success(serverService.clearMonsterSiege(request.getData().getMapId()));
     }
 }

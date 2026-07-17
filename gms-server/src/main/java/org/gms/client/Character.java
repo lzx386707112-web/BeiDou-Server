@@ -90,6 +90,10 @@ import static java.util.concurrent.TimeUnit.*;
 
 public class Character extends AbstractCharacterObject {
     private static final Logger log = LoggerFactory.getLogger(Character.class);
+    private static final Set<Integer> FULL_HP_RESPAWN_MAPS = Set.of(
+            262030300, 262031300, 450010100, 221040001,
+            450009400, 900000207, 410002060, 410002061
+    );
 
     @Getter
     @Setter
@@ -7044,7 +7048,9 @@ public class Character extends AbstractCharacterObject {
 
         cancelAllBuffs(false);  // thanks Oblivium91 for finding out players still could revive in area and take damage before returning to town
 
-        if (usedSafetyCharm) {  // thanks kvmba for noticing safety charm not providing 30% HP/MP
+        if (FULL_HP_RESPAWN_MAPS.contains(returnMap)) {
+            updateHp(getClientMaxHp());
+        } else if (usedSafetyCharm) {  // thanks kvmba for noticing safety charm not providing 30% HP/MP
             addMPHP((int) Math.ceil(this.getClientMaxHp() * 0.3), (int) Math.ceil(this.getClientMaxMp() * 0.3));
         } else {
             updateHp(50);

@@ -193,6 +193,35 @@ public class FootholdTree {
         return null;
     }
 
+    public Point findLowestAtX(int x) {
+        Point lowest = new Point(x, Integer.MIN_VALUE);
+        return findLowestAtX(x, lowest) ? lowest : null;
+    }
+
+    private boolean findLowestAtX(int x, Point lowest) {
+        boolean found = false;
+        for (Foothold foothold : footholds) {
+            if (foothold.isWall() || x < foothold.getX1() || x > foothold.getX2()) {
+                continue;
+            }
+
+            int y = foothold.getY1() + (int) (((long) (foothold.getY2() - foothold.getY1())
+                    * (x - foothold.getX1())) / (foothold.getX2() - foothold.getX1()));
+            if (y > lowest.y) {
+                lowest.y = y;
+            }
+            found = true;
+        }
+
+        if (nw != null) {
+            found |= nw.findLowestAtX(x, lowest);
+            found |= ne.findLowestAtX(x, lowest);
+            found |= sw.findLowestAtX(x, lowest);
+            found |= se.findLowestAtX(x, lowest);
+        }
+        return found;
+    }
+
     public int getX1() {
         return p1.x;
     }

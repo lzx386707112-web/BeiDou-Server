@@ -589,10 +589,11 @@ public class LifeFactory {
             while (monsterSkillInfoData.getChildByPath(Integer.toString(i)) != null) {
                 int skillId = DataTool.getInt(i + "/skill", monsterSkillInfoData, 0);
                 int skillLv = DataTool.getInt(i + "/level", monsterSkillInfoData, 0);
+                int skillAction = DataTool.getInt(i + "/action", monsterSkillInfoData, i + 1);
                 MobSkillType type = MobSkillType.from(skillId).orElseThrow();
                 skills.add(new MobSkillId(type, skillLv));
 
-                Data monsterSkillData = monsterData.getChildByPath("skill" + (i + 1));
+                Data monsterSkillData = monsterData.getChildByPath("skill" + skillAction);
                 if (monsterSkillData != null) {
                     int animationTime = 0;
                     for (Data effectEntry : monsterSkillData.getChildren()) {

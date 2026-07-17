@@ -27,6 +27,7 @@ import os
 import re
 from typing import List, Optional, Tuple
 
+from .crypto import WzKey
 from .properties import (
     WzCanvasProperty,
     WzProperty,
@@ -119,6 +120,9 @@ class WzPackage:
         ``target``.
         """
         wz_paths = _list_pack_files(folder, base_name)
+        if not wz_paths:
+            self._load_loose_into(target, folder)
+            return
         for wz_path in wz_paths:
             wz = WzFile.open(
                 wz_path, region=self.region,
@@ -145,6 +149,25 @@ class WzPackage:
             sub_folder = os.path.join(folder, on_disk)
             sub_target = target.subdirs[sub_name]
             self._load_into(sub_target, sub_folder, on_disk, writable=writable)
+
+    def _load_loose_into(self, target: WzDirectory, folder: str) -> None:
+        """Mount a folder tree containing loose ``.img`` files."""
+        try:
+            entries = sorted(os.listdir(folder), key=_natural_key)
+        except OSError:
+            return
+
+        key = WzKey.for_region(self.region)
+        for name in entries:
+            full = os.path.join(folder, name)
+            if os.path.isdir(full):
+                child = WzDirectory(name=name, parent=target)
+                target.subdirs[name] = child
+                self._load_loose_into(child, full)
+            elif os.path.isfile(full) and name.lower().endswith(".img"):
+                img = WzImage.from_file(full, key=key, name=name)
+                img.parent = target
+                target.images[name] = img
 
 
 # ── helpers ────────────────────────────────────────────────────────────
@@ -213,7 +236,7 @@ def is_hierarchical_pack(path: str) -> bool:
     """
     if os.path.isdir(path):
         folder, base = _resolve_root_folder(path)
-        return len(_list_pack_files(folder, base)) >= 1
+        return len(_list_pack_files(folder, base)) >= 1 or _has_loose_img_files(folder)
     if not os.path.isfile(path):
         return False
     folder, base = _resolve_root_folder(path)
@@ -232,6 +255,29 @@ def is_hierarchical_pack(path: str) -> bool:
             has_indexed = True
             break
     return has_indexed
+
+
+def _has_loose_img_files(folder: str) -> bool:
+    try:
+        for name in os.listdir(folder):
+            full = os.path.join(folder, name)
+            if os.path.isfile(full) and name.lower().endswith(".img"):
+                return True
+            if os.path.isdir(full):
+                try:
+                    if any(child.lower().endswith(".img")
+                           for child in os.listdir(full)):
+                        return True
+                except OSError:
+                    continue
+    except OSError:
+        return False
+    return False
+
+
+def _natural_key(name: str):
+    parts = re.split(r"(\d+)", name)
+    return [int(p) if p.isdigit() else p.lower() for p in parts]
 
 
 def _merge_dir(target: WzDirectory, source: WzDirectory) -> None:

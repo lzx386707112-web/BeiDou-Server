@@ -15,6 +15,7 @@ import java.awt.image.WritableRaster;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.zip.Deflater;
 import java.util.zip.DeflaterOutputStream;
 import java.util.zip.InflaterInputStream;
 
@@ -344,6 +345,21 @@ public class WzPngProperty extends WzImageProperty {
         }
 
         return memStream.toByteArray();
+    }
+
+    public void optimizeCompression() {
+        byte[] rawBytes = decompress(getCompressedBytes(false));
+        ByteArrayOutputStream memStream = new ByteArrayOutputStream();
+        Deflater deflater = new Deflater(Deflater.BEST_COMPRESSION);
+        try (DeflaterOutputStream zip = new DeflaterOutputStream(memStream, deflater)) {
+            zip.write(rawBytes);
+        } catch (IOException e) {
+            throw new RuntimeException("压缩失败", e);
+        }
+        compressedBytes = memStream.toByteArray();
+        if (listWzUsed) {
+            compressBytes(rawBytes, wzImage.getReader().getWzMutableKey());
+        }
     }
 
     public void compressImage() {

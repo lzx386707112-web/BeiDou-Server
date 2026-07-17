@@ -204,6 +204,20 @@ function pickAvailableColor(availableColors, requested) {
   return availableColors[0];
 }
 
+async function pruneMissingDefaultEquips() {
+  for (const [category, slot] of Object.entries({ ...state.equipped })) {
+    try {
+      const resp = await trackedFetch(`/api/character/parts/${category}`);
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const parts = (await resp.json()).parts || [];
+      state.parts.set(category, parts);
+      if (!parts.some(p => p.id === slot.id)) delete state.equipped[category];
+    } catch (err) {
+      delete state.equipped[category];
+    }
+  }
+}
+
 // ── custom hair color (HSV recolor of the red base) ────────────────
 // Hair colour digit 1 = red — the preferred base for the custom recolor.
 const RED_HAIR_COLOR = 1;
@@ -1967,6 +1981,7 @@ function renderCharacterCards() {
 
 // ── boot ──────────────────────────────────────────────────────────
 (async function boot() {
+  await pruneMissingDefaultEquips();
   selectTab(state.activeTab);
   // Pose dropdown is populated from the body's authored poses, so
   // we need that list before the first paint.
@@ -1988,5 +2003,5 @@ function renderCharacterCards() {
   state.characters = [snapshotCurrent()];
   state.activeIdx = 0;
   renderCharacterCards();
-  refreshCompose();
+  if (Object.keys(state.equipped).length > 0) refreshCompose();
 })();

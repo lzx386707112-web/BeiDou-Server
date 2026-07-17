@@ -38,6 +38,7 @@ public final class PreviewImgServer {
     private final List<String> imgPaths;
     private final Set<String> imgPathSet;
     private final boolean skillMode;
+    private final boolean effectMode;
     private final Map<String, Integer> categoryCounts;
     private final Map<String, String> thumbnailCache = new HashMap<>();
     private final Map<String, Boolean> cashCache = new HashMap<>();
@@ -59,6 +60,8 @@ public final class PreviewImgServer {
         this.imgPathSet = new HashSet<>(imgPaths);
         this.skillMode = this.input.getFileName() != null
                 && "Skill".equalsIgnoreCase(this.input.getFileName().toString());
+        this.effectMode = this.input.getFileName() != null
+                && "Effect".equalsIgnoreCase(this.input.getFileName().toString());
         this.categoryCounts = countCategories(imgPaths);
     }
 
@@ -113,7 +116,7 @@ public final class PreviewImgServer {
                 writeJson(exchange, Map.of(
                         "input", input.toString(),
                         "region", region.optionName,
-                        "mode", skillMode ? "skill" : "equip",
+                        "mode", effectMode ? "effect" : skillMode ? "skill" : "equip",
                         "count", imgPaths.size()
                 ));
             } else if (path.equals("/api/search")) {
@@ -130,6 +133,8 @@ public final class PreviewImgServer {
                 handleThumb(exchange);
             } else if (path.equals("/api/wear")) {
                 handleWear(exchange);
+            } else if (path.equals("/api/effect")) {
+                handleEffect(exchange);
             } else {
                 writeJson(exchange, 404, Map.of("error", "not found"));
             }
@@ -150,8 +155,64 @@ public final class PreviewImgServer {
     }
 
     private static String categoryOf(String imgPath) {
+        String[] parts = imgPath.split("/");
+        if (parts.length >= 3 && "Character".equalsIgnoreCase(parts[0])) {
+            return parts[1];
+        }
+        if (parts.length >= 2 && "Effect".equalsIgnoreCase(parts[0])) {
+            return switch (parts[1]) {
+                case "SetEff.img" -> "SetEffect";
+                case "ItemEff.img" -> "ItemEffect";
+                default -> idOf(parts[1]);
+            };
+        }
+        if (parts.length >= 2 && "UI".equalsIgnoreCase(parts[0])) {
+            return idOf(parts[1]);
+        }
+        if (parts.length >= 2 && "Etc".equalsIgnoreCase(parts[0])) {
+            return idOf(parts[1]);
+        }
+        if (parts.length >= 2 && "String".equalsIgnoreCase(parts[0])) {
+            return idOf(parts[1]) + "String";
+        }
         int slash = imgPath.indexOf('/');
-        return slash < 0 ? "Body" : imgPath.substring(0, slash);
+        return slash < 0 ? idOf(imgPath) : imgPath.substring(0, slash);
+    }
+
+    private static String categoryName(String category) {
+        return switch (category) {
+            case "Accessory" -> "饰品";
+            case "Cap" -> "帽子";
+            case "Cape" -> "披风";
+            case "Glove" -> "手套";
+            case "Longcoat" -> "套服/衣服";
+            case "Coat" -> "上衣";
+            case "Pants" -> "裤子";
+            case "Ring" -> "戒指";
+            case "Shoes" -> "鞋子";
+            case "Weapon" -> "武器";
+            case "Shield" -> "盾牌/副手";
+            case "PetEquip" -> "宠物装备";
+            case "TamingMob" -> "骑宠";
+            case "SetEffect" -> "套装特效";
+            case "ItemEffect" -> "物品特效";
+            case "ChatBalloon" -> "聊天气泡";
+            case "NameTag" -> "名字标签";
+            case "Commodity" -> "商城商品表";
+            case "EqpString" -> "装备文本";
+            case "Body" -> "身体";
+            case "Face" -> "脸型";
+            case "Hair" -> "发型";
+            default -> category;
+        };
+    }
+
+    private static String categoryKind(String category) {
+        return switch (category) {
+            case "Accessory", "Cap", "Cape", "Glove", "Longcoat", "Coat", "Pants", "Ring",
+                    "Shoes", "Weapon", "Shield", "PetEquip", "TamingMob", "Body", "Face", "Hair" -> "equip";
+            default -> "node";
+        };
     }
 
     private static String idOf(String imgPath) {
@@ -176,6 +237,17 @@ public final class PreviewImgServer {
     }
 
     private void handleCategories(HttpExchange exchange) throws IOException {
+        if (effectMode) {
+            List<Map<String, Object>> categories = imgPaths.stream().map(img -> {
+                Map<String, Object> item = new LinkedHashMap<>();
+                item.put("id", img);
+                item.put("name", idOf(img));
+                item.put("count", "");
+                return item;
+            }).toList();
+            writeJson(exchange, Map.of("items", categories));
+            return;
+        }
         if (skillMode) {
             handleSkillCategories(exchange);
             return;
@@ -187,7 +259,9 @@ public final class PreviewImgServer {
                 .map(entry -> {
                     Map<String, Object> item = new LinkedHashMap<>();
                     item.put("id", entry.getKey());
-                    item.put("name", entry.getKey());
+                    item.put("name", categoryName(entry.getKey()));
+                    item.put("rawName", entry.getKey());
+                    item.put("kind", categoryKind(entry.getKey()));
                     item.put("count", entry.getValue());
                     return item;
                 })
@@ -213,17 +287,31 @@ public final class PreviewImgServer {
             case "Ring" -> 13;
             case "PetEquip" -> 14;
             case "TamingMob" -> 15;
+            case "SetEffect" -> 30;
+            case "ItemEffect" -> 31;
+            case "ChatBalloon" -> 40;
+            case "NameTag" -> 41;
+            case "Commodity" -> 50;
+            case "EqpString" -> 60;
             default -> 100;
         };
     }
 
     private void handleItems(HttpExchange exchange) throws IOException {
+        if (effectMode) {
+            handleEffectItems(exchange);
+            return;
+        }
         if (skillMode) {
             handleSkillItems(exchange);
             return;
         }
         Map<String, String> query = query(exchange);
         String category = query.getOrDefault("category", "Body");
+        if (!"equip".equals(categoryKind(category))) {
+            handleNodeItems(exchange, category);
+            return;
+        }
         String q = query.getOrDefault("q", "").toLowerCase(Locale.ROOT);
         String cashFilter = query.getOrDefault("cash", "all").toLowerCase(Locale.ROOT);
         Boolean cashRequired = switch (cashFilter) {
@@ -255,6 +343,8 @@ public final class PreviewImgServer {
                 item.put("img", path);
                 item.put("id", id);
                 item.put("category", category);
+                item.put("typeName", categoryName(category));
+                item.put("kind", "equip");
                 item.put("cash", cash);
                 items.add(item);
             }
@@ -267,6 +357,100 @@ public final class PreviewImgServer {
                 "limit", limit,
                 "matched", matched
         ));
+    }
+
+    private void handleNodeItems(HttpExchange exchange, String category) throws IOException {
+        Map<String, String> query = query(exchange);
+        String q = query.getOrDefault("q", "").toLowerCase(Locale.ROOT);
+        int offset = parseInt(query.get("offset"), 0);
+        int limit = Math.min(parseInt(query.get("limit"), 360), 800);
+        List<Map<String, Object>> items = new ArrayList<>();
+        int matched = 0;
+        for (String img : imgPaths) {
+            if (!categoryOf(img).equals(category)) {
+                continue;
+            }
+            WzImageFile image = loadImage(img);
+            synchronized (image) {
+                for (WzImageProperty child : image.getChildren()) {
+                    String id = child.getName();
+                    if (!q.isEmpty()
+                            && !id.toLowerCase(Locale.ROOT).contains(q)
+                            && !img.toLowerCase(Locale.ROOT).contains(q)) {
+                        continue;
+                    }
+                    CanvasCandidate preview = firstCanvas(child.getChildren(), child.getName());
+                    if (child instanceof WzCanvasProperty) {
+                        preview = new CanvasCandidate(child.getName());
+                    }
+                    if (preview == null) {
+                        continue;
+                    }
+                    if (matched >= offset && items.size() < limit) {
+                        Map<String, Object> item = new LinkedHashMap<>();
+                        item.put("img", img);
+                        item.put("id", id);
+                        item.put("category", category);
+                        item.put("typeName", categoryName(category));
+                        item.put("kind", "effect");
+                        item.put("key", img + "/" + id);
+                        item.put("icon", "/api/png?img=" + urlEncode(img) + "&path=" + urlEncode(preview.path()));
+                        items.add(item);
+                    }
+                    matched++;
+                }
+            }
+        }
+        writeJson(exchange, Map.of(
+                "items", items,
+                "category", category,
+                "offset", offset,
+                "limit", limit,
+                "matched", matched
+        ));
+    }
+
+    private void handleEffectItems(HttpExchange exchange) throws IOException {
+        Map<String, String> query = query(exchange);
+        String img = query.getOrDefault("category", imgPaths.isEmpty() ? "" : imgPaths.get(0));
+        if (!imgPathSet.contains(img)) {
+            throw new IllegalArgumentException("找不到 Effect img: " + img);
+        }
+        String q = query.getOrDefault("q", "").toLowerCase(Locale.ROOT);
+        int offset = parseInt(query.get("offset"), 0);
+        int limit = Math.min(parseInt(query.get("limit"), 360), 800);
+        WzImageFile image = loadImage(img);
+        List<Map<String, Object>> items = new ArrayList<>();
+        int matched = 0;
+        synchronized (image) {
+            for (WzImageProperty child : image.getChildren()) {
+                String id = child.getName();
+                if (!q.isEmpty() && !id.toLowerCase(Locale.ROOT).contains(q)) {
+                    continue;
+                }
+                CanvasCandidate preview = firstCanvas(child.getChildren(), child.getName());
+                if (child instanceof WzCanvasProperty) {
+                    preview = new CanvasCandidate(child.getName());
+                }
+                if (preview == null) {
+                    continue;
+                }
+                if (matched >= offset && items.size() < limit) {
+                    Map<String, Object> item = new LinkedHashMap<>();
+                    item.put("img", img);
+                    item.put("id", id);
+                    item.put("category", img);
+                    item.put("typeName", idOf(img));
+                    item.put("kind", "effect");
+                    item.put("key", img + "/" + id);
+                    item.put("icon", "/api/png?img=" + urlEncode(img) + "&path=" + urlEncode(preview.path()));
+                    items.add(item);
+                }
+                matched++;
+            }
+        }
+        writeJson(exchange, Map.of("items", items, "category", img, "offset", offset,
+                "limit", limit, "matched", matched));
     }
 
     private void handleSkillCategories(HttpExchange exchange) throws IOException {
@@ -318,6 +502,8 @@ public final class PreviewImgServer {
                     item.put("img", img);
                     item.put("id", id);
                     item.put("category", category);
+                    item.put("typeName", category);
+                    item.put("kind", "skill");
                     item.put("key", category + "/" + id);
                     item.put("icon", "/api/png?img=" + urlEncode(img) + "&path=" + urlEncode(icon.path()));
                     items.add(item);
@@ -436,6 +622,83 @@ public final class PreviewImgServer {
                 "category", category,
                 "layers", out
         ));
+    }
+
+    private void handleEffect(HttpExchange exchange) throws IOException {
+        Map<String, String> query = query(exchange);
+        String img = require(query, "img");
+        String effectPath = require(query, "path");
+        WzImageFile image = loadImage(img);
+        List<Map<String, Object>> groups = new ArrayList<>();
+        synchronized (image) {
+            WzImageProperty effect = findProperty(image, effectPath);
+            collectEffectGroups(effect, effectPath, groups);
+        }
+        writeJson(exchange, Map.of("img", img, "path", effectPath, "groups", groups));
+    }
+
+    private static void collectEffectGroups(WzImageProperty property, String path,
+                                            List<Map<String, Object>> groups) {
+        List<WzImageProperty> children = property.getChildren();
+        if (children == null) {
+            if (property instanceof WzCanvasProperty canvas) {
+                groups.add(effectGroup(path, List.of(canvas), path.substring(0, path.lastIndexOf('/') + 1)));
+            }
+            return;
+        }
+        List<WzCanvasProperty> frames = children.stream()
+                .filter(WzCanvasProperty.class::isInstance)
+                .map(WzCanvasProperty.class::cast)
+                .sorted((a, b) -> naturalCompare(a.getName(), b.getName()))
+                .toList();
+        if (!frames.isEmpty()) {
+            groups.add(effectGroup(path, frames, path + "/"));
+        }
+        for (WzImageProperty child : children) {
+            if (!(child instanceof WzCanvasProperty)) {
+                collectEffectGroups(child, path + "/" + child.getName(), groups);
+            }
+        }
+    }
+
+    private static Map<String, Object> effectGroup(String path, List<WzCanvasProperty> frames,
+                                                    String framePathPrefix) {
+        List<Map<String, Object>> out = new ArrayList<>();
+        for (WzCanvasProperty canvas : frames) {
+            int originX = 0;
+            int originY = 0;
+            WzImageProperty origin = canvas.getChild("origin");
+            if (origin instanceof WzVectorProperty vector) {
+                originX = vector.getX();
+                originY = vector.getY();
+            }
+            Map<String, Object> frame = new LinkedHashMap<>();
+            String framePath = frames.size() == 1 && path.equals(framePathPrefix.substring(0, framePathPrefix.length() - 1))
+                    ? path : framePathPrefix + canvas.getName();
+            frame.put("path", framePath);
+            frame.put("url", "/api/png?img=" + urlEncode(canvas.getWzImage().getName())
+                    + "&path=" + urlEncode(framePath));
+            frame.put("delay", intChildValue(canvas, "delay", 100));
+            frame.put("width", canvas.getWidth());
+            frame.put("height", canvas.getHeight());
+            frame.put("originX", originX);
+            frame.put("originY", originY);
+            out.add(frame);
+        }
+        return Map.of("path", path, "frames", out);
+    }
+
+    private static int intChildValue(WzImageProperty property, String name, int defaultValue) {
+        WzImageProperty child = property.getChild(name);
+        return child instanceof WzIntProperty value ? value.getValue() : defaultValue;
+    }
+
+    private static int naturalCompare(String left, String right) {
+        try {
+            return Integer.compare(Integer.parseInt(left), Integer.parseInt(right));
+        } catch (NumberFormatException ignored) {
+            return left.compareToIgnoreCase(right);
+        }
     }
 
     private synchronized WzImageFile loadImage(String rel) {
@@ -785,6 +1048,7 @@ public final class PreviewImgServer {
                     .thumb img { max-width:80px; max-height:76px; image-rendering:auto; }
                     .badge { position:absolute; left:5px; top:5px; min-width:28px; height:18px; border-radius:4px; display:grid; place-items:center; padding:0 5px; font-size:11px; line-height:18px; color:#fff; background:#64748b; }
                     .badge.cash { background:#0f766e; }
+                    .type-badge { position:absolute; right:5px; top:5px; max-width:62px; height:18px; border-radius:4px; display:block; padding:0 5px; font-size:11px; line-height:18px; color:#344054; background:rgba(255,255,255,.86); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
                     .id { align-self:end; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-align:center; font:12px ui-monospace,SFMono-Regular,Menlo,monospace; color:#344054; }
                     .side { min-width:0; min-height:0; display:flex; flex-direction:column; background:var(--panel); }
                     .side-head { padding:12px 14px; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:space-between; gap:10px; }
@@ -793,10 +1057,18 @@ public final class PreviewImgServer {
                       linear-gradient(45deg,#e6e9ef 25%,transparent 25%),linear-gradient(-45deg,#e6e9ef 25%,transparent 25%),
                       linear-gradient(45deg,transparent 75%,#e6e9ef 75%),linear-gradient(-45deg,transparent 75%,#e6e9ef 75%);
                       background-size:22px 22px; background-position:0 0,0 11px,11px -11px,-11px 0; }
-                    .mannequin { position:relative; width:220px; height:260px; }
+                    .mannequin { position:relative; width:220px; height:260px; flex:0 0 auto; }
                     .dummy { position:absolute; left:74px; top:66px; width:72px; height:146px; border-radius:42px 42px 28px 28px; background:#f2d2bd; opacity:.35; }
                     .dummy:before { content:""; position:absolute; left:19px; top:-34px; width:34px; height:34px; border-radius:50%; background:#f2d2bd; }
                     .layer { position:absolute; image-rendering:auto; filter:drop-shadow(0 1px 1px rgba(0,0,0,.18)); }
+                    .effect-frame { position:absolute; image-rendering:auto; filter:drop-shadow(0 1px 2px rgba(0,0,0,.2)); visibility:hidden; }
+                    .effect-frame.active { visibility:visible; }
+                    .effect-controls { display:none; align-items:center; gap:6px; padding:8px 12px; border-top:1px solid var(--line); }
+                    .effect-controls select { min-width:0; flex:1; height:30px; border:1px solid var(--line); border-radius:5px; background:#fff; }
+                    .tree { min-height:0; overflow:auto; padding:10px 12px 16px; border-top:1px solid var(--line); font:12px ui-monospace,SFMono-Regular,Menlo,monospace; }
+                    .tree details { margin-left:12px; }
+                    .tree summary { cursor:pointer; line-height:24px; }
+                    .tree-value { color:var(--muted); }
                     .selected-list { min-height:0; overflow:auto; padding:10px 12px 14px; display:flex; flex-direction:column; gap:8px; border-top:1px solid var(--line); }
                     .selected-row { display:grid; grid-template-columns:70px 44px minmax(0,1fr) auto; align-items:center; gap:8px; min-height:42px; border:1px solid var(--line); border-radius:7px; padding:6px; }
                     .selected-row img { max-width:40px; max-height:34px; justify-self:center; }
@@ -834,13 +1106,20 @@ public final class PreviewImgServer {
                         <button id="reset">重置</button>
                       </div>
                       <div class="stage"><div id="mannequin" class="mannequin"><div class="dummy"></div></div></div>
+                      <div id="effectControls" class="effect-controls">
+                        <button id="prevFrame" title="上一帧">&#9664;</button>
+                        <button id="togglePlay" title="播放或暂停">&#10074;&#10074;</button>
+                        <button id="nextFrame" title="下一帧">&#9654;</button>
+                        <select id="effectGroup" aria-label="效果分组"></select>
+                      </div>
                       <div id="selectedList" class="selected-list"><div class="empty">未选择装备</div></div>
+                      <div id="tree" class="tree" hidden></div>
                     </aside>
                   </main>
                   <script>
                     const $ = id => document.getElementById(id);
                     const enc = encodeURIComponent;
-                    const state = { mode: "equip", categories: [], category: "", q: "", cash: "all", offset: 0, limit: 360, matched: 0, items: [], selected: {}, loadSeq: 0 };
+                    const state = { mode: "equip", categories: [], category: "", q: "", cash: "all", offset: 0, limit: 360, matched: 0, items: [], selected: {}, loadSeq: 0, effect: null, group: 0, frame: 0, timer: 0, playing: true, mountedGroup: -1 };
                     const layerOrder = ["Body","Hair","Face","Coat","Longcoat","Pants","Shoes","Glove","Cape","Accessory","Cap","Shield","Weapon","Ring","PetEquip","TamingMob"];
                     const previewAnchor = { x: 110, y: 178 };
 
@@ -856,9 +1135,9 @@ public final class PreviewImgServer {
                     async function boot() {
                       const [meta, cats] = await Promise.all([api("/api/meta"), api("/api/categories")]);
                       state.mode = meta.mode || "equip";
-                      $("title").textContent = state.mode === "skill" ? "Skill IMG Browser" : "Character IMG Browser";
+                      $("title").textContent = state.mode === "effect" ? "Effect IMG Browser" : state.mode === "skill" ? "Skill IMG Browser" : "Character IMG Browser";
                       $("meta").textContent = `${meta.input} · ${meta.region} · ${meta.count} images`;
-                      $("cashFilters").style.display = state.mode === "skill" ? "none" : "flex";
+                      $("cashFilters").style.display = state.mode === "equip" ? "flex" : "none";
                       state.categories = cats.items;
                       state.category = state.categories[0]?.id || "Body";
                       renderTabs();
@@ -896,10 +1175,14 @@ public final class PreviewImgServer {
                       }
                     }
 
+                    function typeName(item) {
+                      return item.typeName || item.category || "";
+                    }
+
                     function renderGrid(items, append) {
                       const html = items.map(item => `
-                        <button class="card" data-img="${escapeAttr(item.img)}" data-id="${escapeAttr(item.id)}" data-category="${escapeAttr(item.category)}" data-key="${escapeAttr(item.key || item.category)}" data-icon="${escapeAttr(item.icon || "")}" title="${escapeAttr(item.img + " / " + item.id)}">
-                          <span class="thumb">${state.mode === "skill" ? "" : `<span class="badge ${item.cash ? "cash" : ""}">${item.cash ? "现金" : "普通"}</span>`}<img loading="lazy" src="${item.icon || thumbUrl(item.img)}" alt="" onerror="this.style.display='none'"></span>
+                        <button class="card" data-img="${escapeAttr(item.img)}" data-id="${escapeAttr(item.id)}" data-category="${escapeAttr(item.category)}" data-kind="${escapeAttr(item.kind || "")}" data-type-name="${escapeAttr(typeName(item))}" data-key="${escapeAttr(item.key || item.category)}" data-icon="${escapeAttr(item.icon || "")}" title="${escapeAttr(typeName(item) + " · " + item.img + " / " + item.id)}">
+                          <span class="thumb">${state.mode === "equip" && (item.kind || "equip") === "equip" ? `<span class="badge ${item.cash ? "cash" : ""}">${item.cash ? "现金" : "普通"}</span>` : ""}<span class="type-badge">${escapeHtml(typeName(item))}</span><img loading="lazy" src="${item.icon || thumbUrl(item.img)}" alt="" onerror="this.style.display='none'"></span>
                           <span class="id">${escapeHtml(item.id)}</span>
                         </button>`).join("");
                       if (append) $("grid").insertAdjacentHTML("beforeend", html);
@@ -908,7 +1191,11 @@ public final class PreviewImgServer {
                     }
 
                     async function selectItem(card) {
-                      const item = { img: card.dataset.img, id: card.dataset.id, category: card.dataset.category, key: card.dataset.key, icon: card.dataset.icon };
+                      const item = { img: card.dataset.img, id: card.dataset.id, category: card.dataset.category, kind: card.dataset.kind, typeName: card.dataset.typeName, key: card.dataset.key, icon: card.dataset.icon };
+                      if (state.mode === "effect" || item.kind === "effect") {
+                        await selectEffect(item);
+                        return;
+                      }
                       state.selected[item.key] = { ...item, loading: true, layers: [] };
                       renderPreview();
                       markActiveCards();
@@ -925,6 +1212,120 @@ public final class PreviewImgServer {
                       }
                       renderPreview();
                       markActiveCards();
+                    }
+
+                    async function selectEffect(item) {
+                      stopEffectTimer();
+                      state.selected = { [item.key]: item };
+                      state.effect = null;
+                      state.group = 0;
+                      state.frame = 0;
+                      state.mountedGroup = -1;
+                      $("previewMeta").textContent = `${item.img} / ${item.id} · 加载中`;
+                      markActiveCards();
+                      try {
+                        const [effect, tree] = await Promise.all([
+                          api(`/api/effect?img=${enc(item.img)}&path=${enc(item.id)}`),
+                          api(`/api/tree?img=${enc(item.img)}`)
+                        ]);
+                        state.effect = { item, groups: effect.groups || [] };
+                        renderEffectControls();
+                        mountEffectGroup(true);
+                        renderEffectFrame();
+                        renderTree((tree.children || []).find(node => node.name === item.id));
+                      } catch (e) {
+                        $("previewMeta").textContent = e.message;
+                      }
+                    }
+
+                    function renderEffectControls() {
+                      const groups = state.effect?.groups || [];
+                      $("effectControls").style.display = groups.length ? "flex" : "none";
+                      $("effectGroup").innerHTML = groups.map((group, index) => `<option value="${index}">${escapeHtml(group.path)} · ${group.frames.length} 帧</option>`).join("");
+                      $("effectGroup").value = String(state.group);
+                      $("selectedList").innerHTML = groups.length ? `<div class="selected-row"><div class="cat">${escapeHtml(state.effect.item.typeName || "Effect")}</div><img src="${state.effect.item.icon}" alt=""><div class="name">${escapeHtml(state.effect.item.img)} / ${escapeHtml(state.effect.item.id)}</div><button data-remove="${escapeAttr(state.effect.item.key)}">移除</button></div>` : `<div class="empty">没有可播放的 Canvas 帧</div>`;
+                    }
+
+                    function renderEffectFrame() {
+                      stopEffectTimer();
+                      const group = state.effect?.groups?.[state.group];
+                      const frame = group?.frames?.[state.frame];
+                      if (!frame) return;
+                      if (state.mountedGroup !== state.group) mountEffectGroup(true);
+                      $("mannequin").querySelectorAll(".effect-frame").forEach((img, index) => img.classList.toggle("active", index === state.frame));
+                      $("previewMeta").textContent = `${state.effect.item.id} · ${state.frame + 1}/${group.frames.length} · ${frame.delay} ms`;
+                      $("togglePlay").innerHTML = state.playing ? "&#10074;&#10074;" : "&#9654;";
+                      if (state.playing && group.frames.length > 1) {
+                        state.timer = setTimeout(() => stepEffect(1), Math.max(16, frame.delay || 100));
+                      }
+                    }
+
+                    function mountEffectGroup(autoplay = false) {
+                      const frames = state.effect?.groups?.[state.group]?.frames || [];
+                      const mannequin = $("mannequin");
+                      mannequin.innerHTML = "";
+                      state.mountedGroup = state.group;
+                      if (!frames.length) return;
+                      if (autoplay) state.playing = false;
+                      const minX = Math.min(...frames.map(frame => -frame.originX));
+                      const minY = Math.min(...frames.map(frame => -frame.originY));
+                      const maxX = Math.max(...frames.map(frame => frame.width - frame.originX));
+                      const maxY = Math.max(...frames.map(frame => frame.height - frame.originY));
+                      const width = Math.max(1, maxX - minX);
+                      const height = Math.max(1, maxY - minY);
+                      const stage = mannequin.parentElement;
+                      const scale = Math.min(1, Math.max(0.05, (stage.clientWidth - 28) / width), Math.max(0.05, (stage.clientHeight - 28) / height));
+                      mannequin.style.width = `${Math.ceil(width * scale)}px`;
+                      mannequin.style.height = `${Math.ceil(height * scale)}px`;
+                      const images = frames.map((frame, index) => {
+                        const img = document.createElement("img");
+                        img.className = `effect-frame${index === state.frame ? " active" : ""}`;
+                        img.src = frame.url;
+                        img.alt = frame.path;
+                        img.decoding = "async";
+                        img.style.left = `${(-frame.originX - minX) * scale}px`;
+                        img.style.top = `${(-frame.originY - minY) * scale}px`;
+                        img.style.width = `${frame.width * scale}px`;
+                        img.style.height = `${frame.height * scale}px`;
+                        mannequin.appendChild(img);
+                        return img;
+                      });
+                      if (autoplay) {
+                        const mountedGroup = state.group;
+                        Promise.all(images.map(img => img.complete
+                          ? img.decode().catch(() => {})
+                          : new Promise(resolve => { img.onload = resolve; img.onerror = resolve; })))
+                          .then(() => {
+                            if (state.effect && state.group === mountedGroup) {
+                              state.playing = true;
+                              renderEffectFrame();
+                            }
+                          });
+                      }
+                    }
+
+                    function stepEffect(delta) {
+                      const frames = state.effect?.groups?.[state.group]?.frames || [];
+                      if (!frames.length) return;
+                      state.frame = (state.frame + delta + frames.length) % frames.length;
+                      renderEffectFrame();
+                    }
+
+                    function stopEffectTimer() {
+                      clearTimeout(state.timer);
+                      state.timer = 0;
+                    }
+
+                    function renderTree(node) {
+                      $("tree").hidden = !node;
+                      $("tree").innerHTML = node ? treeNode(node, true) : "";
+                    }
+
+                    function treeNode(node, open) {
+                      const children = node.children || [];
+                      const label = `${escapeHtml(node.name)} <span class="tree-value">${escapeHtml(node.type || "")}${node.value === undefined ? "" : " = " + escapeHtml(node.value)}</span>`;
+                      if (!children.length) return `<div>${label}</div>`;
+                      return `<details ${open ? "open" : ""}><summary>${label}</summary>${children.map(child => treeNode(child, false)).join("")}</details>`;
                     }
 
                     function renderPreview() {
@@ -948,7 +1349,7 @@ public final class PreviewImgServer {
                       });
                       $("selectedList").innerHTML = selected.length ? selected.map(item => `
                         <div class="selected-row">
-                          <div class="cat">${escapeHtml(item.category)}</div>
+                          <div class="cat">${escapeHtml(item.typeName || item.category)}</div>
                           <img src="${item.icon || thumbUrl(item.img)}" alt="" onerror="this.style.display='none'">
                           <div class="name" title="${escapeAttr(item.img)}">${escapeHtml(item.id)}${item.loading ? " · 加载中" : ""}${item.note ? " · " + escapeHtml(item.note) : ""}${item.error ? " · " + escapeHtml(item.error) : ""}</div>
                           <button data-remove="${escapeAttr(item.key)}">移除</button>
@@ -962,8 +1363,14 @@ public final class PreviewImgServer {
 
                     function resultLabel() {
                       return state.mode === "skill"
-                        ? `${state.category} · ${state.items.length}/${state.matched}`
-                        : `${state.category} · ${cashLabel(state.cash)} · ${state.items.length}/${state.matched}`;
+                        ? `${currentCategoryName()} · ${state.items.length}/${state.matched}`
+                        : state.mode === "effect"
+                          ? `${currentCategoryName()} · ${state.items.length}/${state.matched}`
+                          : `${currentCategoryName()} · ${cashLabel(state.cash)} · ${state.items.length}/${state.matched}`;
+                    }
+
+                    function currentCategoryName() {
+                      return state.categories.find(c => c.id === state.category)?.name || state.category;
                     }
 
                     function cashLabel(value) {
@@ -996,6 +1403,12 @@ public final class PreviewImgServer {
                     $("selectedList").addEventListener("click", event => {
                       const button = event.target.closest("button[data-remove]");
                       if (!button) return;
+                      if (state.mode === "effect" || state.effect) {
+                        stopEffectTimer(); state.selected = {}; state.effect = null;
+                        $("mannequin").innerHTML = ""; $("effectControls").style.display = "none";
+                        $("selectedList").innerHTML = `<div class="empty">未选择效果</div>`; $("tree").hidden = true;
+                        markActiveCards(); return;
+                      }
                       delete state.selected[button.dataset.remove];
                       renderPreview();
                       markActiveCards();
@@ -1009,7 +1422,12 @@ public final class PreviewImgServer {
                     });
                     $("clear").onclick = () => { $("q").value = ""; state.q = ""; loadItems(true); };
                     $("more").onclick = () => loadItems(false);
-                    $("reset").onclick = () => { state.selected = {}; renderPreview(); markActiveCards(); };
+                    $("effectGroup").onchange = () => { state.group = Number($("effectGroup").value); state.frame = 0; mountEffectGroup(true); renderEffectFrame(); };
+                    $("prevFrame").onclick = () => { state.playing = false; stepEffect(-1); };
+                    $("nextFrame").onclick = () => { state.playing = false; stepEffect(1); };
+                    $("togglePlay").onclick = () => { state.playing = !state.playing; renderEffectFrame(); };
+                    window.addEventListener("resize", () => { if (state.mode === "effect" && state.effect) { mountEffectGroup(); renderEffectFrame(); } });
+                    $("reset").onclick = () => { stopEffectTimer(); state.selected = {}; const hadEffect = !!state.effect; state.effect = null; state.mode === "effect" || hadEffect ? ($("selectedList").innerHTML = `<div class="empty">未选择效果</div>`, $("mannequin").innerHTML = "", $("effectControls").style.display = "none", $("tree").hidden = true) : renderPreview(); markActiveCards(); };
                     boot().catch(e => $("grid").innerHTML = `<div class="error">${escapeHtml(e.message)}</div>`);
                   </script>
                 </body>

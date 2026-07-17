@@ -44,6 +44,9 @@ public class ReactorFactory {
         if (stats == null) {
             int infoId = rid;
             Data reactorData = data.getData(StringUtil.getLeftPaddedStr(infoId + ".img", '0', 11));
+            if (reactorData == null) {
+                return new ReactorStats();
+            }
             Data link = reactorData.getChildByPath("info/link");
             if (link != null) {
                 infoId = DataTool.getIntConvert("info/link", reactorData);

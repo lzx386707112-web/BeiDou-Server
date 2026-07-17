@@ -14,10 +14,18 @@ var bossmaps2 = Array(
     Array(271030000, 380000, "骑士团要塞入口            #r（消耗38万金币）#b"),
     Array(271040000, 380000, "希纳斯远征入口            #r（消耗38万金币）#b"),
     Array(272020110, 500000, "阿卡伊勒祭坛入口        #r（消耗50万金币）#b"),
-    Array(105200100, 10000, "鲁塔比斯：半半入口     #r（消耗1万金币，Boss暂未开放）#b"),
-    Array(105200200, 10000, "鲁塔比斯：皮埃尔入口 #r（消耗1万金币，Boss暂未开放）#b"),
-    Array(105200300, 10000, "鲁塔比斯：女王入口     #r（消耗1万金币，Boss暂未开放）#b"),
-    Array(105200400, 10000, "鲁塔比斯：贝伦入口     #r（消耗1万金币，Boss暂未开放）#b"),
+    Array(262030300, 500000, "希拉                               #r（消耗50万金币）#b", 8870000, -1, 1092, 196),
+    Array(262031300, 500000, "白发希拉                       #r（消耗50万金币）#b", 8870200, -1, 1092, 196),
+    Array(450010100, 500000, "觉醒希拉                       #r（消耗50万金币）#b", 8880400, -1, 855, 266),
+//    Array(221040001, 500000, "卡翁                               #r（消耗50万金币）#b", 8880200, -1, -1215, 866),
+    Array(450009400, 500000, "亲卫队长敦凯尔            #r（消耗50万金币）#b", 8645009, -1, -1, -157),
+    Array(900000207, 500000, "守护天使绿水灵            #r（消耗50万金币）#b", 8880700, -1, 703, -1394),
+    Array(410002060, 500000, "监视者卡洛斯                #r（消耗50万金币）#b", 8880803, -1, 900, 325),
+    Array(410002061, 500000, "沦陷的监视者卡洛斯    #r（消耗50万金币）#b", 8880820, 410002060, 900, 325),
+//    Array(105200100, 10000, "鲁塔比斯：半半入口     #r（消耗1万金币，Boss暂未开放）#b"),
+//    Array(105200200, 10000, "鲁塔比斯：皮埃尔入口 #r（消耗1万金币，Boss暂未开放）#b"),
+//    Array(105200300, 10000, "鲁塔比斯：女王入口     #r（消耗1万金币，Boss暂未开放）#b"),
+//    Array(105200400, 10000, "鲁塔比斯：贝伦入口     #r（消耗1万金币，Boss暂未开放）#b"),
     Array(105100100, 100000, "蝙蝠怪巴洛古                #r（消耗10万金币）#b"),
     Array(220080000, 280000, "闹钟                               #r（消耗28万金币）#b"),
     Array(541020700, 380000, "大树BOSS                     #r（消耗38万金币）#b"),
@@ -38,6 +46,20 @@ var DAILY_BOSS_LIMIT = 300;
 var DAILY_BOSS_BY_MAP = {
     211070100: { countKey: "BOSS每日_班雷昂", name: "班·雷昂" },
     703011000: { countKey: "BOSS每日_钻机", name: "钻机" }
+};
+var SHENSHUO_BOSS_ENTRY_ITEMS = Array(
+    Array(4000019, 500),
+    Array(2210006, 1)
+);
+var SHENSHUO_BOSS_MAPS = {
+    262030300: true,
+    262031300: true,
+    450010100: true,
+    221040001: true,
+    450009400: true,
+    900000207: true,
+    410002060: true,
+    410002061: true
 };
 //------------------------------------------------------------------------
 var bossmaps1 = Array(
@@ -142,8 +164,8 @@ var townmaps = Array(
     Array(680100000, 500, "冒险岛周末集市#r  （消耗5百金币）#b"),
     Array(271000000, 10000, "未来之门#r              （消耗1万金币）#b"),
     Array(271030000, 10000, "骑士团要塞入口#r  （消耗1万金币）#b"),
-    Array(1006000, 10000, "遗忘山谷#r              （消耗1万金币）#b"),
-    Array(105200000, 10000, "鲁塔比斯#r              （消耗1万金币）#b"),
+//    Array(1006000, 10000, "遗忘山谷#r              （消耗1万金币）#b"),
+//    Array(105200000, 10000, "鲁塔比斯#r              （消耗1万金币）#b"),
     Array(272000000, 10000, "时间裂缝#r              （消耗1万金币）#b"),
     Array(272020000, 10000, "扭曲时间神殿1#r    （消耗1万金币）#b"),
     Array(272020110, 10000, "阿卡伊勒祭坛前#r  （消耗1万金币）#b"),
@@ -326,9 +348,50 @@ function getDailyBossConfig(mapId) {
     return DAILY_BOSS_BY_MAP[mapId];
 }
 
+function isShenshuoBossMap(mapId) {
+    return SHENSHUO_BOSS_MAPS[mapId] === true;
+}
+
+function hasShenshuoBossEntryItems() {
+    for (var i = 0; i < SHENSHUO_BOSS_ENTRY_ITEMS.length; i++) {
+        if (!cm.haveItem(SHENSHUO_BOSS_ENTRY_ITEMS[i][0], SHENSHUO_BOSS_ENTRY_ITEMS[i][1])) {
+            return false;
+        }
+    }
+    return true;
+}
+
+function changeShenshuoBossEntryItems(multiplier) {
+    for (var i = 0; i < SHENSHUO_BOSS_ENTRY_ITEMS.length; i++) {
+        cm.gainItem(SHENSHUO_BOSS_ENTRY_ITEMS[i][0], SHENSHUO_BOSS_ENTRY_ITEMS[i][1] * multiplier);
+    }
+}
+
+function getShenshuoBossEntryItemText() {
+    return "#v4000019##z4000019# ×500\r\n#v2210006##z2210006# ×1";
+}
+
+function getServerResourceStatus(relativePath) {
+    const File = Java.type('java.io.File');
+    var file = new File(relativePath);
+    return file.getAbsolutePath() + "（" + (file.isFile() ? "存在" : "不存在") + "）";
+}
+
+function getMapResourceStatus(mapId) {
+    var area = Math.floor(mapId / 100000000);
+    var relative = "Map.wz/Map/Map" + area + "/" + mapId + ".img.xml";
+    return "\r\n普通WZ：" + getServerResourceStatus("wz/" + relative)
+        + "\r\n语言WZ：" + getServerResourceStatus("wz-zh-CN/" + relative);
+}
+
 function levelBoss2(selection) {
     var cost = bossmaps2[selection][1];
     var mapId = bossmaps2[selection][0];
+    var bossId = bossmaps2[selection][3];
+    var fallbackMapId = bossmaps2[selection][4];
+    var bossX = bossmaps2[selection][5];
+    var bossY = bossmaps2[selection][6];
+    var requiresEntryItems = isShenshuoBossMap(mapId);
     
     // 检查金币是否足够
     if (cm.getPlayer().getMeso() < cost) {
@@ -336,7 +399,100 @@ function levelBoss2(selection) {
         cm.dispose();
         return;
     }
+
+    if (requiresEntryItems && !hasShenshuoBossEntryItems()) {
+        cm.sendOk("进入该 Boss 地图除 " + cost + " 金币外，还需要：\r\n" + getShenshuoBossEntryItemText());
+        cm.dispose();
+        return;
+    }
+
+    if (mapId === 221040001) {
+        var charged = false;
+        var entryItemsCharged = false;
+        try {
+            cm.gainMeso(-cost);
+            charged = true;
+            changeShenshuoBossEntryItems(-1);
+            entryItemsCharged = true;
+            cm.getPlayer().saveLocationOnWarp();
+            cm.warp(mapId, 0);
+
+            if (cm.getPlayer().getMapId() !== mapId) {
+                cm.gainMeso(cost);
+                charged = false;
+                changeShenshuoBossEntryItems(1);
+                entryItemsCharged = false;
+                cm.sendOk("卡翁地图 " + mapId + " 未安装或加载失败，传送费用已退还。"
+                    + getMapResourceStatus(mapId)
+                    + "\r\n客户端地图：clien/Data/Map/Map/Map2/" + mapId + ".img"
+                    + "\r\n请同时覆盖客户端和服务端地图文件，并完全重启服务端后再试。");
+                cm.dispose();
+                return;
+            }
+
+            var enteredMap = cm.getPlayer().getMap();
+            if (bossId != null && bossId > 0 && enteredMap.getMonsterById(bossId) == null) {
+                const LifeFactory = Java.type('org.gms.server.life.LifeFactory');
+                const Point = Java.type('java.awt.Point');
+                var directBoss = LifeFactory.getMonster(bossId);
+                if (directBoss == null) {
+                    throw new Error("Boss 数据 " + bossId + " 未被当前服务端加载");
+                }
+                directBoss.setPosition(new Point(bossX, bossY));
+                directBoss.setFh(43);
+                directBoss.setCy(bossY);
+                directBoss.setRx0(bossX - 500);
+                directBoss.setRx1(bossX + 500);
+                enteredMap.spawnMonster(directBoss);
+            }
+            cm.dispose();
+        } catch (error) {
+            if (charged && cm.getPlayer().getMapId() !== mapId) {
+                cm.gainMeso(cost);
+            }
+            if (entryItemsCharged && cm.getPlayer().getMapId() !== mapId) {
+                changeShenshuoBossEntryItems(1);
+            }
+            var errorMessage = "卡翁传送失败：" + String(error);
+            if (cm.getPlayer().getMapId() === mapId) {
+                cm.getPlayer().dropMessage(5, errorMessage);
+            } else {
+                cm.sendOk(errorMessage + "\r\n请把这段提示反馈给管理员。");
+            }
+            cm.dispose();
+        }
+        return;
+    }
     
+    var targetMap = cm.getMap(mapId);
+    if (targetMap == null && fallbackMapId != null && fallbackMapId > 0) {
+        mapId = fallbackMapId;
+        targetMap = cm.getMap(mapId);
+    }
+    if (targetMap == null) {
+        cm.sendOk("目标地图 " + mapId + " 未被当前服务端加载。"
+            + getMapResourceStatus(mapId)
+            + "\r\n请按上面的绝对路径检查补丁覆盖层级，并完全重启服务端。");
+        cm.dispose();
+        return;
+    }
+
+    var boss = null;
+    if (bossId != null && bossId > 0 && targetMap.getMonsterById(bossId) == null) {
+        const LifeFactory = Java.type('org.gms.server.life.LifeFactory');
+        const Point = Java.type('java.awt.Point');
+        boss = LifeFactory.getMonster(bossId);
+        if (boss == null) {
+            cm.sendOk("Boss 数据 " + bossId + " 未被当前服务端加载。"
+                + "\r\n普通WZ：" + getServerResourceStatus("wz/Mob.wz/" + bossId + ".img.xml")
+                + "\r\n语言WZ：" + getServerResourceStatus("wz-zh-CN/Mob.wz/" + bossId + ".img.xml")
+                + "\r\n请按上面的绝对路径检查补丁覆盖层级，并完全重启服务端。");
+            cm.dispose();
+            return;
+        }
+        targetMap.spawnMonsterOnGroundBelow(boss, new Point(bossX, bossY));
+    }
+
     var cfg = getDailyBossConfig(mapId);
     if (cfg != null) {
         var used = getDailyBossAttempts(cfg.countKey);
@@ -347,11 +503,23 @@ function levelBoss2(selection) {
         }
         cm.saveOrUpdateAccountExtendValue(cfg.countKey, String(used + 1), true);
     }
-    
+
     cm.gainMeso(-cost);
+    if (requiresEntryItems) {
+        changeShenshuoBossEntryItems(-1);
+    }
     cm.getPlayer().saveLocationOnWarp();
     var portal = getBoss2WarpPortal(mapId);
-    if (portal >= 0) {
+    if (typeof portal === "string") {
+        var targetPortal = targetMap.getPortal(portal);
+        if (targetPortal != null) {
+            // Old mobile clients may ignore a warp packet that references an
+            // invisible script portal. Use its server-side position instead.
+            cm.getPlayer().changeMap(targetMap, targetPortal.getPosition());
+        } else {
+            cm.warp(mapId, 0);
+        }
+    } else if (portal >= 0) {
         cm.warp(mapId, portal);
     } else {
         cm.warp(mapId);
@@ -360,6 +528,12 @@ function levelBoss2(selection) {
 }
 
 function getBoss2WarpPortal(mapId) {
+    if (mapId === 262030300 || mapId === 262031300
+        || mapId === 450010100 || mapId === 221040001
+        || mapId === 450009400 || mapId === 900000207
+        || mapId === 410002060 || mapId === 410002061) {
+        return "bossRetry";
+    }
     if (mapId === 703011000) {
         return 1;
     }

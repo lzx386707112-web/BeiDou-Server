@@ -51,7 +51,11 @@ public class MapFactory {
     private static final DataProvider mapSource = DataProviderFactory.getDataProvider(WZFiles.MAP);
 
     private static void loadLifeFromWz(MapleMap map, Data mapData) {
-        for (Data life : mapData.getChildByPath("life")) {
+        Data lifeData = mapData.getChildByPath("life");
+        if (lifeData == null) {
+            return;
+        }
+        for (Data life : lifeData) {
             life.getName();
             String id = DataTool.getString(life.getChildByPath("id"));
             String type = DataTool.getString(life.getChildByPath("type"));
@@ -109,6 +113,10 @@ public class MapFactory {
 
     private static void loadLifeRaw(MapleMap map, int id, String type, int cy, int f, int fh, int rx0, int rx1, int x, int y, int hide, int mobTime, int team) {
         AbstractLoadedLife myLife = loadLife(id, type, cy, f, fh, rx0, rx1, x, y, hide);
+        if (myLife == null) {
+            System.err.printf("MapFactory: skipping missing life mapId=%d type=%s id=%d%n", map.getId(), type, id);
+            return;
+        }
         if (myLife instanceof Monster monster) {
             int mobRespawnRate = GameConfig.getServerInt("mob_respawn_rate");
             float mobTimeRate = GameConfig.getServerFloat("boss_respawn_mob_time_rate");
@@ -145,12 +153,28 @@ public class MapFactory {
 
         String mapName = getMapName(mapid);
         Data mapData = mapSource.getData(mapName);    // source.getData issue with giving nulls in rare ocasions found thanks to MedicOP
+        if (mapData == null) {
+            System.err.printf("MapFactory: missing map data mapId=%d path=%s%n", mapid, mapName);
+            return null;
+        }
         Data infoData = mapData.getChildByPath("info");
+        if (infoData == null) {
+            System.err.printf("MapFactory: missing map info mapId=%d path=%s%n", mapid, mapName);
+            return null;
+        }
 
         String link = DataTool.getString(infoData.getChildByPath("link"), "");
         if (!link.equals("")) { //nexon made hundreds of dojo maps so to reduce the size they added links.
             mapName = getMapName(Integer.parseInt(link));
             mapData = mapSource.getData(mapName);
+            if (mapData == null) {
+                System.err.printf("MapFactory: missing linked map data mapId=%d link=%s path=%s%n", mapid, link, mapName);
+                return null;
+            }
+            if (mapData.getChildByPath("info") == null) {
+                System.err.printf("MapFactory: missing linked map info mapId=%d link=%s path=%s%n", mapid, link, mapName);
+                return null;
+            }
         }
         float monsterRate = 0;
         Data mobRate = infoData.getChildByPath("mobRate");
@@ -335,6 +359,9 @@ public class MapFactory {
 
     private static AbstractLoadedLife loadLife(int id, String type, int cy, int f, int fh, int rx0, int rx1, int x, int y, int hide) {
         AbstractLoadedLife myLife = LifeFactory.getLife(id, type);
+        if (myLife == null) {
+            return null;
+        }
         myLife.setCy(cy);
         myLife.setF(f);
         myLife.setFh(fh);

@@ -26,6 +26,7 @@ rtk tool/scripts/wz/wzpy.sh
 
 - [095 内容迁移概览](docs/migrations/095-overview.md)
 - [095 内容迁移手册](docs/migrations/095-migration.md)
+- [Boss-only 兼容迁移结论与顺序](docs/migrations/boss-only-migration.md)
 
 ## 排障经验
 

@@ -2,7 +2,7 @@
 <imgdir name="8880300.img" indent="2" media="NONE">
   <imgdir name="info">
     <int name="level" value="200"/>
-    <string name="maxHP" value="2100000000"/>
+    <string name="maxHP" value="5000000000"/>
     <int name="maxMP" value="100000"/>
     <int name="mpRecovery" value="10000"/>
     <int name="PADamage" value="1500"/>
@@ -25,7 +25,7 @@
     <int name="hpTagBgcolor" value="3"/>
     <int name="hpTagColor" value="1"/>
     <int name="bodyAttack" value="0"/>
-  </imgdir>
+  <imgdir name="revive"><int name="0" value="8880301"/></imgdir></imgdir>
   <imgdir name="stand">
     <canvas name="0" format="2" scale="0">
       <vector name="origin" x="99" y="170"/>

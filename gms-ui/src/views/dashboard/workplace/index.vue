@@ -220,6 +220,20 @@
           {{ $t('workplace.button.monsterSiege') }}
         </template>
         <a-form :model="siegeData" layout="vertical">
+          <a-form-item :label="$t('workplace.siege.map')">
+            <a-select v-model="siegeData.mapId">
+              <a-option v-for="map in siegeMapOptions" :key="map.id" :value="map.id">
+                {{ map.name }}（{{ map.id }}）
+              </a-option>
+            </a-select>
+          </a-form-item>
+          <a-form-item :label="$t('workplace.siege.customMapId')">
+            <a-input-number
+              v-model="siegeData.customMapId"
+              :min="1"
+              :placeholder="$t('workplace.siege.customMapId.placeholder')"
+            />
+          </a-form-item>
           <a-form-item :label="$t('workplace.siege.monsterIds')">
             <a-textarea
               v-model="siegeData.monsterIds"
@@ -240,6 +254,15 @@
               :max-length="100"
               show-word-limit
             />
+          </a-form-item>
+          <a-form-item :label="$t('workplace.siege.rewards')">
+            <a-space direction="vertical" fill>
+              <a-space v-for="reward in siegeData.rewards" :key="reward.rank">
+                <span>{{ $t('workplace.siege.rankReward', { rank: reward.rank }) }}</span>
+                <a-input-number v-model="reward.itemId" :min="0" :placeholder="$t('workplace.siege.rewardItemId')" />
+                <a-input-number v-model="reward.quantity" :min="1" :max="32767" :placeholder="$t('workplace.siege.rewardQuantity')" />
+              </a-space>
+            </a-space>
           </a-form-item>
         </a-form>
         <a-divider />
@@ -306,6 +329,7 @@
     reloadPortalsByGMCommand,
   } from '@/api/command';
   import { useI18n } from 'vue-i18n';
+  import { shenshuoSiegeBossOptions, siegeMapOptions } from '../siege-maps';
 
   const { t } = useI18n();
   const { loading, setLoading } = useLoading(false);
@@ -326,10 +350,13 @@
     message: '',
   });
   const siegeData = reactive({
+    mapId: 910000000,
+    customMapId: undefined as number | undefined,
     monsterIds: '',
     count: 1,
     broadcast: true,
-    message: '怪物攻城开始！请前往自由市场入口迎战！',
+    message: '怪物攻城开始！请前往指定主城迎战！',
+    rewards: [1, 2, 3].map((rank) => ({ rank, itemId: 0, quantity: 1 })),
   });
   const bossOptions = [
     { name: '闹钟王', id: 8500001 },
@@ -363,6 +390,7 @@
     { name: '天皇蟾蜍', id: 9400409 },
     { name: '钻机', id: 9600087 },
     { name: '天魔僵尸', id: 9600318 },
+    ...shenshuoSiegeBossOptions,
   ];
 
   const serverControlButtons = [
@@ -584,10 +612,12 @@
     try {
       setLoading(true);
       const { data } = await startMonsterSiege({
+        mapId: getSiegeMapId(),
         monsterIds,
         count: siegeData.count,
         message: siegeData.message.trim(),
         broadcast: siegeData.broadcast,
+        rewards: siegeData.rewards.filter((reward) => reward.itemId > 0),
       });
       Message.success(t('workplace.siege.success', { count: data }));
       handleSiegeCancel();
@@ -603,7 +633,7 @@
   const handleClearSiege = async () => {
     try {
       setLoading(true);
-      const { data } = await clearMonsterSiege();
+      const { data } = await clearMonsterSiege(getSiegeMapId());
       Message.success(t('workplace.siege.clearSuccess', { count: data }));
     } catch (err) {
       console.error(err);
@@ -618,7 +648,7 @@
       monsterIds: '',
       count: 1,
       broadcast: true,
-      message: '怪物攻城开始！请前往自由市场入口迎战！',
+      message: '怪物攻城开始！请前往指定主城迎战！',
     });
     siegeVisible.value = false;
   };
@@ -629,6 +659,8 @@
       .map((id) => Number(id.trim()))
       .filter((id) => Number.isInteger(id) && id > 0);
   };
+
+  const getSiegeMapId = () => siegeData.customMapId || siegeData.mapId;
 
   const appendBossId = (id: number) => {
     const monsterIds = parseMonsterIds(siegeData.monsterIds);
