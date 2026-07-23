@@ -8,8 +8,8 @@
 
 var status = 0;
 var beauty = 0;
-var mhair_r = Array(42240, 48720, 48760, 46540, 42100, 48750, 40070, 42200);
-var fhair_r = Array(48680, 42260, 47140, 48700, 44440, 48750);
+var mhair_r = Array(42240, 48720, 48760, 46540, 42100, 48750, 40070, 42220);
+var fhair_r = Array(48680, 42260, 47140, 48700, 44430, 48750);
 var hairnew = Array();
 
 function pushIfItemExists(array, itemid) {

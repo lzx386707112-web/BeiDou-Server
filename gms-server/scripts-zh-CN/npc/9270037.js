@@ -9,7 +9,7 @@
 var status = 0;
 var beauty = 0;
 var mhair_r = Array(30110, 30180, 30260, 30290, 30300, 30350, 30470, 30720, 30840);
-var fhair_r = Array(31110, 31200, 31250, 31280, 31600, 31640, 31670, 31810, 34020);
+var fhair_r = Array(31110, 31200, 31250, 31280, 31600, 31640, 31670, 31810, 34010);
 var hairnew = Array();
 
 function pushIfItemExists(array, itemid) {

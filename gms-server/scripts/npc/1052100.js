@@ -28,8 +28,8 @@ var status = 0;
 var beauty = 0;
 var hairprice = 1000000;
 var haircolorprice = 1000000;
-var mhair_v = Array(48760, 42100, 47140, 42240, 44440, 40070);
-var fhair_v = Array(48680, 44440, 42260, 48760, 47140, 42200, 42100);
+var mhair_v = Array(48760, 42100, 47140, 42240, 44430, 40070);
+var fhair_v = Array(48680, 44430, 42260, 48760, 47140, 42220, 42100);
 var hairnew = Array();
 
 function pushIfItemExists(array, itemid) {

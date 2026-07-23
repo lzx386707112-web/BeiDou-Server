@@ -58,8 +58,8 @@ public class BotCosmeticPool {
 
     private static final double WILD_CHANCE = 0.01; // 0.5% = 1 in 200
 
-    private static final int[] WILD_MALE_HAIR   = new int[]{46540, 46550, 47140, 48670, 48680, 48690, 42210, 42220, 42260, 42270};
-    private static final int[] WILD_FEMALE_HAIR = new int[]{46540, 46550, 47140, 48670, 48680, 48690, 42210, 42220, 42260, 42270};
+    private static final int[] WILD_MALE_HAIR   = new int[]{46540, 46550, 47140, 48670, 48680, 48690, 42220, 42260, 42270};
+    private static final int[] WILD_FEMALE_HAIR = new int[]{46540, 46550, 47140, 48670, 48680, 48690, 42220, 42260, 42270};
     private static final int[] WILD_MALE_EYES   = new int[]{20012};
     private static final int[] WILD_FEMALE_EYES = new int[]{21009};
 
@@ -69,8 +69,8 @@ public class BotCosmeticPool {
     private static final Map<CosmeticTier, int[]> MALE_HAIR = new EnumMap<>(CosmeticTier.class);
 
     static {
-        MALE_HAIR.put(CosmeticTier.PREMIUM,  new int[]{48700, 48710, 48720, 48730, 42200, 48740, 48750, 42230, 42240, 42250, 48760, 48770});
-        MALE_HAIR.put(CosmeticTier.STANDARD, new int[]{40070, 40080, 42100, 42210, 42220});
+        MALE_HAIR.put(CosmeticTier.PREMIUM,  new int[]{48700, 48710, 48720, 48730, 42220, 48740, 48750, 42230, 42240, 42250, 48760, 48770});
+        MALE_HAIR.put(CosmeticTier.STANDARD, new int[]{40070, 40080, 42100, 42220});
         MALE_HAIR.put(CosmeticTier.BASIC,    new int[]{40070, 40080, 42100});
     }
 
@@ -79,9 +79,9 @@ public class BotCosmeticPool {
     private static final Map<CosmeticTier, int[]> FEMALE_HAIR = new EnumMap<>(CosmeticTier.class);
 
     static {
-        FEMALE_HAIR.put(CosmeticTier.PREMIUM,  new int[]{46540, 46550, 47140, 48670, 48680, 48690, 48700, 48710, 48720, 48730, 42200, 48740});
-        FEMALE_HAIR.put(CosmeticTier.STANDARD, new int[]{43270, 44440, 44450, 42210, 42220});
-        FEMALE_HAIR.put(CosmeticTier.BASIC,    new int[]{43270, 44440, 44450});
+        FEMALE_HAIR.put(CosmeticTier.PREMIUM,  new int[]{46540, 46550, 47140, 48670, 48680, 48690, 48700, 48710, 48720, 48730, 42220, 48740});
+        FEMALE_HAIR.put(CosmeticTier.STANDARD, new int[]{43280, 44430, 44460, 42220});
+        FEMALE_HAIR.put(CosmeticTier.BASIC,    new int[]{43280, 44430, 44460});
     }
 
     // ─── Male Eye Pools ───

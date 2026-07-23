@@ -51,12 +51,12 @@ function action(mode, type, selection) {
         if (mode === 1 && selection === -1 && type === 1) { // 玩家选择是
             //判断性别
             let baldHair;// 光头发型ID
-            // 将玩家变成光头 30437 男生大光头
+            // 将玩家变成光头 30747 男生光头
             if (cm.getPlayer().getGender() === 0) {
-                baldHair = 30437;
+                baldHair = 30747;
             } else {
-                // 将玩家变成光头 31437 女生大光头
-                baldHair = 31437;
+                // 将玩家变成光头 35487 女生光头
+                baldHair = 35487;
             }
             cm.setHair(baldHair);
             cm.sendNext("阿弥陀佛！施主已剃度成功！从此烦恼丝尽断，心如明镜台。");

@@ -27,8 +27,8 @@
 */
 var status = 0;
 var beauty = 0;
-var mhair_v = Array(48700, 44440, 48680, 48750, 42100, 42240, 48720);
-var fhair_v = Array(48720, 42260, 42100, 48700, 48750, 44440);
+var mhair_v = Array(48700, 44430, 48680, 48750, 42100, 42240, 48720);
+var fhair_v = Array(48720, 42260, 42100, 48700, 48750, 44430);
 var hairnew = Array();
 
 function pushIfItemExists(array, itemid) {
