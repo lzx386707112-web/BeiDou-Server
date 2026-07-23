@@ -2,6 +2,7 @@ package orange.wz.provider.tools;
 
 import orange.wz.provider.WzImageProperty;
 import orange.wz.provider.WzObject;
+import orange.wz.provider.WzDirectoryType;
 
 import java.util.Comparator;
 import java.util.List;
@@ -22,6 +23,16 @@ public class WzTool {
             tempStringCache.put(storeName, 1);
             return 1 + getEncodedStringLength(s);
         }
+    }
+
+    public static int getWzObjectValueLength(String s, WzDirectoryType type,
+                                             Map<String, Integer> tempStringCache) {
+        String storeName = type.name() + "_" + s;
+        if (s.length() > 4 && tempStringCache.containsKey(storeName)) {
+            return 5;
+        }
+        tempStringCache.putIfAbsent(storeName, 1);
+        return 1 + getEncodedStringLength(s);
     }
 
     public static int getEncodedStringLength(String s) {

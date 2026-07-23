@@ -37,11 +37,13 @@ public final class PackImgDirToWz {
                 WzAESConstant.DEFAULT_KEY
         );
 
-        Counter counter = new Counter(countImgFiles(config.input));
+        InputStats inputStats = scanInput(config.input);
+        Counter counter = new Counter(inputStats.images);
         System.out.printf(Locale.ROOT,
-                "准备打包客户端 IMG 目录: %s%n共发现 %d 个 .img 文件，输出: %s%n",
+                "准备打包客户端 IMG 目录: %s%n共发现 %d 个 .img 文件，原始大小 %.1f MiB，输出: %s%n",
                 config.input,
                 counter.totalImages,
+                inputStats.bytes / 1024.0 / 1024.0,
                 config.output);
         packFolder(folder, wzFile.getWzDirectory(), counter);
 
@@ -58,12 +60,24 @@ public final class PackImgDirToWz {
                 config.region.optionName);
     }
 
-    private static long countImgFiles(Path input) throws Exception {
+    private static InputStats scanInput(Path input) throws Exception {
         try (Stream<Path> paths = Files.walk(input)) {
-            return paths.filter(Files::isRegularFile)
+            long[] stats = {0, 0};
+            paths.filter(Files::isRegularFile)
                     .filter(path -> path.getFileName().toString().endsWith(".img"))
-                    .count();
+                    .forEach(path -> {
+                        stats[0]++;
+                        try {
+                            stats[1] += Files.size(path);
+                        } catch (Exception e) {
+                            throw new IllegalStateException("读取 IMG 大小失败: " + path, e);
+                        }
+                    });
+            return new InputStats(stats[0], stats[1]);
         }
+    }
+
+    private record InputStats(long images, long bytes) {
     }
 
     private static void packFolder(WzFolder folder, WzDirectory parent, Counter counter) {

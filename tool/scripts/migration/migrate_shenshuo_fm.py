@@ -8,6 +8,7 @@ downgrading map behavior to the older BeiDou client/server surface:
 * high-version optional map fields are removed;
 * pt=10 inner portals are downgraded to pt=3;
 * the current BeiDou Free Market NPC `life` nodes are preserved;
+* the fishing manager is restored when missing from the project map;
 * required visual dependency images are converted to GMS where possible;
 * undecodable source canvases are reported instead of silently hidden.
 """
@@ -76,6 +77,8 @@ LIFE_GROUND_POSITIONS = {
     "9030100": {"x": 288, "y": 23, "fh": 143, "rx0": 238, "rx1": 338},
     "9250025": {"x": -71, "y": 23, "fh": 1, "rx0": -121, "rx1": -21},
     "9000069": {"x": 190, "y": 23, "fh": 123, "rx0": 140, "rx1": 234},
+    "9330045": {"x": 420, "y": 23, "fh": 143, "rx0": 370, "rx1": 470},
+    "9900008": {"x": 580, "y": 23, "fh": 163, "rx0": 530, "rx1": 630},
 }
 
 
@@ -268,6 +271,19 @@ def sanitize_map(root: WzSubProperty, project_map: WzImage, report: dict) -> Non
         for life in project_life.children():
             source_life.add(clone_prop(life, source_life))
         report["life_nodes_preserved"] = len(source_life.children())
+        if not any(
+            isinstance(child(life, "id"), WzStringProperty)
+            and str(child(life, "id").value) == "9330045"
+            for life in source_life.children()
+        ):
+            numeric_names = [int(life.name) for life in source_life.children() if life.name.isdigit()]
+            fishing_manager = WzSubProperty(str(max(numeric_names, default=-1) + 1), source_life)
+            fishing_manager.add(WzStringProperty("type", "n", fishing_manager))
+            fishing_manager.add(WzStringProperty("id", "9330045", fishing_manager))
+            for name, value in (("mobTime", 0), ("f", 0), ("hide", 0)):
+                fishing_manager.add(WzIntProperty(name, value, fishing_manager))
+            source_life.add(fishing_manager)
+            report.setdefault("life_nodes_added", []).append("9330045")
         for life in source_life.children():
             life_id = child(life, "id")
             if not isinstance(life_id, WzStringProperty):

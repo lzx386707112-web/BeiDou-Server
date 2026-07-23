@@ -16,7 +16,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 SERVER_DIR="$ROOT/gms-server"
 UI_DIR="$ROOT/gms-ui"
 STATIC_DIR="$SERVER_DIR/src/main/resources/static"
-DEFAULT_OUTPUT="$SERVER_DIR/BeiDou.jar"
+DEFAULT_OUTPUT="$HOME/Downloads/BeiDou.jar"
 
 usage() {
   cat <<'USAGE'
@@ -28,7 +28,7 @@ usage() {
 构建 gms-ui 后，将后台管理页面和 gms-server 一起打包成 BeiDou.jar。
 
 选项:
-  -o, --output   输出 jar 路径，默认: gms-server/BeiDou.jar
+  -o, --output   输出 jar 路径，默认: $HOME/Downloads/BeiDou.jar
   --skip-ui      不构建/内置 gms-ui，仅打包服务端
   --with-tests   打包时运行测试，默认跳过测试
   -h, --help     显示帮助

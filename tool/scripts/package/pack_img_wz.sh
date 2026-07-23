@@ -29,7 +29,8 @@ usage() {
   PACK_IMG_WZ_JAVA_OPTS
                      打包进程 JVM 参数，默认:
                      -Xms512m -Xmx8g -XX:+UseG1GC
-                     Character 仍内存不足时可设为: -Xms512m -Xmx12g -XX:+UseG1GC
+                     IMG 内容已改为流式写入，超过 2 GiB 不需要加大堆内存。
+                     传统 WZ 使用 32 位偏移，单包必须小于 4 GiB。
 USAGE
 }
 
@@ -278,14 +279,20 @@ run_interactive() {
   echo
 
   data_dir="clien/Data"
-  target="$(interactive_choose "请选择要打包的客户端 Data 目录:" "Character" "Skill" "Item" "UI" "全部目录" "自定义目录")"
+  if [[ ! -d "$data_dir" ]]; then
+    echo "找不到目录: $data_dir" >&2
+    return 2
+  fi
+
+  data_options=()
+  while IFS= read -r input; do
+    data_options+=("$(basename "$input")")
+  done < <(find "$data_dir" -mindepth 1 -maxdepth 1 -type d | sort)
+  data_options+=("全部目录")
+
+  target="$(interactive_choose "请选择要打包的客户端 Data 目录:" "${data_options[@]}")"
   case "$target" in
     "全部目录")
-      if [[ ! -d "$data_dir" ]]; then
-        echo "找不到目录: $data_dir" >&2
-        return 2
-      fi
-
       mkdir -p "$ROOT/tool/orange-wz/target"
 
       inputs=()
@@ -341,9 +348,6 @@ run_interactive() {
 
       echo "已取消。"
       return 0
-      ;;
-    "自定义目录")
-      input="$(interactive_ask_required "输入客户端 .img 目录" "$data_dir/Character")"
       ;;
     *)
       input="$data_dir/$target"

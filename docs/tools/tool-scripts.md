@@ -256,6 +256,21 @@ rtk tool/scripts/png2canvas/png2canvas.sh
 rtk tool/scripts/wz/wzpy.sh convert clien/Data/Skill/1112.img --region GMS -o /tmp/1112.img.json
 ```
 
+### `preview_data.sh`
+
+以只读 Web UI 预览解包后的散 IMG `Data` 目录。默认加载同级
+`MapleStory-IMG/Data` 并监听 `127.0.0.1:8765`：
+
+```sh
+rtk bash tool/scripts/wz/preview_data.sh
+```
+
+自定义目录或端口：
+
+```sh
+rtk bash tool/scripts/wz/preview_data.sh --data /path/to/Data --port 9000
+```
+
 ## 打包客户端后的处理
 
 打包出 `*.wz` 后，需要把这些 WZ 文件放到客户端根目录。

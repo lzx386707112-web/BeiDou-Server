@@ -9,6 +9,7 @@ import orange.wz.model.Pair;
 import orange.wz.provider.tools.*;
 
 import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
@@ -107,20 +108,49 @@ public class WzDirectory extends WzObject {
         checksum = ck;
     }
 
-    public void saveImages(BinaryWriter writer, BinaryWriter tempWriter) {
+    public long saveImages(OutputStream output, BinaryWriter tempWriter, long[] progress, long totalImages) throws IOException {
+        long written = 0;
         for (WzImage img : children.getImages()) {
+            byte[] data;
             if (img.isChanged()) {
                 tempWriter.setPosition(img.getTempFileStart());
-                byte[] buffer = tempWriter.getBytes(img.getDataSize());
-                writer.putBytes(buffer);
+                data = tempWriter.getBytes(img.getDataSize());
             } else {
                 img.getReader().setPosition(img.getTempFileStart());
-                writer.putBytes(img.getReader().getBytes(img.getTempFileEnd() - img.getTempFileStart()));
+                data = img.getReader().getBytes(img.getTempFileEnd() - img.getTempFileStart());
+            }
+            output.write(data);
+            written += data.length;
+            progress[0]++;
+            progress[1] += data.length;
+            if (progress[0] == totalImages || progress[0] % 500 == 0) {
+                log.info("Wz Images 进度: {}/{}，已写入 {} MiB，当前: {}",
+                        progress[0], totalImages, progress[1] / (1024 * 1024), img.getPath());
             }
         }
         for (WzDirectory dir : children.getDirectories()) {
-            dir.saveImages(writer, tempWriter);
+            written += dir.saveImages(output, tempWriter, progress, totalImages);
         }
+        return written;
+    }
+
+    public long getTotalImageSizeLong() {
+        long size = 0;
+        for (WzImage img : children.getImages()) {
+            size += img.getDataSize();
+        }
+        for (WzDirectory dir : children.getDirectories()) {
+            size += dir.getTotalImageSizeLong();
+        }
+        return size;
+    }
+
+    public long getImageCount() {
+        long count = children.getImages().size();
+        for (WzDirectory dir : children.getDirectories()) {
+            count += dir.getImageCount();
+        }
+        return count;
     }
 
     public int generateDataFile(BinaryWriter tempWriter, Map<String, Integer> tempStringCache) {
@@ -182,6 +212,73 @@ public class WzDirectory extends WzObject {
         }
 
         return dataSize;
+    }
+
+    /**
+     * Recalculate directory-table byte lengths in the exact pre-order used by
+     * {@link #saveDirectory(BinaryWriter)}. The older recursive size pass
+     * visited child tables before their siblings, so a repeated IMG name could
+     * be counted as an offset reference at a different point from where it was
+     * actually written. That shifted later subdirectory offsets by a few bytes.
+     */
+    public void recalculateDirectoryLayout(Map<String, Integer> stringCache) {
+        for (int pass = 0; pass < 8; pass++) {
+            stringCache.clear();
+            boolean offsetsChanged = recalculateOffsetSizes(stringCache);
+            boolean dataChanged = recalculateDataSizes();
+            if (!offsetsChanged && !dataChanged) {
+                return;
+            }
+        }
+        throw new IllegalStateException("WZ directory layout did not converge");
+    }
+
+    private boolean recalculateOffsetSizes(Map<String, Integer> stringCache) {
+        int previous = offsetSize;
+        int entryCount = children.getEntryCount();
+        int size = WzTool.getCompressedIntLength(entryCount);
+
+        for (WzImage img : children.getImages()) {
+            size += WzTool.getWzObjectValueLength(
+                    img.getName(), WzDirectoryType.WzImage, stringCache);
+            size += WzTool.getCompressedIntLength(img.getDataSize());
+            size += WzTool.getCompressedIntLength(img.getChecksum());
+            size += 4;
+        }
+        for (WzDirectory dir : children.getDirectories()) {
+            size += WzTool.getWzObjectValueLength(
+                    dir.getName(), WzDirectoryType.WzDirectory, stringCache);
+            size += WzTool.getCompressedIntLength(dir.getDataSize());
+            size += WzTool.getCompressedIntLength(dir.getChecksum());
+            size += 4;
+        }
+        offsetSize = size;
+
+        boolean changed = previous != offsetSize;
+        for (WzDirectory dir : children.getDirectories()) {
+            changed |= dir.recalculateOffsetSizes(stringCache);
+        }
+        return changed;
+    }
+
+    private boolean recalculateDataSizes() {
+        int previous = dataSize;
+        if (children.getEntryCount() == 0) {
+            dataSize = 0;
+            return previous != 0;
+        }
+
+        long size = offsetSize;
+        boolean descendantsChanged = false;
+        for (WzImage img : children.getImages()) {
+            size += img.getDataSize();
+        }
+        for (WzDirectory dir : children.getDirectories()) {
+            descendantsChanged |= dir.recalculateDataSizes();
+            size += Integer.toUnsignedLong(dir.getDataSize());
+        }
+        dataSize = (int) size;
+        return descendantsChanged || previous != dataSize;
     }
 
     public int getOffsets(int curOffset) {

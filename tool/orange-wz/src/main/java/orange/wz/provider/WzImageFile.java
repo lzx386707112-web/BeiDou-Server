@@ -7,6 +7,9 @@ import orange.wz.provider.tools.BinaryReader;
 import orange.wz.provider.tools.WzFileStatus;
 import orange.wz.provider.tools.WzMutableKey;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 
@@ -40,9 +43,16 @@ public class WzImageFile extends WzImage implements WzSavableFile {
         super.setReader(reader);
         super.setDataSize(reader.getDataSize());
         super.setChecksum(0);
-        byte[] bytes = reader.output();
-        for (byte b : bytes) {
-            super.addChecksum(b);
+        byte[] bytes = new byte[1024 * 1024];
+        try (InputStream input = Files.newInputStream(Path.of(filePath))) {
+            int length;
+            while ((length = input.read(bytes)) >= 0) {
+                for (int i = 0; i < length; i++) {
+                    super.addChecksum(bytes[i]);
+                }
+            }
+        } catch (IOException e) {
+            throw new RuntimeException("读取 IMG checksum 失败: " + filePath, e);
         }
         super.setOffset(0);
         return super.parse(realParse);

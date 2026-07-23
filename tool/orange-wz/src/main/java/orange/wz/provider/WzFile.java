@@ -7,9 +7,12 @@ import orange.wz.manager.ServerManager;
 import orange.wz.model.Pair;
 import orange.wz.provider.tools.*;
 
+import java.io.BufferedOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -182,8 +185,14 @@ public final class WzFile extends WzObject implements WzSavableFile {
             BinaryWriter tempWriter = new BinaryWriter();
             log.info("保存 {} Generate Data File 1/4", getName());
             wzDirectory.generateDataFile(tempWriter, tempStringCache);
+            wzDirectory.recalculateDirectoryLayout(tempStringCache);
             tempStringCache.clear();
-            int totalLen = wzDirectory.getImgOffsets(wzDirectory.getOffsets(header.getDataStartPos() + (is64BitWzFile() ? 0 : 2)));
+            int imageStart = wzDirectory.getOffsets(header.getDataStartPos() + (is64BitWzFile() ? 0 : 2));
+            wzDirectory.getImgOffsets(imageStart);
+            long totalLen = Integer.toUnsignedLong(imageStart) + wzDirectory.getTotalImageSizeLong();
+            if (totalLen > 0xFFFF_FFFFL) {
+                throw new IllegalStateException("WZ 超过 4 GiB 的 32 位偏移上限: " + totalLen);
+            }
             log.debug("totalLen : {}", totalLen);
             BinaryWriter writer = new BinaryWriter(true);
             writer.setWzMutableKey(getWzMutableKey());
@@ -200,14 +209,33 @@ public final class WzFile extends WzObject implements WzSavableFile {
             log.info("保存 {} Wz Dirs 2/4", getName());
             wzDirectory.saveDirectory(writer);
             writer.getStringCache().clear();
-            log.info("保存 {} Wz Images 3/4", getName());
-            wzDirectory.saveImages(writer, tempWriter);
+            byte[] prefix = writer.output();
+            if (prefix.length != imageStart) {
+                throw new IllegalStateException("WZ 目录大小不一致: expected=" + imageStart + ", actual=" + prefix.length);
+            }
+            long totalImages = wzDirectory.getImageCount();
+            log.info("保存 {} Wz Images 3/4，共 {} 个 IMG，流式写入目标 {} MiB",
+                    getName(), totalImages, totalLen / (1024 * 1024));
+            long[] progress = {0, 0};
+            long imageBytes;
+            try (OutputStream output = new BufferedOutputStream(
+                    Files.newOutputStream(savePath,
+                            StandardOpenOption.CREATE,
+                            StandardOpenOption.TRUNCATE_EXISTING,
+                            StandardOpenOption.WRITE),
+                    8 * 1024 * 1024)) {
+                output.write(prefix);
+                imageBytes = wzDirectory.saveImages(output, tempWriter, progress, totalImages);
+            }
+            long actualLen = prefix.length + imageBytes;
+            if (actualLen != totalLen) {
+                throw new IllegalStateException("WZ 写入大小不一致: expected=" + totalLen + ", actual=" + actualLen);
+            }
             writer.getStringCache().clear();
-            log.info("保存 {} Wz 写入文件 4/4", getName());
-            byte[] context = writer.output();
+            log.info("保存 {} Wz 写入文件 4/4，完成 {} MiB", getName(), actualLen / (1024 * 1024));
             reader = null;
             clear();
-            if (FileTool.saveFile(savePath, context)) {
+            if (Files.isRegularFile(savePath) && Files.size(savePath) == actualLen) {
                 setNewFile(false);
                 for (int i = 0; i < 10; i++) {
                     try {

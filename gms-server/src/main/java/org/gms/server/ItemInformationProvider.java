@@ -1711,7 +1711,7 @@ public class ItemInformationProvider {
         if (childByPath == null) {
             return false;
         }
-        return DataTool.getInt(childByPath) == 1;
+        return DataTool.getIntConvert(childByPath, 0) == 1;
     }
 
     /**
