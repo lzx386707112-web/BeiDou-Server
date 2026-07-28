@@ -26,8 +26,6 @@ package org.gms.client.command.commands.gm4;
 import org.gms.client.Character;
 import org.gms.client.Client;
 import org.gms.client.command.Command;
-import org.gms.constants.id.MobId;
-import org.gms.server.life.LifeFactory;
 import org.gms.util.I18nUtil;
 
 public class ZakumCommand extends Command {
@@ -38,9 +36,6 @@ public class ZakumCommand extends Command {
     @Override
     public void execute(Client c, String[] params) {
         Character player = c.getPlayer();
-        player.getMap().spawnFakeMonsterOnGroundBelow(LifeFactory.getMonster(MobId.ZAKUM_1), player.getPosition());
-        for (int mobId = MobId.ZAKUM_ARM_1; mobId <= MobId.ZAKUM_ARM_8; mobId++) {
-            player.getMap().spawnMonsterOnGroundBelow(LifeFactory.getMonster(mobId), player.getPosition());
-        }
+        player.getMap().spawnZakumOnGroundBelow(player.getPosition());
     }
 }

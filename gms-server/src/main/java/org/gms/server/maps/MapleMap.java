@@ -4352,9 +4352,25 @@ public class MapleMap {
         return true;
     }
 
-    public void spawnHorntailOnGroundBelow(final Point targetPoint) {   // ayy lmao
+    public List<Monster> spawnZakumOnGroundBelow(final Point targetPoint) {
+        List<Monster> monsters = new ArrayList<>(9);
+        Monster body = LifeFactory.getMonster(MobId.ZAKUM_1);
+        spawnFakeMonsterOnGroundBelow(body, targetPoint);
+        monsters.add(body);
+
+        for (int mobId = MobId.ZAKUM_ARM_1; mobId <= MobId.ZAKUM_ARM_8; mobId++) {
+            Monster arm = LifeFactory.getMonster(mobId);
+            spawnMonsterOnGroundBelow(arm, targetPoint);
+            monsters.add(arm);
+        }
+        return monsters;
+    }
+
+    public List<Monster> spawnHorntailOnGroundBelow(final Point targetPoint) {   // ayy lmao
+        List<Monster> monsters = new ArrayList<>(10);
         Monster htIntro = LifeFactory.getMonster(MobId.SUMMON_HORNTAIL);
         spawnMonsterOnGroundBelow(htIntro, targetPoint);    // htintro spawn animation converting into horntail detected thanks to Arnah
+        monsters.add(htIntro);
 
         final Monster ht = LifeFactory.getMonster(MobId.HORNTAIL);
         ht.setParentMobOid(htIntro.getObjectId());
@@ -4374,6 +4390,7 @@ public class MapleMap {
             }
         });
         spawnMonsterOnGroundBelow(ht, targetPoint);
+        monsters.add(ht);
 
         for (int mobId = MobId.HORNTAIL_HEAD_A; mobId <= MobId.HORNTAIL_TAIL; mobId++) {
             Monster m = LifeFactory.getMonster(mobId);
@@ -4397,7 +4414,9 @@ public class MapleMap {
             });
 
             spawnMonsterOnGroundBelow(m, targetPoint);
+            monsters.add(m);
         }
+        return monsters;
     }
 
     public void spawnChaosHorntailOnGroundBelow(final Point targetPoint) {

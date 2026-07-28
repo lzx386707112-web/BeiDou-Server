@@ -244,6 +244,9 @@ def sanitize_root_abyss_map(root: WzSubProperty, map_id: int | None = None) -> N
     portal_root = root.child("portal")
     if portal_root is not None:
         for portal in portal_root.children():
+            if map_id == 105200400 and child_value(portal, "script") == "rootaNext3":
+                remove_child(portal_root, portal.name)
+                continue
             for key in ("delay", "hideTooltip", "onlyOnce"):
                 remove_child(portal, key)
             script = portal.child("script")

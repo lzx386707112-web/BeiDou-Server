@@ -3,6 +3,7 @@ package org.gms.service;
 import org.gms.client.Character;
 import org.gms.client.inventory.manipulator.InventoryManipulator;
 import org.gms.constants.id.MapId;
+import org.gms.constants.id.MobId;
 import org.gms.model.dto.ChannelListRtnDTO;
 import org.gms.model.dto.MonsterSiegeDTO;
 import org.gms.model.dto.MonsterSiegeRewardDTO;
@@ -99,13 +100,14 @@ public class ServerService {
             List<Point> spawnAnchors = getSiegeSpawnAnchors(map, basePoint);
             for (Integer monsterId : request.getMonsterIds()) {
                 for (int i = 0; i < count; i++) {
-                    Monster monster = LifeFactory.getMonster(monsterId);
-                    if (session != null) {
-                        session.addMonster(monster);
-                    }
                     Point spawnPoint = getRandomGroundSpawnPoint(map, spawnAnchors, basePoint);
-                    map.spawnMonsterOnGroundBelow(monster, spawnPoint);
-                    siegeMonsters.add(monster);
+                    List<Monster> monsters = spawnSiegeMonsters(map, monsterId, spawnPoint);
+                    for (Monster monster : monsters) {
+                        if (session != null) {
+                            session.addMonster(monster);
+                        }
+                        siegeMonsters.add(monster);
+                    }
                     spawned++;
                 }
             }
@@ -123,6 +125,19 @@ public class ServerService {
         }
 
         return spawned;
+    }
+
+    private List<Monster> spawnSiegeMonsters(MapleMap map, int monsterId, Point spawnPoint) {
+        if (monsterId == MobId.ZAKUM_3) {
+            return map.spawnZakumOnGroundBelow(spawnPoint);
+        }
+        if (monsterId == MobId.HORNTAIL) {
+            return map.spawnHorntailOnGroundBelow(spawnPoint);
+        }
+
+        Monster monster = LifeFactory.getMonster(monsterId);
+        map.spawnMonsterOnGroundBelow(monster, spawnPoint);
+        return List.of(monster);
     }
 
     public int clearMonsterSiege(Integer requestedMapId) {
