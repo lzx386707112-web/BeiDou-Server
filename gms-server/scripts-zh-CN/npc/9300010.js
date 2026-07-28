@@ -1,24 +1,14 @@
-var status = 0
+var status = -1;
 
-function start(){
+function start() {
 	action(1, 0, 0);
 }
 
-function action(mode, type ,selection){
-	if(mode == 1) {
-		status++;
-	} else if(mode == 0) {
-		status--;
-	} else {
+function action(mode, type, selection) {
+	if (mode != 1 || status >= 0) {
 		cm.dispose();
 		return;
 	}
-	if(status == 1){
-		cm.sendYesNo("你是否返回?");
-	} else if(status == 2){
-		cm.warp(700000000, 0);
-		cm.dispose();	
-	} else {
-		cm.dispose();
-	}
+	status++;
+	cm.sendOk("红鸾宫相关路线已关闭。");
 }

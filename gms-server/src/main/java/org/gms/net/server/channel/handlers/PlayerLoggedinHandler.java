@@ -42,6 +42,7 @@ import org.gms.client.keybind.KeyBinding;
 import org.gms.config.GameConfig;
 import org.gms.constants.game.GameConstants;
 import org.gms.constants.skills.Hero;
+import org.gms.constants.skills.DawnWarrior;
 import org.gms.manager.ServerManager;
 import org.gms.net.AbstractPacketHandler;
 import org.gms.net.packet.InPacket;
@@ -252,6 +253,7 @@ public final class PlayerLoggedinHandler extends AbstractPacketHandler {
             }
 
             grantRagingBlowVi(player);
+            grantDawnWarriorVViAttacks(player);
             c.sendPacket(PacketCreator.getCharInfo(player));    //这里发送登录成功封包
             if (player.isHidden()) {
                 if (!GameConfig.getServerBoolean("use_auto_hide_gm")) {
@@ -529,5 +531,21 @@ public final class PlayerLoggedinHandler extends AbstractPacketHandler {
             return;
         }
         player.changeSkillLevel(skill, (byte) 30, 30, -1);
+    }
+
+    private static void grantDawnWarriorVViAttacks(Character player) {
+        if (!player.getJob().isA(Job.DAWNWARRIOR4)) {
+            return;
+        }
+        for (int skillId : DawnWarrior.V_VI_ACTIVE_ATTACKS) {
+            Skill skill = SkillFactory.getSkill(skillId);
+            if (skill == null) {
+                continue;
+            }
+            if (player.getSkillLevel(skill) >= 30 && player.getMasterLevel(skill) >= 30) {
+                continue;
+            }
+            player.changeSkillLevel(skill, (byte) 30, 30, -1);
+        }
     }
 }

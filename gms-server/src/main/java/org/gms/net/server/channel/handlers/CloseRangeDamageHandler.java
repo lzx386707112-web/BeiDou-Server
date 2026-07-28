@@ -53,6 +53,10 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
     private static final int SWORD_ILLUSION_HIT_DELAY_MS = 1000;
     private static final int DEATH_FAULT_HIT_DELAY_MS = 1000;
     private static final String DEATH_FAULT_FIELD_EFFECT = "customSkill/deathFault/full";
+    private static final int GALAXY_STAR_BURST_HIT_DELAY_MS = 1800;
+    private static final int SOUL_ECLIPSE_HIT_DELAY_MS = 1500;
+    private static final String GALAXY_STAR_BURST_FIELD_EFFECT = "customSkill/dawnWarrior/galaxyStarBurst";
+    private static final String SOUL_ECLIPSE_FIELD_EFFECT = "customSkill/dawnWarrior/soulEclipse";
 
     @Override
     public final void handlePacket(InPacket p, Client c) {
@@ -202,6 +206,14 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
             chr.getMap().broadcastMessage(PacketCreator.showEffect(DEATH_FAULT_FIELD_EFFECT));
             final int delayedAttackCount = attackCount;
             TimerManager.getInstance().schedule(() -> applyAttack(attack, chr, delayedAttackCount), DEATH_FAULT_HIT_DELAY_MS);
+        } else if (attack.skill == DawnWarrior.GALAXY_STAR_BURST) {
+            chr.getMap().broadcastMessage(PacketCreator.showEffect(GALAXY_STAR_BURST_FIELD_EFFECT));
+            final int delayedAttackCount = attackCount;
+            TimerManager.getInstance().schedule(() -> applyAttack(attack, chr, delayedAttackCount), GALAXY_STAR_BURST_HIT_DELAY_MS);
+        } else if (attack.skill == DawnWarrior.SOUL_ECLIPSE) {
+            chr.getMap().broadcastMessage(PacketCreator.showEffect(SOUL_ECLIPSE_FIELD_EFFECT));
+            final int delayedAttackCount = attackCount;
+            TimerManager.getInstance().schedule(() -> applyAttack(attack, chr, delayedAttackCount), SOUL_ECLIPSE_HIT_DELAY_MS);
         } else {
             applyAttack(attack, chr, attackCount);
         }
