@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
-"""Fill high-value Boss-only skill gaps after the five base migrations."""
+"""Fill high-value Boss-only skill gaps after the four base migrations."""
 
 from __future__ import annotations
 
+import io
 import re
+import struct
 import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -15,9 +17,15 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from wzpy import WzCanvasProperty, WzImage, WzIntProperty, WzKey, WzStringProperty, WzSubProperty, WzUolProperty, WzVectorProperty  # noqa: E402
 from wzpy.canvas import decode_canvas, encode_canvas_payload  # noqa: E402
-from wzpy.writer import encode_image_body  # noqa: E402
+from wzpy.reader import WzBinaryReader  # noqa: E402
+from wzpy.writer import (  # noqa: E402
+    _encode_property_body,
+    _tag_for,
+    encode_compressed_int,
+    encode_image_body,
+    encode_string_block,
+)
 
-from patch_black_mage_boss_compat import append_root_properties, build_custom_mobskill  # noqa: E402
 from patch_lucid_boss_compat import atomic_write_bytes, atomic_write_text, gms_reader, img_to_xml, source_img  # noqa: E402
 
 
@@ -25,7 +33,6 @@ CUSTOM_SKILLS = {
     183: {"mpCon": 10, "interval": 25, "time": 0, "prop": 100, "x": 45},
     184: {"mpCon": 10, "interval": 20, "time": 0, "prop": 100, "x": 35},
     185: {"mpCon": 10, "interval": 25, "time": 0, "prop": 100, "x": 50},
-    186: {"mpCon": 10, "interval": 20, "time": 0, "prop": 100, "x": 40},
     187: {"mpCon": 10, "interval": 25, "time": 0, "prop": 100, "x": 45},
 }
 
@@ -34,11 +41,58 @@ VISUAL_SKILLS = {
     8880301: (183, 7, 8880301, "attack7", "customBossWill", "webBurst"),
     8880000: (184, 1, 8880000, "skill1", "customBossMagnus", "meteorStorm"),
     8880140: (185, 1, 8880140, "skill1", "customBossLucid", "dreamBurst"),
-    8644630: (186, 4, 8644611, "attack4", "customBossDusk", "tentacleStrike"),
     8880342: (187, 3, 8880607, "attack3", "customBossSeren", "sacredBurst"),
 }
 
 MAGNUS_STATUS_SKILLS = ((120, 5, 3), (127, 2, 2), (140, 5, 4))
+
+
+def append_root_properties(path: Path, properties: list[WzSubProperty]) -> None:
+    data = path.read_bytes()
+    img = WzImage.from_bytes(data, key=WzKey.for_region("GMS"), name=path.name)
+    img.parse()
+    missing = [prop for prop in properties if img.root.child(prop.name) is None]
+    if not missing:
+        return
+
+    reader = WzBinaryReader(io.BytesIO(data), WzKey.for_region("GMS"))
+    if reader.read_byte() != 0x73 or reader.read_string() != "Property":
+        raise ValueError(f"{path}: unexpected image header")
+    reader.skip(2)
+    count_offset = reader.position
+    if data[count_offset] == 0x80:
+        count_len = 5
+        count = struct.unpack("<i", data[count_offset + 1:count_offset + 5])[0]
+    else:
+        count_len = 1
+        count = struct.unpack("<b", data[count_offset:count_offset + 1])[0]
+    count_bytes = encode_compressed_int(count + len(missing))
+    if len(count_bytes) != count_len:
+        raise ValueError(f"{path}: root count width would change")
+
+    encoder = gms_reader()
+    appended = bytearray()
+    for prop in missing:
+        appended += encode_string_block(encoder, prop.name)
+        appended += bytes([_tag_for(prop)])
+        appended += _encode_property_body(prop, encoder)
+    patched = bytearray(data)
+    patched[count_offset:count_offset + count_len] = count_bytes
+    patched += appended
+    atomic_write_bytes(path, bytes(patched))
+
+
+def build_custom_mobskill(skill_id: int) -> WzSubProperty:
+    skill = WzSubProperty(str(skill_id))
+    levels = WzSubProperty("level", skill)
+    level = WzSubProperty("1", levels)
+    for name, value in CUSTOM_SKILLS[skill_id].items():
+        level.add(WzIntProperty(name, value, level))
+    level.add(WzVectorProperty("lt", -2000, -1200, level))
+    level.add(WzVectorProperty("rb", 2000, 500, level))
+    levels.add(level)
+    skill.add(levels)
+    return skill
 
 
 def skill_specs(mob_id: int) -> tuple[tuple[int, int, int], ...]:
@@ -177,17 +231,10 @@ def patch_server_mob(mob_id: int) -> None:
 
 
 def patch_custom_mobskills() -> None:
-    import patch_black_mage_boss_compat as black_mage
-
-    previous = black_mage.CUSTOM_SKILLS
-    black_mage.CUSTOM_SKILLS = CUSTOM_SKILLS
-    try:
-        append_root_properties(
-            ROOT / "clien/Data/Skill/MobSkill.img",
-            [build_custom_mobskill(skill_id) for skill_id in CUSTOM_SKILLS],
-        )
-    finally:
-        black_mage.CUSTOM_SKILLS = previous
+    append_root_properties(
+        ROOT / "clien/Data/Skill/MobSkill.img",
+        [build_custom_mobskill(skill_id) for skill_id in CUSTOM_SKILLS],
+    )
 
     path = ROOT / "gms-server/wz/Skill.wz/MobSkill.img.xml"
     text = path.read_text(encoding="utf-8")

@@ -24,17 +24,10 @@ function start() {
 
 function configure(mode) {
     selectedMode = mode;
-    if (selectedMode == 1) {
-        exped = ExpeditionType.CHAOS_HORNTAIL;
-        expedName = "ChaosHorntail";
-        expedBoss = "进阶暗黑龙王";
-        eventName = "ChaosHorntail";
-    } else {
-        exped = ExpeditionType.HORNTAIL;
-        expedName = "Horntail";
-        expedBoss = "暗黑龙王";
-        eventName = "HorntailBattle";
-    }
+    exped = ExpeditionType.HORNTAIL;
+    expedName = "Horntail";
+    expedBoss = "暗黑龙王";
+    eventName = "HorntailBattle";
 }
 
 function action(mode, type, selection) {
@@ -46,7 +39,7 @@ function action(mode, type, selection) {
     }
 
     if (status == 0) {
-        cm.sendSimple("请选择你要管理的远征队：#b\r\n\r\n#L0#暗黑龙王#l\r\n#L1#进阶暗黑龙王#l");
+        cm.sendSimple("请选择你要管理的远征队：#b\r\n\r\n#L0#暗黑龙王#l");
         status = 1;
         return;
     }

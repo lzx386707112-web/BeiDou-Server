@@ -53,13 +53,6 @@ public class MobSkill {
     private static final Logger log = LoggerFactory.getLogger(MobSkill.class);
     private static final int AKAYRUM_SCREEN_CRACK_DAMAGE_DELAY_MS = 1100;
     private static final int AKAYRUM_SCREEN_CRACK_PRONE_RADIUS_REDUCTION = 55;
-    private static final int BLACK_MAGE_DARK_EXPLOSION_DELAY_MS = 1800;
-    private static final int BLACK_MAGE_RED_LIGHTNING_DELAY_MS = 1100;
-    private static final int BLACK_MAGE_WALL_DELAY_MS = 1400;
-    private static final int BLACK_MAGE_RED_LIGHTNING_RADIUS = 220;
-    private static final int BLACK_MAGE_WALL_HALF_WIDTH = 120;
-    private static final int BLACK_MAGE_EFFECT_LIFETIME_MS = 4500;
-    private static final int BLACK_MAGE_ADD_LIFETIME_MS = 20000;
     private static final int BOSS_COMPAT_EFFECT_DAMAGE_DELAY_MS = 1400;
     private static final int[][] AKAYRUM_SCREEN_CRACK_VORTEXES = {
             {-610, -181, 115},
@@ -277,18 +270,9 @@ public class MobSkill {
             case AKAYRUM_BLACK_HOLE_VISUAL, AKAYRUM_GREEN_ORB_VISUAL -> {
                 // Visual-only Akayrum compatibility skills; damage/rules are handled separately.
             }
-            case BLACK_MAGE_DARK_EXPLOSION -> {
-                monster.getMap().broadcastMessage(PacketCreator.showEffect("customBossBlackMage/darkExplosion"));
-                scheduleBlackMageDarkExplosion(monster);
-            }
-            case BLACK_MAGE_RED_LIGHTNING -> castBlackMageRedLightning(monster);
-            case BLACK_MAGE_WALL -> castBlackMageWall(monster);
-            case BLACK_MAGE_FALLEN_ANGEL -> summonBlackMageAdds(monster, 8880511, 2, BLACK_MAGE_ADD_LIFETIME_MS);
-            case BLACK_MAGE_KNIGHT -> summonBlackMageAdds(monster, 8880505, 1, BLACK_MAGE_ADD_LIFETIME_MS);
             case WILL_WEB_BURST -> castBossCompatEffect(monster, "customBossWill/webBurst");
             case MAGNUS_METEOR_STORM -> castBossCompatEffect(monster, "customBossMagnus/meteorStorm");
             case LUCID_DREAM_BURST -> castBossCompatEffect(monster, "customBossLucid/dreamBurst");
-            case DUSK_TENTACLE_STRIKE -> castBossCompatEffect(monster, "customBossDusk/tentacleStrike");
             case SEREN_SACRED_BURST -> castBossCompatEffect(monster, "customBossSeren/sacredBurst");
             case SUMMON -> summonMonsters(monster);
         }
@@ -377,17 +361,6 @@ public class MobSkill {
         return stance == 4 || stance == 5;
     }
 
-    private void scheduleBlackMageDarkExplosion(Monster monster) {
-        TimerManager.getInstance().schedule(() -> {
-            if (!monster.isAlive()) {
-                return;
-            }
-            for (Character character : monster.getMap().getAllPlayers()) {
-                damageCharacterByPercent(monster, character, getX());
-            }
-        }, BLACK_MAGE_DARK_EXPLOSION_DELAY_MS);
-    }
-
     private void castBossCompatEffect(Monster monster, String effectPath) {
         monster.getMap().broadcastMessage(PacketCreator.showEffect(effectPath));
         TimerManager.getInstance().schedule(() -> {
@@ -398,78 +371,6 @@ public class MobSkill {
                 damageCharacterByPercent(monster, character, getX());
             }
         }, BOSS_COMPAT_EFFECT_DAMAGE_DELAY_MS);
-    }
-
-    private void castBlackMageRedLightning(Monster monster) {
-        MapleMap map = monster.getMap();
-        List<Point> strikePoints = map.getAllPlayers().stream()
-                .filter(Character::isAlive)
-                .limit(3)
-                .map(character -> new Point(character.getPosition()))
-                .toList();
-        if (strikePoints.isEmpty()) {
-            strikePoints = List.of(new Point(monster.getPosition()));
-        }
-        for (Point point : strikePoints) {
-            spawnTemporaryBlackMageEntity(map, 8880506, point, BLACK_MAGE_EFFECT_LIFETIME_MS);
-        }
-        List<Point> finalStrikePoints = strikePoints;
-        TimerManager.getInstance().schedule(() -> {
-            if (!monster.isAlive()) {
-                return;
-            }
-            int radiusSq = BLACK_MAGE_RED_LIGHTNING_RADIUS * BLACK_MAGE_RED_LIGHTNING_RADIUS;
-            for (Character character : map.getAllPlayers()) {
-                if (finalStrikePoints.stream().anyMatch(point -> character.getPosition().distanceSq(point) <= radiusSq)) {
-                    damageCharacterByPercent(monster, character, getX());
-                }
-            }
-        }, BLACK_MAGE_RED_LIGHTNING_DELAY_MS);
-    }
-
-    private void castBlackMageWall(Monster monster) {
-        MapleMap map = monster.getMap();
-        Point origin = monster.getPosition();
-        List<Point> wallPoints = List.of(
-                new Point(origin.x - 360, origin.y),
-                new Point(origin.x, origin.y),
-                new Point(origin.x + 360, origin.y)
-        );
-        for (Point point : wallPoints) {
-            spawnTemporaryBlackMageEntity(map, 8880507, point, BLACK_MAGE_EFFECT_LIFETIME_MS);
-        }
-        TimerManager.getInstance().schedule(() -> {
-            if (!monster.isAlive()) {
-                return;
-            }
-            for (Character character : map.getAllPlayers()) {
-                if (wallPoints.stream().anyMatch(point -> Math.abs(character.getPosition().x - point.x) <= BLACK_MAGE_WALL_HALF_WIDTH)) {
-                    damageCharacterByPercent(monster, character, getX());
-                }
-            }
-        }, BLACK_MAGE_WALL_DELAY_MS);
-    }
-
-    private void summonBlackMageAdds(Monster monster, int mobId, int count, long lifetimeMs) {
-        MapleMap map = monster.getMap();
-        Point origin = monster.getPosition();
-        for (int i = 0; i < count; i++) {
-            int offset = count == 1 ? 0 : (i == 0 ? -260 : 260);
-            spawnTemporaryBlackMageEntity(map, mobId, new Point(origin.x + offset, origin.y), lifetimeMs);
-        }
-    }
-
-    private void spawnTemporaryBlackMageEntity(MapleMap map, int mobId, Point position, long lifetimeMs) {
-        Monster summoned = LifeFactory.getMonster(mobId);
-        if (summoned == null) {
-            return;
-        }
-        map.spawnMonsterOnGroundBelow(summoned, position);
-        TimerManager.getInstance().schedule(() -> {
-            if (summoned.isAlive() && summoned.getMap() == map) {
-                map.killMonster(summoned, null, false);
-            }
-        }, lifetimeMs);
     }
 
     private void damageCharacterByPercent(Monster monster, Character character, int percent) {

@@ -82,6 +82,11 @@ function action(mode, type, selection) {
             showChairPage();
             return;
         }
+        if (selection === 2) {
+            cm.dispose();
+            cm.openNpc(9900009, "至高无上·逼王戒");
+            return;
+        }
         rejectInvalidSelection();
         return;
     }
@@ -102,7 +107,8 @@ function action(mode, type, selection) {
 function showMainMenu() {
     var text = "#e#b潮流前线#k#n\r\n\r\n";
     text += "#L0##b时装暖暖#k#l\r\n";
-    text += "#L1##b椅子#k（每把 " + CHAIR_PRICE + " 点券）#l";
+    text += "#L1##b椅子#k（每把 " + CHAIR_PRICE + " 点券）#l\r\n";
+    text += "#L2##b至高无上·逼王戒#k#l";
     cm.sendSimple(text);
 }
 

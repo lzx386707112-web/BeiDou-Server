@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.AllArgsConstructor;
 import org.gms.constants.api.ApiConstant;
 import org.gms.dao.entity.ExtendValueDO;
+import org.gms.model.dto.ChrMoveToHenesysReqDTO;
 import org.gms.model.dto.ChrOnlineListReqDTO;
 import org.gms.model.dto.ChrOnlineListRtnDTO;
 import org.gms.model.dto.ResultBody;
@@ -49,5 +50,21 @@ public class CharacterController {
     @PostMapping("/" + ApiConstant.LATEST + "/online/list")
     public ResultBody<Page<ChrOnlineListRtnDTO>> onlineList(@RequestBody SubmitBody<ChrOnlineListReqDTO> submitBody) {
         return ResultBody.success(characterService.getChrOnlineList(submitBody.getData()));
+    }
+
+    @Tag(name = "/character/" + ApiConstant.LATEST)
+    @Operation(summary = "移动玩家到射手村")
+    @PutMapping("/" + ApiConstant.LATEST + "/moveToHenesys")
+    public ResultBody<Object> moveToHenesys(@RequestBody SubmitBody<ChrMoveToHenesysReqDTO> submitBody) {
+        characterService.moveToHenesys(submitBody.getData());
+        return ResultBody.success();
+    }
+
+    @Tag(name = "/character/" + ApiConstant.LATEST)
+    @Operation(summary = "移动玩家到射手村")
+    @PutMapping("/" + ApiConstant.LATEST + "/{id}/moveToHenesys")
+    public ResultBody<Object> moveToHenesys(@PathVariable int id) {
+        characterService.moveToHenesys(id);
+        return ResultBody.success();
     }
 }

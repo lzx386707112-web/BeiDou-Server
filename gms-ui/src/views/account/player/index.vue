@@ -40,6 +40,9 @@
           </template>
           {{ $t('button.reset') }}
         </a-button>
+        <a-button status="warning" @click="moveFilterToHenesysClick">
+          {{ $t('account.player.button.moveFilterToHenesys') }}
+        </a-button>
       </a-space>
       <a-divider />
       <a-row style="margin-bottom: 16px">
@@ -115,6 +118,14 @@
             <template #cell="{ record }">
               <a-button type="text" size="mini" @click="giveClick(record)">
                 {{ $t('account.player.button.give') }}
+              </a-button>
+              <a-button
+                type="text"
+                status="warning"
+                size="mini"
+                @click="moveToHenesysClick(record)"
+              >
+                {{ $t('account.player.button.moveToHenesys') }}
               </a-button>
             </template>
           </a-table-column>
@@ -306,13 +317,15 @@
   import useLoading from '@/hooks/loading';
   import { ref } from 'vue';
   import { AccountState } from '@/store/modules/account/types';
-  import { Message } from '@arco-design/web-vue';
+  import { Message, Modal } from '@arco-design/web-vue';
   import { useI18n } from 'vue-i18n';
   import {
     getEquInitialInfo,
     getPlayerList,
     GiveForm,
     givePlayerSrc,
+    moveToHenesys,
+    moveToHenesysByCondition,
   } from '@/api/player';
 
   const { t } = useI18n();
@@ -466,6 +479,57 @@
       expire: undefined,
     };
     giveFormVisible.value = true;
+  };
+
+  const moveToHenesysClick = (data: any) => {
+    Modal.confirm({
+      title: t('account.player.moveToHenesys.confirm.title'),
+      content: t('account.player.moveToHenesys.confirm.content', {
+        name: data.name,
+      }),
+      okText: t('account.player.button.moveToHenesys'),
+      onOk: async () => {
+        setLoading(true);
+        try {
+          await moveToHenesys(data.id);
+          Message.success(t('message.success'));
+          await loadData();
+        } finally {
+          setLoading(false);
+        }
+      },
+    });
+  };
+
+  const moveFilterToHenesysClick = () => {
+    const name = filterForm.value.name?.trim();
+    if (!filterForm.value.id && !name) {
+      Message.warning(t('account.player.moveToHenesys.requireTarget'));
+      return;
+    }
+
+    Modal.confirm({
+      title: t('account.player.moveToHenesys.confirm.title'),
+      content: filterForm.value.id
+        ? t('account.player.moveToHenesys.confirm.idContent', {
+            id: filterForm.value.id,
+          })
+        : t('account.player.moveToHenesys.confirm.content', { name }),
+      okText: t('account.player.button.moveToHenesys'),
+      onOk: async () => {
+        setLoading(true);
+        try {
+          await moveToHenesysByCondition({
+            id: filterForm.value.id,
+            name,
+          });
+          Message.success(t('message.success'));
+          await loadData();
+        } finally {
+          setLoading(false);
+        }
+      },
+    });
   };
 
   const submitClick = async () => {

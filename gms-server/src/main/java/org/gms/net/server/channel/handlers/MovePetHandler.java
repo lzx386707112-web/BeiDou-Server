@@ -36,6 +36,7 @@ import java.util.Arrays;
 import java.util.List;
 
 public final class MovePetHandler extends AbstractMovementPacketHandler {
+    private static final long FULL_SCREEN_PICKUP_INTERVAL = 500L;
 
     @Override
     public final void handlePacket(InPacket p, Client c) {
@@ -63,7 +64,9 @@ public final class MovePetHandler extends AbstractMovementPacketHandler {
 
     public void itemVac(Character player, byte slot) {
         Pet pet = player.getPet(slot);
-        if (pet == null) return;
+        if (pet == null || !player.tryBeginFullScreenPetPickup(System.currentTimeMillis(), FULL_SCREEN_PICKUP_INTERVAL)) {
+            return;
+        }
         List<MapObject> list = player.getMap().getMapObjectsInRange(pet.getPos(), Double.POSITIVE_INFINITY, Arrays.asList(MapObjectType.ITEM));//获取全屏物品列表
         for (MapObject item : list) {  // 遍历地图上的物品列表
             player.pickupItem(item, (int) slot);  // 执行拾取操作

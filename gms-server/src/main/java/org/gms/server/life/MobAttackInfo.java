@@ -30,6 +30,7 @@ public class MobAttackInfo {
     private int diseaseSkill;
     private int diseaseLevel;
     private int mpCon;
+    private int fixedDamageRate;
 
     public MobAttackInfo(int mobId, int attackId) {
     }
@@ -72,5 +73,13 @@ public class MobAttackInfo {
 
     public int getMpCon() {
         return mpCon;
+    }
+
+    public void setFixedDamageRate(int fixedDamageRate) {
+        this.fixedDamageRate = fixedDamageRate;
+    }
+
+    public int getFixedDamageRate() {
+        return fixedDamageRate;
     }
 }

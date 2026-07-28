@@ -1,6 +1,7 @@
 package org.gms.dao.mapper;
 
 import com.mybatisflex.core.BaseMapper;
+import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
 import org.gms.dao.entity.CharactersDO;
@@ -19,4 +20,7 @@ public interface CharactersMapper extends BaseMapper<CharactersDO> {
 
     @Select("SELECT id, world FROM characters WHERE accountid = #{accountId}")
     List<CharactersDO> selectIdAndWorldListByAccountId(int accountId);
+
+    @Update("UPDATE characters SET map = #{map}, spawnpoint = #{spawnpoint} WHERE id = #{id}")
+    int updateLocation(@Param("id") int id, @Param("map") int map, @Param("spawnpoint") int spawnpoint);
 }

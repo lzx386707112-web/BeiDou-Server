@@ -64,12 +64,14 @@ public class MobAttackInfoFactory {
                     int disease = DataTool.getInt("disease", attackData, 0);
                     int level = DataTool.getInt("level", attackData, 0);
                     int mpCon = DataTool.getInt("conMP", attackData, 0);
+                    int fixedDamageRate = DataTool.getInt("fixDamR", attackData, 0);
                     ret = new MobAttackInfo(mob.getId(), attack);
                     ret.setDeadlyAttack(deadlyAttack != null);
                     ret.setMpBurn(mpBurn);
                     ret.setDiseaseSkill(disease);
                     ret.setDiseaseLevel(level);
                     ret.setMpCon(mpCon);
+                    ret.setFixedDamageRate(fixedDamageRate);
                 }
                 mobAttacks.put(mob.getId() + "" + attack, ret);
             }

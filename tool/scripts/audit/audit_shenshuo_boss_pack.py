@@ -207,7 +207,7 @@ def main() -> int:
                 }
                 if "DunkelBM1_2" in dependencies or "DunkelBM1_3" not in dependencies:
                     errors.append("retry map 450009301 must use the stable Dunkel boss-scene visuals")
-        if map_id in (450010100, 450009400, 900000207, 410002060, 410002061):
+        if map_id in (450010100, 450009400, 900000207, 410002060):
             forbidden_root = {"particle", "mobTeleport", "noSkill"}
             forbidden_info = {
                 "AmbientBGM", "AmbientBGMv", "ReviveCurFieldOfNoTransfer",
@@ -247,7 +247,7 @@ def main() -> int:
             errors.append(f"missing String/Mob {mob_id}")
         if ui.root.get(f"MobGage/Mob/{mob_id}") is None:
             errors.append(f"missing boss gauge {mob_id}")
-    for mob_id in (8880700, 8880803, 8880820):
+    for mob_id in (8880700, 8880803):
         gauge = ui.root.get(f"MobGage/Mob/{mob_id}")
         if not isinstance(gauge, WzCanvasProperty):
             errors.append(f"boss gauge {mob_id} must be an embedded canvas")
@@ -263,7 +263,7 @@ def main() -> int:
     if not retry_script.exists():
         errors.append("missing shenshuoBossRetry portal script")
     monster_source = (ROOT / "gms-server/src/main/java/org/gms/server/life/Monster.java").read_text(encoding="utf-8")
-    if "case 8880700, 8880803, 8880820 -> 8870000" not in monster_source:
+    if "case 8880700, 8880803 -> 8870000" not in monster_source:
         errors.append("missing mobile-safe boss HP bar template mapping")
 
     if errors:

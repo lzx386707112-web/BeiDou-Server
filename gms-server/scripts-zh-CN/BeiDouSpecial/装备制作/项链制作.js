@@ -22,7 +22,7 @@ var 项链 = [
             {id: 1122012, qty: 1, tip: ""},
             {id: 4021010, qty: 10, tip: ""},
             {id: meso_id, qty: 1000},
-            {id: cash_id, qty: 30000},
+            {id: cash_id, qty: 6666},
         ]
     },
 ];

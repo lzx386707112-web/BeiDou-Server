@@ -85,6 +85,14 @@ export default {
 
   'account.player.button.globalGive': '全服发放资源',
   'account.player.button.give': '发放资源',
+  'account.player.button.moveToHenesys': '移动到射手村',
+  'account.player.button.moveFilterToHenesys': '按条件移动到射手村',
+  'account.player.moveToHenesys.confirm.title': '确认移动角色',
+  'account.player.moveToHenesys.confirm.content':
+    '确定要把角色 {name} 移动到射手村吗？在线角色会立即传送。',
+  'account.player.moveToHenesys.confirm.idContent':
+    '确定要把角色 ID {id} 移动到射手村吗？在线角色会立即传送。',
+  'account.player.moveToHenesys.requireTarget': '请先填写角色 ID 或精确角色名',
   'account.player.nxCredit': '点券',
   'account.player.nxPrepaid': '信用点券',
   'account.player.maplePoint': '抵用券',

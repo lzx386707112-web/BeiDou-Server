@@ -10,7 +10,7 @@ var goldScale = 10000;
 var needItems = [
     {id: 4021010, qty: 1},
     {id: meso_id, qty: 5000},
-    {id: cash_id, qty: 30000},
+    {id: cash_id, qty: 6666},
 ];
 
 const InventoryManipulator = Java.type('org.gms.client.inventory.manipulator.InventoryManipulator');

@@ -87,6 +87,25 @@ def gms_reader() -> WzBinaryReader:
     return WzBinaryReader(io.BytesIO(b""), TARGET_KEY)
 
 
+def convert_canvas_tree_to_argb4444(prop, source_region: str = "EMS") -> None:
+    if isinstance(prop, WzCanvasProperty) and prop.has_pixels():
+        image = decode_canvas(prop, region=source_region)
+        prop.format = 1
+        prop.format2 = 0
+        prop._png_data = encode_canvas_payload(
+            image,
+            1,
+            int(prop.width),
+            int(prop.height),
+            key=TARGET_KEY,
+            listwz=False,
+        )
+        prop._png_length = len(prop._png_data)
+    if hasattr(prop, "children"):
+        for child in prop.children():
+            convert_canvas_tree_to_argb4444(child, source_region)
+
+
 def source_img(path: Path) -> WzImage:
     img = WzImage.from_bytes(path.read_bytes(), key=WzKey.for_region(SOURCE_REGION), name=path.name)
     img.parse()

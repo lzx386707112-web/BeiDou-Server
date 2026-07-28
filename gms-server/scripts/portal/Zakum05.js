@@ -47,6 +47,6 @@ function enter(pi) {
     }
 
     pi.playPortalSound();
-    pi.warp(pi.getPlayer().getMapId() == 211042301 ? 211042401 : 211042400, "west00");
+    pi.warp(211042400, "west00");
     return true;
 }

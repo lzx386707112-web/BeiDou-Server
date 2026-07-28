@@ -24,10 +24,10 @@ from wzpy.writer import (  # noqa: E402
     encode_string_block,
 )
 
-from patch_dusk_boss_compat import convert_canvas_tree_to_argb4444  # noqa: E402
 from patch_lucid_boss_compat import (  # noqa: E402
     atomic_write_bytes,
     atomic_write_text,
+    convert_canvas_tree_to_argb4444,
     gms_reader,
     img_to_xml,
     replace_child,

@@ -24,8 +24,6 @@ BOSS_IDS = (
     8860000,  # Arkarium
     8880340, 8880342,  # Seren
     8880140, 8880141,  # Lucid
-    8644630,  # Dusk
-    8880504, 8880505, 8880506, 8880507, 8880511,  # Black Mage
 )
 KEY = WzKey.for_region("GMS")
 EVA_PATTERN = re.compile(r'(<int name="eva" value=")(-?\d+)("\s*/>)')

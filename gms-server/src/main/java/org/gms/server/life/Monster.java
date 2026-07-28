@@ -1047,7 +1047,7 @@ public class Monster extends AbstractLoadedLife {
 
     public Packet makeBossHPBarPacket() {
         int templateId = switch (getId()) {
-            case 8880700, 8880803, 8880820 -> 8870000;
+            case 8880700, 8880803 -> 8870000;
             default -> getId();
         };
         return PacketCreator.showBossHP(templateId, getHp(), getMaxHp(), getTagColor(), getTagBgColor());
@@ -1215,21 +1215,27 @@ public class Monster extends AbstractLoadedLife {
         }
 
         final Runnable cancelTask = () -> {
-            if (isAlive()) {
-                Packet packet = PacketCreator.cancelMonsterStatus(getObjectId(), status.getStati());
-                broadcastMonsterStatusMessage(packet);
-            }
+            Map<MonsterStatus, Integer> canceledStati = new EnumMap<>(MonsterStatus.class);
 
             statiLock.lock();
             try {
-                for (MonsterStatus stat : status.getStati().keySet()) {
-                    stati.remove(stat);
+                for (Entry<MonsterStatus, Integer> stat : status.getStati().entrySet()) {
+                    if (stati.get(stat.getKey()) == status) {
+                        stati.remove(stat.getKey());
+                        canceledStati.put(stat.getKey(), stat.getValue());
+                    }
                 }
             } finally {
                 statiLock.unlock();
             }
 
-            setVenomMulti(0);
+            if (isAlive() && !canceledStati.isEmpty()) {
+                Packet packet = PacketCreator.cancelMonsterStatus(getObjectId(), canceledStati);
+                broadcastMonsterStatusMessage(packet);
+            }
+            if (venom && !canceledStati.isEmpty()) {
+                setVenomMulti(0);
+            }
         };
 
         Runnable overtimeAction = null;
@@ -1618,17 +1624,15 @@ public class Monster extends AbstractLoadedLife {
     }
 
     private boolean hasPriorityCompatibilitySkill() {
-        return (getId() >= 8880502 && getId() <= 8880504)
-                || getId() == 8880301
+        return getId() == 8880301
                 || getId() == 8880000
                 || getId() == 8880140
-                || getId() == 8644630
                 || getId() == 8880342;
     }
 
     private boolean isPriorityCompatibilitySkill(MobSkillId skill) {
         int skillId = skill.type().getId();
-        return skillId >= 178 && skillId <= 187;
+        return skillId >= 183 && skillId <= 187;
     }
 
     public boolean isFirstAttack() {

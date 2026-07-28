@@ -15,7 +15,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from wzpy import WzImage, WzIntProperty, WzKey, WzStringProperty, WzSubProperty  # noqa: E402
 from wzpy.writer import encode_image_body  # noqa: E402
-from patch_dusk_boss_compat import convert_canvas_tree_to_argb4444  # noqa: E402
+from patch_lucid_boss_compat import convert_canvas_tree_to_argb4444  # noqa: E402
 
 
 KEY = WzKey.for_region("GMS")

@@ -21,10 +21,10 @@
 */
 function enter(pi) {
     var mapId = pi.getPlayer().getMapId();
-    if (mapId == 240060000 || mapId == 240060001) {
-        return warpIfHeadDefeated(pi, 1, mapId + 100);
-    } else if (mapId == 240060100 || mapId == 240060101) {
-        return warpIfHeadDefeated(pi, 2, mapId + 100);
+    if (mapId == 240060000) {
+        return warpIfHeadDefeated(pi, 1, 240060100);
+    } else if (mapId == 240060100) {
+        return warpIfHeadDefeated(pi, 2, 240060200);
     }
     return false;
 }

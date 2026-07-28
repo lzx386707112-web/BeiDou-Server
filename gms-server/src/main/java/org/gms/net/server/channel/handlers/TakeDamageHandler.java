@@ -191,6 +191,10 @@ public final class TakeDamageHandler extends AbstractPacketHandler {
                 }
                 mpattack += attackInfo.getMpBurn();
 
+                if (attackInfo.getFixedDamageRate() > 0 && damage > 0) {
+                    damage = Math.max(1, (int) ((long) chr.getMaxHp() * attackInfo.getFixedDamageRate() / 100));
+                }
+
                 Optional<MobSkillType> possibleType = MobSkillType.from(attackInfo.getDiseaseSkill());
                 Optional<MobSkill> possibleMobSkill = possibleType.map(type -> MobSkillFactory.getMobSkillOrThrow(type, attackInfo.getDiseaseLevel()));
                 if (possibleMobSkill.isPresent() && damage > 0) {

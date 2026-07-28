@@ -33,27 +33,23 @@ ROOT_ABYSS_BOSS_ROOM_SPAWNS = {
     105200110: (8900000, 489, 454),
     105200210: (8910000, -131, 550),
     105200310: (8920000, 60, 134),
-    105200410: (8930000, -192, 442),
 }
 ADVANCED_BOSS_MOBS = {
     8900000, 8900001, 8900002, 8900003,
     8910000, 8910001,
     8920000, 8920001, 8920002, 8920003, 8920004, 8920005, 8920006,
-    8930000, 8930001,
 }
 BOSS_GAUGE_MOBS = {
     8900000, 8900001, 8900002,
     8910000,
     8920000, 8920001, 8920002, 8920003,
-    8930000,
 }
-BOSS_DROP_MOBS = {8900000, 8910000, 8920000, 8930000}
+BOSS_DROP_MOBS = {8900000, 8910000, 8920000}
 OLD_SERVER_REQUIRED_BOSS_INFO_FIELDS = {"PADamage", "PDDamage", "MADamage", "MDDamage", "level"}
 ROOT_ABYSS_SECOND_PHASE_BOSS_HP = {
     8900001: 3_000_000_000,
     8910001: 3_000_000_000,
     8920001: 3_000_000_000,
-    8930001: 3_000_000_000,
 }
 SUPPORTED_ROOT_ABYSS_BOSS_SKILLS = {
     (110, 5),
@@ -74,7 +70,7 @@ NPCS = {
     1064008, 1064012, 1064013, 1064014, 1064015, 1064016,
 }
 REACTORS = {
-    1052006, 1052008, 1058016, 1058020, 1058022, 1058023,
+    1052006, 1052008, 1058016, 1058022, 1058023,
     1058024, 1058025, 1058026, 1058027, 1058028, 1058029,
 }
 ALLOWED_MAP_MARKS = {"None"}
@@ -87,7 +83,6 @@ SCRIPT_PORTAL_TARGETS = {
     "rootabyssOUT": (105040300, "sp"),
     "rootaNext1": (105200210, "sp"),
     "rootaNext2": (105200310, "sp"),
-    "rootaNext3": (105200410, "sp"),
     "outrootaBoss": (105200000, "sp"),
     "rootaNext": (105200110, "sp"),
 }
@@ -232,8 +227,8 @@ class Audit:
 
     def check_map_counts(self) -> None:
         server_maps = sorted(int(p.stem.split(".")[0]) for p in (SERVER_WZ / "Map.wz/Map/Map1").glob("1052*.img.xml"))
-        if len(MAP_IDS) != 191:
-            self.error(f"expected 191 client 1052 maps, got {len(MAP_IDS)}")
+        if len(MAP_IDS) != 181:
+            self.error(f"expected 181 client 1052 maps, got {len(MAP_IDS)}")
         if server_maps != MAP_IDS:
             self.error(f"server/client 1052 map list mismatch: client={len(MAP_IDS)} server={len(server_maps)}")
 
@@ -414,9 +409,9 @@ class Audit:
                         105200500: 105200110,
                         105200600: 105200210,
                         105200700: 105200310,
-                        105200800: 105200410,
                     }
-                    script_target = (next_targets.get(map_id, map_id + 10), "sp")
+                    target_map = next_targets.get(map_id)
+                    script_target = (target_map, "sp") if target_map is not None else None
                 if script_target is not None:
                     self.check_target_portal(map_id, f"portal/{portal.name} script {script}", *script_target)
             target = self.child_value(portal, "tm")

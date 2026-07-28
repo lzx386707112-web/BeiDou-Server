@@ -27,5 +27,4 @@ export const shenshuoSiegeBossOptions = [
   { name: '亲卫队长敦凯尔', id: 8645009 },
   { name: '守护天使绿水灵', id: 8880700 },
   { name: '监视者卡洛斯', id: 8880803 },
-  { name: '沦陷的监视者卡洛斯', id: 8880820 },
 ];

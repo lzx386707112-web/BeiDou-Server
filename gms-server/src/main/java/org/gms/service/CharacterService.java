@@ -12,9 +12,10 @@ import org.gms.constants.id.MapId;
 import org.gms.constants.string.ExtendType;
 import org.gms.dao.entity.*;
 import org.gms.dao.mapper.*;
+import org.gms.exception.BizException;
+import org.gms.model.dto.ChrMoveToHenesysReqDTO;
 import org.gms.model.dto.ChrOnlineListReqDTO;
 import org.gms.model.dto.ChrOnlineListRtnDTO;
-import org.gms.exception.BizException;
 import org.gms.model.pojo.SkillEntry;
 import org.gms.net.server.Server;
 import org.gms.net.server.guild.GuildCharacter;
@@ -113,6 +114,54 @@ public class CharacterService {
                         .level(chr.getLevel())
                         .gm(chr.gmLevel())
                         .build());
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void moveToHenesys(ChrMoveToHenesysReqDTO request) {
+        if (request == null) {
+            throw new BizException(I18nUtil.getExceptionMessage("PARAMETER_SHOULD_NOT_NULL"));
+        }
+
+        Integer characterId = request.getId();
+        if (characterId == null) {
+            if (RequireUtil.isEmpty(request.getName())) {
+                throw new BizException(I18nUtil.getExceptionMessage("PARAMETER_SHOULD_NOT_NULL"));
+            }
+            CharactersDO charactersDO = findByName(request.getName());
+            if (charactersDO == null) {
+                throw new BizException(I18nUtil.getExceptionMessage("UNKNOWN_CHARACTER"));
+            }
+            characterId = charactersDO.getId();
+        }
+
+        moveToHenesys(characterId);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void moveToHenesys(int characterId) {
+        CharactersDO charactersDO = findById(characterId);
+        if (charactersDO == null) {
+            throw new BizException(I18nUtil.getExceptionMessage("UNKNOWN_CHARACTER"));
+        }
+
+        Character character = getOnlineCharacterById(characterId);
+        if (character != null) {
+            character.changeMap(MapId.HENESYS, 0);
+            character.saveCharToDB();
+            return;
+        }
+
+        charactersMapper.updateLocation(characterId, MapId.HENESYS, 0);
+    }
+
+    private Character getOnlineCharacterById(int characterId) {
+        for (World world : Server.getInstance().getWorlds()) {
+            Character character = world.getPlayerStorage().getCharacterById(characterId);
+            if (character != null) {
+                return character;
+            }
+        }
+        return null;
     }
 
     public void updateRate(ExtendValueDO data) {

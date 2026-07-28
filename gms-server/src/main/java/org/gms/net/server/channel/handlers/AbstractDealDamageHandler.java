@@ -69,7 +69,8 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 
 public abstract class AbstractDealDamageHandler extends AbstractPacketHandler {
 
-    private static final Logger log = LoggerFactory.getLogger(ItemPickupHandler.class);
+    private static final Logger log = LoggerFactory.getLogger(AbstractDealDamageHandler.class);
+    private static final double DISTANCE_HACK_BLOCK_MULTIPLIER = 1.5;
 
     private static int decodeClientDamage(int damage) {
         if (damage >= 0) {
@@ -210,6 +211,7 @@ public abstract class AbstractDealDamageHandler extends AbstractPacketHandler {
             Point distanceHackWorstCheckPos = null;
             boolean distanceHackWorstUsedTeleportContext = false;
             boolean distanceHackWorstUsedMovementContext = false;
+            boolean distanceHackWorstBlocked = false;
 
             if (attack.skill == ChiefBandit.MESO_EXPLOSION) {
                 int delay = 0;
@@ -301,14 +303,22 @@ public abstract class AbstractDealDamageHandler extends AbstractPacketHandler {
                                     teleportBeforePosForDistanceCheck,
                                     movementBeforePosForDistanceCheck
                             );
-                            if (distanceSample.distanceSq > distanceToDetect && distanceSample.distanceSq > distanceHackWorstDistance) {
-                                distanceHackWorstMonster = monster;
-                                distanceHackWorstDistance = distanceSample.distanceSq;
-                                distanceHackWorstThreshold = distanceToDetect;
-                                distanceHackWorstUseBbox = useBbox;
-                                distanceHackWorstCheckPos = new Point(distanceSample.checkPos);
-                                distanceHackWorstUsedTeleportContext = distanceSample.usedTeleportContext;
-                                distanceHackWorstUsedMovementContext = distanceSample.usedMovementContext;
+                            if (distanceSample.distanceSq > distanceToDetect) {
+                                boolean blockTarget = distanceSample.distanceSq > distanceToDetect * DISTANCE_HACK_BLOCK_MULTIPLIER;
+                                if (distanceSample.distanceSq > distanceHackWorstDistance) {
+                                    distanceHackWorstMonster = monster;
+                                    distanceHackWorstDistance = distanceSample.distanceSq;
+                                    distanceHackWorstThreshold = distanceToDetect;
+                                    distanceHackWorstUseBbox = useBbox;
+                                    distanceHackWorstCheckPos = new Point(distanceSample.checkPos);
+                                    distanceHackWorstUsedTeleportContext = distanceSample.usedTeleportContext;
+                                    distanceHackWorstUsedMovementContext = distanceSample.usedMovementContext;
+                                    distanceHackWorstBlocked = blockTarget;
+                                }
+                                if (blockTarget) {
+                                    // 明显超距时只丢弃当前目标；同一攻击包中的合法目标继续正常结算。
+                                    continue;
+                                }
                             }
                         }
                     }
@@ -485,13 +495,22 @@ public abstract class AbstractDealDamageHandler extends AbstractPacketHandler {
                         Skill type = SkillFactory.getSkill(player.getJob().getId() == 412 ? 4120005 : (player.getJob().getId() == 1411 ? 14110004 : 4220005));
                         if (player.getSkillLevel(type) > 0) {
                             StatEffect venomEffect = type.getEffect(player.getSkillLevel(type));
-                            for (int i = 0; i < attackCount; i++) {
+                            int previousVenomMulti = monster.getVenomMulti();
+                            int venomMulti = previousVenomMulti;
+                            for (int i = 0; i < attackCount && venomMulti < 3; i++) {
                                 if (venomEffect.makeChanceResult()) {
-                                    if (monster.getVenomMulti() < 3) {
-                                        monster.setVenomMulti((monster.getVenomMulti() + 1));
-                                        MonsterStatusEffect monsterStatusEffect = new MonsterStatusEffect(Collections.singletonMap(MonsterStatus.POISON, 1), type, null, false);
-                                        monster.applyStatus(player, monsterStatusEffect, false, venomEffect.getDuration(), true);
-                                    }
+                                    venomMulti++;
+                                }
+                            }
+                            if (venomMulti > previousVenomMulti) {
+                                Map<MonsterStatus, Integer> venomStati = new EnumMap<>(MonsterStatus.class);
+                                venomStati.put(MonsterStatus.POISON, 1);
+                                venomStati.put(MonsterStatus.VENOMOUS_WEAPON, 1);
+                                MonsterStatusEffect monsterStatusEffect = new MonsterStatusEffect(venomStati, type, null, false);
+
+                                monster.setVenomMulti(venomMulti);
+                                if (!monster.applyStatus(player, monsterStatusEffect, false, venomEffect.getDuration(), true)) {
+                                    monster.setVenomMulti(previousVenomMulti);
                                 }
                             }
                         }
@@ -605,6 +624,10 @@ public abstract class AbstractDealDamageHandler extends AbstractPacketHandler {
                 player.consumeMovementDistanceCheckContext();
             }
             if (distanceHackWorstMonster != null) {
+                String skillName = SkillFactory.getSkillName(attack.skill);
+                if (skillName == null) {
+                    skillName = "unknown";
+                }
                 String bboxInfo = buildBboxInfo(
                         player,
                         distanceHackWorstMonster,
@@ -615,22 +638,28 @@ public abstract class AbstractDealDamageHandler extends AbstractPacketHandler {
                         distanceHackWorstUsedTeleportContext,
                         distanceHackWorstUsedMovementContext
                 );
-                AutobanFactory.DISTANCE_HACK.addPoint(
-                        player.getAutoBanManager(),
-                        "Player: " + player.getName()
-                                + " maxDistanceSqToMob: " + distanceHackWorstDistance
-                                + " thresholdSq: " + distanceHackWorstThreshold
-                                + " SID: " + attack.skill
-                                + " MID: " + distanceHackWorstMonster.getId()
-                                + " " + bboxInfo
-                );
+                String distanceHackReason = "Player: " + player.getName()
+                        + " maxDistanceSqToMob: " + distanceHackWorstDistance
+                        + " thresholdSq: " + distanceHackWorstThreshold
+                        + " SID: " + attack.skill
+                        + " SNAME: " + skillName
+                        + " MID: " + distanceHackWorstMonster.getId()
+                        + " blocked: " + distanceHackWorstBlocked
+                        + " " + bboxInfo;
+                if (distanceHackWorstBlocked) {
+                    AutobanFactory.DISTANCE_HACK.addPoint(player.getAutoBanManager(), distanceHackReason);
+                } else {
+                    AutobanFactory.DISTANCE_HACK.alert(player, distanceHackReason);
+                }
                 log.warn(
-                        "Player: {} maxDistanceSqToMob: {} thresholdSq: {} SID: {} MID: {} {}",
+                        "Player: {} maxDistanceSqToMob: {} thresholdSq: {} SID: {} SNAME: {} MID: {} blocked: {} {}",
                         player.getName(),
                         distanceHackWorstDistance,
                         distanceHackWorstThreshold,
                         attack.skill,
+                        skillName,
                         distanceHackWorstMonster.getId(),
+                        distanceHackWorstBlocked,
                         bboxInfo
                 );
             }

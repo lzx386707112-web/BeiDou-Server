@@ -57,7 +57,8 @@ public class MonsterInformationProvider {
     }
 
     private final Map<Integer, List<MonsterDropEntry>> drops = new HashMap<>();
-    private final List<MonsterGlobalDropEntry> globaldrops = new ArrayList<>();
+    private final Object globalDropsLock = new Object();
+    private List<MonsterGlobalDropEntry> globaldrops = List.of();
     private final Map<Integer, List<MonsterGlobalDropEntry>> continentdrops = new HashMap<>();
 
     private final Map<Integer, List<Integer>> dropsChancePool = new HashMap<>();    // thanks to ronan
@@ -73,34 +74,41 @@ public class MonsterInformationProvider {
     private final Map<Integer, String> mobNameCache = new HashMap<>();
 
     protected MonsterInformationProvider() {
-        retrieveGlobal();
+        List<MonsterGlobalDropEntry> loadedGlobalDrops = retrieveGlobal();
+        if (loadedGlobalDrops != null) {
+            globaldrops = loadedGlobalDrops;
+        }
     }
 
     public final List<MonsterGlobalDropEntry> getRelevantGlobalDrops(int mapid) {
         int continentid = mapid / 100000000;
 
-        List<MonsterGlobalDropEntry> contiItems = continentdrops.get(continentid);
-        if (contiItems == null) {   // continent separated global drops found thanks to marcuswoon
-            contiItems = new ArrayList<>();
+        synchronized (globalDropsLock) {
+            List<MonsterGlobalDropEntry> contiItems = continentdrops.get(continentid);
+            if (contiItems == null) {   // continent separated global drops found thanks to marcuswoon
+                List<MonsterGlobalDropEntry> relevantDrops = new ArrayList<>();
 
-            for (MonsterGlobalDropEntry e : globaldrops) {
-                if (e.continentid < 0 || e.continentid == continentid) {
-                    contiItems.add(e);
+                for (MonsterGlobalDropEntry e : globaldrops) {
+                    if (e.continentid < 0 || e.continentid == continentid) {
+                        relevantDrops.add(e);
+                    }
                 }
+
+                contiItems = List.copyOf(relevantDrops);
+                continentdrops.put(continentid, contiItems);
             }
 
-            continentdrops.put(continentid, contiItems);
+            return contiItems;
         }
-
-        return contiItems;
     }
 
-    private void retrieveGlobal() {
+    private List<MonsterGlobalDropEntry> retrieveGlobal() {
+        List<MonsterGlobalDropEntry> loadedGlobalDrops = new ArrayList<>();
         try (Connection con = DatabaseConnection.getConnection();
              PreparedStatement ps = con.prepareStatement("SELECT * FROM drop_data_global WHERE chance > 0");
              ResultSet rs = ps.executeQuery()) {
             while (rs.next()) {
-                globaldrops.add(new MonsterGlobalDropEntry(
+                loadedGlobalDrops.add(new MonsterGlobalDropEntry(
                         rs.getInt("itemid"),
                         rs.getInt("chance"),
                         rs.getByte("continent"),
@@ -110,7 +118,10 @@ public class MonsterInformationProvider {
             }
         } catch (SQLException e) {
             log.error("Error retrieving global drops", e);
+            return null;
         }
+
+        return List.copyOf(loadedGlobalDrops);
     }
 
     public List<MonsterDropEntry> retrieveEffectiveDrop(final int monsterId) {
@@ -292,8 +303,12 @@ public class MonsterInformationProvider {
         hasNoMultiEquipDrops.clear();
         extraMultiEquipDrops.clear();
         dropsChancePool.clear();
-        globaldrops.clear();
-        continentdrops.clear();
-        retrieveGlobal();
+        List<MonsterGlobalDropEntry> loadedGlobalDrops = retrieveGlobal();
+        if (loadedGlobalDrops != null) {
+            synchronized (globalDropsLock) {
+                globaldrops = loadedGlobalDrops;
+                continentdrops.clear();
+            }
+        }
     }
 }

@@ -120,7 +120,6 @@ p.writeByte(skillLevel);
 优先保留 `<=255` 的原 ID：
 
 ```text
-136  黑魔法师相关，可直接用
 238  露希妲相关，可直接扩展服务端支持
 242  威爾相关，可直接扩展服务端支持
 ```
@@ -192,11 +191,6 @@ PacketCreator.environmentChange(path, 3)
 露希妲:
   Mob 8880140
   MobSkill 238, 201
-
-黑魔法師:
-  Mob 8880502
-  MobSkill 136
-  Etc/BossBlackMage.img
 
 受選的賽蓮:
   Mob 8880600

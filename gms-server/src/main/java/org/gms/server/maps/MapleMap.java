@@ -118,7 +118,6 @@ public class MapleMap {
     private final Collection<SpawnPoint> monsterSpawn = Collections.synchronizedList(new LinkedList<>());
     private final Collection<SpawnPoint> allMonsterSpawn = Collections.synchronizedList(new LinkedList<>());
     private final AtomicInteger spawnedMonstersOnMap = new AtomicInteger(0);
-    private final AtomicInteger droppedItemCount = new AtomicInteger(0);
     private final Collection<Character> characters = new LinkedHashSet<>();
     private final Map<Integer, Set<Integer>> mapParty = new LinkedHashMap<>();
     private final Map<Integer, Portal> portals = new HashMap<>();
@@ -496,11 +495,26 @@ public class MapleMap {
     }
 
     public void removeMapObject(int num) {
+        MapObject removed;
         objectWLock.lock();
         try {
-            this.mapobjects.remove(num);
+            removed = this.mapobjects.remove(num);
+            if (removed instanceof MapItem) {
+                droppedItems.remove(removed);
+            }
         } finally {
             objectWLock.unlock();
+        }
+
+        if (removed != null) {
+            chrRLock.lock();
+            try {
+                for (Character chr : characters) {
+                    chr.removeVisibleMapObject(removed);
+                }
+            } finally {
+                chrRLock.unlock();
+            }
         }
     }
 
@@ -796,12 +810,17 @@ public class MapleMap {
     }
 
     private byte dropGlobalItemsFromMonsterOnMap(List<MonsterGlobalDropEntry> globalEntry, Point pos, byte d, byte droptype, int mobpos, Character chr, Monster mob) {
-        Collections.shuffle(globalEntry);
+        if (globalEntry.isEmpty()) {
+            return d;
+        }
+
+        List<MonsterGlobalDropEntry> shuffledEntry = new ArrayList<>(globalEntry);
+        Collections.shuffle(shuffledEntry);
 
         Item idrop;
         ItemInformationProvider ii = ItemInformationProvider.getInstance();
 
-        for (final MonsterGlobalDropEntry de : globalEntry) {
+        for (final MonsterGlobalDropEntry de : shuffledEntry) {
             if (Randomizer.nextInt(999999) < de.chance) {
                 if (droptype == 3) {
                     pos.x = mobpos + (d % 2 == 0 ? (40 * (d + 1) / 2) : -(40 * (d / 2)));
@@ -812,7 +831,9 @@ public class MapleMap {
                     if (ItemConstants.getInventoryType(de.itemId) == InventoryType.EQUIP) {
                         idrop = ii.randomizeStats((Equip) ii.getEquipById(de.itemId));
                     } else {
-                        idrop = new Item(de.itemId, (short) 0, (short) (de.Maximum != 1 ? Randomizer.nextInt(de.Maximum - de.Minimum) + de.Minimum : 1));
+                        int minimum = Math.max(1, de.Minimum);
+                        int maximum = Math.max(minimum, de.Maximum);
+                        idrop = new Item(de.itemId, (short) 0, (short) Randomizer.rand(minimum, maximum));
                     }
                     spawnDrop(idrop, calcDropPos(pos, mob.getPosition()), mob, chr, droptype, de.questid);
                     d++;
@@ -856,7 +877,7 @@ public class MapleMap {
         List<MonsterDropEntry> lootEntry = GameConfig.getServerBoolean("use_spawn_relevant_loot") ? mob.retrieveRelevantDrops() : mi.retrieveEffectiveDrop(mob.getId());
         sortDropEntries(lootEntry, dropEntry, visibleQuestEntry, otherQuestEntry, chr);     // thanks Articuno, Limit, Rohenn for noticing quest loots not showing up in only-quest item drops scenario
 
-        if (lootEntry.isEmpty()) {   // thanks resinate
+        if (lootEntry.isEmpty() && globalEntry.isEmpty()) {
             return;
         }
 
@@ -986,11 +1007,16 @@ public class MapleMap {
     }
 
     public int getDroppedItemCount() {
-        return droppedItemCount.get();
+        objectRLock.lock();
+        try {
+            return droppedItems.size();
+        } finally {
+            objectRLock.unlock();
+        }
     }
 
     private void instantiateItemDrop(MapItem mdrop) {
-        if (droppedItemCount.get() >= GameConfig.getServerInt("item_limit_on_map")) {
+        if (getDroppedItemCount() >= GameConfig.getServerInt("item_limit_on_map")) {
             MapObject mapobj;
 
             do {
@@ -1017,21 +1043,10 @@ public class MapleMap {
         } finally {
             objectWLock.unlock();
         }
-
-        droppedItemCount.incrementAndGet();
     }
 
     private void registerItemDrop(MapItem mdrop) {
         droppedItems.put(mdrop, !everlast ? Server.getInstance().getCurrentTime() + GameConfig.getServerLong("item_expire_time") : Long.MAX_VALUE);
-    }
-
-    private void unregisterItemDrop(MapItem mdrop) {
-        objectWLock.lock();
-        try {
-            droppedItems.remove(mdrop);
-        } finally {
-            objectWLock.unlock();
-        }
     }
 
     private void makeDisappearExpiredItemDrops() {
@@ -1144,10 +1159,8 @@ public class MapleMap {
     public void pickItemDrop(Packet pickupPacket, MapItem mdrop) { // mdrop must be already locked and not-pickedup checked at this point
         broadcastMessage(pickupPacket, mdrop.getPosition());
 
-        droppedItemCount.decrementAndGet();
         this.removeMapObject(mdrop);
         mdrop.setPickedUp(true);
-        unregisterItemDrop(mdrop);
     }
 
     public List<MapItem> updatePlayerItemDropsToParty(int partyid, int charid, List<Character> partyMembers, Character partyLeaver) {
@@ -1535,7 +1548,6 @@ public class MapleMap {
         if (monster == null) {
             return;
         }
-
         if (chr == null) {
             if (removeKilledMonsterObject(monster)) {
                 monster.dispatchMonsterKilled(false);
@@ -1987,15 +1999,7 @@ public class MapleMap {
     }
 
     public void spawnMonsterOnGroundBelow(Monster mob, Point pos) {
-        Point spos;
-        if (mob.getId() >= 8880502 && mob.getId() <= 8880504) {
-            spos = footholds.findLowestAtX(pos.x);
-        } else {
-            spos = null;
-        }
-        if (spos == null) {
-            spos = calcPointBelow(new Point(pos.x, pos.y - 1));
-        }
+        Point spos = calcPointBelow(new Point(pos.x, pos.y - 1));
         spos.y--;
         mob.setPosition(spos);
         spawnMonster(mob);
@@ -3478,6 +3482,10 @@ public class MapleMap {
     public void movePlayer(Character player, Point newPosition) {
         player.setPosition(newPosition);
 
+        if (GameConfig.getServerBoolean("use_max_range")) {
+            return;
+        }
+
         try {
             MapObject[] visibleObjects = player.getVisibleMapObjects();
 
@@ -3728,12 +3736,10 @@ public class MapleMap {
                                 return;
                             }
                             mapitem.setPickedUp(true);
-                            unregisterItemDrop(mapitem);
 
                             reactor.setShouldCollect(false);
                             MapleMap.this.broadcastMessage(PacketCreator.removeItemFromMap(mapitem.getObjectId(), 0, 0), mapitem.getPosition());
 
-                            droppedItemCount.decrementAndGet();
                             MapleMap.this.removeMapObject(mapitem);
 
                             reactor.hitReactor(c);
@@ -4102,7 +4108,6 @@ public class MapleMap {
 
     public void clearDrops(Character player) {
         for (MapObject i : getMapObjectsInRange(player.getPosition(), Double.POSITIVE_INFINITY, Arrays.asList(MapObjectType.ITEM))) {
-            droppedItemCount.decrementAndGet();
             removeMapObject(i);
             this.broadcastMessage(PacketCreator.removeItemFromMap(i.getObjectId(), 0, player.getId()));
         }
@@ -4110,7 +4115,6 @@ public class MapleMap {
 
     public void clearDrops() {
         for (MapObject i : getMapObjectsInRange(new Point(0, 0), Double.POSITIVE_INFINITY, Arrays.asList(MapObjectType.ITEM))) {
-            droppedItemCount.decrementAndGet();
             removeMapObject(i);
             this.broadcastMessage(PacketCreator.removeItemFromMap(i.getObjectId(), 0, 0));
         }

@@ -88,6 +88,15 @@ export default {
 
   'account.player.button.globalGive': 'Global Give',
   'account.player.button.give': 'Give',
+  'account.player.button.moveToHenesys': 'Move to Henesys',
+  'account.player.button.moveFilterToHenesys': 'Move Filter Target to Henesys',
+  'account.player.moveToHenesys.confirm.title': 'Confirm Move',
+  'account.player.moveToHenesys.confirm.content':
+    'Move {name} to Henesys? Online characters will be warped immediately.',
+  'account.player.moveToHenesys.confirm.idContent':
+    'Move character ID {id} to Henesys? Online characters will be warped immediately.',
+  'account.player.moveToHenesys.requireTarget':
+    'Enter a character ID or exact character name first.',
   'account.player.nxCredit': 'NxCredit',
   'account.player.nxPrepaid': 'NxPrepaid',
   'account.player.maplePoint': 'MaplePoint',

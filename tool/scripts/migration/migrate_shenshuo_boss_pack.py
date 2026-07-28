@@ -18,7 +18,7 @@ SRC = ROOT.parent / "神说" / "Data"
 sys.path.insert(0, str(ROOT / "tool" / "wz-python"))
 sys.path.insert(0, str(ROOT / "tool" / "scripts" / "patch-boss"))
 
-from wzpy import WzCanvasProperty, WzImage, WzIntProperty, WzKey, WzStringProperty, WzSubProperty, WzUolProperty  # noqa: E402
+from wzpy import WzCanvasProperty, WzImage, WzIntProperty, WzKey, WzStringProperty, WzSubProperty  # noqa: E402
 from wzpy.canvas import decode_canvas, encode_canvas_payload  # noqa: E402
 from wzpy.reader import WzBinaryReader  # noqa: E402
 from wzpy.writer import _encode_property_body, _tag_for, encode_compressed_int, encode_image_body, encode_string_block  # noqa: E402
@@ -49,15 +49,12 @@ MAIN_MOBS = {
     8645009: "亲卫队长敦凯尔",
     8880700: "守护天使绿水灵",
     8880803: "监视者卡洛斯",
-    8880820: "沦陷的监视者卡洛斯",
 }
 
 SUPPORT_MOBS = {
     8870004: "血牙",
     8870201: "希拉技能专用",
     8880401: "黑掌",
-    8880403: "死灵斯乌",
-    8880404: "死灵戴米安",
     8645010: "神秘原子集合",
     8645012: "超越三角锥",
     8645014: "上升菱锥",
@@ -84,9 +81,7 @@ MAPS = {
     450009400: "敦凯尔·泰涅布利斯",
     900000207: "守护天使绿水灵领地",
     410002060: "监视者卡洛斯战场",
-    410002061: "沦陷卡洛斯战场",
 }
-MAP_SOURCES = {410002061: 410002060}
 RELATED_MAPS = (262000000, 262030000, 262030310, 262031310, 450011990)
 SAFE_MAP_ALIASES = {}
 RETRY_MAPS = {}
@@ -98,7 +93,6 @@ SAME_FIELD_RETRY_MAPS = {
     450009400: (8645009, -1, -157, "out00", -1, -187, -620, -187),
     900000207: (8880700, 703, -1394, "portal", 703, -1404, -8, -1130),
     410002060: (8880803, 900, 325, "out001", 700, 295, -673, 297),
-    410002061: (8880820, 900, 325, "out001", 700, 295, -673, 297),
 }
 MAP_RETURN_OVERRIDES = {
     262030300: 262030300,
@@ -108,7 +102,6 @@ MAP_RETURN_OVERRIDES = {
     450009400: 450009400,
     900000207: 900000207,
     410002060: 410002060,
-    410002061: 410002061,
     450009301: 910000000,
     900000206: 910000000,
 }
@@ -120,7 +113,6 @@ MAP_BOSSES = {
     450009400: 8645009,
     900000207: 8880700,
     410002060: 8880803,
-    410002061: 8880820,
 }
 
 MAP_UNSUPPORTED_ROOTS = ("particle", "mobTeleport", "userSit", "clock", "area")
@@ -202,35 +194,6 @@ def repair_source_links(img: WzImage, mob_id: int) -> None:
         broken = img.root.get("skill1/0/_inlink")
         if broken is not None and img.root.get(str(broken.value)) is None:
             broken._value = "attack3/0"
-
-    if mob_id != 8880820:
-        return
-    ordinary = source_img(SRC / "Mob/8880803.img")
-    for node, path in list(walk(img.root)):
-        if not isinstance(node, WzUolProperty) or node.name != "_outlink":
-            continue
-        value = str(node.value)
-        if not value.startswith(("Mob/8880800.img/", "Mob/8880801.img/")):
-            continue
-        parent = node.parent
-        target_path = None
-        if "/attack3/info/hit/" in value:
-            index = int(value.rsplit("/", 1)[-1])
-            target_path = f"attack3/info/hit/{min(index, 7)}"
-        elif "/attack2/info/hit/" in value:
-            index = int(value.rsplit("/", 1)[-1])
-            target_path = f"attack2/info/hit/{index % 8}"
-        if target_path is None:
-            parent._children.pop(node.name, None)
-            continue
-        target = ordinary.root.get(target_path)
-        if target is None:
-            parent._children.pop(node.name, None)
-            continue
-        parent._children.pop(node.name, None)
-        if isinstance(target, WzCanvasProperty):
-            replacement = clone_property(target, parent.name, parent.parent)
-            parent.parent._children[parent.name] = replacement
 
 
 def sanitize_mob(img: WzImage, mob_id: int, server: bool) -> None:
@@ -392,8 +355,7 @@ def migrate_visual_img(source: Path, client_path: Path) -> None:
 
 
 def migrate_map(map_id: int) -> None:
-    source_id = MAP_SOURCES.get(map_id, map_id)
-    source = SRC / f"Map/Map/Map{str(source_id)[0]}/{source_id}.img"
+    source = SRC / f"Map/Map/Map{str(map_id)[0]}/{map_id}.img"
     if not source.exists():
         raise FileNotFoundError(source)
     client = source_img(source)
@@ -634,8 +596,7 @@ def patch_existing_map_compat(map_id: int) -> None:
     sanitize_map(client, map_id)
     atomic_write_bytes(client_path, encode_image_body(client, client.wz_file.reader))
 
-    source_id = MAP_SOURCES.get(map_id, map_id)
-    source = SRC / f"Map/Map/Map{str(source_id)[0]}/{source_id}.img"
+    source = SRC / f"Map/Map/Map{str(map_id)[0]}/{map_id}.img"
     server = source_img(source)
     sanitize_map(server, map_id)
     add_server_boss_spawn(server.root, MAP_BOSSES[map_id])
@@ -732,7 +693,7 @@ def patch_client_ui() -> None:
     target = WzImage.from_bytes(path.read_bytes(), key=TARGET_KEY, name=path.name)
     target.parse()
     mob_root = target.root.get("MobGage/Mob")
-    aliases = {8870200: "8870000", 8880700: "8870000", 8880803: "8870000", 8880820: "8870000"}
+    aliases = {8870200: "8870000", 8880700: "8870000", 8880803: "8870000"}
     for mob_id, alias in aliases.items():
         template = mob_root.child(alias)
         if not isinstance(template, WzCanvasProperty):

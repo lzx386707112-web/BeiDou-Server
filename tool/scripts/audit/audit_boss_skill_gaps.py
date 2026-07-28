@@ -78,7 +78,7 @@ def main() -> int:
             errors.append(f"missing server MobSkill {skill_id}/1")
         if not re.search(rf"\({skill_id}\)", enum_text):
             errors.append(f"MobSkillType missing {skill_id}")
-    for token in ("customBossWill/webBurst", "customBossMagnus/meteorStorm", "customBossLucid/dreamBurst", "customBossDusk/tentacleStrike", "customBossSeren/sacredBurst"):
+    for token in ("customBossWill/webBurst", "customBossMagnus/meteorStorm", "customBossLucid/dreamBurst", "customBossSeren/sacredBurst"):
         if token not in logic_text:
             errors.append(f"server handler missing {token}")
 
@@ -86,7 +86,7 @@ def main() -> int:
         for error in errors:
             print(f"ERROR: {error}")
         return 1
-    print(f"boss skill gap audit ok: bosses=5 custom_skills=5 magnus_status_skills={len(MAGNUS_STATUS_SKILLS)}")
+    print(f"boss skill gap audit ok: bosses=4 custom_skills=4 magnus_status_skills={len(MAGNUS_STATUS_SKILLS)}")
     return 0
 
 

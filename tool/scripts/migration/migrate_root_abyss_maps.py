@@ -51,26 +51,29 @@ SOURCE_REGION = "EMS"
 TARGET_KEY = WzKey.for_region("GMS")
 TRANSPARENT_PIXEL = Image.new("RGBA", (1, 1), (0, 0, 0, 0))
 
-MAP_IDS = [int(p.stem) for p in sorted((SRC_CLIENT / "Map/Map/Map1").glob("1052*.img"))]
+RETIRED_MAP_IDS = set(range(105200410, 105200420))
+RETIRED_MAP_ID_STRINGS = {str(map_id) for map_id in RETIRED_MAP_IDS}
+MAP_IDS = [
+    int(p.stem)
+    for p in sorted((SRC_CLIENT / "Map/Map/Map1").glob("1052*.img"))
+    if int(p.stem) not in RETIRED_MAP_IDS
+]
 NORTH_GARDEN_MAP_IDS = {105200400, 105200800}
 NORMAL_MOB_IDS = [7120112, 7120113, 7120114, 7120115]
 ROOT_ABYSS_BOSS_ROOM_SPAWNS = {
     105200110: (8900000, 489, 454),
     105200210: (8910000, -131, 550),
     105200310: (8920000, 60, 134),
-    105200410: (8930000, -192, 442),
 }
 ADVANCED_BOSS_MOB_IDS = [
     8900000, 8900001, 8900002, 8900003,
     8910000, 8910001,
     8920000, 8920001, 8920002, 8920003, 8920004, 8920005, 8920006,
-    8930000, 8930001,
 ]
 BOSS_GAUGE_MOB_IDS = {
     8900000, 8900001, 8900002,
     8910000,
     8920000, 8920001, 8920002, 8920003,
-    8930000,
 }
 SUPPORTED_ROOT_ABYSS_BOSS_SKILLS = {
     (110, 5),
@@ -91,7 +94,6 @@ ROOT_ABYSS_SECOND_PHASE_BOSS_HP = {
     8900001: 3_000_000_000,
     8910001: 3_000_000_000,
     8920001: 3_000_000_000,
-    8930001: 3_000_000_000,
 }
 HIGH_VERSION_MOB_INFO_FIELDS = {
     "attack",
@@ -127,7 +129,7 @@ NPC_IDS = [
     1064008, 1064012, 1064013, 1064014, 1064015, 1064016,
 ]
 REACTOR_IDS = [
-    1052006, 1052008, 1058016, 1058020, 1058022, 1058023,
+    1052006, 1052008, 1058016, 1058022, 1058023,
     1058024, 1058025, 1058026, 1058027, 1058028, 1058029,
 ]
 
@@ -137,7 +139,6 @@ REACTOR_TEMPLATE = {
     1052006: 1052001,
     1052008: 1052001,
     1058016: 1058002,
-    1058020: 1058002,
     1058022: 1058002,
     1058023: 1058002,
     1058024: 1058002,
@@ -724,6 +725,9 @@ def migrate_map_strings() -> dict[str, int]:
     if not isinstance(category, WzSubProperty):
         category = WzSubProperty("victoria", dst.root)
         dst.root.add(category)
+    for client_category in dst.root.children():
+        for map_id in RETIRED_MAP_IDS:
+            remove_child(client_category, str(map_id))
     for map_id in ids:
         source_node = source_map_string_node(src, map_id) or fallback_map_string(map_id)
         remove_child(category, str(map_id))
@@ -737,6 +741,10 @@ def migrate_map_strings() -> dict[str, int]:
     if server_category is None:
         server_category = ET.Element("imgdir", {"name": "victoria"})
         root.append(server_category)
+    for category_node in root:
+        for child in list(category_node):
+            if child.get("name") in RETIRED_MAP_ID_STRINGS:
+                category_node.remove(child)
     for map_id in ids:
         for child in list(server_category):
             if child.get("name") == str(map_id):

@@ -47,6 +47,14 @@ export function givePlayerSrc(data: GiveForm) {
   return axios.post(`/give/v1/resource`, data);
 }
 
+export function moveToHenesys(id: number) {
+  return axios.put(`/character/v1/${id}/moveToHenesys`);
+}
+
+export function moveToHenesysByCondition(data: { id?: number; name?: string }) {
+  return axios.put('/character/v1/moveToHenesys', data);
+}
+
 export function getEquInitialInfo(id: number) {
   return axios.post(`/common/v1/getEquipmentInfoByItemId`, { id });
 }
