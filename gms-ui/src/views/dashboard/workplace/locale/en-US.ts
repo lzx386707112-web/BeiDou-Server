@@ -32,7 +32,8 @@ export default {
   'workplace.siege.monsterIds': 'Monster IDs',
   'workplace.siege.map': 'Siege City',
   'workplace.siege.customMapId': 'Custom Map ID',
-  'workplace.siege.customMapId.placeholder': 'Overrides the selected city when provided',
+  'workplace.siege.customMapId.placeholder':
+    'Overrides the selected city when provided',
   'workplace.siege.rewards': 'Damage Ranking Rewards',
   'workplace.siege.rankReward': 'Rank {rank}',
   'workplace.siege.rewardItemId': 'Item ID',

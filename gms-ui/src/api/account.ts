@@ -73,3 +73,7 @@ export function unbanAccount(id: number) {
 export function resetLoggedIn(id: number) {
   return axios.put(`/account/v1/${id}/reset/logged`);
 }
+
+export function moveToHenesys(id: number) {
+  return axios.put(`/account/v1/${id}/moveToHenesys`);
+}

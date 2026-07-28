@@ -7,6 +7,7 @@ import org.gms.constants.api.ApiConstant;
 import org.gms.dao.entity.AccountsDO;
 import org.gms.model.dto.*;
 import org.gms.service.AccountService;
+import org.gms.service.CharacterService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,10 +18,12 @@ import java.util.Map;
 @RequestMapping("/account")
 public class AccountController {
     private final AccountService accountService;
+    private final CharacterService characterService;
 
     @Autowired
-    public AccountController(AccountService accountService) {
+    public AccountController(AccountService accountService, CharacterService characterService) {
         this.accountService = accountService;
+        this.characterService = characterService;
     }
 
     @Tag(name = "/account/" + ApiConstant.LATEST)
@@ -82,6 +85,14 @@ public class AccountController {
     @PutMapping("/" + ApiConstant.LATEST + "/{id}/reset/logged")
     public ResultBody<Object> resetLoggedIn(@PathVariable("id") int id) {
         accountService.resetAllLoggedIn(id);
+        return ResultBody.success();
+    }
+
+    @Tag(name = "/account/" + ApiConstant.LATEST)
+    @Operation(summary = "移动账号下的所有角色到射手村")
+    @PutMapping("/" + ApiConstant.LATEST + "/{id}/moveToHenesys")
+    public ResultBody<Object> moveToHenesys(@PathVariable("id") int id) {
+        characterService.moveAccountToHenesys(id);
         return ResultBody.success();
     }
 

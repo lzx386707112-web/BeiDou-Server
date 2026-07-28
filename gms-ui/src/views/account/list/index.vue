@@ -141,7 +141,7 @@
           />
           <a-table-column
             :title="$t('account.list.column.operate')"
-            :width="150"
+            :width="220"
             align="center"
           >
             <template #cell="{ record }">
@@ -159,6 +159,14 @@
                 @click="restLoggedInClick(record)"
               >
                 {{ $t('account.list.column.operate.restLoggedIn') }}
+              </a-button>
+              <a-button
+                type="text"
+                size="mini"
+                status="warning"
+                @click="moveToHenesysClick(record)"
+              >
+                {{ $t('account.list.column.operate.moveToHenesys') }}
               </a-button>
               <a-popconfirm
                 type="warning"
@@ -240,12 +248,13 @@
     banAccount,
     deleteAccount,
     getAccountList,
+    moveToHenesys,
     resetLoggedIn,
     unbanAccount,
   } from '@/api/account';
   import AccountAddForm from '@/views/account/list/addForm.vue';
   import AccountUpdateForm from '@/views/account/list/updateForm.vue';
-  import { Message } from '@arco-design/web-vue';
+  import { Message, Modal } from '@arco-design/web-vue';
   import { useI18n } from 'vue-i18n';
 
   const { t } = useI18n();
@@ -336,6 +345,26 @@
     } finally {
       setLoading(false);
     }
+  };
+
+  const moveToHenesysClick = (data: AccountState) => {
+    Modal.confirm({
+      title: t('account.list.moveToHenesys.confirm.title'),
+      content: t('account.list.moveToHenesys.confirm.content', {
+        id: data.id,
+        name: data.name,
+      }),
+      okText: t('account.list.column.operate.moveToHenesys'),
+      onOk: async () => {
+        setLoading(true);
+        try {
+          await moveToHenesys(data.id);
+          Message.success(t('message.success'));
+        } finally {
+          setLoading(false);
+        }
+      },
+    });
   };
 
   const banClick = async (data: AccountState) => {

@@ -35,12 +35,14 @@ export default {
   'workplace.siege.monsterIds': '怪物ID',
   'workplace.siege.map': '攻城主城',
   'workplace.siege.customMapId': '自定义地图ID',
-  'workplace.siege.customMapId.placeholder': '填写后优先使用；留空则使用上方主城',
+  'workplace.siege.customMapId.placeholder':
+    '填写后优先使用；留空则使用上方主城',
   'workplace.siege.rewards': '伤害排行奖励',
   'workplace.siege.rankReward': '第 {rank} 名',
   'workplace.siege.rewardItemId': '物品ID',
   'workplace.siege.rewardQuantity': '数量',
-  'workplace.siege.monsterIds.placeholder': '多个怪物ID可用逗号、空格或换行分隔',
+  'workplace.siege.monsterIds.placeholder':
+    '多个怪物ID可用逗号、空格或换行分隔',
   'workplace.siege.monsterIds.required': '请输入有效的怪物ID',
   'workplace.siege.count': '每个ID召唤数量',
   'workplace.siege.broadcast': '发送全服广播',

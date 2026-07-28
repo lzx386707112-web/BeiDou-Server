@@ -21,6 +21,10 @@ export default {
   'account.list.column.operate.unban.confirm':
     'Are you sure to unban this account?',
   'account.list.column.operate.restLoggedIn': 'restLog',
+  'account.list.column.operate.moveToHenesys': 'Move to Henesys',
+  'account.list.moveToHenesys.confirm.title': 'Confirm Account Move',
+  'account.list.moveToHenesys.confirm.content':
+    'Move all characters under account [{id}] {name} to Henesys? Online characters will move immediately; offline characters will move on their next login.',
   'account.list.column.operate.delete': 'delete',
   'account.list.column.operate.delete.confirm':
     'Are you really to delete this account?',

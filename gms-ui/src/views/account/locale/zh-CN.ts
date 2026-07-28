@@ -20,6 +20,10 @@ export default {
   'account.list.column.operate.unban': '解封',
   'account.list.column.operate.unban.confirm': '你确定要解除该账号的封禁状态？',
   'account.list.column.operate.restLoggedIn': '解卡',
+  'account.list.column.operate.moveToHenesys': '移到射手村',
+  'account.list.moveToHenesys.confirm.title': '确认移动账号角色',
+  'account.list.moveToHenesys.confirm.content':
+    '确定要把账号 [{id}] {name} 下的所有角色移到射手村吗？在线角色会立即传送，离线角色将在下次登录时生效。',
   'account.list.column.operate.delete': '删除',
   'account.list.column.operate.delete.confirm': '你确定要删除该账号吗？',
 

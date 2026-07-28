@@ -65,6 +65,7 @@ import static org.gms.dao.entity.table.WishlistsDOTableDef.WISHLISTS_D_O;
 @Slf4j
 public class CharacterService {
     private final ExtendValueMapper extendValueMapper;
+    private final AccountsMapper accountsMapper;
     private final CharactersMapper charactersMapper;
     private final SkillsMapper skillsMapper;
     private final SkillmacrosMapper skillmacrosMapper;
@@ -152,6 +153,13 @@ public class CharacterService {
         }
 
         charactersMapper.updateLocation(characterId, MapId.HENESYS, 0);
+    }
+
+    public void moveAccountToHenesys(int accountId) {
+        RequireUtil.requireNotNull(accountsMapper.selectOneById(accountId), I18nUtil.getExceptionMessage("AccountService.id.NotExist"));
+        for (CharactersDO character : charactersMapper.selectIdAndWorldListByAccountId(accountId)) {
+            moveToHenesys(character.getId());
+        }
     }
 
     private Character getOnlineCharacterById(int characterId) {

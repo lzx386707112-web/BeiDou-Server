@@ -4,8 +4,7 @@ var bossMaps = Array(
     Array(450010100, 500000, "觉醒希拉                       #r（消耗50万金币）#b", 8880400, -1, 855, 266),
     Array(450009400, 500000, "亲卫队长敦凯尔            #r（消耗50万金币）#b", 8645009, -1, -1, -157),
     Array(900000207, 500000, "守护天使绿水灵            #r（消耗50万金币）#b", 8880700, -1, 703, -1394),
-    Array(410002060, 500000, "监视者卡洛斯                #r（消耗50万金币）#b", 8880803, -1, 900, 325),
-    Array(410002061, 500000, "沦陷的监视者卡洛斯    #r（消耗50万金币）#b", 8880820, 410002060, 900, 325)
+    Array(410002060, 500000, "监视者卡洛斯                #r（消耗50万金币）#b", 8880803, -1, 900, 325)
 );
 
 var entryItems = Array(
@@ -14,7 +13,7 @@ var entryItems = Array(
 );
 
 function start() {
-    if (cm.getPlayer().getLevel() < 100) {
+    if (!cm.getPlayer().isGM() && cm.getPlayer().getLevel() < 100) {
         cm.sendOk("达到 100 级后才可以使用高级 Boss 传送。");
         cm.dispose();
         return;
@@ -40,13 +39,14 @@ function levelBoss(selection) {
     var fallbackMapId = config[4];
     var bossX = config[5];
     var bossY = config[6];
+    var isGM = cm.getPlayer().isGM();
 
-    if (cm.getPlayer().getMeso() < cost) {
+    if (!isGM && cm.getPlayer().getMeso() < cost) {
         cm.sendOk("您的金币不足，无法传送！需要 " + cost + " 金币。");
         cm.dispose();
         return;
     }
-    if (!hasEntryItems()) {
+    if (!isGM && !hasEntryItems()) {
         cm.sendOk("进入该 Boss 地图除 " + cost + " 金币外，还需要：\r\n" + getEntryItemText());
         cm.dispose();
         return;
@@ -80,8 +80,10 @@ function levelBoss(selection) {
         targetMap.spawnMonsterOnGroundBelow(boss, new Point(bossX, bossY));
     }
 
-    cm.gainMeso(-cost);
-    changeEntryItems(-1);
+    if (!isGM) {
+        cm.gainMeso(-cost);
+        changeEntryItems(-1);
+    }
     cm.getPlayer().saveLocationOnWarp();
 
     var targetPortal = targetMap.getPortal("bossRetry");
