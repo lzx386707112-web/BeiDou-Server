@@ -69,6 +69,21 @@ public class PlayerStorage {
         }
     }
 
+    public boolean removePlayer(Character chr) {
+        wlock.lock();
+        try {
+            if (storage.get(chr.getId()) != chr) {
+                return false;
+            }
+
+            storage.remove(chr.getId());
+            nameStorage.remove(chr.getName().toLowerCase(), chr);
+            return true;
+        } finally {
+            wlock.unlock();
+        }
+    }
+
     public Character getCharacterByName(String name) {
         rlock.lock();
         try {

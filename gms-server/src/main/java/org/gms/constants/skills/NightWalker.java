@@ -48,4 +48,40 @@ public class NightWalker {
     public static final int VENOM = 14110004;
     public static final int TRIPLE_THROW = 14110005;
     public static final int POISON_BOMB = 14111006;
+
+    // TMS V/VI compatibility IDs in the otherwise empty 1412 skill book.
+    public static final int SHADOW_BITE = 14121003;
+    public static final int RAPID_THROW = 14121004;
+    public static final int RAPID_THROW_FINISH = 14121005;
+    public static final int RAPID_THROW_UPPER_DART = 14121006;
+    public static final int RAPID_THROW_MIDDLE_DART = 14121007;
+    public static final int RAPID_THROW_LOWER_DART = 14121008;
+    public static final int QUINTUPLE_THROW_VI_NORMAL = 14121009;
+    public static final int QUINTUPLE_THROW_VI = 14121010;
+    public static final int QUINTUPLE_THROW_VI_ENHANCED = 14121011;
+    public static final int QUINTUPLE_THROW_VI_ALTERNATE = 14121012;
+    public static final int QUINTUPLE_THROW_VI_TRACKING = 14121013;
+    public static final int SHADOW_BITE_NORMAL_HIT = 14121014;
+    public static final int SHADOW_BITE_BOSS_HIT = 14121015;
+    public static final int SHADOW_BITE_SHADOW_BAT = 14121016;
+    public static final int SHADOW_BITE_RAVENOUS_BAT = 14121017;
+    public static final int DARK_OMEN_VI = 14121027;
+    public static final int DARK_OMEN_VI_TICK = 14121028;
+    public static final int DOMINION_VI = 14121030;
+    public static final int STYGIAN_COMMAND_MAIN = 14121031;
+    public static final int SILENT_NIGHT = 14121032;
+    public static final int SILENT_NIGHT_DART = 14121033;
+    public static final int SILENT_NIGHT_PROJECTILE = 14121034;
+    public static final int STYGIAN_COMMAND = 14121035;
+    public static final int STYGIAN_COMMAND_FINISH = 14121036;
+
+    public static final int[] V_VI_ACTIVE_SKILLS = {
+        SHADOW_BITE,
+        RAPID_THROW,
+        QUINTUPLE_THROW_VI,
+        DARK_OMEN_VI,
+        DOMINION_VI,
+        SILENT_NIGHT,
+        STYGIAN_COMMAND
+    };
 }

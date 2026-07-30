@@ -38,25 +38,254 @@ import org.gms.constants.skills.NightWalker;
 import org.gms.constants.skills.Rogue;
 import org.gms.constants.skills.WindArcher;
 import org.gms.net.packet.InPacket;
+import org.gms.net.packet.Packet;
 import org.gms.server.StatEffect;
 import org.gms.server.TimerManager;
+import org.gms.server.life.Monster;
+import org.gms.server.maps.MapObject;
+import org.gms.server.maps.MapObjectType;
+import org.gms.server.maps.MapleMap;
 import org.gms.util.PacketCreator;
 import org.gms.util.Pair;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.awt.Point;
+import java.awt.Rectangle;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
+    private static final Logger log = LoggerFactory.getLogger(CloseRangeDamageHandler.class);
+    private static final String ANIMATED_ATTACK_LOG_VERSION = "DW_ANIM v3";
     private static final int SWORD_ILLUSION_HIT_DELAY_MS = 1000;
     private static final int DEATH_FAULT_HIT_DELAY_MS = 1000;
     private static final String DEATH_FAULT_FIELD_EFFECT = "customSkill/deathFault/full";
-    private static final int GALAXY_STAR_BURST_HIT_DELAY_MS = 1800;
-    private static final int SOUL_ECLIPSE_HIT_DELAY_MS = 1500;
-    private static final String GALAXY_STAR_BURST_FIELD_EFFECT = "customSkill/dawnWarrior/galaxyStarBurst";
-    private static final String SOUL_ECLIPSE_FIELD_EFFECT = "customSkill/dawnWarrior/soulEclipse";
+    private static final String GALAXY_STAR_BURST_VIDEO_LAYER =
+            "customSkill/dawnWarrior/galaxyStarBurstVideoLayer";
+    private static final String ECLIPSE_FORCE_VIDEO_LAYER =
+            "customSkill/dawnWarrior/eclipseForceVideoLayer";
+    private static final String SOUL_ECLIPSE_VIDEO_LAYER =
+            "customSkill/dawnWarrior/soulEclipseVideoLayer";
+    private static final int[] GALAXY_STAR_BURST_ATTACK_TIMES_MS = {
+        1200, 1380, 1560, 1740, 3180, 3360, 3540, 3720, 4560, 4740, 6240, 6420, 6600, 6780
+    };
+    private static final int[] ECLIPSE_FORCE_ATTACK_TIMES_MS = {
+        1200, 1380, 1560, 1740, 1920, 2100, 2280, 2340,
+        3120, 3300, 3480, 3660, 3840, 4020, 4200, 4260
+    };
+    private static final int[] SOUL_ECLIPSE_ATTACK_TIMES_MS = {
+        1200, 1800, 2400, 3000, 3600, 4200, 4800, 5400, 6000, 6600,
+        7200, 7800, 8400, 9000, 9600, 10200, 10800, 11400, 12000, 12600,
+        13200, 13800, 14400, 15000, 15600, 16200, 16800, 17400, 18000, 18600,
+        19200, 19800
+    };
+    private static final int[] COSMOS_ATTACK_TIMES_MS = {
+        450, 900, 1350, 1800, 2250, 2700, 3150, 3600, 4050, 4500, 4950,
+        5400, 5850, 6300, 6750, 7200, 7650, 8100, 8550, 9000, 9450, 9900,
+        10350, 10800, 11250, 11700, 12150, 12600, 13050, 13500, 13950, 14400,
+        14850
+    };
+
+    private static boolean canContinueAnimatedAttack(Character chr, MapleMap expectedMap) {
+        return chr.isLoggedIn() && chr.isAlive() && chr.getMap() == expectedMap;
+    }
+
+    private static int decodeRepeatedDamage(int damage) {
+        if (damage >= 0) {
+            return damage;
+        }
+        return (int) Math.min(Integer.MAX_VALUE, (long) damage + (long) Integer.MAX_VALUE + 1L);
+    }
+
+    private static List<Integer> copyCapturedDamageTemplate(AttackInfo attack) {
+        for (List<Integer> damage : attack.allDamage.values()) {
+            if (damage != null && !damage.isEmpty()) {
+                return new ArrayList<>(damage);
+            }
+        }
+        return Collections.emptyList();
+    }
+
+    private static Map<Integer, List<Integer>> collectAnimatedAttackTargets(
+            AttackInfo attack,
+            MapleMap expectedMap,
+            Rectangle attackBounds,
+            int mobCount,
+            List<Integer> damageTemplate
+    ) {
+        Map<Integer, List<Integer>> liveDamage = new LinkedHashMap<>();
+        if (attackBounds != null && !damageTemplate.isEmpty()) {
+            List<MapObject> targets = expectedMap.getMapObjectsInBox(
+                    attackBounds,
+                    Collections.singletonList(MapObjectType.MONSTER)
+            );
+            for (MapObject target : targets) {
+                Monster monster = (Monster) target;
+                if (monster.isAlive()) {
+                    liveDamage.put(monster.getObjectId(), new ArrayList<>(damageTemplate));
+                    if (liveDamage.size() >= mobCount) {
+                        break;
+                    }
+                }
+            }
+            return liveDamage;
+        }
+
+        for (Map.Entry<Integer, List<Integer>> entry : attack.allDamage.entrySet()) {
+            Monster monster = expectedMap.getMonsterByOid(entry.getKey());
+            if (monster != null && monster.isAlive() && entry.getValue() != null) {
+                liveDamage.put(entry.getKey(), entry.getValue());
+            }
+        }
+        return liveDamage;
+    }
+
+    private static int repeatCapturedAttack(
+            AttackInfo attack,
+            Character chr,
+            MapleMap expectedMap,
+            Rectangle attackBounds,
+            int mobCount,
+            List<Integer> damageTemplate
+    ) {
+        if (!canContinueAnimatedAttack(chr, expectedMap)) {
+            return -1;
+        }
+        Map<Integer, List<Integer>> liveDamage = collectAnimatedAttackTargets(
+                attack,
+                expectedMap,
+                attackBounds,
+                mobCount,
+                damageTemplate
+        );
+        if (liveDamage.isEmpty()) {
+            return 0;
+        }
+
+        int packedCount = (Math.min(15, liveDamage.size()) << 4) | (attack.numDamage & 0xF);
+        Packet repeatedAttack = PacketCreator.closeRangeAttack(
+                chr,
+                attack.skill,
+                attack.skilllevel,
+                attack.stance,
+                packedCount,
+                liveDamage,
+                attack.speed,
+                attack.direction,
+                attack.display
+        );
+        chr.sendPacket(repeatedAttack);
+        expectedMap.broadcastMessage(chr, repeatedAttack, false, true);
+
+        for (Map.Entry<Integer, List<Integer>> entry : liveDamage.entrySet()) {
+            Monster monster = expectedMap.getMonsterByOid(entry.getKey());
+            if (monster == null || !monster.isAlive()) {
+                continue;
+            }
+            int damage = 0;
+            for (Integer hit : entry.getValue()) {
+                damage = (int) Math.min(Integer.MAX_VALUE, (long) damage + decodeRepeatedDamage(hit));
+            }
+            chr.sendPacket(PacketCreator.damageMonster(monster.getObjectId(), damage));
+            monster.aggroMonsterDamage(chr, damage);
+            expectedMap.damageMonster(chr, monster, damage);
+        }
+        return liveDamage.size();
+    }
+
+    private static void showCapturedDamageNumbers(AttackInfo attack, Character chr, MapleMap expectedMap) {
+        for (Map.Entry<Integer, List<Integer>> entry : attack.allDamage.entrySet()) {
+            Monster monster = expectedMap.getMonsterByOid(entry.getKey());
+            if (monster == null || !monster.isAlive() || entry.getValue() == null) {
+                continue;
+            }
+            int damage = 0;
+            for (Integer hit : entry.getValue()) {
+                damage = (int) Math.min(Integer.MAX_VALUE, (long) damage + decodeRepeatedDamage(hit));
+            }
+            chr.sendPacket(PacketCreator.damageMonster(monster.getObjectId(), damage));
+        }
+    }
+
+    private void scheduleAnimatedAttacks(
+            AttackInfo attack,
+            Character chr,
+            int attackCount,
+            int[] attackTimesMs
+    ) {
+        MapleMap expectedMap = chr.getMap();
+        Skill skill = SkillFactory.getSkill(attack.skill);
+        StatEffect effect = skill.getEffect(chr.getSkillLevel(skill));
+        Point castPosition = new Point(chr.getPosition());
+        Rectangle attackBounds = effect.hasBoundingBox()
+                ? effect.calculateBoundingBox(castPosition, attack.direction == 0)
+                : null;
+        int mobCount = Math.max(1, Math.min(15, effect.getMobCount()));
+        List<Integer> damageTemplate = copyCapturedDamageTemplate(attack);
+        log.info(
+                "{} schedule skill={} ticks={} initialTargets={} templateHits={} bounds={}",
+                ANIMATED_ATTACK_LOG_VERSION,
+                attack.skill,
+                attackTimesMs.length,
+                attack.allDamage.size(),
+                damageTemplate.size(),
+                attackBounds
+        );
+        for (int index = 0; index < attackTimesMs.length; index++) {
+            final int tickIndex = index;
+            TimerManager.getInstance().schedule(() -> {
+                if (!canContinueAnimatedAttack(chr, expectedMap)) {
+                    if (tickIndex == 0 || tickIndex == 1 || tickIndex == attackTimesMs.length - 1) {
+                        log.info(
+                                "{} stop skill={} tick={}/{} reason=character-state-or-map",
+                                ANIMATED_ATTACK_LOG_VERSION,
+                                attack.skill,
+                                tickIndex + 1,
+                                attackTimesMs.length
+                        );
+                    }
+                    return;
+                }
+                if (tickIndex == 0) {
+                    showCapturedDamageNumbers(attack, chr, expectedMap);
+                    applyAttack(attack, chr, attackCount);
+                    log.info(
+                            "{} first skill={} tick=1/{} targets={}",
+                            ANIMATED_ATTACK_LOG_VERSION,
+                            attack.skill,
+                            attackTimesMs.length,
+                            attack.allDamage.size()
+                    );
+                } else {
+                    int targets = repeatCapturedAttack(
+                            attack,
+                            chr,
+                            expectedMap,
+                            attackBounds,
+                            mobCount,
+                            damageTemplate
+                    );
+                    if (tickIndex == 1 || tickIndex == attackTimesMs.length - 1) {
+                        log.info(
+                                "{} repeat skill={} tick={}/{} targets={}",
+                                ANIMATED_ATTACK_LOG_VERSION,
+                                attack.skill,
+                                tickIndex + 1,
+                                attackTimesMs.length,
+                                targets
+                        );
+                    }
+                }
+            }, attackTimesMs[index]);
+        }
+    }
 
     @Override
     public final void handlePacket(InPacket p, Client c) {
@@ -207,13 +436,16 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
             final int delayedAttackCount = attackCount;
             TimerManager.getInstance().schedule(() -> applyAttack(attack, chr, delayedAttackCount), DEATH_FAULT_HIT_DELAY_MS);
         } else if (attack.skill == DawnWarrior.GALAXY_STAR_BURST) {
-            chr.getMap().broadcastMessage(PacketCreator.showEffect(GALAXY_STAR_BURST_FIELD_EFFECT));
-            final int delayedAttackCount = attackCount;
-            TimerManager.getInstance().schedule(() -> applyAttack(attack, chr, delayedAttackCount), GALAXY_STAR_BURST_HIT_DELAY_MS);
+            chr.sendPacket(PacketCreator.showEffect(GALAXY_STAR_BURST_VIDEO_LAYER));
+            scheduleAnimatedAttacks(attack, chr, attackCount, GALAXY_STAR_BURST_ATTACK_TIMES_MS);
+        } else if (attack.skill == DawnWarrior.ECLIPSE_FORCE) {
+            chr.sendPacket(PacketCreator.showEffect(ECLIPSE_FORCE_VIDEO_LAYER));
+            scheduleAnimatedAttacks(attack, chr, attackCount, ECLIPSE_FORCE_ATTACK_TIMES_MS);
         } else if (attack.skill == DawnWarrior.SOUL_ECLIPSE) {
-            chr.getMap().broadcastMessage(PacketCreator.showEffect(SOUL_ECLIPSE_FIELD_EFFECT));
-            final int delayedAttackCount = attackCount;
-            TimerManager.getInstance().schedule(() -> applyAttack(attack, chr, delayedAttackCount), SOUL_ECLIPSE_HIT_DELAY_MS);
+            chr.sendPacket(PacketCreator.showEffect(SOUL_ECLIPSE_VIDEO_LAYER));
+            scheduleAnimatedAttacks(attack, chr, attackCount, SOUL_ECLIPSE_ATTACK_TIMES_MS);
+        } else if (attack.skill == DawnWarrior.COSMOS) {
+            scheduleAnimatedAttacks(attack, chr, attackCount, COSMOS_ATTACK_TIMES_MS);
         } else {
             applyAttack(attack, chr, attackCount);
         }

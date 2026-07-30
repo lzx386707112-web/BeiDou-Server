@@ -47,4 +47,31 @@ public class BlazeWizard {
     public static final int IFRIT = 12111004;
     public static final int FLAME_GEAR = 12111005;
     public static final int FIRE_STRIKE = 12111006;
+
+    // Custom 4th-job compatibility IDs for every TMS Blaze Wizard V/VI attack/state node.
+    public static final int FLAME_DISCHARGE_LION = 12121001;
+    public static final int FLAME_DISCHARGE_LION_BURST = 12121002;
+    public static final int FLAME_DISCHARGE_LION_EMBER = 12121003;
+    public static final int FLAME_DISCHARGE_LION_FINISH = 12121004;
+    public static final int INFERNO_SPHERE = 12121007;
+    public static final int MAGIC_ERUPTION_VI = 12121020;
+    public static final int MAGIC_ERUPTION_VI_BREATH = 12121021;
+    public static final int PHOENIX_DRIVE_VI = 12121022;
+    public static final int ETERNAL_PHOENIX = 12121025;
+    public static final int ETERNAL_PHOENIX_CYCLE = 12121026;
+    public static final int ETERNAL_PHOENIX_STATE = 12121027;
+    public static final int FLAME_CONCERTO = 12121028;
+    public static final int FLAME_CONCERTO_FINISH = 12121029;
+    public static final int INFERNO_SPHERE_TICK = 12121030;
+    public static final int PHOENIX_DRIVE_VI_TICK = 12121033;
+    public static final int ETERNAL_PHOENIX_BURST = 12121035;
+    public static final int FLAME_CONCERTO_MAIN = 12121036;
+
+    public static final int[] V_VI_ACTIVE_ATTACKS = {
+        FLAME_DISCHARGE_LION,
+        INFERNO_SPHERE,
+        PHOENIX_DRIVE_VI,
+        ETERNAL_PHOENIX,
+        FLAME_CONCERTO
+    };
 }

@@ -1047,7 +1047,7 @@ public class Character extends AbstractCharacterObject {
     }
 
     public void setMasteries(int jobId) {
-        int[] skills = new int[]{0, 0, 0, 0};
+        int[] skills = new int[BlazeWizard.V_VI_ACTIVE_ATTACKS.length];
         if (jobId == 112) {
             skills[0] = Hero.ACHILLES;
             skills[1] = Hero.MONSTER_MAGNET;
@@ -1099,6 +1099,10 @@ public class Character extends AbstractCharacterObject {
             skills[1] = Corsair.BULLSEYE;
             skills[2] = Corsair.WRATH_OF_THE_OCTOPI;
             skills[3] = Corsair.RAPID_FIRE;
+        } else if (jobId == Job.DAWNWARRIOR4.getId()) {
+            System.arraycopy(DawnWarrior.V_VI_ACTIVE_ATTACKS, 0, skills, 0, DawnWarrior.V_VI_ACTIVE_ATTACKS.length);
+        } else if (jobId == Job.BLAZEWIZARD4.getId()) {
+            System.arraycopy(BlazeWizard.V_VI_ACTIVE_ATTACKS, 0, skills, 0, BlazeWizard.V_VI_ACTIVE_ATTACKS.length);
         } else if (jobId == 2112) {
             skills[0] = Aran.OVER_SWING;
             skills[1] = Aran.HIGH_MASTERY;
@@ -1117,11 +1121,14 @@ public class Character extends AbstractCharacterObject {
                     continue;
                 }
                 final int skilllevel = getSkillLevel(skill);
-                if (skilllevel > 0) {
+                if (jobId == Job.DAWNWARRIOR4.getId() || jobId == Job.BLAZEWIZARD4.getId()) {
+                    if (skilllevel >= 30 && getMasterLevel(skill) >= 30) {
+                        continue;
+                    }
+                    changeSkillLevel(skill, (byte) 30, 30, -1);
+                } else if (skilllevel > 0) {
                     continue;
-                }
-
-                if (skillId == Hero.RAGING_BLOW_VI) {
+                } else if (skillId == Hero.RAGING_BLOW_VI) {
                     changeSkillLevel(skill, (byte) 30, 30, -1);
                 } else {
                     changeSkillLevel(skill, (byte) 0, 10, -1);

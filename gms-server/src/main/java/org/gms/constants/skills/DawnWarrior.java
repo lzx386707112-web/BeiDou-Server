@@ -49,27 +49,19 @@ public class DawnWarrior {
     public static final int SOUL_CHARGE = 11111007;
 
     // Custom 4th-job compatibility IDs for TMS Dawn Warrior V/VI attacks.
-    public static final int MOONLIGHT_DIVIDE_VI = 11121000;
-    public static final int SUN_CROSS_VI = 11121001;
-    public static final int COSMIC_BOMBARDMENT_VI = 11121002;
-    public static final int COSMIC_BURST_VI = 11121003;
-    public static final int DOUBLE_SLASH_VI = 11121004;
     public static final int GALAXY_STAR_BURST = 11121005;
     public static final int ECLIPSE_FORCE = 11121006;
     public static final int ECLIPSE_FORCE_FINISH = 11121007;
     public static final int SOUL_ECLIPSE = 11121008;
     public static final int SUN_MOON_DIVIDE = 11121009;
+    public static final int STYX_CROSS = 11121011;
+    public static final int COSMOS = 11121012;
 
     public static final int[] V_VI_ACTIVE_ATTACKS = {
-        MOONLIGHT_DIVIDE_VI,
-        SUN_CROSS_VI,
-        COSMIC_BOMBARDMENT_VI,
-        COSMIC_BURST_VI,
-        DOUBLE_SLASH_VI,
         GALAXY_STAR_BURST,
         ECLIPSE_FORCE,
-        ECLIPSE_FORCE_FINISH,
         SOUL_ECLIPSE,
-        SUN_MOON_DIVIDE
+        STYX_CROSS,
+        COSMOS
     };
 }

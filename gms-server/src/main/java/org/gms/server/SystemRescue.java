@@ -32,6 +32,8 @@ public class SystemRescue {
      * 卡地图救援，将某个倒霉蛋解救到其它地图。
      */
     public void setMapChange(Character player) {
+        if (player == null || player.getMap() == null) return;
+
         MapleMap MapObj = player.getMap();
         int MapId = GameConfig.getServerInt("system_rescue_maperror_changeid");    // 该参数为控制台配置，设置地图ID大于0则启用。设置不存在的ID则改为随机传送到金银岛某个城镇。
         if (MapId <= 0 && !player.isChangingMaps()) return;  // 如果 MapId 不大于0 且 玩家角色非切换地图状态，直接返回
@@ -64,13 +66,15 @@ public class SystemRescue {
             }
         }
         if (MapId == org.gms.constants.id.MapId.FM_ENTRANCE) {
-            int MapId_ret = MapObj.getForcedReturnMap().getId();
-            if (MapObj.getTimeLimit() != -1 || MapObj.isEventMap() || MapObj.getEventInstance() != null) player.changeMap(MapId_ret);  //为迷你地图或者事件地图，先转移到返回地图
+            MapleMap forcedReturnMap = MapObj.getForcedReturnMap();
+            if (forcedReturnMap != null && (MapObj.getTimeLimit() != -1 || MapObj.isEventMap() || MapObj.getEventInstance() != null)) {
+                player.changeMap(forcedReturnMap.getId());  //为迷你地图或者事件地图，先转移到返回地图
+            }
             player.saveLocation("FREE_MARKET");    //如果传送的地图时自由市场则保存当前地图，方便下次出来。
         }
         //考虑到可能会出现地图文件改错改坏造成的闪退，因此不判定地图是否存在再进行转移。
         player.changeMap(MapId);    // 更改角色地图ID，之后才可以执行下方的读取转移后的地图信息。
-        String MapName = MapObj.getMapName();
+        String MapName = player.getMap() == null ? MapName_error : player.getMap().getMapName();
         String Message_system = I18nUtil.getMessage("SystemRescue.map.message1", MapName_error, MapName);
         player.getAbstractPlayerInteraction().saveOrUpdateCharacterExtendValue(key_mapError_sysmsg, Message_system);    //记录通知消息
         log.info(Lebel + I18nUtil.getLogMessage("SystemRescue.info.map.message2"), player.getName(), MapName_error, MapId_error, MapName, MapId);

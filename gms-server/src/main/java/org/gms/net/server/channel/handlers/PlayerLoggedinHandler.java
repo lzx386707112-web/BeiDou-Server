@@ -42,8 +42,11 @@ import org.gms.client.keybind.KeyBinding;
 import org.gms.config.GameConfig;
 import org.gms.constants.game.GameConstants;
 import org.gms.constants.skills.Hero;
+import org.gms.constants.skills.BlazeWizard;
 import org.gms.constants.skills.DawnWarrior;
+import org.gms.constants.skills.NightWalker;
 import org.gms.manager.ServerManager;
+import org.gms.model.pojo.SkillEntry;
 import org.gms.net.AbstractPacketHandler;
 import org.gms.net.packet.InPacket;
 import org.gms.net.server.PlayerBuffValueHolder;
@@ -254,6 +257,8 @@ public final class PlayerLoggedinHandler extends AbstractPacketHandler {
 
             grantRagingBlowVi(player);
             grantDawnWarriorVViAttacks(player);
+            grantBlazeWizardVViAttacks(player);
+            grantNightWalkerVViSkills(player);
             c.sendPacket(PacketCreator.getCharInfo(player));    //这里发送登录成功封包
             if (player.isHidden()) {
                 if (!GameConfig.getServerBoolean("use_auto_hide_gm")) {
@@ -545,7 +550,41 @@ public final class PlayerLoggedinHandler extends AbstractPacketHandler {
             if (player.getSkillLevel(skill) >= 30 && player.getMasterLevel(skill) >= 30) {
                 continue;
             }
-            player.changeSkillLevel(skill, (byte) 30, 30, -1);
+            player.getEditableSkills().put(skill, new SkillEntry((byte) 30, 30, -1));
+        }
+    }
+
+    private static void grantBlazeWizardVViAttacks(Character player) {
+        if (!player.getJob().isA(Job.BLAZEWIZARD4)) {
+            return;
+        }
+        for (int skillId : BlazeWizard.V_VI_ACTIVE_ATTACKS) {
+            Skill skill = SkillFactory.getSkill(skillId);
+            if (skill == null) {
+                continue;
+            }
+            if (player.getSkillLevel(skill) >= 30 && player.getMasterLevel(skill) >= 30) {
+                continue;
+            }
+            player.getEditableSkills().put(skill, new SkillEntry((byte) 30, 30, -1));
+        }
+    }
+
+    private static void grantNightWalkerVViSkills(Character player) {
+        // v83 Cygnus characters remain on the 1411 final job even though the
+        // compatibility skill book is 1412. isA(1411) also accepts custom 1412 jobs.
+        if (!player.getJob().isA(Job.NIGHTWALKER3)) {
+            return;
+        }
+        for (int skillId : NightWalker.V_VI_ACTIVE_SKILLS) {
+            Skill skill = SkillFactory.getSkill(skillId);
+            if (skill == null) {
+                continue;
+            }
+            if (player.getSkillLevel(skill) >= 30 && player.getMasterLevel(skill) >= 30) {
+                continue;
+            }
+            player.getEditableSkills().put(skill, new SkillEntry((byte) 30, 30, -1));
         }
     }
 }

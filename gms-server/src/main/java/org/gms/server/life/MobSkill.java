@@ -306,6 +306,10 @@ public class MobSkill {
 
     private void applyBanishEffect(boolean skill, Monster monster, Character player,
                                    List<Character> banishPlayersOutput) {
+        if (monster.getBanish() == null || banishPlayersOutput == null) {
+            return;
+        }
+
         if (lt != null && rb != null && skill) {
             banishPlayersOutput.addAll(getPlayersInRange(monster));
         } else {

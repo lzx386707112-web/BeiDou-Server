@@ -496,7 +496,8 @@ public class GameConstants {
     }
 
     public static boolean isHiddenSkills(final int skill) {
-        return Aran.HIDDEN_FULL_DOUBLE == skill || Aran.HIDDEN_FULL_TRIPLE == skill || Aran.HIDDEN_OVER_DOUBLE == skill || Aran.HIDDEN_OVER_TRIPLE == skill;
+        return Aran.HIDDEN_FULL_DOUBLE == skill || Aran.HIDDEN_FULL_TRIPLE == skill || Aran.HIDDEN_OVER_DOUBLE == skill || Aran.HIDDEN_OVER_TRIPLE == skill
+                || DawnWarrior.ECLIPSE_FORCE_FINISH == skill || DawnWarrior.SUN_MOON_DIVIDE == skill;
     }
 
     public static boolean isCygnus(final int job) {

@@ -1480,7 +1480,7 @@ public class MapleMap {
             }
         }
         if (monster.isAlive()) {
-            int actualDamage = BossDamageGrowth.applyBossDamageBonus(chr, monster.getId(), damage);
+            int actualDamage = BossDamageGrowth.apply(chr, monster, damage);
             boolean killed = monster.damage(chr, actualDamage, false);
 
             selfDestruction selfDestr = monster.getStats().selfDestruction();
@@ -1614,7 +1614,7 @@ public class MapleMap {
                     }
 
                     Character dropOwner = monster.killBy(chr);
-                    BossDamageGrowth.recordBossKill(chr, monster.getId());
+                    BossDamageGrowth.recordBossKill(monster);
                     if (withDrops && !monster.dropsDisabled()) {
                         if (dropOwner == null) {
                             dropOwner = chr;

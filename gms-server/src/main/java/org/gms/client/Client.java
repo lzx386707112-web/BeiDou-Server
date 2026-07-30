@@ -247,8 +247,8 @@ public class Client extends ChannelInboundHandlerAdapter {
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        // 修复点1：多层非空校验 + 状态防护，避免NPE
-        if (player != null && !player.isLoggedInWorld()) {
+        // 网络断开只需清理会话，不属于地图异常。
+        if (!(cause instanceof IOException) && player != null && !player.isLoggedInWorld()) {
             // 防护：player.getMap() 可能为null
             String mapName = "未知地图";
             int mapId = -1;
@@ -259,7 +259,6 @@ public class Client extends ChannelInboundHandlerAdapter {
 
             log.warn(I18nUtil.getLogMessage("Client.warn.map.message1"), player, mapName, mapId, cause);
 
-            // 修复点2：防护 sysRescue 为null（仅初始化后执行救援）
             if (sysRescue != null) {
                 try {
                     sysRescue.setMapChange(player);   // 尝试解救卡地图玩家
@@ -269,11 +268,9 @@ public class Client extends ChannelInboundHandlerAdapter {
             }
         }
 
-        // 原有逻辑：按异常类型处理连接关闭
         if (cause instanceof InvalidPacketHeaderException) {
             SessionCoordinator.getInstance().closeSession(this, true);
         } else if (cause instanceof IOException) {
-            // 修复点3：closeMapleSession 时增加异常防护，避免连锁报错
             try {
                 closeMapleSession();
             } catch (Throwable t) {
@@ -1008,8 +1005,13 @@ public class Client extends ChannelInboundHandlerAdapter {
         }
     }
 
-    public void timeoutDisconnect() {
+    public boolean timeoutDisconnect() {
+        if (!canDisconnect()) {
+            return false;
+        }
+
         disconnectInternal(false, true);
+        return true;
     }
 
     private synchronized boolean canDisconnect() {

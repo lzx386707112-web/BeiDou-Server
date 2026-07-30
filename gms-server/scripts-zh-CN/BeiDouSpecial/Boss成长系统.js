@@ -9,23 +9,23 @@ var CARD_ICON = "#fUI/UIWindow.img/MonsterBook/icon/0#";
 var BOSS_ICON = "#fUI/UIWindow.img/UserInfo/bossPetCrown#";
 var BOSS_KILL_LIMIT = 10;
 
-// 按BOSS强度排序，每只独立封顶10次；满属性合计400%。
+// 按BOSS强度排序，每只独立封顶10次；满属性合计40%。
 var BOSS_DATA = [
-    { key: "papulatus", name: "帕普拉图斯", maxBonus: 10, mob: 8500002 },
-    { key: "scarga", name: "狮熊双王", maxBonus: 12, mob: 9420544 },
-    { key: "yaoseng", name: "武林妖僧", maxBonus: 14, mob: 9600025 },
-    { key: "krexel", name: "克雷塞尔", maxBonus: 16, mob: 9420522 },
-    { key: "zakum", name: "扎昆", maxBonus: 18, mob: 8800002 },
-    { key: "showa", name: "昭和大头老板", maxBonus: 24, mob: 9400300 },
-    { key: "horntail", name: "暗黑龙王", maxBonus: 26, mob: 8810018 },
-    { key: "pinkbean", name: "品克缤", maxBonus: 28, mob: 8820001 },
-    { key: "tokyo_vergamot", name: "贝尔加莫特", maxBonus: 30, mob: 9400265 },
-    { key: "tokyo_dunas", name: "都纳斯", maxBonus: 32, mob: 9400270 },
-    { key: "tokyo_nibergen", name: "尼贝隆", maxBonus: 34, mob: 9400273 },
-    { key: "tokyo_nux", name: "努克斯", maxBonus: 36, mob: 9400266 },
-    { key: "tokyo_dunas2", name: "再生都纳斯", maxBonus: 38, mob: 9400294 },
-    { key: "tokyo_aufheben", name: "欧碧拉", maxBonus: 40, mob: 9400289 },
-    { key: "vonleon", name: "狮子王", maxBonus: 42, mob: 8840000 }
+    { key: "papulatus", name: "帕普拉图斯", maxBonus: 1.0, mob: 8500002 },
+    { key: "scarga", name: "狮熊双王", maxBonus: 1.2, mob: 9420544 },
+    { key: "yaoseng", name: "武林妖僧", maxBonus: 1.4, mob: 9600025 },
+    { key: "krexel", name: "克雷塞尔", maxBonus: 1.6, mob: 9420522 },
+    { key: "zakum", name: "扎昆", maxBonus: 1.8, mob: 8800002 },
+    { key: "showa", name: "昭和大头老板", maxBonus: 2.4, mob: 9400300 },
+    { key: "horntail", name: "暗黑龙王", maxBonus: 2.6, mob: 8810018 },
+    { key: "pinkbean", name: "品克缤", maxBonus: 2.8, mob: 8820001 },
+    { key: "tokyo_vergamot", name: "贝尔加莫特", maxBonus: 3.0, mob: 9400265 },
+    { key: "tokyo_dunas", name: "都纳斯", maxBonus: 3.2, mob: 9400270 },
+    { key: "tokyo_nibergen", name: "尼贝隆", maxBonus: 3.4, mob: 9400273 },
+    { key: "tokyo_nux", name: "努克斯", maxBonus: 3.6, mob: 9400266 },
+    { key: "tokyo_dunas2", name: "再生都纳斯", maxBonus: 3.8, mob: 9400294 },
+    { key: "tokyo_aufheben", name: "欧碧拉", maxBonus: 4.0, mob: 9400289 },
+    { key: "vonleon", name: "狮子王", maxBonus: 4.2, mob: 8840000 }
 ];
 
 var status = -1;
@@ -61,7 +61,8 @@ function showMain() {
 
     var text = "#e#d===== BOSS伤害成长 =====#k#n\r\n\r\n";
     text += BOSS_ICON + " 当前属性：#r#eBOSS伤害 +" + formatPercent(totalBonus) + "%#n#k\r\n";
-    text += BOSS_ICON + " 满成长属性：#rBOSS伤害 +1000%#k\r\n\r\n";
+    text += BOSS_ICON + " 满成长属性：#rBOSS伤害 +";
+    text += formatPercent(BossDamageGrowth.MAX_BONUS_PERCENT) + "%#k\r\n\r\n";
 
     text += buildProgress(
         CARD_ICON,
@@ -115,7 +116,8 @@ function showBossRecords() {
     }
 
     text += "\r\n" + BOSS_ICON + " 当前征服属性：#rBOSS伤害 +";
-    text += formatPercent(totalBonus) + "%#k / +400%";
+    text += formatPercent(totalBonus) + "%#k / +";
+    text += formatPercent(BossDamageGrowth.BOSS_MAX_BONUS_PERCENT) + "%";
     cm.sendOk(text);
     cm.dispose();
 }
