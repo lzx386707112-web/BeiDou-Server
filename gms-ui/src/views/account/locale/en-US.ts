@@ -14,6 +14,7 @@ export default {
   'account.list.column.lastLoginAt': 'lastLoginAt',
   'account.list.column.registerAt': 'registerAt',
   'account.list.column.operate': 'operate',
+  'account.list.column.operate.viewMap': 'View Map',
   'account.list.column.operate.ban': 'ban',
   'account.list.column.operate.ban.reason': 'reason',
   'account.list.column.operate.ban.reason.title': 'ban account',
@@ -28,6 +29,12 @@ export default {
   'account.list.column.operate.delete': 'delete',
   'account.list.column.operate.delete.confirm':
     'Are you really to delete this account?',
+  'account.list.map.title': 'Character Maps - [{id}] {name}',
+  'account.list.map.characterId': 'Character ID',
+  'account.list.map.characterName': 'Character',
+  'account.list.map.mapName': 'Map Name',
+  'account.list.map.mapId': 'Map ID',
+  'account.list.map.unknown': 'Unknown Map',
 
   'account.list.filter.id': 'ID',
   'account.list.filter.name': 'Name',

@@ -45,6 +45,8 @@ import org.gms.constants.skills.Hero;
 import org.gms.constants.skills.BlazeWizard;
 import org.gms.constants.skills.DawnWarrior;
 import org.gms.constants.skills.NightWalker;
+import org.gms.constants.skills.ThunderBreaker;
+import org.gms.constants.skills.WindArcher;
 import org.gms.manager.ServerManager;
 import org.gms.model.pojo.SkillEntry;
 import org.gms.net.AbstractPacketHandler;
@@ -82,6 +84,11 @@ import java.util.*;
 import java.util.Map.Entry;
 
 public final class PlayerLoggedinHandler extends AbstractPacketHandler {
+    private static final int[] RETIRED_WIND_ARCHER_V_VI_SKILLS = {
+        13121000, 13121001, 13121002,
+        13121006, 13121007, 13121008,
+        13121021, 13121022
+    };
     private static final Logger log = LoggerFactory.getLogger(PlayerLoggedinHandler.class);
     private static final Set<Integer> attemptingLoginAccounts = new HashSet<>();
 
@@ -258,7 +265,9 @@ public final class PlayerLoggedinHandler extends AbstractPacketHandler {
             grantRagingBlowVi(player);
             grantDawnWarriorVViAttacks(player);
             grantBlazeWizardVViAttacks(player);
+            grantWindArcherVViAttacks(player);
             grantNightWalkerVViSkills(player);
+            grantThunderBreakerVViAttacks(player);
             c.sendPacket(PacketCreator.getCharInfo(player));    //这里发送登录成功封包
             if (player.isHidden()) {
                 if (!GameConfig.getServerBoolean("use_auto_hide_gm")) {
@@ -577,6 +586,49 @@ public final class PlayerLoggedinHandler extends AbstractPacketHandler {
             return;
         }
         for (int skillId : NightWalker.V_VI_ACTIVE_SKILLS) {
+            Skill skill = SkillFactory.getSkill(skillId);
+            if (skill == null) {
+                continue;
+            }
+            if (player.getSkillLevel(skill) >= 30 && player.getMasterLevel(skill) >= 30) {
+                continue;
+            }
+            player.getEditableSkills().put(skill, new SkillEntry((byte) 30, 30, -1));
+        }
+    }
+
+    private static void grantWindArcherVViAttacks(Character player) {
+        // v83 Cygnus characters can remain on 1311 while the compatibility
+        // skill resources live in the otherwise empty 1312 book.
+        if (!player.getJob().isA(Job.WINDARCHER3)) {
+            return;
+        }
+        boolean removedRetiredBinding = false;
+        for (int skillId : RETIRED_WIND_ARCHER_V_VI_SKILLS) {
+            removedRetiredBinding |= player.removeBySkillId(skillId);
+        }
+        if (removedRetiredBinding) {
+            player.sendKeymap();
+        }
+        for (int skillId : WindArcher.V_VI_ACTIVE_ATTACKS) {
+            Skill skill = SkillFactory.getSkill(skillId);
+            if (skill == null) {
+                continue;
+            }
+            if (player.getSkillLevel(skill) >= 30 && player.getMasterLevel(skill) >= 30) {
+                continue;
+            }
+            player.getEditableSkills().put(skill, new SkillEntry((byte) 30, 30, -1));
+        }
+    }
+
+    private static void grantThunderBreakerVViAttacks(Character player) {
+        // v83 Cygnus characters can remain on 1511 while the compatibility
+        // skill resources live in the otherwise empty 1512 book.
+        if (!player.getJob().isA(Job.THUNDERBREAKER3)) {
+            return;
+        }
+        for (int skillId : ThunderBreaker.V_VI_ACTIVE_ATTACKS) {
             Skill skill = SkillFactory.getSkill(skillId);
             if (skill == null) {
                 continue;

@@ -48,4 +48,32 @@ public class WindArcher {
     public static final int WIND_PIERCING = 13111006;
     public static final int WIND_SHOT = 13111007;
     public static final int STRAFE = 13111001;
+
+    // TMS V/VI compatibility IDs in the otherwise empty 1312 skill book.
+    public static final int MERCILESS_WINDS = 13121003;
+    public static final int GALE_BARRIER = 13121004;
+    public static final int GALE_BARRIER_TORNADO = 13121005;
+    public static final int FAIRY_SPIRAL_VI = 13121009;
+    public static final int MONSOON_VI = 13121010;
+    public static final int ANEMOI = 13121011;
+    public static final int ANEMOI_GALE = 13121012;
+    public static final int MISTRAL_SPRING = 13121013;
+    public static final int MISTRAL_WIND_BLADE = 13121014;
+    public static final int MISTRAL_SPIRIT = 13121015;
+    public static final int MISTRAL_HAPPY_SPIRIT = 13121016;
+    public static final int MISTRAL_FIERCE_SPIRIT = 13121017;
+    public static final int MERCILESS_WINDS_SPIRIT = 13121018;
+    public static final int ELEMENTAL_TEMPEST = 13121019;
+    public static final int ELEMENTAL_TEMPEST_ARROW_RAIN = 13121020;
+    public static final int ELEMENTAL_TEMPEST_WAVE = 13121023;
+
+    public static final int[] V_VI_ACTIVE_ATTACKS = {
+        MERCILESS_WINDS,
+        GALE_BARRIER,
+        FAIRY_SPIRAL_VI,
+        MONSOON_VI,
+        ANEMOI,
+        MISTRAL_SPRING,
+        ELEMENTAL_TEMPEST
+    };
 }

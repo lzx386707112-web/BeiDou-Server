@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<imgdir name="3003422.img">
+  <imgdir name="info">
+    <int name="dcLeft" value="-115"/>
+    <int name="dcBottom" value="0"/>
+    <int name="dcRight" value="115"/>
+    <int name="dcTop" value="-130"/>
+    <canvas name="default" width="148" height="93" format="1">
+      <vector name="origin" x="74" y="79"/>
+      <int name="z" value="0"/>
+    </canvas>
+    <int name="hide" value="1"/>
+    <imgdir name="script">
+      <imgdir name="0">
+        <string name="script" value="morass_fish"/>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="stand">
+    <canvas name="0" width="260" height="141" format="1">
+      <vector name="origin" x="114" y="135"/>
+      <int name="z" value="0"/>
+      <int name="delay" value="200"/>
+    </canvas>
+    <canvas name="1" width="260" height="127" format="1">
+      <vector name="origin" x="114" y="120"/>
+      <int name="z" value="0"/>
+      <int name="delay" value="200"/>
+    </canvas>
+    <canvas name="2" width="261" height="113" format="1">
+      <vector name="origin" x="114" y="107"/>
+      <int name="z" value="0"/>
+      <int name="delay" value="200"/>
+    </canvas>
+    <canvas name="3" width="262" height="111" format="1">
+      <vector name="origin" x="114" y="106"/>
+      <int name="z" value="0"/>
+      <int name="delay" value="200"/>
+    </canvas>
+    <canvas name="4" width="260" height="115" format="1">
+      <vector name="origin" x="114" y="111"/>
+      <int name="z" value="0"/>
+      <int name="delay" value="200"/>
+    </canvas>
+    <canvas name="5" width="260" height="123" format="1">
+      <vector name="origin" x="114" y="120"/>
+      <int name="z" value="0"/>
+      <int name="delay" value="200"/>
+    </canvas>
+    <canvas name="6" width="259" height="128" format="1">
+      <vector name="origin" x="114" y="124"/>
+      <int name="z" value="0"/>
+      <int name="delay" value="200"/>
+    </canvas>
+    <canvas name="7" width="260" height="134" format="1">
+      <vector name="origin" x="114" y="129"/>
+      <int name="z" value="0"/>
+      <int name="delay" value="200"/>
+    </canvas>
+  </imgdir>
+</imgdir>

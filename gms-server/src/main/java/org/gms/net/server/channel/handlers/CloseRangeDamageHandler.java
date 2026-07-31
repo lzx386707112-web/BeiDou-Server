@@ -36,6 +36,7 @@ import org.gms.constants.skills.DragonKnight;
 import org.gms.constants.skills.Hero;
 import org.gms.constants.skills.NightWalker;
 import org.gms.constants.skills.Rogue;
+import org.gms.constants.skills.ThunderBreaker;
 import org.gms.constants.skills.WindArcher;
 import org.gms.net.packet.InPacket;
 import org.gms.net.packet.Packet;
@@ -54,6 +55,7 @@ import java.awt.Point;
 import java.awt.Rectangle;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -73,6 +75,12 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
             "customSkill/dawnWarrior/eclipseForceVideoLayer";
     private static final String SOUL_ECLIPSE_VIDEO_LAYER =
             "customSkill/dawnWarrior/soulEclipseVideoLayer";
+    private static final String GOD_OF_THE_SEA_VI_VIDEO_LAYER =
+            "customSkill/thunderBreaker/godOfSeaViVideoLayer";
+    private static final String WAVE_RIDING_THUNDER_VIDEO_LAYER =
+            "customSkill/thunderBreaker/waveRidingThunderVideoLayer";
+    private static final String SWIFT_ANNIHILATION_VIDEO_LAYER =
+            "customSkill/thunderBreaker/swiftAnnihilationVideoLayer";
     private static final int[] GALAXY_STAR_BURST_ATTACK_TIMES_MS = {
         1200, 1380, 1560, 1740, 3180, 3360, 3540, 3720, 4560, 4740, 6240, 6420, 6600, 6780
     };
@@ -92,6 +100,42 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
         10350, 10800, 11250, 11700, 12150, 12600, 13050, 13500, 13950, 14400,
         14850
     };
+    private static final int[] SEA_DRAGON_SPIRAL_TIMES_MS = intervalTimes(0, 240, 23760);
+    private static final int[] LIGHTNING_SPEAR_STRIKE_1_TIMES_MS = {0, 1080};
+    private static final int[] LIGHTNING_SPEAR_STRIKE_2_TIMES_MS = {180, 1260};
+    private static final int[] LIGHTNING_SPEAR_STRIKE_3_TIMES_MS = {360, 1440};
+    private static final int[] LIGHTNING_SPEAR_STRIKE_4_TIMES_MS = {540, 1620};
+    private static final int[] LIGHTNING_SPEAR_STRIKE_5_TIMES_MS = {720, 1800};
+    private static final int[] LIGHTNING_SPEAR_STRIKE_6_TIMES_MS = {900, 1980};
+    private static final int[] LIGHTNING_SPEAR_THUNDER_TIMES_MS = {360, 900, 1440, 1980};
+    private static final int[] WAVE_RIDING_THUNDER_OPENING_TIMES_MS = {
+        300, 360, 420, 480, 540, 600, 660, 720, 780, 840, 900, 960,
+        1020, 1080, 1140, 1200, 1260, 1320, 1380, 1440, 1500, 2940, 3060, 3180,
+        3300, 3840, 3900, 3960, 4020, 4080, 4140, 4200
+    };
+    private static final int[] WAVE_RIDING_THUNDER_SHOCK_TIMES_MS = {
+        4680, 4740, 4800, 4860, 4920, 4980, 5040, 5100, 5160, 5220, 5460, 5490,
+        5520, 5550, 5580, 5610, 5640, 5670, 5700, 5730, 5910, 5940, 5970, 6000,
+        6030, 6060, 6090, 6120, 6150, 6180, 6210, 6240, 6270, 6300, 6330, 6360,
+        6390, 6420, 6450, 6480, 6510, 6540, 6570, 6600, 6630, 6660, 6690, 6720,
+        6750, 6780, 6810, 6840, 6870, 6900, 6930, 6960, 6990, 7020, 7050, 7080,
+        7110, 7140
+    };
+    private static final int[] SWIFT_ANNIHILATION_OPENING_TIMES_MS = {
+        180, 240, 300, 360, 420, 480, 540, 600, 660, 720, 780
+    };
+    private static final int[] SWIFT_ANNIHILATION_SURGE_TIMES_MS = {
+        1620, 1680, 1740, 1800, 1860, 1920, 1980, 2010, 2040,
+        2070, 2100, 2130, 2160, 2190, 2220, 2250, 2280, 2310
+    };
+
+    private static int[] intervalTimes(int first, int interval, int last) {
+        int[] result = new int[((last - first) / interval) + 1];
+        for (int index = 0; index < result.length; index++) {
+            result[index] = first + (index * interval);
+        }
+        return result;
+    }
 
     private static boolean canContinueAnimatedAttack(Character chr, MapleMap expectedMap) {
         return chr.isLoggedIn() && chr.isAlive() && chr.getMap() == expectedMap;
@@ -102,6 +146,40 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
             return damage;
         }
         return (int) Math.min(Integer.MAX_VALUE, (long) damage + (long) Integer.MAX_VALUE + 1L);
+    }
+
+    private static int encodeRepeatedDamage(int damage, boolean critical) {
+        int clamped = Math.max(0, damage);
+        return critical ? clamped | Integer.MIN_VALUE : clamped;
+    }
+
+    private static int calculateFallbackCloseDamage(Character chr, StatEffect effect) {
+        long baseDamage = chr.calculateMaxBaseDamage(Math.max(14, chr.getTotalWatk()));
+        long skillDamage = Math.round((double) baseDamage * effect.getDamage() / 100.0);
+        return (int) Math.max(1, Math.min(Integer.MAX_VALUE, skillDamage));
+    }
+
+    private static List<Integer> adaptDamageTemplate(
+            List<Integer> source,
+            int attackCount,
+            int sourcePercent,
+            int targetPercent
+    ) {
+        if (source.isEmpty()) {
+            return Collections.emptyList();
+        }
+        List<Integer> result = new ArrayList<>(attackCount);
+        for (int index = 0; index < attackCount; index++) {
+            int original = source.get(index % source.size());
+            int decoded = decodeRepeatedDamage(original);
+            long scaled = sourcePercent > 0
+                    ? Math.round((double) decoded * targetPercent / sourcePercent)
+                    : decoded;
+            result.add(encodeRepeatedDamage(
+                    (int) Math.min(Integer.MAX_VALUE, scaled), original < 0
+            ));
+        }
+        return result;
     }
 
     private static List<Integer> copyCapturedDamageTemplate(AttackInfo attack) {
@@ -212,6 +290,177 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
             }
             chr.sendPacket(PacketCreator.damageMonster(monster.getObjectId(), damage));
         }
+    }
+
+    private static boolean usesFixedThunderBreakerOrigin(int skillId) {
+        return skillId == ThunderBreaker.LIGHTNING_SPEAR_MULTISTRIKE
+                || skillId == ThunderBreaker.WAVE_RIDING_THUNDER
+                || skillId == ThunderBreaker.SWIFT_ANNIHILATION;
+    }
+
+    private static Map<Integer, List<Integer>> collectTrackingCloseTargets(
+            MapleMap expectedMap,
+            Point attackOrigin,
+            Rectangle attackBounds,
+            int mobCount,
+            List<Integer> damageTemplate
+    ) {
+        Map<Integer, List<Integer>> result = new LinkedHashMap<>();
+        if (damageTemplate.isEmpty()) {
+            return result;
+        }
+        List<Monster> monsters = new ArrayList<>(expectedMap.getAllMonsters());
+        monsters.removeIf(monster -> !monster.isAlive()
+                || (attackBounds != null && !attackBounds.contains(monster.getPosition())));
+        monsters.sort(Comparator
+                .comparing((Monster monster) -> !monster.isBoss())
+                .thenComparingDouble(monster -> monster.getPosition().distanceSq(attackOrigin))
+                .thenComparingInt(Monster::getObjectId));
+        for (Monster monster : monsters) {
+            result.put(monster.getObjectId(), new ArrayList<>(damageTemplate));
+            if (result.size() >= Math.min(15, mobCount)) {
+                break;
+            }
+        }
+        return result;
+    }
+
+    private static void repeatTrackingCloseAttack(
+            AttackInfo attack,
+            Character chr,
+            MapleMap expectedMap,
+            int replaySkillId,
+            int replayAttackCount,
+            int mobCount,
+            List<Integer> damageTemplate,
+            StatEffect replayEffect,
+            Point fixedAttackOrigin
+    ) {
+        if (!canContinueAnimatedAttack(chr, expectedMap)) {
+            return;
+        }
+        Point attackOrigin = fixedAttackOrigin != null
+                ? fixedAttackOrigin
+                : new Point(chr.getPosition());
+        Rectangle attackBounds = replayEffect.hasBoundingBox()
+                ? replayEffect.calculateBoundingBox(attackOrigin, attack.direction == 0)
+                : null;
+        Map<Integer, List<Integer>> damage = collectTrackingCloseTargets(
+                expectedMap, attackOrigin, attackBounds, mobCount, damageTemplate
+        );
+        if (damage.isEmpty()) {
+            return;
+        }
+        int packedCount = (damage.size() << 4) | (replayAttackCount & 0xF);
+        Packet packet = PacketCreator.closeRangeAttack(
+                chr,
+                replaySkillId,
+                attack.skilllevel,
+                attack.stance,
+                packedCount,
+                damage,
+                attack.speed,
+                attack.direction,
+                attack.display
+        );
+        chr.sendPacket(packet);
+        expectedMap.broadcastMessage(chr, packet, false, true);
+        for (Map.Entry<Integer, List<Integer>> entry : damage.entrySet()) {
+            Monster monster = expectedMap.getMonsterByOid(entry.getKey());
+            if (monster == null || !monster.isAlive()) {
+                continue;
+            }
+            int total = 0;
+            for (Integer hit : entry.getValue()) {
+                total = (int) Math.min(Integer.MAX_VALUE, (long) total + decodeRepeatedDamage(hit));
+            }
+            chr.sendPacket(PacketCreator.damageMonster(monster.getObjectId(), total));
+            monster.aggroMonsterDamage(chr, total);
+            expectedMap.damageMonster(chr, monster, total);
+        }
+    }
+
+    private void scheduleTrackingCloseAttacks(
+            AttackInfo attack,
+            Character chr,
+            int[] attackTimesMs,
+            int replaySkillId,
+            boolean applyOriginalFirst
+    ) {
+        MapleMap expectedMap = chr.getMap();
+        Skill originalSkill = SkillFactory.getSkill(attack.skill);
+        StatEffect originalEffect = originalSkill.getEffect(chr.getSkillLevel(originalSkill));
+        Skill replaySkill = SkillFactory.getSkill(replaySkillId);
+        int replayLevel = Math.max(1, Math.min(attack.skilllevel, replaySkill.getMaxLevel()));
+        StatEffect replayEffect = replaySkill.getEffect(replayLevel);
+        int replayAttackCount = Math.max(1, Math.min(15, replayEffect.getAttackCount()));
+        int mobCount = Math.max(1, Math.min(15, replayEffect.getMobCount()));
+        List<Integer> sourceDamageTemplate = copyCapturedDamageTemplate(attack);
+        if (sourceDamageTemplate.isEmpty()) {
+            sourceDamageTemplate = Collections.singletonList(
+                    calculateFallbackCloseDamage(chr, originalEffect)
+            );
+        }
+        List<Integer> damageTemplate = adaptDamageTemplate(
+                sourceDamageTemplate,
+                replayAttackCount,
+                originalEffect.getDamage(),
+                replayEffect.getDamage()
+        );
+        Point fixedAttackOrigin = usesFixedThunderBreakerOrigin(attack.skill)
+                ? new Point(chr.getPosition())
+                : null;
+        for (int index = 0; index < attackTimesMs.length; index++) {
+            final boolean originalTick = applyOriginalFirst && index == 0;
+            TimerManager.getInstance().schedule(() -> {
+                if (!canContinueAnimatedAttack(chr, expectedMap)) {
+                    return;
+                }
+                if (originalTick) {
+                    showCapturedDamageNumbers(attack, chr, expectedMap);
+                    applyAttack(attack, chr, originalEffect.getAttackCount());
+                    return;
+                }
+                repeatTrackingCloseAttack(
+                        attack,
+                        chr,
+                        expectedMap,
+                        replaySkillId,
+                        replayAttackCount,
+                        mobCount,
+                        damageTemplate,
+                        replayEffect,
+                        fixedAttackOrigin
+                );
+            }, attackTimesMs[index]);
+        }
+    }
+
+    private void scheduleLightningSpearMultistrike(AttackInfo attack, Character chr) {
+        scheduleTrackingCloseAttacks(
+                attack, chr, new int[]{LIGHTNING_SPEAR_STRIKE_1_TIMES_MS[0]},
+                ThunderBreaker.LIGHTNING_SPEAR_MULTISTRIKE, true
+        );
+        scheduleTrackingCloseAttacks(
+                attack, chr, new int[]{LIGHTNING_SPEAR_STRIKE_1_TIMES_MS[1]},
+                ThunderBreaker.LIGHTNING_SPEAR_STRIKE_1, false
+        );
+        scheduleTrackingCloseAttacks(attack, chr, LIGHTNING_SPEAR_STRIKE_2_TIMES_MS,
+                ThunderBreaker.LIGHTNING_SPEAR_STRIKE_2, false);
+        scheduleTrackingCloseAttacks(attack, chr, LIGHTNING_SPEAR_STRIKE_3_TIMES_MS,
+                ThunderBreaker.LIGHTNING_SPEAR_STRIKE_3, false);
+        scheduleTrackingCloseAttacks(attack, chr, LIGHTNING_SPEAR_STRIKE_4_TIMES_MS,
+                ThunderBreaker.LIGHTNING_SPEAR_STRIKE_4, false);
+        scheduleTrackingCloseAttacks(attack, chr, LIGHTNING_SPEAR_STRIKE_5_TIMES_MS,
+                ThunderBreaker.LIGHTNING_SPEAR_STRIKE_5, false);
+        scheduleTrackingCloseAttacks(attack, chr, LIGHTNING_SPEAR_STRIKE_6_TIMES_MS,
+                ThunderBreaker.LIGHTNING_SPEAR_STRIKE_6, false);
+        scheduleTrackingCloseAttacks(attack, chr, LIGHTNING_SPEAR_THUNDER_TIMES_MS,
+                ThunderBreaker.LIGHTNING_SPEAR_THUNDER, false);
+        scheduleTrackingCloseAttacks(attack, chr, new int[]{2490},
+                ThunderBreaker.LIGHTNING_SPEAR_FINISH, false);
+        scheduleTrackingCloseAttacks(attack, chr, new int[]{2820},
+                ThunderBreaker.LIGHTNING_SPEAR_GIANT_THUNDER, false);
     }
 
     private void scheduleAnimatedAttacks(
@@ -446,6 +695,48 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
             scheduleAnimatedAttacks(attack, chr, attackCount, SOUL_ECLIPSE_ATTACK_TIMES_MS);
         } else if (attack.skill == DawnWarrior.COSMOS) {
             scheduleAnimatedAttacks(attack, chr, attackCount, COSMOS_ATTACK_TIMES_MS);
+        } else if (attack.skill == ThunderBreaker.SEA_DRAGON_SPIRAL) {
+            scheduleTrackingCloseAttacks(
+                    attack, chr, SEA_DRAGON_SPIRAL_TIMES_MS,
+                    ThunderBreaker.SEA_DRAGON_SPIRAL, true
+            );
+        } else if (attack.skill == ThunderBreaker.LIGHTNING_SPEAR_MULTISTRIKE) {
+            scheduleLightningSpearMultistrike(attack, chr);
+        } else if (attack.skill == ThunderBreaker.THUNDERBOLT_VI) {
+            applyAttack(attack, chr, attackCount);
+            if (!chr.skillIsCooling(ThunderBreaker.THUNDERBOLT_FLASH)) {
+                chr.addCooldown(
+                        ThunderBreaker.THUNDERBOLT_FLASH,
+                        currentServerTime(),
+                        SECONDS.toMillis(6)
+                );
+                scheduleTrackingCloseAttacks(
+                        attack, chr, new int[]{0}, ThunderBreaker.THUNDERBOLT_FLASH, false
+                );
+            }
+        } else if (attack.skill == ThunderBreaker.GOD_OF_THE_SEA_VI) {
+            chr.sendPacket(PacketCreator.showEffect(GOD_OF_THE_SEA_VI_VIDEO_LAYER));
+            applyAttack(attack, chr, attackCount);
+        } else if (attack.skill == ThunderBreaker.WAVE_RIDING_THUNDER) {
+            chr.sendPacket(PacketCreator.showEffect(WAVE_RIDING_THUNDER_VIDEO_LAYER));
+            scheduleTrackingCloseAttacks(
+                    attack, chr, WAVE_RIDING_THUNDER_OPENING_TIMES_MS,
+                    ThunderBreaker.WAVE_RIDING_THUNDER, true
+            );
+            scheduleTrackingCloseAttacks(
+                    attack, chr, WAVE_RIDING_THUNDER_SHOCK_TIMES_MS,
+                    ThunderBreaker.WAVE_RIDING_THUNDER_SHOCK, false
+            );
+        } else if (attack.skill == ThunderBreaker.SWIFT_ANNIHILATION) {
+            chr.sendPacket(PacketCreator.showEffect(SWIFT_ANNIHILATION_VIDEO_LAYER));
+            scheduleTrackingCloseAttacks(
+                    attack, chr, SWIFT_ANNIHILATION_OPENING_TIMES_MS,
+                    ThunderBreaker.SWIFT_ANNIHILATION, true
+            );
+            scheduleTrackingCloseAttacks(
+                    attack, chr, SWIFT_ANNIHILATION_SURGE_TIMES_MS,
+                    ThunderBreaker.SWIFT_ANNIHILATION_SURGE, false
+            );
         } else {
             applyAttack(attack, chr, attackCount);
         }

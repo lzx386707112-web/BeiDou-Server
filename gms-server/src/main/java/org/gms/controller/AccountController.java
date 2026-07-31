@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.NoSuchAlgorithmException;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -45,6 +46,13 @@ public class AccountController {
                                                        @RequestParam(name = "createdAtStart", required = false) String createdAtStart,
                                                        @RequestParam(name = "createdAtEnd", required = false) String createdAtEnd) {
         return ResultBody.success(accountService.getAccountList(page, size, id, name, lastLoginStart, lastLoginEnd, createdAtStart, createdAtEnd));
+    }
+
+    @Tag(name = "/account/" + ApiConstant.LATEST)
+    @Operation(summary = "获取账号下所有角色的当前地图")
+    @GetMapping("/" + ApiConstant.LATEST + "/{id}/characters/maps")
+    public ResultBody<List<CharacterMapRtnDTO>> getCharacterMaps(@PathVariable("id") int id) {
+        return ResultBody.success(characterService.getCharacterMapsByAccountId(id));
     }
 
     @Tag(name = "/account/" + ApiConstant.LATEST)

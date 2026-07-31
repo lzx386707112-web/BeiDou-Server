@@ -287,7 +287,7 @@ run_interactive() {
   data_options=()
   while IFS= read -r input; do
     data_options+=("$(basename "$input")")
-  done < <(find "$data_dir" -mindepth 1 -maxdepth 1 -type d | sort)
+  done < <(find "$data_dir" -mindepth 1 -maxdepth 1 -type d ! -name 'Video' | sort)
   data_options+=("全部目录")
 
   target="$(interactive_choose "请选择要打包的客户端 Data 目录:" "${data_options[@]}")"
@@ -298,7 +298,7 @@ run_interactive() {
       inputs=()
       while IFS= read -r input; do
         inputs+=("$input")
-      done < <(find "$data_dir" -mindepth 1 -maxdepth 1 -type d | sort)
+      done < <(find "$data_dir" -mindepth 1 -maxdepth 1 -type d ! -name 'Video' | sort)
       interactive_collect_base_imgs
 
       if [[ ${#inputs[@]} -eq 0 && ${#base_imgs[@]} -eq 0 ]]; then

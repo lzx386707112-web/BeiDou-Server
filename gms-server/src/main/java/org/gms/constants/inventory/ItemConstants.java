@@ -286,7 +286,7 @@ public final class ItemConstants {
     }
 
     public static boolean isFishingChair(int itemId) {
-        return itemId == ItemId.FISHING_CHAIR;
+        return ItemId.isChair(itemId);
     }
 
     public static boolean isMedal(int itemId) {

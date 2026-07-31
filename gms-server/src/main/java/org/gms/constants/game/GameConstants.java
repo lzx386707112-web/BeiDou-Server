@@ -600,7 +600,7 @@ public class GameConstants {
         return skillId > 1111002 && skillId < 1111007 || skillId == 11111002 || skillId == 11111003;
     }
 
-    public static boolean isMedalQuest(short questid) {
+    public static boolean isMedalQuest(int questid) {
         return Quest.getInstance(questid).getMedalRequirement() != -1;
     }
 

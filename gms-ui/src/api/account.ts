@@ -30,6 +30,13 @@ export interface GMUpdateForm {
   language?: number;
 }
 
+export interface CharacterMap {
+  characterId: number;
+  characterName: string;
+  mapId: number;
+  mapName: string;
+}
+
 export function getAccountList(
   page: number,
   size: number,
@@ -48,6 +55,10 @@ export function getAccountList(
   if (isValidString(createdAtStart)) url += `&createdAtStart=${createdAtStart}`;
   if (isValidString(createdAtEnd)) url += `&createdAtEnd=${createdAtEnd}`;
   return axios.get<PageState>(url);
+}
+
+export function getCharacterMaps(id: number) {
+  return axios.get<CharacterMap[]>(`/account/v1/${id}/characters/maps`);
 }
 
 export function addAccount(data: RegisterForm) {

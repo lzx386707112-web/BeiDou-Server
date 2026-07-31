@@ -204,6 +204,24 @@ class WzSoundProperty(WzProperty):
         return self._data_length
 
 
+class WzVideoProperty(WzSubProperty):
+    """Opaque ``Canvas#Video`` payload used by modern skill effects."""
+
+    type_name = "Video"
+
+    def __init__(self, name: str, parent: Optional[WzProperty] = None):
+        super().__init__(name, parent)
+        self.video_type = 0
+        self._data_offset = 0
+        self._data_length = 0
+        self._data: Optional[bytes] = None
+        self._wz_image: Optional["WzImage"] = None
+
+    @property
+    def value(self) -> int:
+        return self._data_length
+
+
 # ── parser entry point ───────────────────────────────────────────────
 def parse_property_list(
     reader: "WzBinaryReader",
@@ -527,6 +545,21 @@ def _parse_extended(
         sound._data_offset = reader.position
         reader.skip(sound._data_length)
         return sound
+
+    if ext_type == "Canvas#Video":
+        video = WzVideoProperty(name, parent)
+        video._wz_image = wz_image
+        reader.skip(1)  # reserved
+        has_children = reader.read_byte()
+        if has_children == 1:
+            reader.skip(2)
+            for child in parse_property_list(reader, base_offset, video, wz_image):
+                video.add(child)
+        video.video_type = reader.read_byte()
+        video._data_length = reader.read_compressed_int()
+        video._data_offset = reader.position
+        reader.skip(video._data_length)
+        return video
 
     if ext_type == "UOL":
         reader.skip(1)  # reserved

@@ -48,4 +48,39 @@ public class ThunderBreaker {
     public static final int ENERGY_DRAIN = 15111001;
     public static final int SPARK = 15111006;
     public static final int SHARK_WAVE = 15111007;
+
+    // Custom 4th-job compatibility IDs for TMS Thunder Breaker V/VI attacks.
+    public static final int SEA_DRAGON_SPIRAL = 15121000;
+    public static final int SHARK_TORPEDO = 15121001;
+    public static final int LIGHTNING_SPEAR_MULTISTRIKE = 15121002;
+    public static final int LIGHTNING_SPEAR_STRIKE_1 = 15121003;
+    public static final int LIGHTNING_SPEAR_STRIKE_2 = 15121004;
+    public static final int LIGHTNING_SPEAR_STRIKE_3 = 15121005;
+    public static final int LIGHTNING_SPEAR_STRIKE_4 = 15121006;
+    public static final int LIGHTNING_SPEAR_STRIKE_5 = 15121007;
+    public static final int LIGHTNING_SPEAR_STRIKE_6 = 15121008;
+    public static final int LIGHTNING_SPEAR_THUNDER = 15121009;
+    public static final int LIGHTNING_SPEAR_FINISH = 15121010;
+    public static final int LIGHTNING_SPEAR_GIANT_THUNDER = 15121011;
+    public static final int ANNIHILATE_VI = 15121012;
+    public static final int THUNDERBOLT_VI = 15121013;
+    public static final int THUNDERBOLT_FLASH = 15121014;
+    public static final int TYPHOON_VI = 15121015;
+    public static final int GOD_OF_THE_SEA_VI = 15121016;
+    public static final int WAVE_RIDING_THUNDER = 15121017;
+    public static final int WAVE_RIDING_THUNDER_SHOCK = 15121018;
+    public static final int SWIFT_ANNIHILATION = 15121019;
+    public static final int SWIFT_ANNIHILATION_SURGE = 15121020;
+
+    public static final int[] V_VI_ACTIVE_ATTACKS = {
+        SEA_DRAGON_SPIRAL,
+        SHARK_TORPEDO,
+        LIGHTNING_SPEAR_MULTISTRIKE,
+        ANNIHILATE_VI,
+        THUNDERBOLT_VI,
+        TYPHOON_VI,
+        GOD_OF_THE_SEA_VI,
+        WAVE_RIDING_THUNDER,
+        SWIFT_ANNIHILATION
+    };
 }

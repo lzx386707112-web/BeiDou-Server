@@ -49,7 +49,7 @@ public class QuestScriptManager extends AbstractScriptManager {
         return instance;
     }
 
-    private ScriptEngine getQuestScriptEngine(Client c, short questid) {
+    private ScriptEngine getQuestScriptEngine(Client c, int questid) {
         ScriptEngine engine = getInvocableScriptEngine("quest/" + questid + ".js", c);
         if (engine == null && GameConstants.isMedalQuest(questid)) {
             engine = getInvocableScriptEngine("quest/medalQuest.js", c);   // start generic medal quest
@@ -58,7 +58,7 @@ public class QuestScriptManager extends AbstractScriptManager {
         return engine;
     }
 
-    public void start(Client c, short questid, int npc) {
+    public void start(Client c, int questid, int npc) {
         Quest quest = Quest.getInstance(questid);
         try {
             QuestActionManager qm = new QuestActionManager(c, questid, npc, true);
@@ -106,7 +106,7 @@ public class QuestScriptManager extends AbstractScriptManager {
         }
     }
 
-    public void end(Client c, short questid, int npc) {
+    public void end(Client c, int questid, int npc) {
         Quest quest = Quest.getInstance(questid);
         if (!c.getPlayer().getQuest(quest).getStatus().equals(QuestStatus.Status.STARTED) || (!c.getPlayer().getMap().containsNPC(npc) && !quest.isAutoComplete())) {
             dispose(c);
@@ -158,7 +158,7 @@ public class QuestScriptManager extends AbstractScriptManager {
         }
     }
 
-    public void raiseOpen(Client c, short questid, int npc) {
+    public void raiseOpen(Client c, int questid, int npc) {
         try {
             QuestActionManager qm = new QuestActionManager(c, questid, npc, true);
             if (qms.containsKey(c)) {
@@ -211,7 +211,7 @@ public class QuestScriptManager extends AbstractScriptManager {
         qms.clear();
     }
 
-    public boolean checkFunctionExists(Client c, short questid, int npc, String functionName) {
+    public boolean checkFunctionExists(Client c, int questid, int npc, String functionName) {
         ScriptEngine engine = getQuestScriptEngine(c, questid);
         if (engine == null) {
             return false;

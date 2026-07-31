@@ -16,6 +16,7 @@ import org.gms.exception.BizException;
 import org.gms.model.dto.ChrMoveToHenesysReqDTO;
 import org.gms.model.dto.ChrOnlineListReqDTO;
 import org.gms.model.dto.ChrOnlineListRtnDTO;
+import org.gms.model.dto.CharacterMapRtnDTO;
 import org.gms.model.pojo.SkillEntry;
 import org.gms.net.server.Server;
 import org.gms.net.server.guild.GuildCharacter;
@@ -160,6 +161,22 @@ public class CharacterService {
         for (CharactersDO character : charactersMapper.selectIdAndWorldListByAccountId(accountId)) {
             moveToHenesys(character.getId());
         }
+    }
+
+    public List<CharacterMapRtnDTO> getCharacterMapsByAccountId(int accountId) {
+        RequireUtil.requireNotNull(accountsMapper.selectOneById(accountId), I18nUtil.getExceptionMessage("AccountService.id.NotExist"));
+        return getCharacterByAccountId(accountId).stream()
+                .map(character -> {
+                    Character onlineCharacter = getOnlineCharacterById(character.getId());
+                    int mapId = onlineCharacter == null ? character.getMap() : onlineCharacter.getMapId();
+                    return CharacterMapRtnDTO.builder()
+                            .characterId(character.getId())
+                            .characterName(character.getName())
+                            .mapId(mapId)
+                            .mapName(MapFactory.loadPlaceName(mapId))
+                            .build();
+                })
+                .toList();
     }
 
     private Character getOnlineCharacterById(int characterId) {

@@ -697,7 +697,7 @@ public abstract class AbstractDealDamageHandler extends AbstractPacketHandler {
         ret.numAttackedAndDamage = p.readByte();
         ret.numAttacked = (ret.numAttackedAndDamage >>> 4) & 0xF;
         ret.numDamage = ret.numAttackedAndDamage & 0xF;
-        ret.allDamage = new HashMap<>();
+        ret.allDamage = new LinkedHashMap<>();
         ret.skill = p.readInt();
         ret.ranged = ranged;
         ret.magic = magic;

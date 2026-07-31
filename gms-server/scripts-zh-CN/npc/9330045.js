@@ -1,6 +1,8 @@
 var status = -1;
 var sel;
 const Fishing = Java.type('org.gms.util.packets.Fishing');
+const InventoryType = Java.type('org.gms.client.inventory.InventoryType');
+const ItemId = Java.type('org.gms.constants.id.ItemId');
 
 function start() {
     var text = "\t\t\t\t\t#e#k欢迎来到#r[钓鱼系统]#k系统#n\t\t\t\t\r\n\r\n";
@@ -47,14 +49,14 @@ function action(mode, type, selection) {
         sel = selection;
         // 进入钓鱼场逻辑
         if (sel == 0) {
-            // 检查是否拥有钓鱼椅（核心条件）
-            if (cm.haveItem(3011000)) {
+            // 任意物品椅子都可用于钓鱼
+            if (hasChair()) {
                 // 保存当前地图位置，传送至钓鱼场
                 cm.getPlayer().saveLocation("MIRROR");
                 cm.warp(741000200, 0);
                 cm.dispose();
             } else {
-                cm.sendNext("你必须拥有钓鱼椅才能进入钓鱼场！");
+                cm.sendNext("你必须拥有一把椅子才能进入钓鱼场！");
                 cm.dispose();
             }
         }
@@ -85,7 +87,7 @@ function action(mode, type, selection) {
             查看掉落();
         } else if (sel == 999) {
             let text = "\t\t\t\t\t#e#k欢迎来到#r[钓鱼说明]#k系统#n\t\t\t\t\r\n\r\n";
-            text += "#r1.钓鱼需要购买钓鱼的专用椅子，点击椅子后进入钓鱼状态\r\n";
+            text += "#r1.在钓鱼区域坐上任意物品椅子，即可进入钓鱼状态\r\n";
             text += `#b2.需要诱饵才能钓鱼，普通鱼饵${Fishing.COMMON_BAIT_BASE_RATE * 100}%成功率，高级鱼饵${Fishing.ADVANCED_BAIT_BASE_RATE * 100}%成功率\r\n`;
             text += "#r3.鱼饵在随身商店中购买\r\n";
             text += `#b4.钓鱼成功后会增加钓鱼等级，每级增加1%的成功率，最高加成${Fishing.MAX_SUCCESS_LEVEL_RATE * 100}%成功率\r\n`;
@@ -95,6 +97,16 @@ function action(mode, type, selection) {
             cm.dispose();
         }
     }
+}
+
+function hasChair() {
+    const items = cm.getPlayer().getInventory(InventoryType.SETUP).iterator();
+    while (items.hasNext()) {
+        if (ItemId.isChair(items.next().getItemId())) {
+            return true;
+        }
+    }
+    return false;
 }
 
 function openNpc(scriptName) {

@@ -27,10 +27,24 @@ constexpr int kFirstSkill = 11121005;
 constexpr int kLastSkill = 11121012;
 constexpr UINT kVideoMarkerWidth = 7;
 constexpr UINT kVideoMarkerHeight = 5;
-constexpr int kMaxVideoMarkerTextures = 8;
+constexpr int kMaxVideoMarkerTextures = 16;
 constexpr uintptr_t kMagicBulletNodeUpdateAddress = 0x00441090;
+constexpr uintptr_t kMagicBulletManagerAddress = 0x00BEBF6C;
+constexpr uintptr_t kMagicBulletCreateAddress = 0x00435F47;
+constexpr uintptr_t kZtlBstrFromWideAddress = 0x00403382;
+constexpr uintptr_t kRangedSkillRangeClassifierAddress = 0x007666CB;
+constexpr uintptr_t kRangedMultiTargetClassifierAddress = 0x00766722;
+constexpr uintptr_t kRangedTargetCollectorAddress = 0x00678476;
+constexpr uintptr_t kMobGetBodyRectAddress = 0x00664559;
+constexpr uintptr_t kRangedProjectileDestinationAddress = 0x00954596;
+constexpr int kShadowBiteProjectileTravelMilliseconds = 660;
+constexpr DWORD kRapidThrowImpactDedupMilliseconds = 80;
 constexpr int kNightWalkerFirstSkill = 14121003;
 constexpr int kNightWalkerLastSkill = 14121036;
+constexpr int kWindArcherFirstSkill = 13121003;
+constexpr int kWindArcherLastSkill = 13121023;
+constexpr int kThunderBreakerFirstSkill = 15121000;
+constexpr int kThunderBreakerLastSkill = 15121020;
 constexpr int kMaxTrackedProjectiles = 256;
 
 using PlayFileFn = int(__stdcall*)(const char*);
@@ -161,14 +175,75 @@ struct ProjectileRuntime {
     int mode;
     int profile;
     int lane;
+    int rapidThrowSkillId;
     unsigned int startTime;
     unsigned int endTime;
 };
 
+struct ProjectileTarget {
+    int x;
+    int y;
+};
+
+struct PendingRapidThrowImpact {
+    volatile LONG state;
+    IUnknown* origin;
+    unsigned int startTime;
+    int x;
+    int y;
+    int z;
+    int skillId;
+    int duration;
+};
+
+struct RecentRapidThrowImpact {
+    IUnknown* origin;
+    int skillId;
+    DWORD time;
+};
+
 using MagicBulletNodeUpdateFn = int(__thiscall*)(MagicBulletNode*, unsigned int);
 MagicBulletNodeUpdateFn gRealMagicBulletNodeUpdate = nullptr;
+using RangedMultiTargetClassifierFn = int(__cdecl*)(int);
+RangedMultiTargetClassifierFn gRealRangedMultiTargetClassifier = nullptr;
+RangedMultiTargetClassifierFn gRealRangedSkillRangeClassifier = nullptr;
+using RangedTargetCollectorFn = int(__thiscall*)(
+    void*, void*, void**, int, void*, void*, void*, void*, void*);
+RangedTargetCollectorFn gRealRangedTargetCollector = nullptr;
+using MobGetBodyRectFn = int(__thiscall*)(void*, RECT*, int);
+using MagicBulletCreateFn = void(__thiscall*)(
+    void*, unsigned int, unsigned int, int, int, int, int,
+    IUnknown*, int, void*, int);
+using ZtlBstrFromWideFn = void*(__thiscall*)(void**, const wchar_t*);
+volatile LONG gShadowBiteClassifierObserved = 0;
+volatile LONG gShadowBiteRangeClassifierObserved = 0;
+volatile LONG gCustomRangedTargetLimit = 0;
 ProjectileRuntime gProjectileRuntime[kMaxTrackedProjectiles] = {};
 unsigned int gProjectileSeed = 0x4E575649;
+void* gProjectileLayerVtable = nullptr;
+DISPID gProjectileRxProperty = DISPID_UNKNOWN;
+DISPID gProjectileRyProperty = DISPID_UNKNOWN;
+bool gProjectilePropertyLookupAttempted = false;
+volatile LONG gProjectileMoveObserved = 0;
+volatile LONG gProjectileLoggedNodes = 0;
+ProjectileTarget gProjectileTargets[15] = {};
+volatile LONG gProjectileTargetCount = 0;
+volatile LONG gProjectileTargetIndex = 0;
+DWORD gProjectileTargetWindowEnd = 0;
+volatile LONG gNativeRangedProjectileIndex = 0;
+volatile LONG gNativeRangedProjectileLogged = 0;
+DWORD gNativeRangedProjectileWindowEnd = 0;
+constexpr int kMaxPendingRapidThrowImpacts = 64;
+PendingRapidThrowImpact gPendingRapidThrowImpacts[kMaxPendingRapidThrowImpacts] = {};
+RecentRapidThrowImpact gRecentRapidThrowImpacts[kMaxPendingRapidThrowImpacts] = {};
+void* gProjectileOriginVtable = nullptr;
+DISPID gProjectileOriginRxProperty = DISPID_UNKNOWN;
+DISPID gProjectileOriginRyProperty = DISPID_UNKNOWN;
+bool gProjectileOriginPropertyLookupAttempted = false;
+volatile LONG gRapidThrowImpactQueuedObserved = 0;
+volatile LONG gRapidThrowImpactCreatedObserved = 0;
+volatile LONG gRapidThrowImpactErrorObserved = 0;
+bool gRapidThrowImpactSupportReady = false;
 
 template <typename Function>
 Function LoadFunction(HMODULE module, const char* name) {
@@ -267,6 +342,68 @@ bool IsReadablePointer(const void* pointer) {
         (information.Protect & (PAGE_NOACCESS | PAGE_GUARD)) == 0;
 }
 
+bool WideContains(const wchar_t* text, const wchar_t* needle) {
+    if (text == nullptr || needle == nullptr || *needle == L'\0') {
+        return false;
+    }
+    for (const wchar_t* candidate = text; *candidate != L'\0'; ++candidate) {
+        const wchar_t* left = candidate;
+        const wchar_t* right = needle;
+        while (*left != L'\0' && *right != L'\0' && *left == *right) {
+            ++left;
+            ++right;
+        }
+        if (*right == L'\0') {
+            return true;
+        }
+    }
+    return false;
+}
+
+const wchar_t* MagicBulletResourcePath(const MagicBulletNode* node) {
+    if (node == nullptr || !IsReadablePointer(node->bstrData)) {
+        return nullptr;
+    }
+    const auto* data = static_cast<const void* const*>(node->bstrData);
+    const auto* path = static_cast<const wchar_t*>(*data);
+    return IsReadablePointer(path) ? path : nullptr;
+}
+
+int RapidThrowSkillFromBullet(const MagicBulletNode* node) {
+    const wchar_t* path = MagicBulletResourcePath(node);
+    if (path == nullptr || WideContains(path, L"/hit/")) {
+        return 0;
+    }
+    if (WideContains(path, L"14121005")) return 14121005;
+    if (WideContains(path, L"14121006")) return 14121006;
+    if (WideContains(path, L"14121007")) return 14121007;
+    if (WideContains(path, L"14121008")) return 14121008;
+    return 0;
+}
+
+bool IsRapidThrowImpactNode(const MagicBulletNode* node) {
+    const wchar_t* path = MagicBulletResourcePath(node);
+    return path != nullptr && WideContains(path, L"/hit/") &&
+        (WideContains(path, L"14121005") ||
+         WideContains(path, L"14121006") ||
+         WideContains(path, L"14121007") ||
+         WideContains(path, L"14121008"));
+}
+
+const wchar_t* RapidThrowImpactPath(int skillId) {
+    switch (skillId) {
+        case 14121005: return L"Skill/1412.img/skill/14121005/hit/0";
+        case 14121006: return L"Skill/1412.img/skill/14121006/hit/0";
+        case 14121007: return L"Skill/1412.img/skill/14121007/hit/0";
+        case 14121008: return L"Skill/1412.img/skill/14121008/hit/0";
+        default: return nullptr;
+    }
+}
+
+int RapidThrowImpactDuration(int skillId) {
+    return skillId == 14121005 ? 660 : 600;
+}
+
 int ProjectileRandom(int minimum, int maximum) {
     gProjectileSeed = gProjectileSeed * 1103515245u + 12345u;
     const unsigned int range = static_cast<unsigned int>(maximum - minimum + 1);
@@ -335,7 +472,7 @@ ProjectileRuntime* RegisterProjectileRuntime(MagicBulletNode* node) {
         constexpr int kSilentNightCurves[] = {-120, -80, 80, 120};
         curvePower = kSilentNightCurves[lane % 4];
     } else if (gNightWalkerProjectileProfile == kProjectileProfileShadowBiteBat) {
-        constexpr int kShadowBiteBatCurves[] = {-85, 85, -115, 115};
+        constexpr int kShadowBiteBatCurves[] = {-180, 180, -240, 240};
         curvePower = kShadowBiteBatCurves[lane % 4];
     }
     *runtime = {};
@@ -350,22 +487,58 @@ ProjectileRuntime* RegisterProjectileRuntime(MagicBulletNode* node) {
     runtime->mode = 0;
     runtime->profile = gNightWalkerProjectileProfile;
     runtime->lane = lane;
+    runtime->rapidThrowSkillId = gNightWalkerProjectileProfile == kProjectileProfileRapidThrow
+        ? RapidThrowSkillFromBullet(node)
+        : 0;
     runtime->startTime = static_cast<unsigned int>(node->startTime);
     runtime->endTime = static_cast<unsigned int>(node->endTime);
+    const LONG loggedNode = InterlockedIncrement(&gProjectileLoggedNodes);
+    if (loggedNode <= 6) {
+        char message[160] = {};
+        wsprintfA(
+            message,
+            "PROJECTILE NODE: index=%ld start=(%d,%d) end=(%d,%d)",
+            loggedNode,
+            node->x1,
+            node->y1,
+            node->x2,
+            node->y2);
+        LogLine(message);
+    }
     return runtime;
 }
 
-bool SetDispatchIntegerProperty(void* object, const wchar_t* propertyName, int value) {
+bool ResolveProjectileLayerProperties(void* object) {
     if (!IsReadablePointer(object)) {
         return false;
     }
-    auto* dispatch = reinterpret_cast<IDispatch*>(object);
-    LPOLESTR name = const_cast<LPOLESTR>(propertyName);
-    DISPID property = DISPID_UNKNOWN;
-    const IID nullIid = {};
-    if (FAILED(dispatch->GetIDsOfNames(nullIid, &name, 1, LOCALE_USER_DEFAULT, &property))) {
+    void* vtable = *reinterpret_cast<void**>(object);
+    if (!IsReadablePointer(vtable)) {
         return false;
     }
+    if (vtable == gProjectileLayerVtable && gProjectilePropertyLookupAttempted) {
+        return gProjectileRxProperty != DISPID_UNKNOWN &&
+            gProjectileRyProperty != DISPID_UNKNOWN;
+    }
+    gProjectileLayerVtable = vtable;
+    gProjectilePropertyLookupAttempted = true;
+    gProjectileRxProperty = DISPID_UNKNOWN;
+    gProjectileRyProperty = DISPID_UNKNOWN;
+    auto* dispatch = reinterpret_cast<IDispatch*>(object);
+    LPOLESTR rxName = const_cast<LPOLESTR>(L"rx");
+    LPOLESTR ryName = const_cast<LPOLESTR>(L"ry");
+    const IID nullIid = {};
+    if (FAILED(dispatch->GetIDsOfNames(
+            nullIid, &rxName, 1, LOCALE_USER_DEFAULT, &gProjectileRxProperty)) ||
+        FAILED(dispatch->GetIDsOfNames(
+            nullIid, &ryName, 1, LOCALE_USER_DEFAULT, &gProjectileRyProperty))) {
+        return false;
+    }
+    return true;
+}
+
+bool PutDispatchIntegerProperty(IDispatch* dispatch, DISPID property, int value) {
+    const IID nullIid = {};
     VARIANTARG argument = {};
     argument.vt = VT_I4;
     argument.lVal = value;
@@ -380,6 +553,246 @@ bool SetDispatchIntegerProperty(void* object, const wchar_t* propertyName, int v
         nullptr,
         nullptr,
         nullptr));
+}
+
+bool SetProjectileLayerPosition(void* object, int x, int y) {
+    if (!ResolveProjectileLayerProperties(object)) {
+        return false;
+    }
+    auto* dispatch = reinterpret_cast<IDispatch*>(object);
+    return PutDispatchIntegerProperty(dispatch, gProjectileRxProperty, x) &&
+        PutDispatchIntegerProperty(dispatch, gProjectileRyProperty, y);
+}
+
+bool ResolveProjectileOriginProperties(void* object) {
+    if (!IsReadablePointer(object)) {
+        return false;
+    }
+    void* vtable = *reinterpret_cast<void**>(object);
+    if (!IsReadablePointer(vtable)) {
+        return false;
+    }
+    if (vtable == gProjectileOriginVtable && gProjectileOriginPropertyLookupAttempted) {
+        return gProjectileOriginRxProperty != DISPID_UNKNOWN &&
+            gProjectileOriginRyProperty != DISPID_UNKNOWN;
+    }
+    gProjectileOriginVtable = vtable;
+    gProjectileOriginPropertyLookupAttempted = true;
+    gProjectileOriginRxProperty = DISPID_UNKNOWN;
+    gProjectileOriginRyProperty = DISPID_UNKNOWN;
+    auto* dispatch = reinterpret_cast<IDispatch*>(object);
+    LPOLESTR rxName = const_cast<LPOLESTR>(L"rx");
+    LPOLESTR ryName = const_cast<LPOLESTR>(L"ry");
+    const IID nullIid = {};
+    if (FAILED(dispatch->GetIDsOfNames(
+            nullIid, &rxName, 1, LOCALE_USER_DEFAULT, &gProjectileOriginRxProperty)) ||
+        FAILED(dispatch->GetIDsOfNames(
+            nullIid, &ryName, 1, LOCALE_USER_DEFAULT, &gProjectileOriginRyProperty))) {
+        return false;
+    }
+    return true;
+}
+
+bool GetDispatchIntegerProperty(IDispatch* dispatch, DISPID property, int* value) {
+    if (dispatch == nullptr || value == nullptr || property == DISPID_UNKNOWN) {
+        return false;
+    }
+    const IID nullIid = {};
+    DISPPARAMS parameters = {};
+    VARIANT result = {};
+    if (FAILED(dispatch->Invoke(
+            property,
+            nullIid,
+            LOCALE_USER_DEFAULT,
+            DISPATCH_PROPERTYGET,
+            &parameters,
+            &result,
+            nullptr,
+            nullptr))) {
+        return false;
+    }
+    switch (result.vt) {
+        case VT_I2:
+            *value = result.iVal;
+            return true;
+        case VT_I4:
+        case VT_INT:
+            *value = result.lVal;
+            return true;
+        case VT_UI2:
+            *value = result.uiVal;
+            return true;
+        case VT_UI4:
+        case VT_UINT:
+            *value = static_cast<int>(result.ulVal);
+            return true;
+        case VT_R4:
+            *value = static_cast<int>(result.fltVal);
+            return true;
+        case VT_R8:
+            *value = static_cast<int>(result.dblVal);
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool GetProjectileOriginPosition(IUnknown* origin, int* x, int* y) {
+    if (!ResolveProjectileOriginProperties(origin)) {
+        return false;
+    }
+    auto* dispatch = reinterpret_cast<IDispatch*>(origin);
+    return GetDispatchIntegerProperty(dispatch, gProjectileOriginRxProperty, x) &&
+        GetDispatchIntegerProperty(dispatch, gProjectileOriginRyProperty, y);
+}
+
+bool RememberRapidThrowImpact(IUnknown* origin, int skillId, DWORD now) {
+    if (origin == nullptr) {
+        return true;
+    }
+    int replacement = 0;
+    DWORD replacementAge = 0;
+    for (int index = 0; index < kMaxPendingRapidThrowImpacts; ++index) {
+        RecentRapidThrowImpact& recent = gRecentRapidThrowImpacts[index];
+        const DWORD age = now - recent.time;
+        if (recent.origin == origin && recent.skillId == skillId &&
+            age < kRapidThrowImpactDedupMilliseconds) {
+            return false;
+        }
+        if (recent.origin == nullptr || age >= replacementAge) {
+            replacement = index;
+            replacementAge = age;
+        }
+    }
+    gRecentRapidThrowImpacts[replacement].origin = origin;
+    gRecentRapidThrowImpacts[replacement].skillId = skillId;
+    gRecentRapidThrowImpacts[replacement].time = now;
+    return true;
+}
+
+void QueueRapidThrowImpact(
+    const ProjectileRuntime& runtime,
+    MagicBulletNode* node,
+    unsigned int currentTime) {
+    if (!gRapidThrowImpactSupportReady || runtime.rapidThrowSkillId == 0 || node == nullptr ||
+        RapidThrowImpactPath(runtime.rapidThrowSkillId) == nullptr) {
+        return;
+    }
+    const DWORD now = GetTickCount();
+    if (!RememberRapidThrowImpact(node->origin, runtime.rapidThrowSkillId, now)) {
+        return;
+    }
+    int absoluteX = runtime.endX;
+    int absoluteY = runtime.endY;
+    int originX = 0;
+    int originY = 0;
+    if (node->origin != nullptr &&
+        GetProjectileOriginPosition(node->origin, &originX, &originY)) {
+        absoluteX += originX;
+        absoluteY += originY;
+    } else {
+        const LONG targetCount = InterlockedCompareExchange(&gProjectileTargetCount, 0, 0);
+        if (targetCount > 0 &&
+            static_cast<LONG>(gProjectileTargetWindowEnd - now) > 0) {
+            const LONG targetIndex = runtime.lane % targetCount;
+            absoluteX = gProjectileTargets[targetIndex].x;
+            absoluteY = gProjectileTargets[targetIndex].y;
+        } else if (node->origin != nullptr) {
+            if (InterlockedCompareExchange(&gRapidThrowImpactErrorObserved, 1, 0) == 0) {
+                LogLine("RAPID THROW HIT ERROR: target origin position unavailable");
+            }
+            return;
+        }
+    }
+    for (int index = 0; index < kMaxPendingRapidThrowImpacts; ++index) {
+        PendingRapidThrowImpact& pending = gPendingRapidThrowImpacts[index];
+        if (InterlockedCompareExchange(&pending.state, 1, 0) != 0) {
+            continue;
+        }
+        pending.origin = node->origin;
+        if (pending.origin != nullptr) {
+            pending.origin->AddRef();
+        }
+        pending.startTime = currentTime;
+        pending.x = absoluteX;
+        pending.y = absoluteY;
+        pending.z = node->a8;
+        pending.skillId = runtime.rapidThrowSkillId;
+        pending.duration = RapidThrowImpactDuration(runtime.rapidThrowSkillId);
+        InterlockedExchange(&pending.state, 2);
+        if (InterlockedCompareExchange(&gRapidThrowImpactQueuedObserved, 1, 0) == 0) {
+            LogLine("RAPID THROW HIT QUEUED: arrival-synced impact animation ready");
+        }
+        return;
+    }
+    if (InterlockedCompareExchange(&gRapidThrowImpactErrorObserved, 1, 0) == 0) {
+        LogLine("RAPID THROW HIT ERROR: impact queue is full");
+    }
+}
+
+void DrainRapidThrowImpacts() {
+    if (!gRapidThrowImpactSupportReady) {
+        return;
+    }
+    auto** managerSlot = reinterpret_cast<void**>(kMagicBulletManagerAddress);
+    if (!IsReadablePointer(managerSlot) || !IsReadablePointer(*managerSlot)) {
+        return;
+    }
+    const auto createBullet = reinterpret_cast<MagicBulletCreateFn>(kMagicBulletCreateAddress);
+    const auto constructBstr = reinterpret_cast<ZtlBstrFromWideFn>(kZtlBstrFromWideAddress);
+    for (int index = 0; index < kMaxPendingRapidThrowImpacts; ++index) {
+        PendingRapidThrowImpact& pending = gPendingRapidThrowImpacts[index];
+        if (InterlockedCompareExchange(&pending.state, 3, 2) != 2) {
+            continue;
+        }
+        const wchar_t* path = RapidThrowImpactPath(pending.skillId);
+        if (path != nullptr) {
+            void* pathData = nullptr;
+            constructBstr(&pathData, path);
+            if (pathData != nullptr) {
+                createBullet(
+                    *managerSlot,
+                    pending.startTime,
+                    pending.startTime + pending.duration,
+                    pending.x,
+                    pending.y,
+                    pending.x,
+                    pending.y,
+                    pending.origin,
+                    pending.z,
+                    pathData,
+                    0);
+                if (InterlockedCompareExchange(
+                        &gRapidThrowImpactCreatedObserved, 1, 0) == 0) {
+                    LogLine("RAPID THROW HIT OK: impact MagicBullet created at target");
+                }
+            }
+        }
+        if (pending.origin != nullptr) {
+            pending.origin->Release();
+        }
+        pending.origin = nullptr;
+        InterlockedExchange(&pending.state, 0);
+    }
+}
+
+bool EnableRapidThrowImpactSupport() {
+    const unsigned char createOriginal[] = {0xB8, 0xD0, 0x95, 0xA7, 0x00};
+    const unsigned char bstrOriginal[] = {0x56, 0xFF, 0x74, 0x24, 0x08};
+    if (!BytesEqual(
+            reinterpret_cast<const void*>(kMagicBulletCreateAddress),
+            createOriginal,
+            sizeof(createOriginal)) ||
+        !BytesEqual(
+            reinterpret_cast<const void*>(kZtlBstrFromWideAddress),
+            bstrOriginal,
+            sizeof(bstrOriginal))) {
+        LogLine("RAPID THROW HIT ERROR: internal MagicBullet creator bytes do not match");
+        return false;
+    }
+    gRapidThrowImpactSupportReady = true;
+    LogLine("RAPID THROW HIT OK: arrival-synced impact creator enabled");
+    return true;
 }
 
 void BuildProjectilePoint(const ProjectileRuntime& runtime, float rawT, int* outputX, int* outputY) {
@@ -432,7 +845,16 @@ bool NightWalkerProjectileWindowActive() {
 extern "C" __attribute__((used, noinline)) void ArmNightWalkerProjectiles(int skillId) {
     DWORD duration = 0;
     switch (skillId) {
+        case 13121003:
+            gNightWalkerProjectileProfile = kProjectileProfileNone;
+            gNightWalkerProjectileWindowEnd = 0;
+            gNativeRangedProjectileWindowEnd = GetTickCount() + 1200;
+            return;
         case 14121003:
+            gNightWalkerProjectileProfile = kProjectileProfileNone;
+            gNightWalkerProjectileWindowEnd = 0;
+            gNativeRangedProjectileWindowEnd = GetTickCount() + 2400;
+            return;
         case 14121016:
         case 14121017:
             gNightWalkerProjectileProfile = kProjectileProfileShadowBiteBat;
@@ -452,17 +874,116 @@ extern "C" __attribute__((used, noinline)) void ArmNightWalkerProjectiles(int sk
         default:
             gNightWalkerProjectileProfile = kProjectileProfileNone;
             gNightWalkerProjectileWindowEnd = 0;
+            gNativeRangedProjectileWindowEnd = 0;
             return;
     }
+    gNativeRangedProjectileWindowEnd = 0;
     gNightWalkerProjectileWindowEnd = GetTickCount() + duration;
+}
+
+extern "C" __attribute__((used, noinline)) void AssignNativeRangedProjectileTarget(
+    int* targetX,
+    int* targetY,
+    int* travelMilliseconds) {
+    if (targetX == nullptr || targetY == nullptr || travelMilliseconds == nullptr ||
+        static_cast<LONG>(gNativeRangedProjectileWindowEnd - GetTickCount()) <= 0 ||
+        static_cast<LONG>(gProjectileTargetWindowEnd - GetTickCount()) <= 0) {
+        return;
+    }
+    const LONG targetCount = InterlockedCompareExchange(&gProjectileTargetCount, 0, 0);
+    if (targetCount <= 0) {
+        return;
+    }
+    const LONG projectileIndex = InterlockedIncrement(&gNativeRangedProjectileIndex) - 1;
+    const LONG targetIndex = projectileIndex % targetCount;
+    *targetX = gProjectileTargets[targetIndex].x;
+    *targetY = gProjectileTargets[targetIndex].y;
+    if (*travelMilliseconds > kShadowBiteProjectileTravelMilliseconds) {
+        *travelMilliseconds = kShadowBiteProjectileTravelMilliseconds;
+    }
+    const LONG logged = InterlockedIncrement(&gNativeRangedProjectileLogged);
+    if (logged <= 6) {
+        char message[160] = {};
+        wsprintfA(
+            message,
+            "RANGED PROJECTILE: index=%ld target=%ld/%ld end=(%d,%d) travel=%dms",
+            projectileIndex,
+            targetIndex + 1,
+            targetCount,
+            *targetX,
+            *targetY,
+            *travelMilliseconds);
+        LogLine(message);
+    }
+}
+
+extern "C" __attribute__((naked, noinline)) void HookNativeRangedProjectileDestination() {
+    __asm__ __volatile__(
+        ".intel_syntax noprefix\n"
+        "mov dword ptr [ebp-0x24], eax\n"
+        "pushfd\n"
+        "pushad\n"
+        "lea eax, [ebp-0x2c]\n"
+        "push eax\n"
+        "lea eax, [ebp-0x24]\n"
+        "push eax\n"
+        "lea eax, [ebp-0x28]\n"
+        "push eax\n"
+        "call _AssignNativeRangedProjectileTarget\n"
+        "add esp, 12\n"
+        "popad\n"
+        "popfd\n"
+        "jne 1f\n"
+        "push 0x0095459F\n"
+        "ret\n"
+        "1:\n"
+        "push 0x009546AC\n"
+        "ret\n"
+        ".att_syntax prefix\n");
+}
+
+bool InstallNativeRangedProjectileHook() {
+    const unsigned char original[] = {
+        0x89, 0x45, 0xDC,
+        0x0F, 0x85, 0x0D, 0x01, 0x00, 0x00,
+    };
+    const HookSite hook = {
+        "Shared native ranged projectile destination",
+        kRangedProjectileDestinationAddress,
+        original,
+        sizeof(original),
+        reinterpret_cast<void*>(&HookNativeRangedProjectileDestination),
+        0xE9,
+    };
+    if (!BytesEqual(reinterpret_cast<const void*>(hook.address), original, sizeof(original))) {
+        LogLine("RANGED PROJECTILE ERROR: destination bytes do not match");
+        return false;
+    }
+    if (!WriteRelativeBranch(hook)) {
+        LogLine("RANGED PROJECTILE ERROR: destination patch failed");
+        return false;
+    }
+    LogLine("RANGED PROJECTILE OK: native per-target destination hook installed");
+    return true;
 }
 
 int __fastcall HookMagicBulletNodeUpdate(MagicBulletNode* node, void*, unsigned int currentTime) {
     if (node != nullptr && IsReadablePointer(node) && node->layer == nullptr &&
-        NightWalkerProjectileWindowActive() && FindProjectileRuntime(node) == nullptr) {
+        NightWalkerProjectileWindowActive() && FindProjectileRuntime(node) == nullptr &&
+        !IsRapidThrowImpactNode(node)) {
         int duration = node->endTime - node->startTime;
         if (duration > 0) {
             if (gNightWalkerProjectileProfile == kProjectileProfileShadowBiteBat) {
+                const LONG targetCount = InterlockedCompareExchange(
+                    &gProjectileTargetCount, 0, 0);
+                if (targetCount > 0 &&
+                    static_cast<LONG>(gProjectileTargetWindowEnd - GetTickCount()) > 0) {
+                    const LONG targetIndex = InterlockedIncrement(&gProjectileTargetIndex) - 1;
+                    if (targetIndex >= 0 && targetIndex < targetCount) {
+                        node->x2 = gProjectileTargets[targetIndex].x;
+                        node->y2 = gProjectileTargets[targetIndex].y;
+                    }
+                }
                 if (duration < 240) {
                     duration = 240;
                 } else if (duration > 900) {
@@ -484,6 +1005,7 @@ int __fastcall HookMagicBulletNodeUpdate(MagicBulletNode* node, void*, unsigned 
     ProjectileRuntime* runtime = FindProjectileRuntime(node);
     if (runtime != nullptr) {
         if (result != 0) {
+            QueueRapidThrowImpact(*runtime, node, currentTime);
             ReleaseProjectileRuntime(node);
         } else if (node->layer != nullptr && runtime->endTime > runtime->startTime) {
             const float t = static_cast<float>(currentTime - runtime->startTime) /
@@ -491,8 +1013,12 @@ int __fastcall HookMagicBulletNodeUpdate(MagicBulletNode* node, void*, unsigned 
             int x = 0;
             int y = 0;
             BuildProjectilePoint(*runtime, t, &x, &y);
-            SetDispatchIntegerProperty(node->layer, L"rx", x);
-            SetDispatchIntegerProperty(node->layer, L"ry", y);
+            const bool moved = SetProjectileLayerPosition(node->layer, x, y);
+            if (InterlockedCompareExchange(&gProjectileMoveObserved, 1, 0) == 0) {
+                LogLine(moved
+                    ? "PROJECTILE MOVE OK: cached rx/ry updates active"
+                    : "PROJECTILE MOVE ERROR: layer rx/ry update failed");
+            }
         }
     }
     return result;
@@ -531,6 +1057,235 @@ bool InstallMagicBulletHook() {
         return false;
     }
     LogLine("PROJECTILE OK: Night Walker-only Bezier trajectory hook installed");
+    return true;
+}
+
+LONG CustomRangedTargetLimit(int skillId) {
+    switch (skillId) {
+        case 14121003: return 15;
+        case 14121016: return 3;
+        case 14121017: return 1;
+        case 13121003: return 10;
+        case 13121004: return 3;
+        case 13121009: return 7;
+        case 13121010: return 15;
+        case 13121011: return 12;
+        case 13121013: return 15;
+        case 13121019: return 15;
+        case 15121001: return 15;
+        default: return 0;
+    }
+}
+
+bool IsCustomRangedSkill(int skillId) {
+    return CustomRangedTargetLimit(skillId) > 0 ||
+        (skillId >= kWindArcherFirstSkill && skillId <= kWindArcherLastSkill);
+}
+
+int __cdecl HookRangedMultiTargetClassifier(int skillId) {
+    const LONG targetLimit = CustomRangedTargetLimit(skillId);
+    if (targetLimit > 0) {
+        InterlockedExchange(&gCustomRangedTargetLimit, targetLimit);
+        if (skillId == 14121003 &&
+            InterlockedCompareExchange(&gShadowBiteClassifierObserved, 1, 0) == 0) {
+            LogLine("RANGED TARGET HIT: Shadow Bite classified as native multi-target");
+        }
+        return 1;
+    }
+    InterlockedExchange(&gCustomRangedTargetLimit, 0);
+    return gRealRangedMultiTargetClassifier(skillId);
+}
+
+int __cdecl HookRangedSkillRangeClassifier(int skillId) {
+    if (IsCustomRangedSkill(skillId)) {
+        if (skillId == 14121003 &&
+            InterlockedCompareExchange(&gShadowBiteRangeClassifierObserved, 1, 0) == 0) {
+            LogLine("RANGED RANGE HIT: Shadow Bite uses its skill lt/rb bounds");
+        }
+        return 1;
+    }
+    return gRealRangedSkillRangeClassifier(skillId);
+}
+
+void CaptureProjectileTargets(void** targets, int targetCount) {
+    InterlockedExchange(&gProjectileTargetCount, 0);
+    InterlockedExchange(&gProjectileTargetIndex, 0);
+    InterlockedExchange(&gNativeRangedProjectileIndex, 0);
+    gNightWalkerProjectileLane = 0;
+    if (targets == nullptr || targetCount <= 0) {
+        gProjectileTargetWindowEnd = 0;
+        return;
+    }
+    const auto getBodyRect = reinterpret_cast<MobGetBodyRectFn>(kMobGetBodyRectAddress);
+    int captured = 0;
+    for (int index = 0; index < targetCount && captured < 15; ++index) {
+        void* monster = targets[index];
+        if (!IsReadablePointer(monster)) {
+            continue;
+        }
+        RECT body = {};
+        if (getBodyRect(monster, &body, 1) == 0) {
+            continue;
+        }
+        gProjectileTargets[captured].x = (body.left + body.right) / 2;
+        gProjectileTargets[captured].y = (body.top + body.bottom) / 2;
+        ++captured;
+    }
+    InterlockedExchange(&gProjectileTargetCount, captured);
+    gProjectileTargetWindowEnd = captured > 0 ? GetTickCount() + 2400 : 0;
+    char message[96] = {};
+    wsprintfA(message, "PROJECTILE TARGETS: captured=%d", captured);
+    LogLine(message);
+}
+
+int __fastcall HookRangedTargetCollector(
+    void* self,
+    void*,
+    void* bounds,
+    void** targets,
+    int maxTargets,
+    void* filter1,
+    void* filter2,
+    void* filter3,
+    void* filter4,
+    void* filter5) {
+    const LONG forcedLimit = InterlockedExchange(&gCustomRangedTargetLimit, 0);
+    if (forcedLimit > 0) {
+        maxTargets = forcedLimit;
+    }
+    const int result = gRealRangedTargetCollector(
+        self, bounds, targets, maxTargets, filter1, filter2, filter3, filter4, filter5);
+    if (forcedLimit > 0) {
+        CaptureProjectileTargets(targets, result & 0xFFFF);
+        const auto* selectionBounds = static_cast<const RECT*>(bounds);
+        char message[192] = {};
+        wsprintfA(
+            message,
+            "RANGED TARGET RESULT: requested=%ld selected=%d bounds=(%ld,%ld)-(%ld,%ld)",
+            forcedLimit,
+            result & 0xFFFF,
+            selectionBounds->left,
+            selectionBounds->top,
+            selectionBounds->right,
+            selectionBounds->bottom);
+        LogLine(message);
+    }
+    return result;
+}
+
+bool InstallRangedMultiTargetClassifierHook() {
+    const unsigned char original[] = {
+        0x8B, 0x44, 0x24, 0x04,
+        0xB9, 0x90, 0xAA, 0x4F, 0x00,
+    };
+    auto* target = reinterpret_cast<unsigned char*>(kRangedMultiTargetClassifierAddress);
+    if (!BytesEqual(target, original, sizeof(original))) {
+        LogLine("RANGED TARGET ERROR: classifier bytes do not match");
+        return false;
+    }
+    auto* trampoline = static_cast<unsigned char*>(VirtualAlloc(
+        nullptr, 14, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE));
+    if (trampoline == nullptr) {
+        LogLine("RANGED TARGET ERROR: classifier trampoline allocation failed");
+        return false;
+    }
+    memcpy(trampoline, original, sizeof(original));
+    trampoline[9] = 0xE9;
+    *reinterpret_cast<int32_t*>(trampoline + 10) = static_cast<int32_t>(
+        (target + 9) - (trampoline + 14));
+    gRealRangedMultiTargetClassifier =
+        reinterpret_cast<RangedMultiTargetClassifierFn>(trampoline);
+    const HookSite hook = {
+        "Night Walker ranged multi-target classifier",
+        kRangedMultiTargetClassifierAddress,
+        original,
+        sizeof(original),
+        reinterpret_cast<void*>(&HookRangedMultiTargetClassifier),
+        0xE9,
+    };
+    if (!WriteRelativeBranch(hook)) {
+        VirtualFree(trampoline, 0, MEM_RELEASE);
+        gRealRangedMultiTargetClassifier = nullptr;
+        LogLine("RANGED TARGET ERROR: classifier patch failed");
+        return false;
+    }
+    LogLine("RANGED TARGET OK: Shadow Bite uses native multi-target selection");
+    return true;
+}
+
+bool InstallRangedSkillRangeClassifierHook() {
+    const unsigned char original[] = {
+        0x8B, 0x44, 0x24, 0x04,
+        0xB9, 0x90, 0xAA, 0x4F, 0x00,
+    };
+    auto* target = reinterpret_cast<unsigned char*>(kRangedSkillRangeClassifierAddress);
+    if (!BytesEqual(target, original, sizeof(original))) {
+        LogLine("RANGED RANGE ERROR: classifier bytes do not match");
+        return false;
+    }
+    auto* trampoline = static_cast<unsigned char*>(VirtualAlloc(
+        nullptr, 14, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE));
+    if (trampoline == nullptr) {
+        LogLine("RANGED RANGE ERROR: classifier trampoline allocation failed");
+        return false;
+    }
+    memcpy(trampoline, original, sizeof(original));
+    trampoline[9] = 0xE9;
+    *reinterpret_cast<int32_t*>(trampoline + 10) = static_cast<int32_t>(
+        (target + 9) - (trampoline + 14));
+    gRealRangedSkillRangeClassifier =
+        reinterpret_cast<RangedMultiTargetClassifierFn>(trampoline);
+    const HookSite hook = {
+        "Night Walker ranged skill-range classifier",
+        kRangedSkillRangeClassifierAddress,
+        original,
+        sizeof(original),
+        reinterpret_cast<void*>(&HookRangedSkillRangeClassifier),
+        0xE9,
+    };
+    if (!WriteRelativeBranch(hook)) {
+        VirtualFree(trampoline, 0, MEM_RELEASE);
+        gRealRangedSkillRangeClassifier = nullptr;
+        LogLine("RANGED RANGE ERROR: classifier patch failed");
+        return false;
+    }
+    LogLine("RANGED RANGE OK: Night Walker skill lt/rb hook installed");
+    return true;
+}
+
+bool InstallRangedTargetCollectorHook() {
+    const unsigned char original[] = {0x55, 0x8B, 0xEC, 0x83, 0xEC, 0x28};
+    auto* target = reinterpret_cast<unsigned char*>(kRangedTargetCollectorAddress);
+    if (!BytesEqual(target, original, sizeof(original))) {
+        LogLine("RANGED TARGET ERROR: collector bytes do not match");
+        return false;
+    }
+    auto* trampoline = static_cast<unsigned char*>(VirtualAlloc(
+        nullptr, 11, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE));
+    if (trampoline == nullptr) {
+        LogLine("RANGED TARGET ERROR: collector trampoline allocation failed");
+        return false;
+    }
+    memcpy(trampoline, original, sizeof(original));
+    trampoline[6] = 0xE9;
+    *reinterpret_cast<int32_t*>(trampoline + 7) = static_cast<int32_t>(
+        (target + 6) - (trampoline + 11));
+    gRealRangedTargetCollector = reinterpret_cast<RangedTargetCollectorFn>(trampoline);
+    const HookSite hook = {
+        "Night Walker ranged target collector",
+        kRangedTargetCollectorAddress,
+        original,
+        sizeof(original),
+        reinterpret_cast<void*>(&HookRangedTargetCollector),
+        0xE9,
+    };
+    if (!WriteRelativeBranch(hook)) {
+        VirtualFree(trampoline, 0, MEM_RELEASE);
+        gRealRangedTargetCollector = nullptr;
+        LogLine("RANGED TARGET ERROR: collector patch failed");
+        return false;
+    }
+    LogLine("RANGED TARGET OK: Night Walker target limits override installed");
     return true;
 }
 
@@ -723,6 +1478,7 @@ HRESULT WINAPI HookPresent(
     const RECT* destination,
     HWND overrideWindow,
     const RGNDATA* dirtyRegion) {
+    DrainRapidThrowImpacts();
     if (!gVideoDeviceAttached && LoadVideoModule() && gAttachDevice(device)) {
         gVideoDeviceAttached = true;
         LogLine("VIDEO OK: active D3D8 device attached on first Present");
@@ -1009,6 +1765,12 @@ constexpr VideoSkillMapping kVideoSkills[] = {
     {14121030, "Data\\Video\\dominion.mcv", "VIDEO OK: Dominion started"},
     {14121032, "Data\\Video\\silent-night.mcv", "VIDEO OK: Silent Night started"},
     {14121035, "Data\\Video\\stygian-command.mcv", "VIDEO OK: Stygian Command started"},
+    {13121010, "Data\\Video\\monsoon-vi.mcv", "VIDEO OK: Monsoon VI started"},
+    {13121013, "Data\\Video\\mistral-spring.mcv", "VIDEO OK: Mistral Spring started"},
+    {13121019, "Data\\Video\\elemental-tempest.mcv", "VIDEO OK: Elemental Tempest started"},
+    {15121016, "Data\\Video\\god-of-sea-vi.mcv", "VIDEO OK: God of the Sea VI started"},
+    {15121017, "Data\\Video\\wave-riding-thunder.mcv", "VIDEO OK: Wave Riding Thunder started"},
+    {15121019, "Data\\Video\\swift-annihilation.mcv", "VIDEO OK: Swift Annihilation started"},
 };
 
 extern "C" __attribute__((used, noinline)) void StartVideoSkill(int skillId) {
@@ -1045,6 +1807,16 @@ extern "C" __attribute__((naked, noinline)) void HookKeyboardDispatch() {
     __asm__ __volatile__(
         ".intel_syntax noprefix\n"
         "mov ecx, dword ptr [esi+1]\n"
+        "cmp ecx, 15121000\n"
+        "jb thunder_keyboard_next\n"
+        "cmp ecx, 15121020\n"
+        "jbe 2f\n"
+        "thunder_keyboard_next:\n"
+        "cmp ecx, 13121003\n"
+        "jb wind_keyboard_next\n"
+        "cmp ecx, 13121023\n"
+        "jbe 2f\n"
+        "wind_keyboard_next:\n"
         "cmp ecx, 14121003\n"
         "jb 4f\n"
         "cmp ecx, 14121036\n"
@@ -1076,6 +1848,30 @@ extern "C" __attribute__((naked, noinline)) void HookKeyboardDispatch() {
 extern "C" __attribute__((naked, noinline)) void HookActiveSkillDispatch() {
     __asm__ __volatile__(
         ".intel_syntax noprefix\n"
+        "cmp esi, 15121000\n"
+        "jb thunder_active_next\n"
+        "cmp esi, 15121020\n"
+        "ja thunder_active_next\n"
+        "cmp esi, 15121001\n"
+        "je thunder_active_ranged\n"
+        "pushfd\n"
+        "pushad\n"
+        "push esi\n"
+        "call _StartVideoSkill\n"
+        "add esp, 4\n"
+        "popad\n"
+        "popfd\n"
+        "push 0x009690AE\n"
+        "ret\n"
+        "thunder_active_ranged:\n"
+        "push 0x009690E9\n"
+        "ret\n"
+        "thunder_active_next:\n"
+        "cmp esi, 13121003\n"
+        "jb wind_active_next\n"
+        "cmp esi, 13121023\n"
+        "jbe wind_active\n"
+        "wind_active_next:\n"
         "cmp esi, 14121003\n"
         "jb 7f\n"
         "cmp esi, 14121036\n"
@@ -1137,12 +1933,35 @@ extern "C" __attribute__((naked, noinline)) void HookActiveSkillDispatch() {
         "popfd\n"
         "push 0x009690E9\n"
         "ret\n"
+        "wind_active:\n"
+        "pushfd\n"
+        "pushad\n"
+        "push esi\n"
+        "call _StartVideoSkill\n"
+        "add esp, 4\n"
+        "push esi\n"
+        "call _ArmNightWalkerProjectiles\n"
+        "add esp, 4\n"
+        "popad\n"
+        "popfd\n"
+        "push 0x009690E9\n"
+        "ret\n"
         ".att_syntax prefix\n");
 }
 
 extern "C" __attribute__((naked, noinline)) void HookHighSkillVisualBranch() {
     __asm__ __volatile__(
         ".intel_syntax noprefix\n"
+        "cmp esi, 15121000\n"
+        "jb thunder_visual_next\n"
+        "cmp esi, 15121020\n"
+        "jbe 5f\n"
+        "thunder_visual_next:\n"
+        "cmp esi, 13121003\n"
+        "jb wind_visual_next\n"
+        "cmp esi, 13121023\n"
+        "jbe 5f\n"
+        "wind_visual_next:\n"
         "cmp esi, 14121003\n"
         "jb 6f\n"
         "cmp esi, 14121036\n"
@@ -1179,6 +1998,13 @@ extern "C" __attribute__((naked, noinline)) void HookHighSkillVisualBranch() {
 extern "C" __attribute__((naked, noinline)) void HookBrandishActionType() {
     __asm__ __volatile__(
         ".intel_syntax noprefix\n"
+        "cmp eax, 15121000\n"
+        "jb thunder_action_next\n"
+        "cmp eax, 15121020\n"
+        "ja thunder_action_next\n"
+        "cmp eax, 15121001\n"
+        "jne 2f\n"
+        "thunder_action_next:\n"
         "cmp eax, 11121005\n"
         "jb 1f\n"
         "cmp eax, 11121012\n"
@@ -1199,6 +2025,13 @@ extern "C" __attribute__((naked, noinline)) void HookBrandishActionType() {
 extern "C" __attribute__((naked, noinline)) void HookBrandishVisualOffset() {
     __asm__ __volatile__(
         ".intel_syntax noprefix\n"
+        "cmp eax, 15121000\n"
+        "jb thunder_offset_next\n"
+        "cmp eax, 15121020\n"
+        "ja thunder_offset_next\n"
+        "cmp eax, 15121001\n"
+        "jne 2f\n"
+        "thunder_offset_next:\n"
         "cmp eax, 11121005\n"
         "jb 1f\n"
         "cmp eax, 11121012\n"
@@ -1219,6 +2052,13 @@ extern "C" __attribute__((naked, noinline)) void HookBrandishVisualOffset() {
 extern "C" __attribute__((naked, noinline)) void HookBrandishStateSwitch() {
     __asm__ __volatile__(
         ".intel_syntax noprefix\n"
+        "cmp esi, 15121000\n"
+        "jb thunder_state_next\n"
+        "cmp esi, 15121020\n"
+        "ja thunder_state_next\n"
+        "cmp esi, 15121001\n"
+        "jne 3f\n"
+        "thunder_state_next:\n"
         "cmp esi, 11121005\n"
         "jb 1f\n"
         "cmp esi, 11121012\n"
@@ -1244,6 +2084,13 @@ extern "C" __attribute__((naked, noinline)) void HookBrandishStateSwitch() {
 extern "C" __attribute__((naked, noinline)) void HookBrandishHit() {
     __asm__ __volatile__(
         ".intel_syntax noprefix\n"
+        "cmp ebx, 15121000\n"
+        "jb thunder_hit_next\n"
+        "cmp ebx, 15121020\n"
+        "ja thunder_hit_next\n"
+        "cmp ebx, 15121001\n"
+        "jne 2f\n"
+        "thunder_hit_next:\n"
         "cmp ebx, 11121005\n"
         "jb 1f\n"
         "cmp ebx, 11121012\n"
@@ -1283,7 +2130,7 @@ HookSite kHooks[] = {
 };
 
 DWORD WINAPI InstallHooks(LPVOID) {
-    LogLine("LOAD: Dawn Warrior/Blaze Wizard/Night Walker Skill Compat v15");
+    LogLine("LOAD: Dawn Warrior/Blaze Wizard/Wind Archer/Night Walker/Thunder Breaker Skill Compat v28");
     if (reinterpret_cast<uintptr_t>(GetModuleHandleA(nullptr)) != kExpectedImageBase) {
         LogLine("ERROR: unexpected BeiDou.exe image base; no hooks installed");
         return 1;
@@ -1300,8 +2147,13 @@ DWORD WINAPI InstallHooks(LPVOID) {
             return 3;
         }
     }
-    LogLine("OK: unified skill compat v15 hooks installed (melee/magic/ranged dispatch)");
+    LogLine("OK: unified skill compat v28 hooks installed (melee/magic/ranged dispatch)");
+    InstallRangedSkillRangeClassifierHook();
+    InstallRangedMultiTargetClassifierHook();
+    InstallRangedTargetCollectorHook();
+    InstallNativeRangedProjectileHook();
     InstallMagicBulletHook();
+    EnableRapidThrowImpactSupport();
     for (int attempt = 0; attempt < kVideoHookRetryCount && !DeviceVideoHooksReady(); ++attempt) {
         HMODULE gr2D = GetModuleHandleA("Gr2D_DX8.dll");
         if (gr2D != nullptr) {

@@ -77,22 +77,57 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
             "customSkill/nightWalker/silentNightVideoLayer";
     private static final String STYGIAN_COMMAND_VIDEO_LAYER =
             "customSkill/nightWalker/stygianCommandVideoLayer";
-    private static final int[] RAPID_THROW_UPPER_TIMES_MS = intervalTimes(0, 360, 2160);
-    private static final int[] RAPID_THROW_MIDDLE_TIMES_MS = intervalTimes(120, 360, 2280);
-    private static final int[] RAPID_THROW_LOWER_TIMES_MS = intervalTimes(240, 360, 2040);
-    private static final int[] QUINTUPLE_THROW_VI_TIMES_MS = {450};
+    private static final String MONSOON_VIDEO_LAYER =
+            "customSkill/windArcher/monsoonVideoLayer";
+    private static final String MISTRAL_SPRING_VIDEO_LAYER =
+            "customSkill/windArcher/mistralSpringVideoLayer";
+    private static final String ELEMENTAL_TEMPEST_VIDEO_LAYER =
+            "customSkill/windArcher/elementalTempestVideoLayer";
+    private static final int[] RAPID_THROW_UPPER_TIMES_MS = intervalTimes(240, 360, 2400);
+    private static final int[] RAPID_THROW_MIDDLE_TIMES_MS = intervalTimes(360, 360, 2520);
+    private static final int[] RAPID_THROW_LOWER_TIMES_MS = intervalTimes(480, 360, 2280);
+    private static final int RAPID_THROW_FINISH_TIME_MS = 2640;
     private static final int SHADOW_BITE_PASSIVE_PERCENT = 120;
     private static final int SHADOW_BITE_NORMAL_PERCENT = 990;
     private static final int SHADOW_BITE_BOSS_PERCENT = 2673;
+    private static final int SHADOW_BITE_ATTACK_COUNT = 8;
     private static final int SHADOW_BITE_BAT_DELAY_MS = 720;
-    private static final long QUINTUPLE_THROW_VI_ALTERNATE_INTERVAL_MS = SECONDS.toMillis(6);
-    private static final Map<Character, Long> QUINTUPLE_THROW_VI_ALTERNATE_READY_AT =
-            Collections.synchronizedMap(new WeakHashMap<>());
-    private static final int[] DARK_OMEN_VI_TIMES_MS = intervalTimes(270, 270, 7020);
+    private static final int[] DOMINION_VI_ATTACK_TIMES_MS = intervalTimes(120, 540, 2820);
+    private static final int[] DARK_OMEN_VI_TIMES_MS = intervalTimes(270, 270, 6750);
     private static final int[] SILENT_NIGHT_OPENING_TIMES_MS = intervalTimes(3180, 30, 3420);
     private static final int[] SILENT_NIGHT_DART_TIMES_MS = intervalTimes(4020, 30, 4740);
     private static final int[] STYGIAN_COMMAND_TIMES_MS = intervalTimes(900, 30, 1200);
     private static final int[] STYGIAN_COMMAND_FINISH_TIMES_MS = intervalTimes(1890, 30, 2280);
+    private static final int[] MERCILESS_WINDS_TIMES_MS = intervalTimes(0, 100, 900);
+    private static final int MERCILESS_WINDS_TRACKING_DURATION_MS = 8000;
+    private static final int MERCILESS_WINDS_SEARCH_INTERVAL_MS = 100;
+    private static final int MERCILESS_WINDS_REPEATED_TARGET_PERCENT = 85;
+    private static final int MERCILESS_WINDS_DOT_PERCENT = 1100;
+    private static final int MERCILESS_WINDS_DOT_TICKS = 9;
+    private static final int MERCILESS_WINDS_DOT_INTERVAL_MS = 1000;
+    private static final Map<Character, Map<Monster, Long>> MERCILESS_WINDS_DOT_GENERATIONS =
+            new WeakHashMap<>();
+    private static final int[] GALE_BARRIER_TIMES_MS = {0};
+    private static final int[] ANEMOI_TIMES_MS = {1200};
+    private static final int[] MISTRAL_WIND_BLADE_TIMES_MS = {
+        2400, 3600, 3720, 3840, 3900, 3930, 3960,
+        3990, 4020, 4050, 4080, 4110, 4140
+    };
+    private static final int MISTRAL_SPIRIT_START_TIME_MS = 4080;
+    private static final int MISTRAL_SPIRIT_INTERVAL_MS = 2100;
+    private static final int MISTRAL_SPIRIT_DURATION_MS = 20000;
+    private static final int MISTRAL_SPIRIT_TOTAL_END_TIME_MS = 25000;
+    private static final int MISTRAL_SPIRIT_SEARCH_INTERVAL_MS = 100;
+    private static final int[] MISTRAL_SPIRIT_SKILL_IDS = {
+        WindArcher.MISTRAL_SPIRIT,
+        WindArcher.MISTRAL_HAPPY_SPIRIT,
+        WindArcher.MISTRAL_FIERCE_SPIRIT
+    };
+    private static final int[] MISTRAL_SPIRIT_COUNTS = {13, 5, 3};
+    private static final int[] MISTRAL_SPIRIT_LIFETIMES_MS = {3000, 4000, 2400};
+    private static final int[] MISTRAL_SPIRIT_ENABLE_DELAYS_MS = {270, 120, 120};
+    private static final int[] ELEMENTAL_TEMPEST_WAVE_TIMES_MS = intervalTimes(960, 30, 1260);
+    private static final int[] ELEMENTAL_TEMPEST_ARROW_TIMES_MS = intervalTimes(2040, 30, 2340);
 
     private static int[] intervalTimes(int first, int interval, int last) {
         int[] result = new int[((last - first) / interval) + 1];
@@ -103,9 +138,21 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
     }
 
     private static boolean isNightWalkerVViSkill(int skillId) {
-        return (skillId >= NightWalker.SHADOW_BITE && skillId <= NightWalker.SHADOW_BITE_RAVENOUS_BAT)
+        return (skillId >= NightWalker.SHADOW_BITE && skillId <= NightWalker.RAPID_THROW_LOWER_DART)
+                || (skillId >= NightWalker.SHADOW_BITE_NORMAL_HIT
+                    && skillId <= NightWalker.DOMINION_VI_TICK)
                 || (skillId >= NightWalker.DARK_OMEN_VI && skillId <= NightWalker.DARK_OMEN_VI_TICK)
                 || (skillId >= NightWalker.DOMINION_VI && skillId <= NightWalker.STYGIAN_COMMAND_FINISH);
+    }
+
+    private static boolean isWindArcherVViSkill(int skillId) {
+        return (skillId >= WindArcher.MERCILESS_WINDS
+                    && skillId <= WindArcher.GALE_BARRIER_TORNADO)
+                || (skillId >= WindArcher.FAIRY_SPIRAL_VI
+                    && skillId <= WindArcher.MERCILESS_WINDS_SPIRIT)
+                || skillId == WindArcher.ELEMENTAL_TEMPEST
+                || skillId == WindArcher.ELEMENTAL_TEMPEST_ARROW_RAIN
+                || skillId == WindArcher.ELEMENTAL_TEMPEST_WAVE;
     }
 
     private static void scaleDamageLines(List<Integer> damage, int numerator, int denominator) {
@@ -146,24 +193,25 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
 
     private static boolean usesScheduledDamageOnly(int skillId) {
         return skillId == NightWalker.RAPID_THROW
-                || skillId == NightWalker.QUINTUPLE_THROW_VI
+                || skillId == NightWalker.DARK_OMEN_VI
+                || skillId == NightWalker.DOMINION_VI
                 || skillId == NightWalker.SILENT_NIGHT
-                || skillId == NightWalker.STYGIAN_COMMAND;
+                || skillId == NightWalker.STYGIAN_COMMAND
+                || skillId == WindArcher.MERCILESS_WINDS
+                || skillId == WindArcher.GALE_BARRIER
+                || skillId == WindArcher.MISTRAL_SPRING
+                || skillId == WindArcher.ELEMENTAL_TEMPEST;
     }
 
-    private static boolean useQuintupleThrowAlternate(Character chr) {
-        long now = currentServerTime();
-        synchronized (QUINTUPLE_THROW_VI_ALTERNATE_READY_AT) {
-            Long readyAt = QUINTUPLE_THROW_VI_ALTERNATE_READY_AT.get(chr);
-            if (readyAt != null && readyAt > now) {
-                return false;
-            }
-            QUINTUPLE_THROW_VI_ALTERNATE_READY_AT.put(
-                    chr,
-                    now + QUINTUPLE_THROW_VI_ALTERNATE_INTERVAL_MS
-            );
-            return true;
-        }
+    private static boolean usesFixedAttackOrigin(int skillId) {
+        return skillId == NightWalker.DARK_OMEN_VI
+                || skillId == NightWalker.DOMINION_VI
+                || skillId == NightWalker.SILENT_NIGHT
+                || skillId == NightWalker.STYGIAN_COMMAND
+                || skillId == WindArcher.MERCILESS_WINDS
+                || skillId == WindArcher.ANEMOI
+                || skillId == WindArcher.MISTRAL_SPRING
+                || skillId == WindArcher.ELEMENTAL_TEMPEST;
     }
 
     private void applyAttackCostOnly(AttackInfo attack, Character chr, int bulletCount) {
@@ -207,6 +255,12 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
         return Collections.emptyList();
     }
 
+    private static int calculateFallbackRangedDamage(Character chr, StatEffect effect) {
+        long baseDamage = chr.calculateMaxBaseDamage(Math.max(14, chr.getTotalWatk()));
+        long skillDamage = Math.round((double) baseDamage * effect.getDamage() / 100.0);
+        return (int) Math.max(1, Math.min(Integer.MAX_VALUE, skillDamage));
+    }
+
     private static List<Integer> adaptDamageTemplate(
             List<Integer> source,
             int attackCount,
@@ -229,8 +283,9 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
     }
 
     private static Map<Integer, List<Integer>> collectTrackingTargets(
-            Character chr,
             MapleMap expectedMap,
+            Point attackOrigin,
+            Rectangle attackBounds,
             int mobCount,
             List<Integer> damageTemplate
     ) {
@@ -238,12 +293,12 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
         if (damageTemplate.isEmpty()) {
             return result;
         }
-        Point casterPosition = new Point(chr.getPosition());
         List<Monster> monsters = new ArrayList<>(expectedMap.getAllMonsters());
-        monsters.removeIf(monster -> !monster.isAlive());
+        monsters.removeIf(monster -> !monster.isAlive()
+                || (attackBounds != null && !attackBounds.contains(monster.getPosition())));
         monsters.sort(Comparator
                 .comparing((Monster monster) -> !monster.isBoss())
-                .thenComparingDouble(monster -> monster.getPosition().distanceSq(casterPosition))
+                .thenComparingDouble(monster -> monster.getPosition().distanceSq(attackOrigin))
                 .thenComparingInt(Monster::getObjectId));
         for (Monster monster : monsters) {
             result.put(monster.getObjectId(), new ArrayList<>(damageTemplate));
@@ -261,13 +316,21 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
             int replaySkillId,
             int replayAttackCount,
             int mobCount,
-            List<Integer> damageTemplate
+            List<Integer> damageTemplate,
+            StatEffect replayEffect,
+            Point fixedAttackOrigin
     ) {
         if (!canContinueTrackingAttack(chr, expectedMap)) {
             return;
         }
+        Point attackOrigin = fixedAttackOrigin != null
+                ? fixedAttackOrigin
+                : new Point(chr.getPosition());
+        Rectangle attackBounds = replayEffect.hasBoundingBox()
+                ? replayEffect.calculateBoundingBox(attackOrigin, attack.direction == 0)
+                : null;
         Map<Integer, List<Integer>> damage = collectTrackingTargets(
-                chr, expectedMap, mobCount, damageTemplate
+                expectedMap, attackOrigin, attackBounds, mobCount, damageTemplate
         );
         if (damage.isEmpty()) {
             return;
@@ -441,17 +504,19 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
             (monster.isBoss() ? additionalBossTargets : additionalNormalTargets).add(monster);
         }
         List<Integer> normalDamage = adaptDamageTemplate(
-                baseDamageTemplate, 14, SHADOW_BITE_NORMAL_PERCENT, SHADOW_BITE_NORMAL_PERCENT
+                baseDamageTemplate, SHADOW_BITE_ATTACK_COUNT,
+                SHADOW_BITE_NORMAL_PERCENT, SHADOW_BITE_NORMAL_PERCENT
         );
         List<Integer> bossDamage = adaptDamageTemplate(
-                baseDamageTemplate, 14, SHADOW_BITE_NORMAL_PERCENT, SHADOW_BITE_BOSS_PERCENT
+                baseDamageTemplate, SHADOW_BITE_ATTACK_COUNT,
+                SHADOW_BITE_NORMAL_PERCENT, SHADOW_BITE_BOSS_PERCENT
         );
         replayTargetedAttacksIndividually(
                 attack,
                 chr,
                 expectedMap,
                 NightWalker.SHADOW_BITE_NORMAL_HIT,
-                14,
+                SHADOW_BITE_ATTACK_COUNT,
                 additionalNormalTargets,
                 normalDamage
         );
@@ -460,7 +525,7 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
                 chr,
                 expectedMap,
                 NightWalker.SHADOW_BITE_BOSS_HIT,
-                14,
+                SHADOW_BITE_ATTACK_COUNT,
                 additionalBossTargets,
                 bossDamage
         );
@@ -519,12 +584,21 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
         StatEffect replayEffect = replaySkill.getEffect(replayLevel);
         int replayAttackCount = Math.max(1, Math.min(15, replayEffect.getAttackCount()));
         int mobCount = Math.max(1, Math.min(15, replayEffect.getMobCount()));
+        List<Integer> sourceDamageTemplate = copyDamageTemplate(attack);
+        if (sourceDamageTemplate.isEmpty()) {
+            sourceDamageTemplate = Collections.singletonList(
+                    calculateFallbackRangedDamage(chr, originalEffect)
+            );
+        }
         List<Integer> damageTemplate = adaptDamageTemplate(
-                copyDamageTemplate(attack),
+                sourceDamageTemplate,
                 replayAttackCount,
                 originalEffect.getDamage(),
                 replayEffect.getDamage()
         );
+        Point fixedAttackOrigin = usesFixedAttackOrigin(attack.skill)
+                ? new Point(chr.getPosition())
+                : null;
         for (int attackTimeMs : attackTimesMs) {
             TimerManager.getInstance().schedule(() -> repeatTrackingAttack(
                     attack,
@@ -533,8 +607,369 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
                     replaySkillId,
                     replayAttackCount,
                     mobCount,
-                    damageTemplate
+                    damageTemplate,
+                    replayEffect,
+                    fixedAttackOrigin
             ), attackTimeMs);
+        }
+    }
+
+    private static List<Monster> collectMercilessWindsTargets(
+            MapleMap expectedMap,
+            Point castPosition,
+            Rectangle attackBounds
+    ) {
+        List<Monster> monsters = new ArrayList<>(expectedMap.getAllMonsters());
+        monsters.removeIf(monster -> !monster.isAlive()
+                || (attackBounds != null && !attackBounds.contains(monster.getPosition())));
+        monsters.sort(Comparator
+                .comparing((Monster monster) -> !monster.isBoss())
+                .thenComparing(Comparator.comparingLong(
+                        (Monster monster) -> monster.isBoss() ? monster.getMaxHp() : 0L
+                ).reversed())
+                .thenComparingDouble(monster -> monster.getPosition().distanceSq(castPosition))
+                .thenComparingInt(Monster::getObjectId));
+        return monsters;
+    }
+
+    private static long refreshMercilessWindsDot(Character chr, Monster monster) {
+        synchronized (MERCILESS_WINDS_DOT_GENERATIONS) {
+            Map<Monster, Long> generations = MERCILESS_WINDS_DOT_GENERATIONS.computeIfAbsent(
+                    chr, ignored -> new WeakHashMap<>()
+            );
+            long generation = generations.getOrDefault(monster, 0L) + 1L;
+            generations.put(monster, generation);
+            return generation;
+        }
+    }
+
+    private static boolean isCurrentMercilessWindsDot(
+            Character chr,
+            Monster monster,
+            long generation
+    ) {
+        synchronized (MERCILESS_WINDS_DOT_GENERATIONS) {
+            Map<Monster, Long> generations = MERCILESS_WINDS_DOT_GENERATIONS.get(chr);
+            return generations != null && generations.get(monster) != null
+                    && generations.get(monster) == generation;
+        }
+    }
+
+    private static void clearMercilessWindsDot(
+            Character chr,
+            Monster monster,
+            long generation
+    ) {
+        synchronized (MERCILESS_WINDS_DOT_GENERATIONS) {
+            Map<Monster, Long> generations = MERCILESS_WINDS_DOT_GENERATIONS.get(chr);
+            if (generations == null || generations.get(monster) == null
+                    || generations.get(monster) != generation) {
+                return;
+            }
+            generations.remove(monster);
+            if (generations.isEmpty()) {
+                MERCILESS_WINDS_DOT_GENERATIONS.remove(chr);
+            }
+        }
+    }
+
+    private static void scheduleMercilessWindsDot(
+            Character chr,
+            MapleMap expectedMap,
+            Monster monster,
+            List<Integer> damageTemplate
+    ) {
+        long generation = refreshMercilessWindsDot(chr, monster);
+        int totalDamage = 0;
+        for (Integer hit : damageTemplate) {
+            totalDamage = (int) Math.min(
+                    Integer.MAX_VALUE, (long) totalDamage + decodeRepeatedDamage(hit)
+            );
+        }
+        final int tickDamage = totalDamage;
+        for (int tick = 1; tick <= MERCILESS_WINDS_DOT_TICKS; tick++) {
+            final boolean finalTick = tick == MERCILESS_WINDS_DOT_TICKS;
+            TimerManager.getInstance().schedule(() -> {
+                if (!isCurrentMercilessWindsDot(chr, monster, generation)) {
+                    return;
+                }
+                if (!canContinueTrackingAttack(chr, expectedMap) || !monster.isAlive()) {
+                    clearMercilessWindsDot(chr, monster, generation);
+                    return;
+                }
+                expectedMap.broadcastMessage(
+                        PacketCreator.damageMonster(monster.getObjectId(), tickDamage),
+                        monster.getPosition()
+                );
+                monster.aggroMonsterDamage(chr, tickDamage);
+                expectedMap.damageMonster(chr, monster, tickDamage);
+                if (finalTick || !monster.isAlive()) {
+                    clearMercilessWindsDot(chr, monster, generation);
+                }
+            }, (long) tick * MERCILESS_WINDS_DOT_INTERVAL_MS);
+        }
+    }
+
+    private static void tryMercilessWindsProjectile(
+            AttackInfo attack,
+            Character chr,
+            MapleMap expectedMap,
+            Point castPosition,
+            Rectangle attackBounds,
+            int projectileIndex,
+            long trackingDeadline,
+            int replayAttackCount,
+            List<Integer> damageTemplate,
+            List<Integer> dotDamageTemplate,
+            Map<Integer, Integer> targetHitCounts
+    ) {
+        if (!canContinueTrackingAttack(chr, expectedMap)
+                || currentServerTime() >= trackingDeadline) {
+            return;
+        }
+        List<Monster> targets = collectMercilessWindsTargets(
+                expectedMap, castPosition, attackBounds
+        );
+        if (targets.isEmpty()) {
+            TimerManager.getInstance().schedule(() -> tryMercilessWindsProjectile(
+                    attack, chr, expectedMap, castPosition, attackBounds,
+                    projectileIndex, trackingDeadline, replayAttackCount,
+                    damageTemplate, dotDamageTemplate, targetHitCounts
+            ), MERCILESS_WINDS_SEARCH_INTERVAL_MS);
+            return;
+        }
+
+        Monster target = targets.get(projectileIndex % targets.size());
+        List<Integer> projectileDamage = new ArrayList<>(damageTemplate);
+        synchronized (targetHitCounts) {
+            int previousHits = targetHitCounts.getOrDefault(target.getObjectId(), 0);
+            if (previousHits > 0) {
+                scaleDamageLines(
+                        projectileDamage, MERCILESS_WINDS_REPEATED_TARGET_PERCENT, 100
+                );
+            }
+            targetHitCounts.put(target.getObjectId(), previousHits + 1);
+        }
+        Map<Integer, List<Integer>> damage = new LinkedHashMap<>();
+        damage.put(target.getObjectId(), projectileDamage);
+        if (replayTargetedAttack(
+                attack,
+                chr,
+                expectedMap,
+                WindArcher.MERCILESS_WINDS_SPIRIT,
+                replayAttackCount,
+                damage
+        )) {
+            scheduleMercilessWindsDot(chr, expectedMap, target, dotDamageTemplate);
+            return;
+        }
+        synchronized (targetHitCounts) {
+            int recordedHits = targetHitCounts.getOrDefault(target.getObjectId(), 0);
+            if (recordedHits <= 1) {
+                targetHitCounts.remove(target.getObjectId());
+            } else {
+                targetHitCounts.put(target.getObjectId(), recordedHits - 1);
+            }
+        }
+        TimerManager.getInstance().schedule(() -> tryMercilessWindsProjectile(
+                attack, chr, expectedMap, castPosition, attackBounds,
+                projectileIndex, trackingDeadline, replayAttackCount,
+                damageTemplate, dotDamageTemplate, targetHitCounts
+        ), MERCILESS_WINDS_SEARCH_INTERVAL_MS);
+    }
+
+    private static void scheduleMercilessWinds(AttackInfo attack, Character chr) {
+        MapleMap expectedMap = chr.getMap();
+        Skill originalSkill = SkillFactory.getSkill(attack.skill);
+        StatEffect originalEffect = originalSkill.getEffect(chr.getSkillLevel(originalSkill));
+        Skill replaySkill = SkillFactory.getSkill(WindArcher.MERCILESS_WINDS_SPIRIT);
+        int replayLevel = Math.max(1, Math.min(attack.skilllevel, replaySkill.getMaxLevel()));
+        StatEffect replayEffect = replaySkill.getEffect(replayLevel);
+        int replayAttackCount = Math.max(1, Math.min(15, replayEffect.getAttackCount()));
+        Point castPosition = new Point(chr.getPosition());
+        Rectangle attackBounds = originalEffect.hasBoundingBox()
+                ? originalEffect.calculateBoundingBox(castPosition, attack.direction == 0)
+                : null;
+        List<Integer> sourceDamageTemplate = copyDamageTemplate(attack);
+        if (sourceDamageTemplate.isEmpty()) {
+            sourceDamageTemplate = Collections.singletonList(
+                    calculateFallbackRangedDamage(chr, originalEffect)
+            );
+        }
+        List<Integer> damageTemplate = adaptDamageTemplate(
+                sourceDamageTemplate,
+                replayAttackCount,
+                originalEffect.getDamage(),
+                replayEffect.getDamage()
+        );
+        List<Integer> dotDamageTemplate = adaptDamageTemplate(
+                sourceDamageTemplate,
+                1,
+                originalEffect.getDamage(),
+                MERCILESS_WINDS_DOT_PERCENT
+        );
+        Map<Integer, Integer> targetHitCounts = new LinkedHashMap<>();
+        long trackingDeadline = currentServerTime() + MERCILESS_WINDS_TRACKING_DURATION_MS;
+        for (int projectileIndex = 0;
+                projectileIndex < MERCILESS_WINDS_TIMES_MS.length;
+                projectileIndex++) {
+            final int currentProjectileIndex = projectileIndex;
+            TimerManager.getInstance().schedule(() -> tryMercilessWindsProjectile(
+                    attack,
+                    chr,
+                    expectedMap,
+                    castPosition,
+                    attackBounds,
+                    currentProjectileIndex,
+                    trackingDeadline,
+                    replayAttackCount,
+                    damageTemplate,
+                    dotDamageTemplate,
+                    targetHitCounts
+            ), MERCILESS_WINDS_TIMES_MS[projectileIndex]);
+        }
+    }
+
+    private static void tryMistralSpiritProjectile(
+            AttackInfo attack,
+            Character chr,
+            MapleMap expectedMap,
+            Point castPosition,
+            Rectangle attackBounds,
+            int projectileIndex,
+            long trackingDeadline,
+            int replaySkillId,
+            int replayAttackCount,
+            List<Integer> damageTemplate
+    ) {
+        if (!canContinueTrackingAttack(chr, expectedMap)
+                || currentServerTime() >= trackingDeadline) {
+            return;
+        }
+        List<Monster> targets = collectMercilessWindsTargets(
+                expectedMap, castPosition, attackBounds
+        );
+        if (!targets.isEmpty()) {
+            Monster target = targets.get(projectileIndex % targets.size());
+            Map<Integer, List<Integer>> damage = new LinkedHashMap<>();
+            damage.put(target.getObjectId(), new ArrayList<>(damageTemplate));
+            if (replayTargetedAttack(
+                    attack,
+                    chr,
+                    expectedMap,
+                    replaySkillId,
+                    replayAttackCount,
+                    damage
+            )) {
+                return;
+            }
+        }
+        TimerManager.getInstance().schedule(() -> tryMistralSpiritProjectile(
+                attack,
+                chr,
+                expectedMap,
+                castPosition,
+                attackBounds,
+                projectileIndex,
+                trackingDeadline,
+                replaySkillId,
+                replayAttackCount,
+                damageTemplate
+        ), MISTRAL_SPIRIT_SEARCH_INTERVAL_MS);
+    }
+
+    private static void launchMistralSpiritWave(
+            AttackInfo attack,
+            Character chr,
+            MapleMap expectedMap,
+            Point castPosition,
+            Rectangle attackBounds,
+            int spiritType,
+            long trackingDeadline,
+            int replayAttackCount,
+            List<Integer> damageTemplate
+    ) {
+        if (!canContinueTrackingAttack(chr, expectedMap)) {
+            return;
+        }
+        for (int projectileIndex = 0;
+                projectileIndex < MISTRAL_SPIRIT_COUNTS[spiritType];
+                projectileIndex++) {
+            tryMistralSpiritProjectile(
+                    attack,
+                    chr,
+                    expectedMap,
+                    castPosition,
+                    attackBounds,
+                    projectileIndex,
+                    trackingDeadline,
+                    MISTRAL_SPIRIT_SKILL_IDS[spiritType],
+                    replayAttackCount,
+                    damageTemplate
+            );
+        }
+    }
+
+    private static void scheduleMistralSpirits(AttackInfo attack, Character chr) {
+        MapleMap expectedMap = chr.getMap();
+        Skill originalSkill = SkillFactory.getSkill(attack.skill);
+        StatEffect originalEffect = originalSkill.getEffect(chr.getSkillLevel(originalSkill));
+        Point castPosition = new Point(chr.getPosition());
+        Rectangle attackBounds = originalEffect.hasBoundingBox()
+                ? originalEffect.calculateBoundingBox(castPosition, attack.direction == 0)
+                : new Rectangle(castPosition.x - 1200, castPosition.y - 800, 2400, 1600);
+        List<Integer> sourceDamageTemplate = copyDamageTemplate(attack);
+        if (sourceDamageTemplate.isEmpty()) {
+            sourceDamageTemplate = Collections.singletonList(
+                    calculateFallbackRangedDamage(chr, originalEffect)
+            );
+        }
+        List<List<Integer>> damageTemplates = new ArrayList<>(
+                MISTRAL_SPIRIT_SKILL_IDS.length
+        );
+        int[] replayAttackCounts = new int[MISTRAL_SPIRIT_SKILL_IDS.length];
+        for (int spiritType = 0;
+                spiritType < MISTRAL_SPIRIT_SKILL_IDS.length;
+                spiritType++) {
+            Skill replaySkill = SkillFactory.getSkill(MISTRAL_SPIRIT_SKILL_IDS[spiritType]);
+            int replayLevel = Math.max(
+                    1, Math.min(attack.skilllevel, replaySkill.getMaxLevel())
+            );
+            StatEffect replayEffect = replaySkill.getEffect(replayLevel);
+            replayAttackCounts[spiritType] = Math.max(
+                    1, Math.min(15, replayEffect.getAttackCount())
+            );
+            damageTemplates.add(adaptDamageTemplate(
+                    sourceDamageTemplate,
+                    replayAttackCounts[spiritType],
+                    originalEffect.getDamage(),
+                    replayEffect.getDamage()
+            ));
+        }
+        long castTime = currentServerTime();
+        int waveIndex = 0;
+        for (int waveOffset = 0;
+                waveOffset < MISTRAL_SPIRIT_DURATION_MS;
+                waveOffset += MISTRAL_SPIRIT_INTERVAL_MS) {
+            final int spiritType = waveIndex % MISTRAL_SPIRIT_SKILL_IDS.length;
+            final long trackingDeadline = Math.min(
+                    castTime + MISTRAL_SPIRIT_START_TIME_MS + waveOffset
+                            + MISTRAL_SPIRIT_LIFETIMES_MS[spiritType],
+                    castTime + MISTRAL_SPIRIT_TOTAL_END_TIME_MS
+            );
+            TimerManager.getInstance().schedule(() -> launchMistralSpiritWave(
+                    attack,
+                    chr,
+                    expectedMap,
+                    castPosition,
+                    attackBounds,
+                    spiritType,
+                    trackingDeadline,
+                    replayAttackCounts[spiritType],
+                    damageTemplates.get(spiritType)
+            ), MISTRAL_SPIRIT_START_TIME_MS + waveOffset
+                    + MISTRAL_SPIRIT_ENABLE_DELAYS_MS[spiritType]);
+            waveIndex++;
         }
     }
 
@@ -554,20 +989,8 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
                         NightWalker.RAPID_THROW_MIDDLE_DART);
                 scheduleTrackingAttacks(attack, chr, RAPID_THROW_LOWER_TIMES_MS,
                         NightWalker.RAPID_THROW_LOWER_DART);
-                scheduleTrackingAttacks(attack, chr, new int[]{2400}, NightWalker.RAPID_THROW_FINISH);
-                break;
-            case NightWalker.QUINTUPLE_THROW_VI:
-                if (useQuintupleThrowAlternate(chr)) {
-                    scheduleTrackingAttacks(attack, chr, new int[]{0},
-                            NightWalker.QUINTUPLE_THROW_VI_ALTERNATE);
-                    scheduleTrackingAttacks(attack, chr, QUINTUPLE_THROW_VI_TIMES_MS,
-                            NightWalker.QUINTUPLE_THROW_VI_TRACKING);
-                } else {
-                    scheduleTrackingAttacks(attack, chr, new int[]{0},
-                            NightWalker.QUINTUPLE_THROW_VI_NORMAL);
-                    scheduleTrackingAttacks(attack, chr, QUINTUPLE_THROW_VI_TIMES_MS,
-                            NightWalker.QUINTUPLE_THROW_VI_ENHANCED);
-                }
+                scheduleTrackingAttacks(attack, chr, new int[]{RAPID_THROW_FINISH_TIME_MS},
+                        NightWalker.RAPID_THROW_FINISH);
                 break;
             case NightWalker.DARK_OMEN_VI:
                 scheduleTrackingAttacks(attack, chr, DARK_OMEN_VI_TIMES_MS,
@@ -575,6 +998,8 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
                 break;
             case NightWalker.DOMINION_VI:
                 chr.sendPacket(PacketCreator.showEffect(DOMINION_VIDEO_LAYER));
+                scheduleTrackingAttacks(attack, chr, DOMINION_VI_ATTACK_TIMES_MS,
+                        NightWalker.DOMINION_VI_TICK);
                 break;
             case NightWalker.SILENT_NIGHT:
                 chr.sendPacket(PacketCreator.showEffect(SILENT_NIGHT_VIDEO_LAYER));
@@ -589,6 +1014,40 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
                         NightWalker.STYGIAN_COMMAND_MAIN);
                 scheduleTrackingAttacks(attack, chr, STYGIAN_COMMAND_FINISH_TIMES_MS,
                         NightWalker.STYGIAN_COMMAND_FINISH);
+                break;
+            default:
+                break;
+        }
+    }
+
+    private static void scheduleWindArcherSkill(AttackInfo attack, Character chr) {
+        switch (attack.skill) {
+            case WindArcher.MERCILESS_WINDS:
+                scheduleMercilessWinds(attack, chr);
+                break;
+            case WindArcher.GALE_BARRIER:
+                scheduleTrackingAttacks(attack, chr, GALE_BARRIER_TIMES_MS,
+                        WindArcher.GALE_BARRIER_TORNADO);
+                break;
+            case WindArcher.MONSOON_VI:
+                chr.sendPacket(PacketCreator.showEffect(MONSOON_VIDEO_LAYER));
+                break;
+            case WindArcher.ANEMOI:
+                scheduleTrackingAttacks(attack, chr, ANEMOI_TIMES_MS,
+                        WindArcher.ANEMOI_GALE);
+                break;
+            case WindArcher.MISTRAL_SPRING:
+                chr.sendPacket(PacketCreator.showEffect(MISTRAL_SPRING_VIDEO_LAYER));
+                scheduleTrackingAttacks(attack, chr, MISTRAL_WIND_BLADE_TIMES_MS,
+                        WindArcher.MISTRAL_WIND_BLADE);
+                scheduleMistralSpirits(attack, chr);
+                break;
+            case WindArcher.ELEMENTAL_TEMPEST:
+                chr.sendPacket(PacketCreator.showEffect(ELEMENTAL_TEMPEST_VIDEO_LAYER));
+                scheduleTrackingAttacks(attack, chr, ELEMENTAL_TEMPEST_WAVE_TIMES_MS,
+                        WindArcher.ELEMENTAL_TEMPEST_WAVE);
+                scheduleTrackingAttacks(attack, chr, ELEMENTAL_TEMPEST_ARROW_TIMES_MS,
+                        WindArcher.ELEMENTAL_TEMPEST_ARROW_RAIN);
                 break;
             default:
                 break;
@@ -635,6 +1094,41 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
             for (int i = 0; i < attack.numAttacked; i++) {
                 chr.handleEnergyChargeGain();
             }
+        } else if (attack.skill == ThunderBreaker.SHARK_TORPEDO
+                && chr.getSkillLevel(ThunderBreaker.SHARK_TORPEDO) > 0) {
+            Skill skill = SkillFactory.getSkill(ThunderBreaker.SHARK_TORPEDO);
+            StatEffect effect = skill.getEffect(chr.getSkillLevel(skill));
+            if (chr.skillIsCooling(ThunderBreaker.SHARK_TORPEDO)) {
+                return;
+            }
+            if (effect.getCooldown() > 0) {
+                c.sendPacket(PacketCreator.skillCooldown(
+                        ThunderBreaker.SHARK_TORPEDO, effect.getCooldown()
+                ));
+                chr.addCooldown(
+                        ThunderBreaker.SHARK_TORPEDO,
+                        currentServerTime(),
+                        SECONDS.toMillis(effect.getCooldown())
+                );
+            }
+            MapleMap expectedMap = chr.getMap();
+            chr.getMap().broadcastMessage(chr, PacketCreator.rangedAttack(
+                    chr,
+                    attack.skill,
+                    attack.skilllevel,
+                    attack.stance,
+                    attack.numAttackedAndDamage,
+                    0,
+                    attack.allDamage,
+                    attack.speed,
+                    attack.direction,
+                    attack.display
+            ), false);
+            TimerManager.getInstance().schedule(() -> {
+                if (canContinueTrackingAttack(chr, expectedMap)) {
+                    applyAttack(attack, chr, effect.getAttackCount());
+                }
+            }, 540);
         } else if (attack.skill == Aran.COMBO_SMASH || attack.skill == Aran.COMBO_FENRIR || attack.skill == Aran.COMBO_TEMPEST) {
             chr.getMap().broadcastMessage(chr, PacketCreator.rangedAttack(chr, attack.skill, attack.skilllevel, attack.stance, attack.numAttackedAndDamage, 0, attack.allDamage, attack.speed, attack.direction, attack.display), false);
             if (attack.skill == Aran.COMBO_SMASH && chr.getCombo() >= 30) {
@@ -680,7 +1174,8 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
                 }
             }
             boolean hasShadowPartner = chr.getBuffedValue(BuffStat.SHADOWPARTNER) != null;
-            if (hasShadowPartner && !isNightWalkerVViSkill(attack.skill)) {
+            if (hasShadowPartner && !isNightWalkerVViSkill(attack.skill)
+                    && !isWindArcherVViSkill(attack.skill)) {
                 bulletCount *= 2;
             }
             Inventory inv = chr.getInventory(InventoryType.USE);
@@ -730,7 +1225,8 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
                         && attack.skill != 11101004
                         && attack.skill != 15111007
                         && attack.skill != 14101006) {
-                    short bulletConsume = isNightWalkerVViSkill(attack.skill) ? 1 : bulletCount;
+                    short bulletConsume = (isNightWalkerVViSkill(attack.skill)
+                            || isWindArcherVViSkill(attack.skill)) ? 1 : bulletCount;
 
                     if (effect != null && effect.getBulletConsume() != 0) {
                         bulletConsume = (byte) (effect.getBulletConsume() * (hasShadowPartner ? 2 : 1));
@@ -759,7 +1255,7 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
                             }
                         }
                     }
-                } else if (soulArrow || attack.skill == 3111004 || attack.skill == 3211004 || attack.skill == 11101004 || attack.skill == 15111007 || attack.skill == 14101006 || attack.skill == 13101005) {
+                } else if (soulArrow || isWindArcherVViSkill(attack.skill) || attack.skill == 3111004 || attack.skill == 3211004 || attack.skill == 11101004 || attack.skill == 15111007 || attack.skill == 14101006 || attack.skill == 13101005) {
                     visProjectile = 0;
                 }
 
@@ -805,6 +1301,9 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
                 }
                 if (isNightWalkerVViSkill(attack.skill)) {
                     scheduleNightWalkerSkill(attack, chr, shadowBiteDamageTemplate);
+                }
+                if (isWindArcherVViSkill(attack.skill)) {
+                    scheduleWindArcherSkill(attack, chr);
                 }
             }
         }

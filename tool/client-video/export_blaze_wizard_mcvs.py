@@ -37,6 +37,7 @@ class EffectSpec:
     skill_id: int
     video_paths: tuple[tuple[str, ...], ...]
     output_name: str
+    cover_field: bool = False
 
 
 EFFECTS = (
@@ -77,18 +78,51 @@ def frame_entries(video: ET.Element, source: Path) -> list[tuple[Path, int]]:
     return result
 
 
-def contain_on_screen(path: Path) -> Image.Image:
+def alpha_union_bounds(tracks: list[list[tuple[Path, int]]]) -> tuple[int, int, int, int]:
+    bounds = None
+    for track in tracks:
+        for path, _ in track:
+            with Image.open(path) as opened:
+                frame_bounds = opened.convert("RGBA").getchannel("A").getbbox()
+            if frame_bounds is None:
+                continue
+            bounds = frame_bounds if bounds is None else (
+                min(bounds[0], frame_bounds[0]),
+                min(bounds[1], frame_bounds[1]),
+                max(bounds[2], frame_bounds[2]),
+                max(bounds[3], frame_bounds[3]),
+            )
+    if bounds is None:
+        raise RuntimeError("full-screen video has no visible pixels")
+    return bounds
+
+
+def contain_on_screen(
+        path: Path,
+        cover_bounds: tuple[int, int, int, int] | None = None,
+) -> Image.Image:
     with Image.open(path) as opened:
         source = opened.convert("RGBA")
-    scale = min(1.0, WIDTH / source.width, HEIGHT / source.height)
+    if cover_bounds is not None:
+        cropped = source.crop(cover_bounds)
+        source.close()
+        source = cropped
+        scale = max(WIDTH / source.width, HEIGHT / source.height)
+    else:
+        scale = min(1.0, WIDTH / source.width, HEIGHT / source.height)
     width = max(1, round(source.width * scale))
     height = max(1, round(source.height * scale))
     if (width, height) != source.size:
         resized = source.resize((width, height), Image.Resampling.LANCZOS)
         source.close()
         source = resized
-    result = Image.new("RGBA", (WIDTH, HEIGHT), (0, 0, 0, 0))
-    result.alpha_composite(source, ((WIDTH - width) // 2, (HEIGHT - height) // 2))
+    if cover_bounds is not None:
+        left = max(0, (width - WIDTH) // 2)
+        top = max(0, (height - HEIGHT) // 2)
+        result = source.crop((left, top, left + WIDTH, top + HEIGHT))
+    else:
+        result = Image.new("RGBA", (WIDTH, HEIGHT), (0, 0, 0, 0))
+        result.alpha_composite(source, ((WIDTH - width) // 2, (HEIGHT - height) // 2))
     source.close()
     return result
 
@@ -109,6 +143,7 @@ def load_effect_frames(spec: EffectSpec, source: Path) -> tuple[list[list[tuple[
 
 def encode_effect(spec: EffectSpec, source: Path, output_directory: Path) -> Path:
     tracks, delays = load_effect_frames(spec, source)
+    cover_bounds = alpha_union_bounds(tracks) if spec.cover_field else None
     ffmpeg = shutil.which("ffmpeg")
     if ffmpeg is None:
         raise RuntimeError("ffmpeg is required to export MCV files")
@@ -130,7 +165,7 @@ def encode_effect(spec: EffectSpec, source: Path, output_directory: Path) -> Pat
             for index in range(len(delays)):
                 rendered = Image.new("RGBA", (WIDTH, HEIGHT), (0, 0, 0, 0))
                 for track in tracks:
-                    layer = contain_on_screen(track[index][0])
+                    layer = contain_on_screen(track[index][0], cover_bounds)
                     rendered.alpha_composite(layer)
                     layer.close()
                 rgb = rendered.convert("RGB")

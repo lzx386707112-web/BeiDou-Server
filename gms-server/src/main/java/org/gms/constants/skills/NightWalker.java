@@ -56,15 +56,11 @@ public class NightWalker {
     public static final int RAPID_THROW_UPPER_DART = 14121006;
     public static final int RAPID_THROW_MIDDLE_DART = 14121007;
     public static final int RAPID_THROW_LOWER_DART = 14121008;
-    public static final int QUINTUPLE_THROW_VI_NORMAL = 14121009;
-    public static final int QUINTUPLE_THROW_VI = 14121010;
-    public static final int QUINTUPLE_THROW_VI_ENHANCED = 14121011;
-    public static final int QUINTUPLE_THROW_VI_ALTERNATE = 14121012;
-    public static final int QUINTUPLE_THROW_VI_TRACKING = 14121013;
     public static final int SHADOW_BITE_NORMAL_HIT = 14121014;
     public static final int SHADOW_BITE_BOSS_HIT = 14121015;
     public static final int SHADOW_BITE_SHADOW_BAT = 14121016;
     public static final int SHADOW_BITE_RAVENOUS_BAT = 14121017;
+    public static final int DOMINION_VI_TICK = 14121018;
     public static final int DARK_OMEN_VI = 14121027;
     public static final int DARK_OMEN_VI_TICK = 14121028;
     public static final int DOMINION_VI = 14121030;
@@ -78,7 +74,6 @@ public class NightWalker {
     public static final int[] V_VI_ACTIVE_SKILLS = {
         SHADOW_BITE,
         RAPID_THROW,
-        QUINTUPLE_THROW_VI,
         DARK_OMEN_VI,
         DOMINION_VI,
         SILENT_NIGHT,

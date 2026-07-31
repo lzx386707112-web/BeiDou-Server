@@ -141,10 +141,13 @@
           />
           <a-table-column
             :title="$t('account.list.column.operate')"
-            :width="220"
+            :width="280"
             align="center"
           >
             <template #cell="{ record }">
+              <a-button type="text" size="mini" @click="viewMapClick(record)">
+                {{ $t('account.list.column.operate.viewMap') }}
+              </a-button>
               <a-button
                 type="text"
                 size="mini"
@@ -220,6 +223,46 @@
     <account-add-form ref="accountAddFormRef" @reload="loadData" />
     <account-update-form ref="accountUpdateFormRef" @reload="loadData" />
     <a-modal
+      v-model:visible="mapVisible"
+      :title="mapTitle"
+      :footer="false"
+      width="680px"
+    >
+      <a-table
+        row-key="characterId"
+        :loading="mapLoading"
+        :data="characterMaps"
+        :pagination="false"
+        :bordered="{ cell: true }"
+      >
+        <template #columns>
+          <a-table-column
+            :title="$t('account.list.map.characterId')"
+            data-index="characterId"
+            :width="100"
+          />
+          <a-table-column
+            :title="$t('account.list.map.characterName')"
+            data-index="characterName"
+            :width="160"
+          />
+          <a-table-column
+            :title="$t('account.list.map.mapName')"
+            data-index="mapName"
+          >
+            <template #cell="{ record }">
+              {{ record.mapName || $t('account.list.map.unknown') }}
+            </template>
+          </a-table-column>
+          <a-table-column
+            :title="$t('account.list.map.mapId')"
+            data-index="mapId"
+            :width="120"
+          />
+        </template>
+      </a-table>
+    </a-modal>
+    <a-modal
       v-model:visible="reasonVisible"
       :title="reasonTitle"
       :ok-loading="loading"
@@ -248,6 +291,8 @@
     banAccount,
     deleteAccount,
     getAccountList,
+    getCharacterMaps,
+    CharacterMap,
     moveToHenesys,
     resetLoggedIn,
     unbanAccount,
@@ -282,6 +327,10 @@
   const reasonTitle = ref('');
   const reason = ref('');
   const banAccountIdReady = ref(0);
+  const mapVisible = ref(false);
+  const mapLoading = ref(false);
+  const mapTitle = ref('');
+  const characterMaps = ref<CharacterMap[]>([]);
 
   const loadData = async () => {
     setLoading(true);
@@ -334,6 +383,22 @@
   const accountUpdateFormRef = ref();
   const editClick = (data: AccountState) => {
     accountUpdateFormRef.value.init(data);
+  };
+
+  const viewMapClick = async (data: AccountState) => {
+    mapTitle.value = t('account.list.map.title', {
+      id: data.id,
+      name: data.name,
+    });
+    characterMaps.value = [];
+    mapVisible.value = true;
+    mapLoading.value = true;
+    try {
+      const { data: maps } = await getCharacterMaps(data.id);
+      characterMaps.value = maps;
+    } finally {
+      mapLoading.value = false;
+    }
   };
 
   const restLoggedInClick = async (data: AccountState) => {

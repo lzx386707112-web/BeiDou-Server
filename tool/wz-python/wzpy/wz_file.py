@@ -346,7 +346,7 @@ class WzFile:
                     continue
                 if kind == 2:
                     string_offset = r.read_i32()
-                    name = r.read_string_at(body_start - 1 + string_offset)
+                    name = r.read_string_at(self.header.fstart + string_offset)
                     new_kind = ord("?")
                     # placeholder: name decoded above
                 elif kind in (3, 4):
@@ -385,8 +385,8 @@ class WzFile:
                 continue
             if kind == 2:
                 string_offset = r.read_i32()
-                # absolute name location: header.fstart + 1 + string_offset
-                name_pos = (self.header.fstart + 1 + string_offset) & 0xFFFFFFFF
+                # Directory string offsets are relative to header.fstart.
+                name_pos = (self.header.fstart + string_offset) & 0xFFFFFFFF
                 name_kind_pos = name_pos
                 # peek into the indirected entry header to get the real kind
                 keep = r.position

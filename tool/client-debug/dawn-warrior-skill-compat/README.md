@@ -1,16 +1,22 @@
-# Dawn Warrior Skill Compatibility DLL
+# Cygnus V/VI Skill Compatibility DLL
 
 `DawnWarriorSkillCompat.dll` is the unified runtime hook for the retained Dawn
 Warrior skills, the Blaze Wizard V/VI compatibility range
 `12121000..12121036`, and the retained Night Walker attack ranges
-`14121003..17`, `14121027..28`, and `14121030..36`. Dawn Warrior continues through the native melee branch;
+`14121003..08`, `14121014..17`, `14121027..28`, and `14121030..36`, plus
+Thunder Breaker `15121000..15121020`. Dawn Warrior and Thunder Breaker continue through the native melee branch;
 Blaze Wizard is routed through the native magic branch and its original flat
 high-ID visual exit so the old client keeps direct `effect`, magic `hit`, and
 damage-number paths. Night Walker uses the native ranged entry `0x009690E9` and
 arms a skill-whitelisted MagicBullet trajectory hook for its migrated darts.
+Thunder Breaker's Shark Torpedo `15121001` alone follows its original Shark
+Wave-style ranged projectile branch; the remaining Thunder Breaker skills use
+the knuckle melee branch.
 Blaze Wizard skills `12121025`
 and `12121028` start their transparent MCV full-screen videos through
 `BeiDouVideo.dll`; Night Walker uses the same path for `14121032` and `14121035`.
+Thunder Breaker uses it for `15121016`, `15121017`, and `15121019`, keeping the
+large multi-frame screen layers out of Skill.wz.
 
 The DLL patches the keyboard active-skill gate, the `DoActiveSkill` melee
 dispatch, the high-ID visual tree, and the downstream Brandish-compatible
@@ -36,12 +42,24 @@ rtk python3 tool/scripts/patch-client/patch_dawn_warrior_skill_dll_loader.py
 ```
 
 At runtime, inspect `clien/DawnWarriorSkillCompat.log`. A successful load
-writes `LOAD: Dawn Warrior/Blaze Wizard/Night Walker Skill Compat v15` followed by the
-recognition-hook result. Version 15 preserves the Shadow Bite projectile window across its hidden
+writes `LOAD: Dawn Warrior/Blaze Wizard/Wind Archer/Night Walker/Thunder Breaker Skill Compat v28`
+followed by the recognition-hook result. Version 28 gives Merciless Winds ten
+independently targeted native projectiles and cycles them across the selected
+monsters. Version 27 removes the three retired
+Wind Archer entries and keeps Mistral Spring on the full-screen MCV path. Version 25 adds Thunder Breaker's
+melee/ranged split, skill-range target cap and three MCV mappings. Version 21 captures the selected monsters' body centers and assigns them
+directly to consecutive Shadow Bite `MagicBullet` endpoints. Version 20 pairs the Shadow Bite stages' visual projectile counts with
+their maximum target counts (`15/3/1`) while keeping damage-line counts independent. Version 19
+caches the projectile layer's `rx/ry` dispatch identifiers and uses visibly wider Shadow Bite curves.
+Version 18 hooks the old client's ranged skill-range classifier at `0x7666CB`,
+so Shadow Bite uses its migrated `lt/rb` bounds instead of the normal throwing-star line. Version 17 forces the target collector at `0x678476` to use the migrated
+Shadow Bite target limits and logs the number of targets actually selected. Version 16 hooks the native ranged multi-target classifier at `0x766722`,
+so Shadow Bite enters the same target-array construction path as the old client's built-in multi-target
+throwing skills. Version 15 preserves the Shadow Bite projectile window across its hidden
 normal/Boss hit stages and re-arms it for both bat stages. Version 14 adds fixed converging arcs for the Shadow Bite bats and keeps
 their flight time within `240..900ms`. Version 13 replaces the random Night Walker projectile modes with
-skill-specific paths: Rapid Throw cycles through three fixed lanes, Quintuple Throw keeps the
-native straight flight, and Silent Night uses alternating homing arcs. It also adds Dominion's
+skill-specific paths: Rapid Throw cycles through three fixed lanes and Silent Night uses alternating
+homing arcs. It also adds Dominion's
 MCV full-screen layer. Version 12 added ranged dispatch and the first Night Walker projectile runtime.
 Version 11 extended the magic visual range
 for hit-only replay stages; the video path first

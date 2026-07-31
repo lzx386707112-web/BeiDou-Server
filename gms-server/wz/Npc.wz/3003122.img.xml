@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<imgdir name="3003122.img">
+  <imgdir name="info">
+    <int name="hideName" value="1"/>
+  </imgdir>
+  <imgdir name="stand">
+    <canvas name="0" width="447" height="445" format="1">
+      <vector name="origin" x="223" y="444"/>
+      <int name="z" value="0"/>
+      <int name="delay" value="180"/>
+    </canvas>
+  </imgdir>
+  <imgdir name="condition1">
+    <imgdir name="stand">
+      <canvas name="0" width="460" height="445" format="1">
+        <vector name="origin" x="236" y="444"/>
+        <int name="z" value="0"/>
+      </canvas>
+      <canvas name="1" width="458" height="445" format="1">
+        <vector name="origin" x="234" y="444"/>
+        <int name="z" value="0"/>
+      </canvas>
+      <canvas name="2" width="468" height="445" format="1">
+        <vector name="origin" x="234" y="444"/>
+        <int name="z" value="0"/>
+      </canvas>
+      <canvas name="3" width="469" height="445" format="1">
+        <vector name="origin" x="245" y="444"/>
+        <int name="z" value="0"/>
+      </canvas>
+      <canvas name="4" width="470" height="445" format="1">
+        <vector name="origin" x="246" y="444"/>
+        <int name="z" value="0"/>
+      </canvas>
+      <canvas name="5" width="469" height="445" format="1">
+        <vector name="origin" x="245" y="444"/>
+        <int name="z" value="0"/>
+      </canvas>
+      <canvas name="6" width="468" height="445" format="1">
+        <vector name="origin" x="244" y="444"/>
+        <int name="z" value="0"/>
+      </canvas>
+      <canvas name="7" width="468" height="445" format="1">
+        <vector name="origin" x="244" y="444"/>
+        <int name="z" value="0"/>
+      </canvas>
+      <canvas name="8" width="464" height="445" format="1">
+        <vector name="origin" x="240" y="444"/>
+        <int name="z" value="0"/>
+      </canvas>
+      <canvas name="9" width="454" height="445" format="1">
+        <vector name="origin" x="230" y="444"/>
+        <int name="z" value="0"/>
+      </canvas>
+      <canvas name="10" width="455" height="445" format="1">
+        <vector name="origin" x="231" y="444"/>
+        <int name="z" value="0"/>
+      </canvas>
+      <canvas name="11" width="461" height="445" format="1">
+        <vector name="origin" x="237" y="444"/>
+        <int name="z" value="0"/>
+      </canvas>
+      <canvas name="12" width="477" height="445" format="1">
+        <vector name="origin" x="239" y="444"/>
+        <int name="z" value="0"/>
+      </canvas>
+      <canvas name="13" width="479" height="445" format="1">
+        <vector name="origin" x="237" y="444"/>
+        <int name="z" value="0"/>
+      </canvas>
+      <canvas name="14" width="483" height="445" format="1">
+        <vector name="origin" x="236" y="444"/>
+        <int name="z" value="0"/>
+      </canvas>
+    </imgdir>
+    <int name="34105" value="2"/>
+  </imgdir>
+  <imgdir name="condition2">
+    <imgdir name="stand">
+      <canvas name="0" width="447" height="445" format="1">
+        <vector name="origin" x="223" y="444"/>
+        <int name="z" value="0"/>
+      </canvas>
+    </imgdir>
+    <int name="34104" value="2"/>
+  </imgdir>
+  <imgdir name="condition3">
+    <imgdir name="stand">
+      <canvas name="0" width="447" height="445" format="1">
+        <vector name="origin" x="223" y="444"/>
+        <int name="z" value="0"/>
+      </canvas>
+    </imgdir>
+    <int name="34103" value="2"/>
+  </imgdir>
+  <imgdir name="condition4">
+    <imgdir name="stand">
+      <canvas name="0" width="447" height="445" format="1">
+        <vector name="origin" x="223" y="444"/>
+        <int name="z" value="0"/>
+      </canvas>
+    </imgdir>
+    <int name="34102" value="2"/>
+  </imgdir>
+  <imgdir name="condition5">
+    <uol name="stand" value="../stand"/>
+    <int name="34102" value="0"/>
+  </imgdir>
+</imgdir>
