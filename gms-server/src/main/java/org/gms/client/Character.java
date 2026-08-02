@@ -460,6 +460,7 @@ public class Character extends AbstractCharacterObject {
     private int newWarpMap = -1;
     private boolean canWarpMap = true;  //only one "warp" must be used per call, and this will define the right one.
     private int canWarpCounter = 0;     //counts how many times "inner warps" have been called.
+    private final AtomicLong combatLifecycleGeneration = new AtomicLong();
     private byte extraHpRec = 0, extraMpRec = 0;
     private short extraRecInterval;
     @Setter
@@ -1129,7 +1130,9 @@ public class Character extends AbstractCharacterObject {
                 }
                 final int skilllevel = getSkillLevel(skill);
                 if (jobId == Job.DAWNWARRIOR4.getId() || jobId == Job.BLAZEWIZARD4.getId()
-                        || jobId == Job.WINDARCHER4.getId()) {
+                        || jobId == Job.WINDARCHER4.getId()
+                        || jobId == Job.THUNDERBREAKER3.getId()
+                        || jobId == Job.THUNDERBREAKER4.getId()) {
                     if (skilllevel >= 30 && getMasterLevel(skill) >= 30) {
                         continue;
                     }
@@ -1865,6 +1868,7 @@ public class Character extends AbstractCharacterObject {
         }
         if (getMap(to.getId(), true) == null) return; //判断地图不存在则直接返回并发送提示消息。
 
+        combatLifecycleGeneration.incrementAndGet();
         this.mapTransitioning.set(true);
         // 显式清空“传送距离校验上下文”，避免跨图后旧上下文残留
         clearTeleportDistanceContext();
@@ -5107,13 +5111,13 @@ public class Character extends AbstractCharacterObject {
         if (mxjMaxLevel == 0) {
             mxjMaxLevel = GameConfig.getServerInt("mxj_max_level");
             if (mxjMaxLevel <= 0) {
-                mxjMaxLevel = 200;
+                mxjMaxLevel = 250;
             }
         }
         if (qstMaxLevel == 0) {
             qstMaxLevel = GameConfig.getServerInt("qst_max_level");
             if (qstMaxLevel <= 0) {
-                qstMaxLevel = 120;
+                qstMaxLevel = 250;
             }
         }
         return isCygnus() ? qstMaxLevel : mxjMaxLevel;
@@ -6951,6 +6955,7 @@ public class Character extends AbstractCharacterObject {
     }
 
     private void playerDead() {
+        combatLifecycleGeneration.incrementAndGet();
         if (this.getMap().isCPQMap()) {
             int losing = getMap().getDeathCP();
             if (getCP() < losing) {
@@ -8295,6 +8300,10 @@ public class Character extends AbstractCharacterObject {
         if (map != null) {
             map.registerCharacterStatUpdate(r);
         }
+    }
+
+    public long getCombatLifecycleGeneration() {
+        return combatLifecycleGeneration.get();
     }
 
     private Pair<Stat, Integer> calcHpRatioUpdate(int newHp, int oldHp) {

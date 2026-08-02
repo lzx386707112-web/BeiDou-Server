@@ -123,6 +123,18 @@ class DetailedAudit:
         extra_info = self.fields(image.root.child("info")) - self.legacy_fields["info"]
         if extra_info:
             result.errors.append(f"旧端基线外 info 字段: {sorted(extra_info)}")
+        if result.map_id in migration.LEGACY_ZERO_FIELD_LIMIT_MAPS and migration.child_value(
+            image.root.child("info"), "fieldLimit"
+        ) != 0:
+            result.errors.append("info/fieldLimit 未降级为旧端安全值 0")
+        foothold = image.root.child("foothold")
+        if foothold is not None:
+            for node, path in migration.walk(foothold):
+                remaining = self.fields(node) & migration.FOOTHOLD_UNSUPPORTED_BY_MAP.get(
+                    result.map_id, set()
+                )
+                if remaining:
+                    result.errors.append(f"旧端不兼容 foothold/{path}: {sorted(remaining)}")
         for section in ("back", "portal", "life", "ladderRope"):
             root = image.root.child(section)
             if root is None:
@@ -131,6 +143,13 @@ class DetailedAudit:
                 extra = self.fields(entry) - self.legacy_fields[section]
                 if extra:
                     result.errors.append(f"旧端基线外 {section}/{entry.name}: {sorted(extra)}")
+                if section == "life":
+                    unsupported = migration.LIFE_UNSUPPORTED_BY_MAP.get(result.map_id, set())
+                    remaining = self.fields(entry) & unsupported
+                    if remaining:
+                        result.errors.append(
+                            f"旧端不兼容 life/{entry.name}: {sorted(remaining)}"
+                        )
         for layer in [child for child in image.root.children() if child.name.isdigit()]:
             for section in ("obj", "tile"):
                 root = layer.child(section)
@@ -237,11 +256,20 @@ class DetailedAudit:
         result.errors.extend(errors)
         result.canvases += canvases
         result.decoded_bytes += decoded_bytes
+        swim = migration.child_value(image.root.child("info"), "swim")
+        expected_swim = 1 if result.map_id in migration.LEGACY_SWIM_MAPS else 0
+        if swim != expected_swim:
+            result.errors.append(
+                f"info/swim={swim}，旧端兼容期望值={expected_swim}"
+            )
         for (kind, name), branches in dependencies["assets"].items():
             path = CLIENT / f"Map/{kind}/{name}.img"
             if not path.exists():
                 result.errors.append(f"缺少资源 IMG: Map/{kind}/{name}.img")
                 continue
+            asset_image = self.gms(path)
+            for error in migration.legacy_asset_structure_errors(asset_image, kind, name):
+                result.errors.append(f"资源数字子节点不连续: {error}")
             for branch in branches:
                 result.branches += 1
                 branch_errors, branch_canvases, branch_bytes = self.branch_metrics(path, branch)
@@ -299,8 +327,22 @@ class DetailedAudit:
                 unsupported = self.fields(info) & migration.MOB_INFO_UNSUPPORTED
                 if unsupported:
                     result.errors.append(f"Mob {mob_id} 旧端基线外字段: {sorted(unsupported)}")
-            if not (ROOT / f"gms-server/wz/Mob.wz/{mob_id:07d}.img.xml").exists():
+                if migration.child_value(info, "eva") != 200:
+                    result.errors.append(f"Mob {mob_id} 客户端 eva 非 200")
+            server_mob = ROOT / f"gms-server/wz/Mob.wz/{mob_id:07d}.img.xml"
+            if not server_mob.exists():
                 result.errors.append(f"缺少服务端 Mob: {mob_id}")
+            else:
+                server_info = next(
+                    (child for child in ET.parse(server_mob).getroot() if child.get("name") == "info"),
+                    None,
+                )
+                server_eva = next(
+                    (child.get("value") for child in server_info or [] if child.get("name") == "eva"),
+                    None,
+                )
+                if server_eva != "200":
+                    result.errors.append(f"Mob {mob_id} 服务端 eva 非 200")
         self.check_portals(image, result)
 
     def check_portals(self, image: WzImage, result: Result) -> None:
@@ -384,7 +426,10 @@ class DetailedAudit:
         for index, map_id in enumerate(migration.MAP_IDS, 1):
             result = self.check_map(map_id)
             self.results.append(result)
-            print(f"[{index:03d}/152] {map_id}: {'PASS' if not result.errors else 'FAIL'}")
+            print(
+                f"[{index:03d}/{len(migration.MAP_IDS):03d}] {map_id}: "
+                f"{'PASS' if not result.errors else 'FAIL'}"
+            )
         self.write_report(baseline_count)
         errors = sum(len(result.errors) for result in self.results)
         print(f"report: {REPORT}")

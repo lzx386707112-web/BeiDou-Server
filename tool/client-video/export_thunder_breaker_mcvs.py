@@ -36,7 +36,6 @@ import patch_thunder_breaker_v_vi as thunder_breaker  # noqa: E402
 
 
 DEFAULT_OUTPUT_DIRECTORY = ROOT / "clien" / "Data" / "Video"
-FRAME_BYTES = WIDTH * HEIGHT * 4
 
 
 @dataclass(frozen=True)
@@ -53,16 +52,19 @@ class McvTrack:
 class RawDecoder:
     process: subprocess.Popen
     frame_count: int
+    width: int
+    height: int
 
     def read_frame(self, index: int) -> Image.Image | None:
         if index >= self.frame_count:
             return None
         if self.process.stdout is None:
             raise RuntimeError("FFmpeg decoder stdout is unavailable")
-        data = self.process.stdout.read(FRAME_BYTES)
-        if len(data) != FRAME_BYTES:
+        frame_bytes = self.width * self.height * 4
+        data = self.process.stdout.read(frame_bytes)
+        if len(data) != frame_bytes:
             raise RuntimeError(f"FFmpeg returned a truncated RGBA frame: {len(data)} bytes")
-        return Image.frombytes("RGBA", (WIDTH, HEIGHT), data)
+        return Image.frombytes("RGBA", (self.width, self.height), data)
 
     def close(self) -> None:
         if self.process.stdout is not None:
@@ -132,23 +134,112 @@ def write_ivf(path: Path, track: McvTrack, packets: tuple[bytes, ...]) -> None:
             output.write(packet)
 
 
-def start_decoder(ffmpeg: str, track: McvTrack, directory: Path, index: int) -> RawDecoder:
+def start_decoder(
+        ffmpeg: str,
+        track: McvTrack,
+        directory: Path,
+        index: int,
+        cover_bounds: tuple[int, int, int, int] | None = None,
+) -> RawDecoder:
     color = directory / f"track-{index}-color.ivf"
     alpha = directory / f"track-{index}-alpha.ivf"
     write_ivf(color, track, track.color_packets)
     write_ivf(alpha, track, track.alpha_packets)
-    contain = (
-        f"scale={WIDTH}:{HEIGHT}:force_original_aspect_ratio=decrease,"
-        f"pad={WIDTH}:{HEIGHT}:(ow-iw)/2:(oh-ih)/2"
-    )
+    if cover_bounds is None:
+        color_filter = "format=rgba"
+        alpha_filter = "format=gray"
+        output_width = track.width
+        output_height = track.height
+    else:
+        left, top, right, bottom = cover_bounds
+        crop_width = right - left
+        crop_height = bottom - top
+        if (crop_width <= 0 or crop_height <= 0
+                or left < 0 or top < 0
+                or right > track.width or bottom > track.height):
+            raise RuntimeError(f"invalid source Alpha bounds: {cover_bounds}")
+        cover = (
+            f"crop={crop_width}:{crop_height}:{left}:{top},"
+            f"scale={WIDTH}:{HEIGHT}:force_original_aspect_ratio=increase,"
+            f"crop={WIDTH}:{HEIGHT}:(iw-ow)/2:(ih-oh)/2"
+        )
+        color_filter = f"{cover},format=rgba"
+        alpha_filter = f"{cover},format=gray"
+        output_width = WIDTH
+        output_height = HEIGHT
     command = [
         ffmpeg, "-v", "error", "-i", str(color), "-i", str(alpha),
         "-filter_complex",
-        f"[0:v]{contain},format=rgba[c];[1:v]{contain},format=gray[a];"
+        f"[0:v]{color_filter}[c];[1:v]{alpha_filter}[a];"
         "[c][a]alphamerge,format=rgba[out]",
         "-map", "[out]", "-f", "rawvideo", "-pix_fmt", "rgba", "-",
     ]
-    return RawDecoder(subprocess.Popen(command, stdout=subprocess.PIPE), len(track.delays))
+    return RawDecoder(
+        subprocess.Popen(command, stdout=subprocess.PIPE),
+        len(track.delays),
+        output_width,
+        output_height,
+    )
+
+
+def union_alpha_bounds(
+        current: tuple[int, int, int, int] | None,
+        frame: Image.Image,
+) -> tuple[int, int, int, int] | None:
+    bounds = frame.getchannel("A").getbbox()
+    if bounds is None:
+        return current
+    if current is None:
+        return bounds
+    return (
+        min(current[0], bounds[0]),
+        min(current[1], bounds[1]),
+        max(current[2], bounds[2]),
+        max(current[3], bounds[3]),
+    )
+
+
+def decoded_alpha_union_bounds(
+        tracks: tuple[McvTrack, ...],
+        ffmpeg: str,
+        directory: Path,
+) -> tuple[int, int, int, int]:
+    dimensions = {(track.width, track.height) for track in tracks}
+    if len(dimensions) != 1:
+        raise RuntimeError(f"source video dimensions do not match: {sorted(dimensions)}")
+    decoders = [
+        start_decoder(ffmpeg, track, directory, index)
+        for index, track in enumerate(tracks)
+    ]
+    bounds = None
+    try:
+        for decoder in decoders:
+            for frame_index in range(decoder.frame_count):
+                frame = decoder.read_frame(frame_index)
+                if frame is not None:
+                    bounds = union_alpha_bounds(bounds, frame)
+                    frame.close()
+        for decoder in decoders:
+            decoder.close()
+    except BaseException:
+        for decoder in decoders:
+            if decoder.process.poll() is None:
+                decoder.process.terminate()
+                decoder.process.wait()
+        raise
+    if bounds is None:
+        raise RuntimeError("source full-screen video has no visible Alpha pixels")
+    return bounds
+
+
+def output_alpha_union_bounds(path: Path, ffmpeg: str) -> tuple[int, int, int, int]:
+    track = parse_mcv(path.read_bytes())
+    if (track.width, track.height) != (WIDTH, HEIGHT):
+        raise RuntimeError(
+            f"unexpected output dimensions for {path}: {track.width}x{track.height}"
+        )
+    with tempfile.TemporaryDirectory(prefix="thunder-breaker-alpha-check-") as name:
+        return decoded_alpha_union_bounds((track,), ffmpeg, Path(name))
 
 
 def encode_tracks(
@@ -163,7 +254,11 @@ def encode_tracks(
         delays.extend([delays[-1]] * (frame_count - len(delays)))
     with tempfile.TemporaryDirectory(prefix=f"{key}-mcv-") as directory_name:
         directory = Path(directory_name)
-        decoders = [start_decoder(ffmpeg, track, directory, index) for index, track in enumerate(tracks)]
+        cover_bounds = decoded_alpha_union_bounds(tracks, ffmpeg, directory)
+        decoders = [
+            start_decoder(ffmpeg, track, directory, index, cover_bounds)
+            for index, track in enumerate(tracks)
+        ]
         color_path = directory / "color.ivf"
         alpha_path = directory / "alpha.ivf"
         color = subprocess.Popen(
@@ -210,6 +305,11 @@ def encode_tracks(
         if color_fourcc != alpha_fourcc:
             raise RuntimeError("color and alpha codecs do not match")
         write_mcv(output, color_fourcc, color_packets, alpha_packets, delays)
+    output_bounds = output_alpha_union_bounds(output, ffmpeg)
+    if output_bounds != (0, 0, WIDTH, HEIGHT):
+        raise RuntimeError(
+            f"output video does not cover the full canvas: {key} {output_bounds}"
+        )
     print(f"wrote: {output} frames={frame_count} duration_ms={sum(delays)} bytes={output.stat().st_size}")
     return output
 
@@ -262,32 +362,107 @@ def encode_source_videos(output_directory: Path, ffmpeg: str) -> None:
 def encode_god_of_sea(output_directory: Path, ffmpeg: str) -> Path:
     thunder_breaker.configure_engine()
     groups, _, metadata = thunder_breaker.engine.load_sources()
-    variants = thunder_breaker.engine.tracks(groups, metadata, 15141007, "screen")
-    if len(variants) != 1 or not variants[0]:
+    screen_meta = thunder_breaker.source_metadata_node(
+        metadata, 15141007, "screen"
+    )
+    frame_metadata = thunder_breaker.engine.base.ms_numeric_frames(
+        screen_meta, metadata
+    )
+    if not frame_metadata:
         raise RuntimeError("unexpected God of the Sea VI screen track")
-    track = variants[0]
-    delays = [thunder_breaker.engine.base.frame_delay(canvas, meta) for canvas, meta in track]
+    screen_timeline = []
+    elapsed = 0
+    for meta in frame_metadata:
+        delay = thunder_breaker.engine.base.ms_int(meta, "delay", 60) or 60
+        screen_timeline.append((elapsed, elapsed + delay, meta))
+        elapsed += delay
+
+    flash_meta = thunder_breaker.source_metadata_node(
+        metadata, 15141007, "effectFlash"
+    )
+    flash_timeline = []
+    elapsed = 0
+    flash_entries = sorted(
+        (child for child in flash_meta
+         if child.tag == "imgdir" and child.attrib.get("name", "").isdigit()),
+        key=lambda child: int(child.attrib["name"]),
+    )
+    for entry in flash_entries:
+        delay = thunder_breaker.engine.base.ms_int(entry, "delay", 0) or 0
+        alpha = thunder_breaker.engine.base.ms_int(entry, "alpha", 0) or 0
+        color_node = next(
+            (child for child in entry
+             if child.tag == "string" and child.attrib.get("name") == "color"),
+            None,
+        )
+        color_text = "0" if color_node is None else color_node.attrib["value"]
+        color_value = int(color_text, 16)
+        color = (
+            (color_value >> 16) & 0xFF,
+            (color_value >> 8) & 0xFF,
+            color_value & 0xFF,
+        )
+        flash_timeline.append((elapsed, elapsed + delay, color, alpha))
+        elapsed += delay
+
+    boundaries = sorted({
+        time
+        for timeline in (screen_timeline, flash_timeline)
+        for entry in timeline
+        for time in entry[:2]
+    })
+    screen_end = screen_timeline[-1][1]
+    boundaries = [time for time in boundaries if time <= screen_end]
+    delays = [end - begin for begin, end in zip(boundaries, boundaries[1:])]
+    segments = list(zip(boundaries, boundaries[1:]))
     with tempfile.TemporaryDirectory(prefix="god-of-sea-vi-mcv-") as directory_name:
         directory = Path(directory_name)
         color_path = directory / "color.ivf"
         alpha_path = directory / "alpha.ivf"
         color = subprocess.Popen(
-            encoder_command(ffmpeg, "rgb24", 24, len(track), color_path), stdin=subprocess.PIPE
+            encoder_command(ffmpeg, "rgb24", 24, len(segments), color_path),
+            stdin=subprocess.PIPE,
         )
         alpha = subprocess.Popen(
-            encoder_command(ffmpeg, "gray", 16, len(track), alpha_path), stdin=subprocess.PIPE
+            encoder_command(ffmpeg, "gray", 16, len(segments), alpha_path),
+            stdin=subprocess.PIPE,
         )
         try:
             if color.stdin is None or alpha.stdin is None:
                 raise RuntimeError("failed to open God of the Sea VI encoder pipes")
-            for index, (canvas, meta) in enumerate(track):
+            for index, (begin, _end) in enumerate(segments):
                 rendered = Image.new("RGBA", (WIDTH, HEIGHT), (0, 0, 0, 0))
-                layer = thunder_breaker.engine.base.clean_rgba(
-                    thunder_breaker.engine.base.decode_source_canvas(canvas)
+                meta = next(
+                    entry[2] for entry in screen_timeline
+                    if entry[0] <= begin < entry[1]
                 )
-                origin_x, origin_y = thunder_breaker.engine.base.canvas_origin(canvas, meta)
-                rendered.alpha_composite(layer, (WIDTH // 2 - origin_x, HEIGHT // 2 - origin_y))
-                layer.close()
+                canvas = thunder_breaker.engine.base.resolve_ms_canvas(
+                    meta, groups, metadata
+                )
+                if canvas is not None:
+                    layer = thunder_breaker.engine.base.clean_rgba(
+                        thunder_breaker.engine.base.decode_source_canvas(canvas)
+                    )
+                    origin_x, origin_y = thunder_breaker.engine.base.canvas_origin(
+                        canvas, meta
+                    )
+                    rendered.alpha_composite(
+                        layer, (WIDTH // 2 - origin_x, HEIGHT // 2 - origin_y)
+                    )
+                    layer.close()
+                flash = next(
+                    (entry for entry in flash_timeline
+                     if entry[0] <= begin < entry[1]),
+                    None,
+                )
+                if flash is not None and flash[3] > 0:
+                    # TMS effectFlash alpha is expressed as a percentage.
+                    overlay_alpha = max(0, min(255, round(flash[3] * 255 / 100)))
+                    overlay = Image.new(
+                        "RGBA", (WIDTH, HEIGHT), (*flash[2], overlay_alpha)
+                    )
+                    rendered.alpha_composite(overlay)
+                    overlay.close()
                 rgb = rendered.convert("RGB")
                 alpha_channel = rendered.getchannel("A")
                 color.stdin.write(rgb.tobytes())
@@ -295,8 +470,12 @@ def encode_god_of_sea(output_directory: Path, ffmpeg: str) -> Path:
                 rgb.close()
                 alpha_channel.close()
                 rendered.close()
-                if index == 0 or (index + 1) % 20 == 0 or index + 1 == len(track):
-                    print(f"encoded god-of-sea-vi: {index + 1}/{len(track)}", flush=True)
+                if (index == 0 or (index + 1) % 20 == 0
+                        or index + 1 == len(segments)):
+                    print(
+                        f"encoded god-of-sea-vi: {index + 1}/{len(segments)}",
+                        flush=True,
+                    )
             color.stdin.close()
             alpha.stdin.close()
             if color.wait() != 0 or alpha.wait() != 0:
@@ -311,7 +490,10 @@ def encode_god_of_sea(output_directory: Path, ffmpeg: str) -> Path:
         alpha_fourcc, alpha_packets = read_ivf(alpha_path)
         output = output_directory / "god-of-sea-vi.mcv"
         write_mcv(output, color_fourcc, color_packets, alpha_packets, delays)
-    print(f"wrote: {output} frames={len(delays)} duration_ms={sum(delays)} bytes={output.stat().st_size}")
+    print(
+        f"wrote: {output} frames={len(delays)} duration_ms={sum(delays)} "
+        f"effect_flash_frames={len(flash_entries)} bytes={output.stat().st_size}"
+    )
     return output
 
 

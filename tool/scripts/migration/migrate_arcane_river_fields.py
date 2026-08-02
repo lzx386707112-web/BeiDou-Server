@@ -67,7 +67,7 @@ MAP_IDS = tuple(
 450002000,450002001,450002002,450002003,450002004,450002005,450002006,450002007,450002008,450002009,450002010,450002011,450002012,450002013,450002014,450002015,450002016,450002017,450002018,450002019,450002020,450002300,450002301,450002302,
 450003000,450003100,450003200,450003210,450003220,450003300,450003310,450003320,450003330,450003340,450003350,450003360,450003400,450003410,450003420,450003430,450003440,450003450,450003460,450003500,450003510,450003520,450003530,450003540,450003560,
 450005000,450005100,450005110,450005120,450005121,450005130,450005131,450005200,450005210,450005220,450005221,450005222,450005230,450005240,450005241,450005242,450005300,450005400,450005410,450005411,450005412,450005420,450005430,450005431,450005432,450005440,450005500,450005510,450005520,450005530,450005550,
-450006000,450006010,450006020,450006030,450006040,450006110,450006120,450006130,450006140,450006150,450006160,450006200,450006210,450006220,450006230,450006240,450006300,450006310,450006320,450006400,450006410,450006420,450006430,450006440,
+450006000,450006010,450006020,450006030,450006040,450006110,450006120,450006130,450006150,450006160,450006200,450006210,450006220,450006230,450006240,450006300,450006310,450006320,450006400,450006410,450006420,450006430,450006440,
 450007000,450007010,450007020,450007030,450007040,450007050,450007060,450007070,450007100,450007110,450007120,450007130,450007140,450007150,450007160,450007200,450007210,450007220,450007230
 """.replace("\n", "").split(",")
     if value
@@ -86,6 +86,17 @@ MAP_MARKS = {"Road of Vanishing", "ChewChew", "Lacheln", "Arcana", "Morass", "es
 MAP_ONLY_AB_TESTS: set[int] = set()
 LEGACY_MEDIA_DISABLED_MAPS = {450001000}
 LEGACY_CONNECT_FIRST_MAPS = set(MAP_IDS)
+LEGACY_SWIM_MAPS = {450002011}
+LEGACY_ZERO_FIELD_LIMIT_MAPS = {450006130}
+LIFE_UNSUPPORTED_BY_MAP = {
+    450006130: {"forcedZPage", "forcedZMass"},
+}
+FOOTHOLD_UNSUPPORTED_BY_MAP = {
+    450006130: {"piece"},
+}
+LEGACY_ASSET_CHILD_RENAMES = {
+    ("Obj", "morass", "castle_Outside/stone/7/0/foothold"): {"5": "4"},
+}
 PINNED_CLIENT_MAP_SHA256 = {
     450001000: "ac6127f16ca8c56bac8db7448ced677c24ca557cbc22bb4ea861104d679d373e",
 }
@@ -624,6 +635,10 @@ def sanitize_map(root: WzSubProperty, map_id: int) -> None:
     if isinstance(info, WzSubProperty):
         for name in MAP_INFO_UNSUPPORTED:
             remove_child(info, name)
+        if map_id in LEGACY_SWIM_MAPS:
+            set_int(info, "swim", 1)
+        if map_id in LEGACY_ZERO_FIELD_LIMIT_MAPS:
+            set_int(info, "fieldLimit", 0)
         if map_id in MAP_ONLY_AB_TESTS or map_id in LEGACY_MEDIA_DISABLED_MAPS:
             remove_child(info, "bgm")
             remove_child(info, "mapMark")
@@ -645,8 +660,15 @@ def sanitize_map(root: WzSubProperty, map_id: int) -> None:
                 if hidden or npc_id in REMOVED_NPCS or (not regional and not installed):
                     remove_child(life, entry.name)
                     continue
-            for name in LIFE_UNSUPPORTED:
+            for name in LIFE_UNSUPPORTED | LIFE_UNSUPPORTED_BY_MAP.get(map_id, set()):
                 remove_child(entry, name)
+
+    foothold = root.child("foothold")
+    for node, _ in walk(foothold) if foothold is not None else ():
+        if not isinstance(node, WzSubProperty):
+            continue
+        for name in FOOTHOLD_UNSUPPORTED_BY_MAP.get(map_id, set()):
+            remove_child(node, name)
 
     for layer in [child for child in root.children() if child.name.isdigit()]:
         objects = layer.child("obj")
@@ -722,6 +744,9 @@ def sanitize_mob(root: WzSubProperty) -> None:
     for name, value in OLD_MOB_FIELDS.items():
         if info.child(name) is None:
             set_int(info, name, value)
+    # Modern Arcane River EVA values (up to 930) make the legacy client miss
+    # even at 999 accuracy. Keep the imported mobs on the old-client scale.
+    set_int(info, "eva", 200)
     max_hp = info.child("maxHP")
     if max_hp is not None and int(max_hp.value) > 2_147_483_647:
         set_int(info, "maxHP", 2_147_483_647)
@@ -839,6 +864,43 @@ def ensure_path(root: WzSubProperty, path: str) -> WzSubProperty:
     return current
 
 
+def normalize_legacy_asset_structure(image: WzImage, kind: str, name: str) -> int:
+    changed = 0
+    for (asset_kind, asset_name, path), renames in LEGACY_ASSET_CHILD_RENAMES.items():
+        if (kind, name) != (asset_kind, asset_name):
+            continue
+        node = image.root.get(path)
+        if not isinstance(node, WzSubProperty):
+            raise RuntimeError(f"missing compatibility asset node: {kind}/{name}.img/{path}")
+        for old_name, new_name in renames.items():
+            old = node.child(old_name)
+            new = node.child(new_name)
+            if old is None and new is not None:
+                continue
+            if old is None or new is not None:
+                raise RuntimeError(
+                    f"unexpected compatibility asset children: {kind}/{name}.img/{path}"
+                )
+            node._children.pop(old_name)
+            old.name = new_name
+            node.add(old)
+            changed += 1
+    return changed
+
+
+def legacy_asset_structure_errors(image: WzImage, kind: str, name: str) -> list[str]:
+    errors = []
+    for asset_kind, asset_name, path in LEGACY_ASSET_CHILD_RENAMES:
+        if (kind, name) != (asset_kind, asset_name):
+            continue
+        node = image.root.get(path)
+        names = [child.name for child in node.children()] if isinstance(node, WzSubProperty) else []
+        expected = [str(index) for index in range(len(names))]
+        if names != expected:
+            errors.append(f"{kind}/{name}.img/{path}: {names}, expected {expected}")
+    return errors
+
+
 def merge_asset(kind: str, name: str, branches: set[str]) -> tuple[int, int, int]:
     source_path = SOURCE / f"Map/{kind}/{name}.img"
     target_path = ROOT / f"clien/Data/Map/{kind}/{name}.img"
@@ -872,6 +934,7 @@ def merge_asset(kind: str, name: str, branches: set[str]) -> tuple[int, int, int
         parent = ensure_path(target.root, parent_path)
         remove_child(parent, leaf)
         parent.add(clone_property(source_node, parent, source, source_path, materializer, leaf))
+    normalize_legacy_asset_structure(target, kind, name)
     write_client_image(target_path, target)
     return materializer.canvases, materializer.links, materializer.resized
 

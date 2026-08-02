@@ -4,27 +4,40 @@
 Warrior skills, the Blaze Wizard V/VI compatibility range
 `12121000..12121036`, and the retained Night Walker attack ranges
 `14121003..08`, `14121014..17`, `14121027..28`, and `14121030..36`, plus
-Thunder Breaker `15121000..15121020`. Dawn Warrior and Thunder Breaker continue through the native melee branch;
+Thunder Breaker active skills `15121000`, `15121002..15121021` and server-only visual IDs
+`15121022..15121033`. Dawn Warrior and Thunder Breaker continue through the native melee branch;
 Blaze Wizard is routed through the native magic branch and its original flat
 high-ID visual exit so the old client keeps direct `effect`, magic `hit`, and
 damage-number paths. Night Walker uses the native ranged entry `0x009690E9` and
 arms a skill-whitelisted MagicBullet trajectory hook for its migrated darts.
-Thunder Breaker's Shark Torpedo `15121001` alone follows its original Shark
-Wave-style ranged projectile branch; the remaining Thunder Breaker skills use
-the knuckle melee branch.
+Thunder Breaker skills use the knuckle melee branch. `15121021` is the hidden Sea Dragon Spiral tick node,
+so continuous hits do not replay the complete cast animation. The Lightning
+Spear visual IDs `15121022..15121033` are accepted by the active-skill and
+high-ID visual paths so server replay packets can render their standard
+`effect`; keyboard dispatch remains capped at `15121021`, so players cannot
+bind or actively cast the hidden IDs.
 Blaze Wizard skills `12121025`
 and `12121028` start their transparent MCV full-screen videos through
 `BeiDouVideo.dll`; Night Walker uses the same path for `14121032` and `14121035`.
 Thunder Breaker uses it for `15121016`, `15121017`, and `15121019`, keeping the
-large multi-frame screen layers out of Skill.wz.
+large multi-frame screen layers out of Skill.wz. Its active-skill hook queues
+these videos until the next D3D8 Present, after the native melee constructor
+has finished changing attack state.
 
 The DLL patches the keyboard active-skill gate, the `DoActiveSkill` melee
 dispatch, the high-ID visual tree, and the downstream Brandish-compatible
-branches at runtime. The
+branches at runtime. Version 38 keeps the native requirement function intact,
+including its MP/HP consumption and attack-state initialization, but no longer
+classifies Thunder Breaker `15121000..15121021` as Hero Brandish in the four
+downstream action, offset, state, and hit classifiers. Version 38 additionally
+opens the server-only Lightning Spear replay range without making it keyboard-castable,
+uses the old client's supported `alert5` action for every Lightning Spear stage,
+and removes the unsupported Shark Torpedo compatibility path. Other attacks use
+the same generic knuckle-melee path as native Thunder Breaker skill `15111004`. The
 high-ID hook is required because `111210xx` leaves
 the visual binary-search tree before the original Hero Brandish comparison.
 It does
-not patch the skill window, short-circuit native validation, or read/modify
+not patch the skill window, globally short-circuit native validation, or read/modify
 `ijl15.dll`. The accompanying EXE patch only calls
 `LoadLibraryA("DawnWarriorSkillCompat.dll")` during startup.
 
@@ -42,8 +55,15 @@ rtk python3 tool/scripts/patch-client/patch_dawn_warrior_skill_dll_loader.py
 ```
 
 At runtime, inspect `clien/DawnWarriorSkillCompat.log`. A successful load
-writes `LOAD: Dawn Warrior/Blaze Wizard/Wind Archer/Night Walker/Thunder Breaker Skill Compat v28`
-followed by the recognition-hook result. Version 28 gives Merciless Winds ten
+writes `LOAD: Dawn Warrior/Blaze Wizard/Wind Archer/Night Walker/Thunder Breaker Skill Compat v38`
+followed by the recognition-hook result. Version 38 removes the unsupported
+Thunder Breaker projectile compatibility path and keeps Lightning Spear on the
+supported melee visual path. Version 33 also renders an active MCV
+from the D3D8 Present hook when the field-layer marker is not drawn, so Origin
+full-screen effects remain visible on clients whose Gr2D path skips the marker.
+Version 31 removes the accidental
+Brandish sword/axe classification from migrated Thunder Breaker attacks while
+preserving native skill validation. Version 28 gives Merciless Winds ten
 independently targeted native projectiles and cycles them across the selected
 monsters. Version 27 removes the three retired
 Wind Archer entries and keeps Mistral Spring on the full-screen MCV path. Version 25 adds Thunder Breaker's

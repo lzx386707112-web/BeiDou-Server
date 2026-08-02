@@ -1235,7 +1235,7 @@ public class MapleMap {
         }
     }
 
-    private void spawnDrop(final Item idrop, final Point dropPos, final MapObject dropper, final Character chr, final byte droptype, final short questid) {
+    private void spawnDrop(final Item idrop, final Point dropPos, final MapObject dropper, final Character chr, final byte droptype, final int questid) {
         final MapItem mdrop = new MapItem(idrop, dropPos, dropper, chr, chr.getClient(), droptype, false, questid);
         mdrop.setDropTime(Server.getInstance().getCurrentTime());
         spawnAndAddRangedMapObject(mdrop, c -> {

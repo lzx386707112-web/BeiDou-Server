@@ -91,6 +91,7 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
     private static final int SHADOW_BITE_NORMAL_PERCENT = 990;
     private static final int SHADOW_BITE_BOSS_PERCENT = 2673;
     private static final int SHADOW_BITE_ATTACK_COUNT = 8;
+    private static final int SHADOW_BITE_TARGET_COUNT = 10;
     private static final int SHADOW_BITE_BAT_DELAY_MS = 720;
     private static final int[] DOMINION_VI_ATTACK_TIMES_MS = intervalTimes(120, 540, 2820);
     private static final int[] DARK_OMEN_VI_TIMES_MS = intervalTimes(270, 270, 6750);
@@ -451,9 +452,12 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
                         monster.getPosition().distanceSq(casterPosition))
                 .thenComparingInt(Monster::getObjectId));
 
-        List<Monster> result = new ArrayList<>(15);
+        List<Monster> result = new ArrayList<>(SHADOW_BITE_TARGET_COUNT);
         Set<Integer> selectedIds = new HashSet<>();
         for (Integer objectId : attack.allDamage.keySet()) {
+            if (result.size() >= SHADOW_BITE_TARGET_COUNT) {
+                break;
+            }
             Monster monster = expectedMap.getMonsterByOid(objectId);
             if (monster != null && monster.isAlive()
                     && attackBounds.contains(monster.getPosition())
@@ -462,7 +466,7 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
             }
         }
         for (Monster monster : candidates) {
-            if (result.size() >= 15) {
+            if (result.size() >= SHADOW_BITE_TARGET_COUNT) {
                 break;
             }
             if (selectedIds.add(monster.getObjectId())) {
@@ -1094,41 +1098,6 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
             for (int i = 0; i < attack.numAttacked; i++) {
                 chr.handleEnergyChargeGain();
             }
-        } else if (attack.skill == ThunderBreaker.SHARK_TORPEDO
-                && chr.getSkillLevel(ThunderBreaker.SHARK_TORPEDO) > 0) {
-            Skill skill = SkillFactory.getSkill(ThunderBreaker.SHARK_TORPEDO);
-            StatEffect effect = skill.getEffect(chr.getSkillLevel(skill));
-            if (chr.skillIsCooling(ThunderBreaker.SHARK_TORPEDO)) {
-                return;
-            }
-            if (effect.getCooldown() > 0) {
-                c.sendPacket(PacketCreator.skillCooldown(
-                        ThunderBreaker.SHARK_TORPEDO, effect.getCooldown()
-                ));
-                chr.addCooldown(
-                        ThunderBreaker.SHARK_TORPEDO,
-                        currentServerTime(),
-                        SECONDS.toMillis(effect.getCooldown())
-                );
-            }
-            MapleMap expectedMap = chr.getMap();
-            chr.getMap().broadcastMessage(chr, PacketCreator.rangedAttack(
-                    chr,
-                    attack.skill,
-                    attack.skilllevel,
-                    attack.stance,
-                    attack.numAttackedAndDamage,
-                    0,
-                    attack.allDamage,
-                    attack.speed,
-                    attack.direction,
-                    attack.display
-            ), false);
-            TimerManager.getInstance().schedule(() -> {
-                if (canContinueTrackingAttack(chr, expectedMap)) {
-                    applyAttack(attack, chr, effect.getAttackCount());
-                }
-            }, 540);
         } else if (attack.skill == Aran.COMBO_SMASH || attack.skill == Aran.COMBO_FENRIR || attack.skill == Aran.COMBO_TEMPEST) {
             chr.getMap().broadcastMessage(chr, PacketCreator.rangedAttack(chr, attack.skill, attack.skilllevel, attack.stance, attack.numAttackedAndDamage, 0, attack.allDamage, attack.speed, attack.direction, attack.display), false);
             if (attack.skill == Aran.COMBO_SMASH && chr.getCombo() >= 30) {

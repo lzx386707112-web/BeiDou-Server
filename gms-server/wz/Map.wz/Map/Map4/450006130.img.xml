@@ -12,11 +12,11 @@
     <string name="mapMark" value="Morass"/>
     <int name="fly" value="0"/>
     <int name="hideMinimap" value="0"/>
-    <int name="fieldLimit" value="1048576"/>
     <int name="VRTop" value="-1133"/>
     <int name="VRLeft" value="-2791"/>
     <int name="VRBottom" value="310"/>
     <int name="VRRight" value="2326"/>
+    <int name="fieldLimit" value="0"/>
   </imgdir>
   <imgdir name="back">
     <imgdir name="0">
@@ -746,8 +746,6 @@
       <int name="mobTime" value="0"/>
       <int name="f" value="0"/>
       <int name="hide" value="0"/>
-      <int name="forcedZPage" value="-1"/>
-      <int name="forcedZMass" value="-1"/>
       <int name="fh" value="90"/>
       <int name="cy" value="24"/>
       <int name="rx0" value="644"/>
@@ -758,1196 +756,27 @@
   <imgdir name="0">
     <imgdir name="info"></imgdir>
     <imgdir name="tile"></imgdir>
-    <imgdir name="obj">
-      <imgdir name="0">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="acc"/>
-        <string name="l2" value="9"/>
-        <int name="x" value="-2377"/>
-        <int name="y" value="-790"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="72"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="1">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="acc"/>
-        <string name="l2" value="11"/>
-        <int name="x" value="-2243"/>
-        <int name="y" value="-731"/>
-        <int name="z" value="6"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="72"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="2">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="acc"/>
-        <string name="l2" value="13"/>
-        <int name="x" value="-1560"/>
-        <int name="y" value="-741"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="70"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="3">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="acc"/>
-        <string name="l2" value="11"/>
-        <int name="x" value="-2020"/>
-        <int name="y" value="-731"/>
-        <int name="z" value="6"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="72"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="4">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="acc"/>
-        <string name="l2" value="11"/>
-        <int name="x" value="-1068"/>
-        <int name="y" value="-732"/>
-        <int name="z" value="10"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="70"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="5">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="acc"/>
-        <string name="l2" value="11"/>
-        <int name="x" value="-845"/>
-        <int name="y" value="-732"/>
-        <int name="z" value="10"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="70"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="6">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="acc"/>
-        <string name="l2" value="11"/>
-        <int name="x" value="-621"/>
-        <int name="y" value="-732"/>
-        <int name="z" value="6"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="70"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="7">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="acc"/>
-        <string name="l2" value="10"/>
-        <int name="x" value="-504"/>
-        <int name="y" value="-788"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="70"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="8">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="acc"/>
-        <string name="l2" value="12"/>
-        <int name="x" value="1418"/>
-        <int name="y" value="-885"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="74"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="9">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="acc"/>
-        <string name="l2" value="11"/>
-        <int name="x" value="1090"/>
-        <int name="y" value="-845"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="74"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="10">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="acc"/>
-        <string name="l2" value="11"/>
-        <int name="x" value="1745"/>
-        <int name="y" value="-845"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="74"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="11">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="acc"/>
-        <string name="l2" value="11"/>
-        <int name="x" value="1969"/>
-        <int name="y" value="-845"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="74"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="12">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="acc"/>
-        <string name="l2" value="9"/>
-        <int name="x" value="2096"/>
-        <int name="y" value="-901"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="74"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="13">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="acc"/>
-        <string name="l2" value="10"/>
-        <int name="x" value="961"/>
-        <int name="y" value="-904"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="74"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="14">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="acc"/>
-        <string name="l2" value="3"/>
-        <int name="x" value="663"/>
-        <int name="y" value="-805"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="75"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="15">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="acc"/>
-        <string name="l2" value="3"/>
-        <int name="x" value="779"/>
-        <int name="y" value="-805"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="75"/>
-        <int name="r" value="0"/>
-      </imgdir>
-    </imgdir>
+    <imgdir name="obj"></imgdir>
   </imgdir>
   <imgdir name="1">
     <imgdir name="info"></imgdir>
     <imgdir name="tile"></imgdir>
-    <imgdir name="obj">
-      <imgdir name="1">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="bridge"/>
-        <string name="l2" value="8"/>
-        <int name="x" value="880"/>
-        <int name="y" value="-318"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="53"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="2">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="bridge"/>
-        <string name="l2" value="7"/>
-        <int name="x" value="880"/>
-        <int name="y" value="-205"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="44"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="3">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="bridge"/>
-        <string name="l2" value="6"/>
-        <int name="x" value="880"/>
-        <int name="y" value="-92"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="31"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="4">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="bridge"/>
-        <string name="l2" value="5"/>
-        <int name="x" value="880"/>
-        <int name="y" value="-1"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="25"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="5">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="bridge"/>
-        <string name="l2" value="6"/>
-        <int name="x" value="880"/>
-        <int name="y" value="-431"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="61"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="10">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="bridge"/>
-        <string name="l2" value="6"/>
-        <int name="x" value="1347"/>
-        <int name="y" value="-431"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="55"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="11">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="bridge"/>
-        <string name="l2" value="8"/>
-        <int name="x" value="1347"/>
-        <int name="y" value="-318"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="52"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="12">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="bridge"/>
-        <string name="l2" value="7"/>
-        <int name="x" value="1347"/>
-        <int name="y" value="-205"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="42"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="13">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="bridge"/>
-        <string name="l2" value="6"/>
-        <int name="x" value="1347"/>
-        <int name="y" value="-92"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="33"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="14">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="bridge"/>
-        <string name="l2" value="5"/>
-        <int name="x" value="1347"/>
-        <int name="y" value="-1"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="23"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="15">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="bridge"/>
-        <string name="l2" value="6"/>
-        <int name="x" value="1814"/>
-        <int name="y" value="-431"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="60"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="16">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="bridge"/>
-        <string name="l2" value="8"/>
-        <int name="x" value="1814"/>
-        <int name="y" value="-318"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="51"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="17">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="bridge"/>
-        <string name="l2" value="7"/>
-        <int name="x" value="1814"/>
-        <int name="y" value="-205"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="43"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="18">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="bridge"/>
-        <string name="l2" value="6"/>
-        <int name="x" value="1814"/>
-        <int name="y" value="-92"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="32"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="19">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="bridge"/>
-        <string name="l2" value="5"/>
-        <int name="x" value="1814"/>
-        <int name="y" value="-1"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="24"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="29">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="bridge"/>
-        <string name="l2" value="7"/>
-        <int name="x" value="-1649"/>
-        <int name="y" value="-204"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="38"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="30">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="bridge"/>
-        <string name="l2" value="6"/>
-        <int name="x" value="-1649"/>
-        <int name="y" value="-91"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="30"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="31">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="bridge"/>
-        <string name="l2" value="5"/>
-        <int name="x" value="-1649"/>
-        <int name="y" value="0"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="20"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="32">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="bridge"/>
-        <string name="l2" value="6"/>
-        <int name="x" value="-1649"/>
-        <int name="y" value="-317"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="38"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="33">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="bridge"/>
-        <string name="l2" value="6"/>
-        <int name="x" value="-1182"/>
-        <int name="y" value="-317"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="48"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="35">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="bridge"/>
-        <string name="l2" value="7"/>
-        <int name="x" value="-1182"/>
-        <int name="y" value="-204"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="40"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="36">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="bridge"/>
-        <string name="l2" value="6"/>
-        <int name="x" value="-1182"/>
-        <int name="y" value="-91"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="28"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="37">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="bridge"/>
-        <string name="l2" value="5"/>
-        <int name="x" value="-1182"/>
-        <int name="y" value="0"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="21"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="38">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="bridge"/>
-        <string name="l2" value="6"/>
-        <int name="x" value="-715"/>
-        <int name="y" value="-317"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="50"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="39">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="bridge"/>
-        <string name="l2" value="5"/>
-        <int name="x" value="-715"/>
-        <int name="y" value="0"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="18"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="28">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="bridge"/>
-        <string name="l2" value="6"/>
-        <int name="x" value="-715"/>
-        <int name="y" value="-91"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="29"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="34">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="bridge"/>
-        <string name="l2" value="7"/>
-        <int name="x" value="-715"/>
-        <int name="y" value="-204"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="39"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="42">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="bridge"/>
-        <string name="l2" value="6"/>
-        <int name="x" value="-2116"/>
-        <int name="y" value="-317"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="49"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="43">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="bridge"/>
-        <string name="l2" value="7"/>
-        <int name="x" value="-2116"/>
-        <int name="y" value="-204"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="41"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="41">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="acc"/>
-        <string name="l2" value="0"/>
-        <int name="x" value="844"/>
-        <int name="y" value="-400"/>
-        <int name="z" value="10"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="53"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="25">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="acc"/>
-        <string name="l2" value="0"/>
-        <int name="x" value="1304"/>
-        <int name="y" value="-406"/>
-        <int name="z" value="10"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="55"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="26">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="acc"/>
-        <string name="l2" value="0"/>
-        <int name="x" value="-1683"/>
-        <int name="y" value="-280"/>
-        <int name="z" value="10"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="38"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="40">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="foothold_Bridge"/>
-        <string name="l2" value="0"/>
-        <int name="x" value="-2369"/>
-        <int name="y" value="-614"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="69"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="7">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="foothold_Bridge"/>
-        <string name="l2" value="4"/>
-        <int name="x" value="-425"/>
-        <int name="y" value="-614"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="68"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="6">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="foothold_Bridge"/>
-        <string name="l2" value="1"/>
-        <int name="x" value="-1183"/>
-        <int name="y" value="-614"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="59"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="0">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="foothold_Bridge"/>
-        <string name="l2" value="2"/>
-        <int name="x" value="-716"/>
-        <int name="y" value="-614"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="57"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="27">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="foothold_Bridge"/>
-        <string name="l2" value="2"/>
-        <int name="x" value="-1650"/>
-        <int name="y" value="-614"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="38"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="9">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="foothold_Bridge"/>
-        <string name="l2" value="1"/>
-        <int name="x" value="-2117"/>
-        <int name="y" value="-614"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="58"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="8">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="bridge"/>
-        <string name="l2" value="5"/>
-        <int name="x" value="-2116"/>
-        <int name="y" value="0"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="19"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="23">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="foothold_Bridge"/>
-        <string name="l2" value="1"/>
-        <int name="x" value="1813"/>
-        <int name="y" value="-728"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="66"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="22">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="foothold_Bridge"/>
-        <string name="l2" value="2"/>
-        <int name="x" value="1346"/>
-        <int name="y" value="-728"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="65"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="21">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="foothold_Bridge"/>
-        <string name="l2" value="0"/>
-        <int name="x" value="627"/>
-        <int name="y" value="-728"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="73"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="24">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="foothold_Bridge"/>
-        <string name="l2" value="1"/>
-        <int name="x" value="879"/>
-        <int name="y" value="-728"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="67"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="20">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="bridge"/>
-        <string name="l2" value="6"/>
-        <int name="x" value="-2116"/>
-        <int name="y" value="-91"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="27"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="44">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="foothold_Bridge"/>
-        <string name="l2" value="4"/>
-        <int name="x" value="2104"/>
-        <int name="y" value="-728"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="71"/>
-        <int name="r" value="0"/>
-      </imgdir>
-    </imgdir>
+    <imgdir name="obj"></imgdir>
   </imgdir>
   <imgdir name="2">
     <imgdir name="info"></imgdir>
     <imgdir name="tile"></imgdir>
-    <imgdir name="obj">
-      <imgdir name="2">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="foothold_Castle"/>
-        <string name="l2" value="3"/>
-        <int name="x" value="-1472"/>
-        <int name="y" value="-285"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="16"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="3">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="foothold_Castle"/>
-        <string name="l2" value="6"/>
-        <int name="x" value="-184"/>
-        <int name="y" value="-279"/>
-        <int name="z" value="4"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="14"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="4">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="foothold_Castle"/>
-        <string name="l2" value="2"/>
-        <int name="x" value="-2234"/>
-        <int name="y" value="-283"/>
-        <int name="z" value="8"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="16"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="7">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="acc"/>
-        <string name="l2" value="2"/>
-        <int name="x" value="-878"/>
-        <int name="y" value="-128"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="14"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="8">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="acc"/>
-        <string name="l2" value="3"/>
-        <int name="x" value="-94"/>
-        <int name="y" value="-8"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="14"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="5">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="acc"/>
-        <string name="l2" value="4"/>
-        <int name="x" value="904"/>
-        <int name="y" value="-12"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="15"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="1">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="acc"/>
-        <string name="l2" value="3"/>
-        <int name="x" value="-475"/>
-        <int name="y" value="-7"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="14"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="12">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="acc"/>
-        <string name="l2" value="7"/>
-        <int name="x" value="2101"/>
-        <int name="y" value="-534"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="64"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="13">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="acc"/>
-        <string name="l2" value="2"/>
-        <int name="x" value="777"/>
-        <int name="y" value="-130"/>
-        <int name="z" value="10"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="15"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="6">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="foothold_Castle"/>
-        <string name="l2" value="0"/>
-        <int name="x" value="-702"/>
-        <int name="y" value="-266"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="14"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="0">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="acc"/>
-        <string name="l2" value="8"/>
-        <int name="x" value="1537"/>
-        <int name="y" value="-536"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="63"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="14">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="stone"/>
-        <string name="l2" value="7"/>
-        <int name="x" value="464"/>
-        <int name="y" value="-234"/>
-        <int name="z" value="7"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="22"/>
-        <int name="r" value="0"/>
-      </imgdir>
-    </imgdir>
+    <imgdir name="obj"></imgdir>
   </imgdir>
   <imgdir name="3">
     <imgdir name="info"></imgdir>
     <imgdir name="tile"></imgdir>
-    <imgdir name="obj">
-      <imgdir name="0">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="acc"/>
-        <string name="l2" value="2"/>
-        <int name="x" value="-1996"/>
-        <int name="y" value="-127"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="17"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="2">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="acc"/>
-        <string name="l2" value="4"/>
-        <int name="x" value="-1282"/>
-        <int name="y" value="-16"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="26"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="3">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="acc"/>
-        <string name="l2" value="3"/>
-        <int name="x" value="-1865"/>
-        <int name="y" value="-6"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="17"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="4">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="foothold_Bridge"/>
-        <string name="l2" value="1"/>
-        <int name="x" value="1642"/>
-        <int name="y" value="-404"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="46"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="5">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="foothold_Bridge"/>
-        <string name="l2" value="0"/>
-        <int name="x" value="1390"/>
-        <int name="y" value="-404"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="56"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="6">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="bridge"/>
-        <string name="l2" value="6"/>
-        <int name="x" value="1643"/>
-        <int name="y" value="-107"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="34"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="7">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="bridge"/>
-        <string name="l2" value="8"/>
-        <int name="x" value="1643"/>
-        <int name="y" value="6"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="11"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="8">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="foothold_Bridge"/>
-        <string name="l2" value="2"/>
-        <int name="x" value="2109"/>
-        <int name="y" value="-404"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="45"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="9">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="bridge"/>
-        <string name="l2" value="6"/>
-        <int name="x" value="2110"/>
-        <int name="y" value="-107"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="35"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="1">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="bridge"/>
-        <string name="l2" value="8"/>
-        <int name="x" value="2110"/>
-        <int name="y" value="6"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="12"/>
-        <int name="r" value="0"/>
-      </imgdir>
-    </imgdir>
+    <imgdir name="obj"></imgdir>
   </imgdir>
   <imgdir name="4">
     <imgdir name="info"></imgdir>
     <imgdir name="tile"></imgdir>
-    <imgdir name="obj">
-      <imgdir name="0">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="foothold_Bridge2"/>
-        <string name="l2" value="3"/>
-        <int name="x" value="701"/>
-        <int name="y" value="69"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="0"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="1">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="foothold_Bridge2"/>
-        <string name="l2" value="2"/>
-        <int name="x" value="234"/>
-        <int name="y" value="69"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="1"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="2">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="foothold_Bridge2"/>
-        <string name="l2" value="1"/>
-        <int name="x" value="-233"/>
-        <int name="y" value="69"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="2"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="3">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="foothold_Bridge2"/>
-        <string name="l2" value="3"/>
-        <int name="x" value="-700"/>
-        <int name="y" value="69"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="3"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="4">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="foothold_Bridge2"/>
-        <string name="l2" value="3"/>
-        <int name="x" value="-2101"/>
-        <int name="y" value="69"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="4"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="5">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="foothold_Bridge2"/>
-        <string name="l2" value="1"/>
-        <int name="x" value="-1634"/>
-        <int name="y" value="69"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="5"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="6">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="foothold_Bridge2"/>
-        <string name="l2" value="2"/>
-        <int name="x" value="-1167"/>
-        <int name="y" value="69"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="6"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="7">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="foothold_Bridge2"/>
-        <string name="l2" value="1"/>
-        <int name="x" value="1168"/>
-        <int name="y" value="69"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="7"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="8">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="foothold_Bridge2"/>
-        <string name="l2" value="2"/>
-        <int name="x" value="1635"/>
-        <int name="y" value="69"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="8"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="9">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="foothold_Bridge2"/>
-        <string name="l2" value="3"/>
-        <int name="x" value="2102"/>
-        <int name="y" value="69"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="9"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="10">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="foothold_Bridge2"/>
-        <string name="l2" value="3"/>
-        <int name="x" value="-2568"/>
-        <int name="y" value="69"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="10"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="11">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="acc"/>
-        <string name="l2" value="2"/>
-        <int name="x" value="-2682"/>
-        <int name="y" value="-129"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="10"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="13">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="acc"/>
-        <string name="l2" value="6"/>
-        <int name="x" value="1887"/>
-        <int name="y" value="-62"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="8"/>
-        <int name="r" value="0"/>
-      </imgdir>
-      <imgdir name="12">
-        <string name="oS" value="morass"/>
-        <string name="l0" value="castle_Outside"/>
-        <string name="l1" value="acc"/>
-        <string name="l2" value="5"/>
-        <int name="x" value="1360"/>
-        <int name="y" value="-64"/>
-        <int name="z" value="9"/>
-        <int name="f" value="0"/>
-        <int name="zM" value="7"/>
-        <int name="r" value="0"/>
-      </imgdir>
-    </imgdir>
+    <imgdir name="obj"></imgdir>
   </imgdir>
   <imgdir name="5">
     <imgdir name="info"></imgdir>
@@ -2041,7 +870,6 @@
           <int name="y2" value="-659"/>
           <int name="prev" value="2"/>
           <int name="next" value="3"/>
-          <int name="piece" value="0"/>
         </imgdir>
       </imgdir>
       <imgdir name="59">
@@ -2052,7 +880,6 @@
           <int name="y2" value="-659"/>
           <int name="prev" value="9"/>
           <int name="next" value="1"/>
-          <int name="piece" value="6"/>
         </imgdir>
       </imgdir>
       <imgdir name="68">
@@ -2063,7 +890,6 @@
           <int name="y2" value="-659"/>
           <int name="prev" value="1"/>
           <int name="next" value="0"/>
-          <int name="piece" value="7"/>
         </imgdir>
       </imgdir>
       <imgdir name="58">
@@ -2074,7 +900,6 @@
           <int name="y2" value="-659"/>
           <int name="prev" value="10"/>
           <int name="next" value="9"/>
-          <int name="piece" value="9"/>
         </imgdir>
       </imgdir>
       <imgdir name="73">
@@ -2085,7 +910,6 @@
           <int name="y2" value="-773"/>
           <int name="prev" value="0"/>
           <int name="next" value="8"/>
-          <int name="piece" value="21"/>
         </imgdir>
       </imgdir>
       <imgdir name="65">
@@ -2096,7 +920,6 @@
           <int name="y2" value="-773"/>
           <int name="prev" value="8"/>
           <int name="next" value="7"/>
-          <int name="piece" value="22"/>
         </imgdir>
       </imgdir>
       <imgdir name="66">
@@ -2107,7 +930,6 @@
           <int name="y2" value="-773"/>
           <int name="prev" value="6"/>
           <int name="next" value="11"/>
-          <int name="piece" value="23"/>
         </imgdir>
       </imgdir>
       <imgdir name="67">
@@ -2118,7 +940,6 @@
           <int name="y2" value="-773"/>
           <int name="prev" value="5"/>
           <int name="next" value="6"/>
-          <int name="piece" value="24"/>
         </imgdir>
       </imgdir>
       <imgdir name="38">
@@ -2129,7 +950,6 @@
           <int name="y2" value="-659"/>
           <int name="prev" value="4"/>
           <int name="next" value="2"/>
-          <int name="piece" value="27"/>
         </imgdir>
       </imgdir>
       <imgdir name="69">
@@ -2140,7 +960,6 @@
           <int name="y2" value="-659"/>
           <int name="prev" value="0"/>
           <int name="next" value="4"/>
-          <int name="piece" value="40"/>
         </imgdir>
       </imgdir>
       <imgdir name="71">
@@ -2151,7 +970,6 @@
           <int name="y2" value="-773"/>
           <int name="prev" value="7"/>
           <int name="next" value="0"/>
-          <int name="piece" value="44"/>
         </imgdir>
       </imgdir>
     </imgdir>
@@ -2164,7 +982,6 @@
           <int name="y2" value="-268"/>
           <int name="prev" value="0"/>
           <int name="next" value="13"/>
-          <int name="piece" value="2"/>
         </imgdir>
         <imgdir name="13">
           <int name="x1" value="-1412"/>
@@ -2173,7 +990,6 @@
           <int name="y2" value="-215"/>
           <int name="prev" value="12"/>
           <int name="next" value="0"/>
-          <int name="piece" value="2"/>
         </imgdir>
         <imgdir name="14">
           <int name="x1" value="-1706"/>
@@ -2182,7 +998,6 @@
           <int name="y2" value="-493"/>
           <int name="prev" value="0"/>
           <int name="next" value="15"/>
-          <int name="piece" value="2"/>
         </imgdir>
         <imgdir name="15">
           <int name="x1" value="-1678"/>
@@ -2191,7 +1006,6 @@
           <int name="y2" value="-475"/>
           <int name="prev" value="14"/>
           <int name="next" value="16"/>
-          <int name="piece" value="2"/>
         </imgdir>
         <imgdir name="16">
           <int name="x1" value="-1648"/>
@@ -2200,7 +1014,6 @@
           <int name="y2" value="-510"/>
           <int name="prev" value="15"/>
           <int name="next" value="17"/>
-          <int name="piece" value="2"/>
         </imgdir>
         <imgdir name="17">
           <int name="x1" value="-1619"/>
@@ -2209,7 +1022,6 @@
           <int name="y2" value="-548"/>
           <int name="prev" value="16"/>
           <int name="next" value="18"/>
-          <int name="piece" value="2"/>
         </imgdir>
         <imgdir name="18">
           <int name="x1" value="-1451"/>
@@ -2218,7 +1030,6 @@
           <int name="y2" value="-545"/>
           <int name="prev" value="17"/>
           <int name="next" value="19"/>
-          <int name="piece" value="2"/>
         </imgdir>
         <imgdir name="19">
           <int name="x1" value="-1439"/>
@@ -2227,7 +1038,6 @@
           <int name="y2" value="-543"/>
           <int name="prev" value="18"/>
           <int name="next" value="20"/>
-          <int name="piece" value="2"/>
         </imgdir>
         <imgdir name="20">
           <int name="x1" value="-1419"/>
@@ -2236,7 +1046,6 @@
           <int name="y2" value="-539"/>
           <int name="prev" value="19"/>
           <int name="next" value="21"/>
-          <int name="piece" value="2"/>
         </imgdir>
         <imgdir name="21">
           <int name="x1" value="-1391"/>
@@ -2245,7 +1054,6 @@
           <int name="y2" value="-489"/>
           <int name="prev" value="20"/>
           <int name="next" value="0"/>
-          <int name="piece" value="2"/>
         </imgdir>
         <imgdir name="22">
           <int name="x1" value="-2512"/>
@@ -2254,7 +1062,6 @@
           <int name="y2" value="-156"/>
           <int name="prev" value="0"/>
           <int name="next" value="0"/>
-          <int name="piece" value="4"/>
         </imgdir>
         <imgdir name="23">
           <int name="x1" value="-2515"/>
@@ -2263,7 +1070,6 @@
           <int name="y2" value="-393"/>
           <int name="prev" value="0"/>
           <int name="next" value="24"/>
-          <int name="piece" value="4"/>
         </imgdir>
         <imgdir name="24">
           <int name="x1" value="-2232"/>
@@ -2272,7 +1078,6 @@
           <int name="y2" value="-333"/>
           <int name="prev" value="23"/>
           <int name="next" value="0"/>
-          <int name="piece" value="4"/>
         </imgdir>
         <imgdir name="25">
           <int name="x1" value="-2215"/>
@@ -2281,7 +1086,6 @@
           <int name="y2" value="-251"/>
           <int name="prev" value="0"/>
           <int name="next" value="26"/>
-          <int name="piece" value="4"/>
         </imgdir>
         <imgdir name="26">
           <int name="x1" value="-2160"/>
@@ -2290,7 +1094,6 @@
           <int name="y2" value="-260"/>
           <int name="prev" value="25"/>
           <int name="next" value="27"/>
-          <int name="piece" value="4"/>
         </imgdir>
         <imgdir name="27">
           <int name="x1" value="-2122"/>
@@ -2299,7 +1102,6 @@
           <int name="y2" value="-280"/>
           <int name="prev" value="26"/>
           <int name="next" value="28"/>
-          <int name="piece" value="4"/>
         </imgdir>
         <imgdir name="28">
           <int name="x1" value="-2067"/>
@@ -2308,7 +1110,6 @@
           <int name="y2" value="-294"/>
           <int name="prev" value="27"/>
           <int name="next" value="29"/>
-          <int name="piece" value="4"/>
         </imgdir>
         <imgdir name="29">
           <int name="x1" value="-2023"/>
@@ -2317,7 +1118,6 @@
           <int name="y2" value="-297"/>
           <int name="prev" value="28"/>
           <int name="next" value="30"/>
-          <int name="piece" value="4"/>
         </imgdir>
         <imgdir name="30">
           <int name="x1" value="-1972"/>
@@ -2326,7 +1126,6 @@
           <int name="y2" value="-294"/>
           <int name="prev" value="29"/>
           <int name="next" value="31"/>
-          <int name="piece" value="4"/>
         </imgdir>
         <imgdir name="31">
           <int name="x1" value="-1916"/>
@@ -2335,7 +1134,6 @@
           <int name="y2" value="-291"/>
           <int name="prev" value="30"/>
           <int name="next" value="32"/>
-          <int name="piece" value="4"/>
         </imgdir>
         <imgdir name="32">
           <int name="x1" value="-1878"/>
@@ -2344,7 +1142,6 @@
           <int name="y2" value="-302"/>
           <int name="prev" value="31"/>
           <int name="next" value="33"/>
-          <int name="piece" value="4"/>
         </imgdir>
         <imgdir name="33">
           <int name="x1" value="-1817"/>
@@ -2353,7 +1150,6 @@
           <int name="y2" value="-311"/>
           <int name="prev" value="32"/>
           <int name="next" value="34"/>
-          <int name="piece" value="4"/>
         </imgdir>
         <imgdir name="34">
           <int name="x1" value="-1787"/>
@@ -2362,7 +1158,6 @@
           <int name="y2" value="-264"/>
           <int name="prev" value="33"/>
           <int name="next" value="0"/>
-          <int name="piece" value="4"/>
         </imgdir>
         <imgdir name="35">
           <int name="x1" value="-2571"/>
@@ -2371,7 +1166,6 @@
           <int name="y2" value="-188"/>
           <int name="prev" value="0"/>
           <int name="next" value="36"/>
-          <int name="piece" value="4"/>
         </imgdir>
         <imgdir name="36">
           <int name="x1" value="-2543"/>
@@ -2380,7 +1174,6 @@
           <int name="y2" value="-182"/>
           <int name="prev" value="35"/>
           <int name="next" value="0"/>
-          <int name="piece" value="4"/>
         </imgdir>
         <imgdir name="37">
           <int name="x1" value="-2271"/>
@@ -2389,7 +1182,6 @@
           <int name="y2" value="-211"/>
           <int name="prev" value="0"/>
           <int name="next" value="38"/>
-          <int name="piece" value="4"/>
         </imgdir>
         <imgdir name="38">
           <int name="x1" value="-2239"/>
@@ -2398,7 +1190,6 @@
           <int name="y2" value="-205"/>
           <int name="prev" value="37"/>
           <int name="next" value="0"/>
-          <int name="piece" value="4"/>
         </imgdir>
         <imgdir name="39">
           <int name="x1" value="-2504"/>
@@ -2407,7 +1198,6 @@
           <int name="y2" value="-551"/>
           <int name="prev" value="0"/>
           <int name="next" value="40"/>
-          <int name="piece" value="4"/>
         </imgdir>
         <imgdir name="40">
           <int name="x1" value="-2476"/>
@@ -2416,7 +1206,6 @@
           <int name="y2" value="-545"/>
           <int name="prev" value="39"/>
           <int name="next" value="41"/>
-          <int name="piece" value="4"/>
         </imgdir>
         <imgdir name="41">
           <int name="x1" value="-2450"/>
@@ -2425,7 +1214,6 @@
           <int name="y2" value="-541"/>
           <int name="prev" value="40"/>
           <int name="next" value="42"/>
-          <int name="piece" value="4"/>
         </imgdir>
         <imgdir name="42">
           <int name="x1" value="-2436"/>
@@ -2434,7 +1222,6 @@
           <int name="y2" value="-577"/>
           <int name="prev" value="41"/>
           <int name="next" value="43"/>
-          <int name="piece" value="4"/>
         </imgdir>
         <imgdir name="43">
           <int name="x1" value="-2292"/>
@@ -2443,7 +1230,6 @@
           <int name="y2" value="-603"/>
           <int name="prev" value="42"/>
           <int name="next" value="44"/>
-          <int name="piece" value="4"/>
         </imgdir>
         <imgdir name="44">
           <int name="x1" value="-2269"/>
@@ -2452,7 +1238,6 @@
           <int name="y2" value="-609"/>
           <int name="prev" value="43"/>
           <int name="next" value="45"/>
-          <int name="piece" value="4"/>
         </imgdir>
         <imgdir name="45">
           <int name="x1" value="-2238"/>
@@ -2461,7 +1246,6 @@
           <int name="y2" value="-601"/>
           <int name="prev" value="44"/>
           <int name="next" value="0"/>
-          <int name="piece" value="4"/>
         </imgdir>
       </imgdir>
       <imgdir name="14">
@@ -2472,7 +1256,6 @@
           <int name="y2" value="-207"/>
           <int name="prev" value="0"/>
           <int name="next" value="47"/>
-          <int name="piece" value="3"/>
         </imgdir>
         <imgdir name="47">
           <int name="x1" value="-521"/>
@@ -2481,7 +1264,6 @@
           <int name="y2" value="-201"/>
           <int name="prev" value="46"/>
           <int name="next" value="0"/>
-          <int name="piece" value="3"/>
         </imgdir>
         <imgdir name="48">
           <int name="x1" value="-151"/>
@@ -2490,7 +1272,6 @@
           <int name="y2" value="-252"/>
           <int name="prev" value="0"/>
           <int name="next" value="49"/>
-          <int name="piece" value="3"/>
         </imgdir>
         <imgdir name="49">
           <int name="x1" value="-119"/>
@@ -2499,7 +1280,6 @@
           <int name="y2" value="-246"/>
           <int name="prev" value="48"/>
           <int name="next" value="0"/>
-          <int name="piece" value="3"/>
         </imgdir>
         <imgdir name="50">
           <int name="x1" value="-495"/>
@@ -2508,7 +1288,6 @@
           <int name="y2" value="-502"/>
           <int name="prev" value="0"/>
           <int name="next" value="51"/>
-          <int name="piece" value="3"/>
         </imgdir>
         <imgdir name="51">
           <int name="x1" value="-458"/>
@@ -2517,7 +1296,6 @@
           <int name="y2" value="-486"/>
           <int name="prev" value="50"/>
           <int name="next" value="52"/>
-          <int name="piece" value="3"/>
         </imgdir>
         <imgdir name="52">
           <int name="x1" value="-412"/>
@@ -2526,7 +1304,6 @@
           <int name="y2" value="-528"/>
           <int name="prev" value="51"/>
           <int name="next" value="53"/>
-          <int name="piece" value="3"/>
         </imgdir>
         <imgdir name="53">
           <int name="x1" value="-362"/>
@@ -2535,7 +1312,6 @@
           <int name="y2" value="-554"/>
           <int name="prev" value="52"/>
           <int name="next" value="54"/>
-          <int name="piece" value="3"/>
         </imgdir>
         <imgdir name="54">
           <int name="x1" value="-252"/>
@@ -2544,7 +1320,6 @@
           <int name="y2" value="-557"/>
           <int name="prev" value="53"/>
           <int name="next" value="55"/>
-          <int name="piece" value="3"/>
         </imgdir>
         <imgdir name="55">
           <int name="x1" value="-185"/>
@@ -2553,7 +1328,6 @@
           <int name="y2" value="-577"/>
           <int name="prev" value="54"/>
           <int name="next" value="56"/>
-          <int name="piece" value="3"/>
         </imgdir>
         <imgdir name="56">
           <int name="x1" value="-161"/>
@@ -2562,7 +1336,6 @@
           <int name="y2" value="-583"/>
           <int name="prev" value="55"/>
           <int name="next" value="57"/>
-          <int name="piece" value="3"/>
         </imgdir>
         <imgdir name="57">
           <int name="x1" value="-130"/>
@@ -2571,7 +1344,6 @@
           <int name="y2" value="-575"/>
           <int name="prev" value="56"/>
           <int name="next" value="58"/>
-          <int name="piece" value="3"/>
         </imgdir>
         <imgdir name="58">
           <int name="x1" value="-102"/>
@@ -2580,7 +1352,6 @@
           <int name="y2" value="-540"/>
           <int name="prev" value="57"/>
           <int name="next" value="59"/>
-          <int name="piece" value="3"/>
         </imgdir>
         <imgdir name="59">
           <int name="x1" value="-69"/>
@@ -2589,7 +1360,6 @@
           <int name="y2" value="-482"/>
           <int name="prev" value="58"/>
           <int name="next" value="60"/>
-          <int name="piece" value="3"/>
         </imgdir>
         <imgdir name="60">
           <int name="x1" value="9"/>
@@ -2598,7 +1368,6 @@
           <int name="y2" value="-431"/>
           <int name="prev" value="59"/>
           <int name="next" value="0"/>
-          <int name="piece" value="3"/>
         </imgdir>
         <imgdir name="61">
           <int name="x1" value="-805"/>
@@ -2607,7 +1376,6 @@
           <int name="y2" value="-241"/>
           <int name="prev" value="0"/>
           <int name="next" value="62"/>
-          <int name="piece" value="6"/>
         </imgdir>
         <imgdir name="62">
           <int name="x1" value="-769"/>
@@ -2616,7 +1384,6 @@
           <int name="y2" value="-248"/>
           <int name="prev" value="61"/>
           <int name="next" value="63"/>
-          <int name="piece" value="6"/>
         </imgdir>
         <imgdir name="63">
           <int name="x1" value="-700"/>
@@ -2625,7 +1392,6 @@
           <int name="y2" value="-239"/>
           <int name="prev" value="62"/>
           <int name="next" value="64"/>
-          <int name="piece" value="6"/>
         </imgdir>
         <imgdir name="64">
           <int name="x1" value="-618"/>
@@ -2634,7 +1400,6 @@
           <int name="y2" value="-230"/>
           <int name="prev" value="63"/>
           <int name="next" value="0"/>
-          <int name="piece" value="6"/>
         </imgdir>
         <imgdir name="65">
           <int name="x1" value="-841"/>
@@ -2643,7 +1408,6 @@
           <int name="y2" value="-479"/>
           <int name="prev" value="0"/>
           <int name="next" value="66"/>
-          <int name="piece" value="6"/>
         </imgdir>
         <imgdir name="66">
           <int name="x1" value="-813"/>
@@ -2652,7 +1416,6 @@
           <int name="y2" value="-469"/>
           <int name="prev" value="65"/>
           <int name="next" value="67"/>
-          <int name="piece" value="6"/>
         </imgdir>
         <imgdir name="67">
           <int name="x1" value="-790"/>
@@ -2661,7 +1424,6 @@
           <int name="y2" value="-450"/>
           <int name="prev" value="66"/>
           <int name="next" value="68"/>
-          <int name="piece" value="6"/>
         </imgdir>
         <imgdir name="68">
           <int name="x1" value="-770"/>
@@ -2670,7 +1432,6 @@
           <int name="y2" value="-461"/>
           <int name="prev" value="67"/>
           <int name="next" value="69"/>
-          <int name="piece" value="6"/>
         </imgdir>
         <imgdir name="69">
           <int name="x1" value="-723"/>
@@ -2679,7 +1440,6 @@
           <int name="y2" value="-456"/>
           <int name="prev" value="68"/>
           <int name="next" value="70"/>
-          <int name="piece" value="6"/>
         </imgdir>
         <imgdir name="70">
           <int name="x1" value="-674"/>
@@ -2688,7 +1448,6 @@
           <int name="y2" value="-463"/>
           <int name="prev" value="69"/>
           <int name="next" value="71"/>
-          <int name="piece" value="6"/>
         </imgdir>
         <imgdir name="71">
           <int name="x1" value="-660"/>
@@ -2697,7 +1456,6 @@
           <int name="y2" value="-481"/>
           <int name="prev" value="70"/>
           <int name="next" value="72"/>
-          <int name="piece" value="6"/>
         </imgdir>
         <imgdir name="72">
           <int name="x1" value="-646"/>
@@ -2706,7 +1464,6 @@
           <int name="y2" value="-487"/>
           <int name="prev" value="71"/>
           <int name="next" value="73"/>
-          <int name="piece" value="6"/>
         </imgdir>
         <imgdir name="73">
           <int name="x1" value="-615"/>
@@ -2715,7 +1472,6 @@
           <int name="y2" value="-477"/>
           <int name="prev" value="72"/>
           <int name="next" value="0"/>
-          <int name="piece" value="6"/>
         </imgdir>
         <imgdir name="74">
           <int name="x1" value="-732"/>
@@ -2724,7 +1480,6 @@
           <int name="y2" value="-650"/>
           <int name="prev" value="0"/>
           <int name="next" value="75"/>
-          <int name="piece" value="6"/>
         </imgdir>
         <imgdir name="75">
           <int name="x1" value="-688"/>
@@ -2733,7 +1488,6 @@
           <int name="y2" value="-641"/>
           <int name="prev" value="74"/>
           <int name="next" value="0"/>
-          <int name="piece" value="6"/>
         </imgdir>
       </imgdir>
       <imgdir name="22">
@@ -2744,7 +1498,6 @@
           <int name="y2" value="-119"/>
           <int name="prev" value="0"/>
           <int name="next" value="77"/>
-          <int name="piece" value="14"/>
         </imgdir>
         <imgdir name="77">
           <int name="x1" value="389"/>
@@ -2753,7 +1506,6 @@
           <int name="y2" value="-118"/>
           <int name="prev" value="76"/>
           <int name="next" value="78"/>
-          <int name="piece" value="14"/>
         </imgdir>
         <imgdir name="78">
           <int name="x1" value="543"/>
@@ -2762,7 +1514,6 @@
           <int name="y2" value="-105"/>
           <int name="prev" value="77"/>
           <int name="next" value="0"/>
-          <int name="piece" value="14"/>
         </imgdir>
         <imgdir name="79">
           <int name="x1" value="375"/>
@@ -2771,7 +1522,6 @@
           <int name="y2" value="-176"/>
           <int name="prev" value="0"/>
           <int name="next" value="80"/>
-          <int name="piece" value="14"/>
         </imgdir>
         <imgdir name="80">
           <int name="x1" value="446"/>
@@ -2780,7 +1530,6 @@
           <int name="y2" value="-168"/>
           <int name="prev" value="79"/>
           <int name="next" value="0"/>
-          <int name="piece" value="14"/>
         </imgdir>
         <imgdir name="81">
           <int name="x1" value="382"/>
@@ -2789,7 +1538,6 @@
           <int name="y2" value="-388"/>
           <int name="prev" value="0"/>
           <int name="next" value="82"/>
-          <int name="piece" value="14"/>
         </imgdir>
         <imgdir name="82">
           <int name="x1" value="421"/>
@@ -2798,7 +1546,6 @@
           <int name="y2" value="-388"/>
           <int name="prev" value="81"/>
           <int name="next" value="83"/>
-          <int name="piece" value="14"/>
         </imgdir>
         <imgdir name="83">
           <int name="x1" value="522"/>
@@ -2807,7 +1554,6 @@
           <int name="y2" value="-375"/>
           <int name="prev" value="82"/>
           <int name="next" value="0"/>
-          <int name="piece" value="14"/>
         </imgdir>
         <imgdir name="84">
           <int name="x1" value="404"/>
@@ -2816,7 +1562,6 @@
           <int name="y2" value="-447"/>
           <int name="prev" value="0"/>
           <int name="next" value="85"/>
-          <int name="piece" value="14"/>
         </imgdir>
         <imgdir name="85">
           <int name="x1" value="433"/>
@@ -2825,7 +1570,6 @@
           <int name="y2" value="-443"/>
           <int name="prev" value="84"/>
           <int name="next" value="86"/>
-          <int name="piece" value="14"/>
         </imgdir>
         <imgdir name="86">
           <int name="x1" value="506"/>
@@ -2834,7 +1578,6 @@
           <int name="y2" value="-432"/>
           <int name="prev" value="85"/>
           <int name="next" value="0"/>
-          <int name="piece" value="14"/>
         </imgdir>
       </imgdir>
     </imgdir>
@@ -2847,7 +1590,6 @@
           <int name="y2" value="-449"/>
           <int name="prev" value="88"/>
           <int name="next" value="89"/>
-          <int name="piece" value="4"/>
         </imgdir>
       </imgdir>
       <imgdir name="56">
@@ -2858,7 +1600,6 @@
           <int name="y2" value="-449"/>
           <int name="prev" value="0"/>
           <int name="next" value="87"/>
-          <int name="piece" value="5"/>
         </imgdir>
       </imgdir>
       <imgdir name="45">
@@ -2869,7 +1610,6 @@
           <int name="y2" value="-449"/>
           <int name="prev" value="87"/>
           <int name="next" value="0"/>
-          <int name="piece" value="8"/>
         </imgdir>
       </imgdir>
     </imgdir>
@@ -2882,7 +1622,6 @@
           <int name="y2" value="24"/>
           <int name="prev" value="91"/>
           <int name="next" value="97"/>
-          <int name="piece" value="0"/>
         </imgdir>
       </imgdir>
       <imgdir name="1">
@@ -2893,7 +1632,6 @@
           <int name="y2" value="24"/>
           <int name="prev" value="92"/>
           <int name="next" value="90"/>
-          <int name="piece" value="1"/>
         </imgdir>
       </imgdir>
       <imgdir name="2">
@@ -2904,7 +1642,6 @@
           <int name="y2" value="24"/>
           <int name="prev" value="93"/>
           <int name="next" value="91"/>
-          <int name="piece" value="2"/>
         </imgdir>
       </imgdir>
       <imgdir name="3">
@@ -2915,7 +1652,6 @@
           <int name="y2" value="24"/>
           <int name="prev" value="96"/>
           <int name="next" value="92"/>
-          <int name="piece" value="3"/>
         </imgdir>
       </imgdir>
       <imgdir name="4">
@@ -2926,7 +1662,6 @@
           <int name="y2" value="24"/>
           <int name="prev" value="100"/>
           <int name="next" value="95"/>
-          <int name="piece" value="4"/>
         </imgdir>
       </imgdir>
       <imgdir name="5">
@@ -2937,7 +1672,6 @@
           <int name="y2" value="24"/>
           <int name="prev" value="94"/>
           <int name="next" value="96"/>
-          <int name="piece" value="5"/>
         </imgdir>
       </imgdir>
       <imgdir name="6">
@@ -2948,7 +1682,6 @@
           <int name="y2" value="24"/>
           <int name="prev" value="95"/>
           <int name="next" value="93"/>
-          <int name="piece" value="6"/>
         </imgdir>
       </imgdir>
       <imgdir name="7">
@@ -2959,7 +1692,6 @@
           <int name="y2" value="24"/>
           <int name="prev" value="90"/>
           <int name="next" value="98"/>
-          <int name="piece" value="7"/>
         </imgdir>
       </imgdir>
       <imgdir name="8">
@@ -2970,7 +1702,6 @@
           <int name="y2" value="24"/>
           <int name="prev" value="97"/>
           <int name="next" value="99"/>
-          <int name="piece" value="8"/>
         </imgdir>
       </imgdir>
       <imgdir name="9">
@@ -2981,7 +1712,6 @@
           <int name="y2" value="24"/>
           <int name="prev" value="98"/>
           <int name="next" value="0"/>
-          <int name="piece" value="9"/>
         </imgdir>
       </imgdir>
       <imgdir name="10">
@@ -2992,7 +1722,6 @@
           <int name="y2" value="24"/>
           <int name="prev" value="0"/>
           <int name="next" value="94"/>
-          <int name="piece" value="10"/>
         </imgdir>
       </imgdir>
     </imgdir>
@@ -3069,7 +1798,7 @@
       <int name="pt" value="2"/>
       <int name="x" value="2263"/>
       <int name="y" value="21"/>
-      <int name="tm" value="450006140"/>
+      <int name="tm" value="450006150"/>
       <string name="tn" value="west00"/>
     </imgdir>
     <imgdir name="7">

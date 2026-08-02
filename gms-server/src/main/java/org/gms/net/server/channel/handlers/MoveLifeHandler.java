@@ -68,14 +68,23 @@ public final class MoveLifeHandler extends AbstractMovementPacketHandler {
         }
 
         Monster monster = (Monster) mmo;
+        boolean traceArcanaMob = monster.getId() == 8644001
+                && (map.getId() == 450005120 || map.getId() == 450005131);
         List<Character> banishPlayers = null;
 
         byte pNibbles = p.readByte();
         byte rawActivity = p.readByte();
+        byte packetActivity = rawActivity;
         int skillId = p.readByte() & 0xff;
         int skillLv = p.readByte() & 0xff;
         short pOption = p.readShort();
         p.skip(8);
+
+        if (traceArcanaMob) {
+            log.info("[Mob8644001Trace] header map={} chr={} oid={} moveId={} activityByte={} nibbles={} skillId={} skillLv={} option={} mobPos={} remaining={}",
+                    map.getId(), player.getName(), objectid, moveid, packetActivity, pNibbles,
+                    skillId, skillLv, pOption, monster.getPosition(), p.available());
+        }
 
         if (rawActivity >= 0) {
             rawActivity = (byte) (rawActivity & 0xFF >> 1);
@@ -83,6 +92,12 @@ public final class MoveLifeHandler extends AbstractMovementPacketHandler {
 
         boolean isAttack = inRangeInclusive(rawActivity, 24, 41);
         boolean isSkill = inRangeInclusive(rawActivity, 42, 59);
+
+        if (traceArcanaMob) {
+            log.info("[Mob8644001Trace] classified map={} oid={} activity={} attack={} skill={} castPos={}",
+                    map.getId(), objectid, rawActivity, isAttack, isSkill,
+                    isAttack ? (rawActivity - 24) / 2 : -1);
+        }
 
         int useSkillId = 0;
         int useSkillLevel = 0;
@@ -159,6 +174,12 @@ public final class MoveLifeHandler extends AbstractMovementPacketHandler {
             long movementDataLength = p.getPosition() - movementDataStart; //how many bytes were read by updatePosition
             p.seek(movementDataStart);
 
+            if (traceArcanaMob) {
+                log.info("[Mob8644001Trace] parsed map={} oid={} activity={} movementBytes={} startPos={} serverStartPos={} resultingPos={}",
+                        map.getId(), objectid, rawActivity, movementDataLength, startPos,
+                        serverStartPos, monster.getPosition());
+            }
+
             if (GameConfig.getServerBoolean("use_debug_show_life_move")) {
                 log.info("{} rawAct: {}, opt: {}, skillId: {}, skillLv: {}, allowSkill: {}, mobMp: {}",
                         isSkill ? "SKILL" : (isAttack ? "ATTCK" : ""), rawActivity, pOption, useSkillId,
@@ -166,9 +187,17 @@ public final class MoveLifeHandler extends AbstractMovementPacketHandler {
             }
 
             map.broadcastMessage(player, PacketCreator.moveMonster(objectid, nextMovementCouldBeSkill, rawActivity, useSkillId, useSkillLevel, pOption, startPos, p, movementDataLength), serverStartPos);
+            if (traceArcanaMob) {
+                log.info("[Mob8644001Trace] broadcast map={} oid={} activity={} nextSkill={}:{}",
+                        map.getId(), objectid, rawActivity, nextSkillId, nextSkillLevel);
+            }
             //updatePosition(res, monster, -2); //does this need to be done after the packet is broadcast?
             map.moveMonster(monster, monster.getPosition());
         } catch (EmptyMovementException e) {
+            if (traceArcanaMob) {
+                log.warn("[Mob8644001Trace] empty movement map={} oid={} activity={} remaining={}",
+                        map.getId(), objectid, rawActivity, p.available());
+            }
         }
 
         if (banishPlayers != null) {

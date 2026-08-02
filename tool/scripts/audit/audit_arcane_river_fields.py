@@ -169,13 +169,26 @@ class Audit:
         life = image.root.child("life")
         if isinstance(life, WzSubProperty):
             for entry in life.children():
-                for name in migration.LIFE_UNSUPPORTED:
+                unsupported = migration.LIFE_UNSUPPORTED | migration.LIFE_UNSUPPORTED_BY_MAP.get(
+                    map_id, set()
+                )
+                for name in unsupported:
                     if entry.child(name) is not None:
                         self.error(f"{map_id}: unsupported life field {entry.name}/{name}")
                 if self.child_value(entry, "type") == "n":
                     npc_id = int(self.child_value(entry, "id"))
                     if npc_id in migration.REMOVED_NPCS:
                         self.error(f"{map_id}: removed activity NPC {npc_id} remains")
+        if map_id in migration.LEGACY_ZERO_FIELD_LIMIT_MAPS and self.child_value(
+            image.root.child("info"), "fieldLimit"
+        ) != 0:
+            self.error(f"{map_id}: fieldLimit is not legacy-safe 0")
+        foothold = image.root.child("foothold")
+        if foothold is not None:
+            for node, path in migration.walk(foothold):
+                for name in migration.FOOTHOLD_UNSUPPORTED_BY_MAP.get(map_id, set()):
+                    if node.child(name) is not None:
+                        self.error(f"{map_id}: unsupported foothold field {path}/{name}")
         portal = image.root.child("portal")
         if isinstance(portal, WzSubProperty):
             for entry in portal.children():
@@ -214,6 +227,8 @@ class Audit:
             image = self.image(path)
             if image is None:
                 continue
+            for error in migration.legacy_asset_structure_errors(image, kind, name):
+                self.error(f"non-contiguous legacy asset node: {error}")
             for branch in branches:
                 node = image.root.get(branch)
                 if node is None:
@@ -315,7 +330,7 @@ class Audit:
             self.check_string("wz", "Npc", npc_id)
 
     def run(self) -> int:
-        if len(migration.MAP_IDS) != 152:
+        if len(migration.MAP_IDS) != 151:
             self.error(f"migration whitelist changed: {len(migration.MAP_IDS)} maps")
         for map_id in migration.MAP_IDS:
             self.check_map(map_id)

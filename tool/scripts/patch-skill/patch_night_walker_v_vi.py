@@ -34,9 +34,15 @@ VIDEO_MARKERS = ("dominionVideoLayer", "silentNightVideoLayer", "stygianCommandV
 MASTER_LEVEL = 30
 CUSTOM_SKILL_IDS = range(14121000, 14121037)
 RETIRED_SKILL_IDS = {14121009, 14121010, 14121011, 14121012, 14121013}
-SHADOW_BITE_BULLET_COUNTS = {14121003: 15, 14121016: 3, 14121017: 1}
+SHADOW_BITE_TARGET_COUNT = 10
+SHADOW_BITE_BULLET_COUNTS = {14121003: SHADOW_BITE_TARGET_COUNT, 14121016: 3, 14121017: 1}
 SHADOW_BITE_ATTACK_COUNT = 8
 SHADOW_BITE_ATTACK_SKILL_IDS = (14121003, 14121014, 14121015)
+SHADOW_BITE_BOSS_HIT_SOURCE_FRAMES = (0, 3, 6, 9, 12, 16, 17, 19, 21, 24, 27, 31)
+SHADOW_BITE_BOSS_HIT_FRAME_DELAY = 75
+SHADOW_BITE_BOSS_HIT_DURATION = (
+    len(SHADOW_BITE_BOSS_HIT_SOURCE_FRAMES) * SHADOW_BITE_BOSS_HIT_FRAME_DELAY
+)
 AVENGER_REPLAY_SKILL_IDS = {
     14121005, 14121006, 14121007, 14121008,
     14121016, 14121017, 14121018, 14121028,
@@ -51,7 +57,8 @@ TimedEffectSpec = engine.TimedEffectSpec
 # Visible entry points retain icons and descriptions. Internal attack and
 # projectile states are invisible but remain packet-addressable.
 SKILLS = (
-    SkillSpec(14121003, 400041037, "40004", "暗影吞噬", 990, SHADOW_BITE_ATTACK_COUNT, 15, 1500, 0, False,
+    SkillSpec(14121003, 400041037, "40004", "暗影吞噬", 990, SHADOW_BITE_ATTACK_COUNT,
+              SHADOW_BITE_TARGET_COUNT, 1500, 0, False,
               extra_nodes=("hit2",), lt=(-450, -450), rb=(450, 150), duration_seconds=20),
     SkillSpec(14121004, 400041059, "40004", "暗影投掷", 858, 5, 8, 1000, 0, False,
               effect_nodes=(), include_hit=False,
@@ -69,10 +76,12 @@ SKILLS = (
               icon_source_id=400041059, effect_nodes=(), projectile_nodes=("shootobj/layerList/b3",),
               lt=(-1200, -800), rb=(1200, 800)),
 
-    SkillSpec(14121014, 400041037, "40004", "暗影吞噬：普通命中", 990, SHADOW_BITE_ATTACK_COUNT, 15,
+    SkillSpec(14121014, 400041037, "40004", "暗影吞噬：普通命中", 990, SHADOW_BITE_ATTACK_COUNT,
+              SHADOW_BITE_TARGET_COUNT,
               icon_source_id=400041037, effect_nodes=(), include_hit=False,
               lt=(-450, -450), rb=(450, 150)),
-    SkillSpec(14121015, 400041037, "40004", "暗影吞噬：Boss命中", 2673, SHADOW_BITE_ATTACK_COUNT, 15,
+    SkillSpec(14121015, 400041037, "40004", "暗影吞噬：Boss命中", 2673, SHADOW_BITE_ATTACK_COUNT,
+              SHADOW_BITE_TARGET_COUNT,
               icon_source_id=400041037, effect_nodes=(), include_hit=False,
               lt=(-450, -450), rb=(450, 150)),
     SkillSpec(14121016, 400041037, "40004", "暗影吞噬：暗影蝙蝠", 150, 1, 3,
@@ -332,6 +341,35 @@ def optimize_shadow_bite_normal_hit(target) -> None:
             raise RuntimeError(f"unexpected Shadow Bite normal hit frame count: {len(frames)}")
 
 
+def optimize_shadow_bite_boss_hit(target) -> None:
+    hit = target.get("hit2")
+    if not isinstance(hit, engine.WzSubProperty):
+        raise RuntimeError("missing Shadow Bite boss hit")
+    expected_count = len(SHADOW_BITE_BOSS_HIT_SOURCE_FRAMES)
+    for variant in hit.children():
+        if not variant.name.isdigit() or not isinstance(variant, engine.WzSubProperty):
+            continue
+        frames = sorted(
+            (child for child in variant.children() if child.name.isdigit()),
+            key=lambda child: int(child.name),
+        )
+        if len(frames) == 32:
+            retained = [frames[index] for index in SHADOW_BITE_BOSS_HIT_SOURCE_FRAMES]
+            for frame in frames:
+                variant._children.pop(frame.name, None)
+        elif len(frames) == expected_count:
+            retained = frames
+            for frame in frames:
+                variant._children.pop(frame.name, None)
+        else:
+            raise RuntimeError(f"unexpected Shadow Bite boss hit frame count: {len(frames)}")
+        for index, frame in enumerate(retained):
+            frame.name = str(index)
+            engine.set_int(frame, "delay", SHADOW_BITE_BOSS_HIT_FRAME_DELAY)
+            variant.add(frame)
+        engine.set_int(variant, "delayShowDamage", SHADOW_BITE_BOSS_HIT_DURATION)
+
+
 def backup(path: Path) -> None:
     target = path.with_name(path.name + ".bak-night-walker-v-vi")
     if not target.exists():
@@ -347,10 +385,16 @@ def build_skill(spec, parent, key, groups, metadata):
         engine.set_int(info, "areaAttack", 1)
         engine.base.replace_child(target, info)
         optimize_shadow_bite_normal_hit(target)
+        optimize_shadow_bite_boss_hit(target)
     elif spec.target_id == 14121014:
         add_linked_shadow_bite_hit(target, "hit", 9, 720)
     elif spec.target_id == 14121015:
-        add_linked_shadow_bite_hit(target, "hit2", 32, 1200)
+        add_linked_shadow_bite_hit(
+            target,
+            "hit2",
+            len(SHADOW_BITE_BOSS_HIT_SOURCE_FRAMES),
+            SHADOW_BITE_BOSS_HIT_DURATION,
+        )
     elif spec.target_id == 14121005:
         replace_rapid_throw_finish_effect(target, key, groups, metadata)
     elif spec.target_id == 14121016:
@@ -433,12 +477,11 @@ def patch_client_sound(dry_run: bool) -> None:
         CLIENT_SOUND.read_bytes(), key=engine.WzKey.for_region("GMS"), name=CLIENT_SOUND.name
     )
     target_root = target_image.parse()
+    remove_shadow_bite_replay_sound_nodes(target_root)
     mappings = {
         14121003: ((400041037, "Use", "Use"),
                    (400041037, "Hit", "Hit"),
                    (400041037, "Hit2", "Hit2")),
-        14121014: ((400041037, "Hit", "Hit"),),
-        14121015: ((400041037, "Hit2", "Hit"),),
         14121016: ((14000028, "Hit", "Hit"),),
         14121017: ((14120018, "Hit", "Hit"),),
         14121004: ((400041059, "Pre", "Pre"),
@@ -468,9 +511,30 @@ def patch_client_sound(dry_run: bool) -> None:
         )
 
 
+def remove_shadow_bite_replay_sound_nodes(root) -> None:
+    for skill_id in (14121014, 14121015):
+        root._children.pop(str(skill_id), None)
+
+
+def patch_shadow_bite_sound_only(dry_run: bool) -> None:
+    image = engine.WzImage.from_bytes(
+        CLIENT_SOUND.read_bytes(),
+        key=engine.WzKey.for_region("GMS"),
+        name=CLIENT_SOUND.name,
+    )
+    root = image.parse()
+    remove_shadow_bite_replay_sound_nodes(root)
+    if not dry_run:
+        backup(CLIENT_SOUND)
+        engine.base.atomic_write_bytes(
+            CLIENT_SOUND, engine.encode_image_body(image, image.wz_file.reader)
+        )
+
+
 def level_text(spec) -> str:
     if spec.target_id == 14121003:
-        return (f"消耗MP 1500，最多攻击15名敌人{SHADOW_BITE_ATTACK_COUNT}次，普通怪物伤害990%，"
+        return (f"消耗MP 1500，最多攻击{SHADOW_BITE_TARGET_COUNT}名敌人{SHADOW_BITE_ATTACK_COUNT}次，"
+                "普通怪物伤害990%，"
                 "Boss伤害2673%；命中后生成暗影蝙蝠与饥饿蝙蝠立即攻击。"
                 "被动：最终伤害增加20%                    ")
     cooldown = f"，冷却时间{spec.cooldown}秒" if spec.cooldown else ""
@@ -542,9 +606,17 @@ def patch_shadow_bite_only(dry_run: bool) -> None:
             if not isinstance(level_node, engine.WzSubProperty):
                 raise RuntimeError(f"missing Shadow Bite level: {skill_id}/{level}")
             engine.set_int(level_node, "attackCount", SHADOW_BITE_ATTACK_COUNT)
+            engine.set_int(level_node, "mobCount", SHADOW_BITE_TARGET_COUNT)
 
     optimize_shadow_bite_normal_hit(root.get("skill/14121003"))
+    optimize_shadow_bite_boss_hit(root.get("skill/14121003"))
     add_linked_shadow_bite_hit(root.get("skill/14121014"), "hit", 9, 720)
+    add_linked_shadow_bite_hit(
+        root.get("skill/14121015"),
+        "hit2",
+        len(SHADOW_BITE_BOSS_HIT_SOURCE_FRAMES),
+        SHADOW_BITE_BOSS_HIT_DURATION,
+    )
 
     shadow_bat_ball = root.get("skill/14121016/ball")
     if not isinstance(shadow_bat_ball, engine.WzSubProperty):
@@ -578,19 +650,27 @@ def patch_shadow_bite_only(dry_run: bool) -> None:
         server = server[:start] + block + server[end:]
     for skill_id in SHADOW_BITE_ATTACK_SKILL_IDS:
         start, end = engine.find_imgdir_block(server, str(skill_id))
-        block, replacements = re.subn(
+        block, attack_replacements = re.subn(
             r'(<int name="attackCount" value=")\d+("/>)',
             rf'\g<1>{SHADOW_BITE_ATTACK_COUNT}\2',
             server[start:end],
         )
-        if replacements != MASTER_LEVEL:
+        block, target_replacements = re.subn(
+            r'(<int name="mobCount" value=")\d+("/>)',
+            rf'\g<1>{SHADOW_BITE_TARGET_COUNT}\2',
+            block,
+        )
+        if attack_replacements != MASTER_LEVEL or target_replacements != MASTER_LEVEL:
             raise RuntimeError(
-                f"unexpected Shadow Bite attackCount levels: {skill_id} {replacements}"
+                f"unexpected Shadow Bite level count: {skill_id} "
+                f"attack={attack_replacements} target={target_replacements}"
             )
         server = server[:start] + block + server[end:]
     if not dry_run:
         backup(SERVER_SKILL)
         engine.base.atomic_write_text(SERVER_SKILL, server)
+    patch_shadow_bite_strings_only(dry_run)
+    patch_shadow_bite_sound_only(dry_run)
 
 
 def patch_client_string(strings, dry_run: bool) -> None:
@@ -609,6 +689,42 @@ def patch_client_string(strings, dry_run: bool) -> None:
     if not dry_run:
         backup(CLIENT_STRING)
         engine.base.atomic_write_bytes(CLIENT_STRING, engine.encode_image_body(image, image.wz_file.reader))
+
+
+def patch_shadow_bite_strings_only(dry_run: bool) -> None:
+    shadow_bite_spec = next(spec for spec in SKILLS if spec.target_id == 14121003)
+    text = level_text(shadow_bite_spec)
+    image = engine.WzImage.from_bytes(
+        CLIENT_STRING.read_bytes(),
+        key=engine.WzKey.for_region("GMS"),
+        name=CLIENT_STRING.name,
+    )
+    root = image.parse()
+    node = root.get("14121003")
+    if not isinstance(node, engine.WzSubProperty):
+        raise RuntimeError("missing Shadow Bite client string")
+    for level in range(1, MASTER_LEVEL + 1):
+        engine.set_string(node, f"h{level}", text)
+    if not dry_run:
+        backup(CLIENT_STRING)
+        engine.base.atomic_write_bytes(
+            CLIENT_STRING, engine.encode_image_body(image, image.wz_file.reader)
+        )
+
+    server = SERVER_STRING.read_text(encoding="utf-8")
+    start, end = engine.find_imgdir_block(server, "14121003")
+    block, replacements = re.subn(
+        r'(<string name="h\d+" value=")[^"]*("/>)',
+        lambda match: f'{match.group(1)}{html.escape(text, quote=True)}{match.group(2)}',
+        server[start:end],
+    )
+    if replacements != MASTER_LEVEL:
+        raise RuntimeError(f"unexpected Shadow Bite server string levels: {replacements}")
+    if not dry_run:
+        backup(SERVER_STRING)
+        engine.base.atomic_write_text(
+            SERVER_STRING, server[:start] + block + server[end:]
+        )
 
 
 def server_string_block(spec, source: dict[str, str]) -> str:
@@ -733,9 +849,14 @@ def validate() -> None:
     for skill_id in SHADOW_BITE_ATTACK_SKILL_IDS:
         for level in range(1, MASTER_LEVEL + 1):
             attack_count = root.get(f"skill/{skill_id}/level/{level}/attackCount")
+            mob_count = root.get(f"skill/{skill_id}/level/{level}/mobCount")
             if attack_count is None or int(attack_count.value) != SHADOW_BITE_ATTACK_COUNT:
                 raise RuntimeError(
                     f"Shadow Bite attack count mismatch: {skill_id}/{level}"
+                )
+            if mob_count is None or int(mob_count.value) != SHADOW_BITE_TARGET_COUNT:
+                raise RuntimeError(
+                    f"Shadow Bite target count mismatch: {skill_id}/{level}"
                 )
     normal_hit = root.get("skill/14121003/hit/0")
     normal_hit_frames = [
@@ -743,6 +864,18 @@ def validate() -> None:
     ]
     if len(normal_hit_frames) != 9 or engine.flat_animation_duration(normal_hit) != 1020:
         raise RuntimeError("Shadow Bite normal hit optimization mismatch")
+    for variant_index in range(3):
+        boss_source_hit = root.get(f"skill/14121003/hit2/{variant_index}")
+        boss_source_hit_frames = [
+            child for child in boss_source_hit.children() if child.name.isdigit()
+        ]
+        delay_show = boss_source_hit.get("delayShowDamage")
+        if (len(boss_source_hit_frames) != len(SHADOW_BITE_BOSS_HIT_SOURCE_FRAMES) or
+                engine.flat_animation_duration(boss_source_hit) != SHADOW_BITE_BOSS_HIT_DURATION or
+                delay_show is None or int(delay_show.value) != SHADOW_BITE_BOSS_HIT_DURATION):
+            raise RuntimeError(
+                f"Shadow Bite boss source hit optimization mismatch: {variant_index}"
+            )
     linked_normal_hit = root.get("skill/14121014/hit/0")
     linked_normal_hit_frames = [
         child for child in linked_normal_hit.children()
@@ -751,13 +884,18 @@ def validate() -> None:
     if (len(linked_normal_hit_frames) != 9 or
             linked_normal_hit_frames[-1].value != "../../../14121003/hit/0/8"):
         raise RuntimeError("Shadow Bite linked normal hit mismatch")
-    boss_hit = root.get("skill/14121015/hit/0")
-    boss_hit_frames = [
-        child for child in boss_hit.children()
-        if child.name.isdigit() and isinstance(child, engine.WzUolProperty)
-    ]
-    if len(boss_hit_frames) != 32 or boss_hit_frames[-1].value != "../../../14121003/hit2/0/31":
-        raise RuntimeError("Shadow Bite boss hit animation mismatch")
+    for variant_index in range(3):
+        boss_hit = root.get(f"skill/14121015/hit/{variant_index}")
+        boss_hit_frames = [
+            child for child in boss_hit.children()
+            if child.name.isdigit() and isinstance(child, engine.WzUolProperty)
+        ]
+        delay_show = boss_hit.get("delayShowDamage")
+        if (len(boss_hit_frames) != len(SHADOW_BITE_BOSS_HIT_SOURCE_FRAMES) or
+                boss_hit_frames[-1].value !=
+                f"../../../14121003/hit2/{variant_index}/11" or
+                delay_show is None or int(delay_show.value) != SHADOW_BITE_BOSS_HIT_DURATION):
+            raise RuntimeError(f"Shadow Bite boss hit animation mismatch: {variant_index}")
     if engine.flat_animation_duration(root.get("skill/14121016/ball")) != 240:
         raise RuntimeError("Shadow Bat projectile animation mismatch")
     shadow_bat_ball_names = [
@@ -807,8 +945,6 @@ def validate() -> None:
         "14121003/Use": 2016,
         "14121003/Hit": 5112,
         "14121003/Hit2": 3504,
-        "14121014/Hit": 5112,
-        "14121015/Hit": 3504,
         "14121016/Hit": 364,
         "14121017/Hit": 338,
         "14121004/Pre": 339,
@@ -827,6 +963,9 @@ def validate() -> None:
         sound = sound_image.get(path)
         if not isinstance(sound, WzSoundProperty) or sound.length_ms != expected_duration:
             raise RuntimeError(f"sound mismatch: {path}")
+    for path in ("14121014/Hit", "14121015/Hit"):
+        if sound_image.get(path) is not None:
+            raise RuntimeError(f"hidden Shadow Bite replay sound remains: {path}")
     server = SERVER_SKILL.read_text(encoding="utf-8")
     client_string = engine.WzImage.from_bytes(
         CLIENT_STRING.read_bytes(),
@@ -836,6 +975,27 @@ def validate() -> None:
     server_string = SERVER_STRING.read_text(encoding="utf-8")
     for spec in SKILLS:
         engine.find_imgdir_block(server, str(spec.target_id))
+    for skill_id in SHADOW_BITE_ATTACK_SKILL_IDS:
+        start, end = engine.find_imgdir_block(server, str(skill_id))
+        block = server[start:end]
+        if block.count(
+                f'<int name="attackCount" value="{SHADOW_BITE_ATTACK_COUNT}"/>') != MASTER_LEVEL:
+            raise RuntimeError(f"server Shadow Bite attack count mismatch: {skill_id}")
+        if block.count(
+                f'<int name="mobCount" value="{SHADOW_BITE_TARGET_COUNT}"/>') != MASTER_LEVEL:
+            raise RuntimeError(f"server Shadow Bite target count mismatch: {skill_id}")
+    main_start, main_end = engine.find_imgdir_block(server, "14121003")
+    if server[main_start:main_end].count(
+            f'<int name="bulletCount" value="{SHADOW_BITE_TARGET_COUNT}"/>') != MASTER_LEVEL:
+        raise RuntimeError("server Shadow Bite projectile count mismatch")
+    shadow_bite_text = level_text(next(spec for spec in SKILLS if spec.target_id == 14121003))
+    client_h30 = client_string.get("14121003/h30")
+    if client_h30 is None or client_h30.value != shadow_bite_text:
+        raise RuntimeError("client Shadow Bite level text mismatch")
+    string_start, string_end = engine.find_imgdir_block(server_string, "14121003")
+    escaped_text = html.escape(shadow_bite_text, quote=True)
+    if server_string[string_start:string_end].count(f'value="{escaped_text}"/>') != MASTER_LEVEL:
+        raise RuntimeError("server Shadow Bite level text mismatch")
     for skill_id in RETIRED_SKILL_IDS:
         if root.get(f"skill/{skill_id}") is not None:
             raise RuntimeError(f"retired client skill remains: {skill_id}")

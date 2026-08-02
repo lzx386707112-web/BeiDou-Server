@@ -24,7 +24,7 @@ package org.gms.server.life;
  * @author LightPepsi
  */
 public class MonsterGlobalDropEntry {
-    public MonsterGlobalDropEntry(int itemId, int chance, int continent, int Minimum, int Maximum, short questid) {
+    public MonsterGlobalDropEntry(int itemId, int chance, int continent, int Minimum, int Maximum, int questid) {
         this.itemId = itemId;
         this.chance = chance;
         this.questid = questid;
@@ -33,6 +33,5 @@ public class MonsterGlobalDropEntry {
         this.Maximum = Maximum;
     }
 
-    public int itemId, chance, Minimum, Maximum, continentid;
-    public short questid;
+    public int itemId, chance, Minimum, Maximum, continentid, questid;
 }

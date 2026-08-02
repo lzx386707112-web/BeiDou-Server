@@ -7,6 +7,7 @@ var newHairs = [];
 const DRAW_COST = 6000;
 //当[当前发色不显示=true]时,预览不显示当前发色
 var 当前发色不显示 = true;
+var ItemConstants = Java.type("org.gms.constants.inventory.ItemConstants");
 
 function start() {
     action(1, 0, 0)
@@ -32,10 +33,16 @@ function action(mode, type, selection) {
 
 function 发色展示() {
     newHairs = Array();
-    var currentBaseHair = parseInt(cm.getPlayer().getHair() / 10) * 10;
+    var currentHair = cm.getPlayer().getHair();
+    if (!ItemConstants.isNewHair(currentHair)) {
+        cm.sendOk("该发型不支持改变颜色，请先更换发型！");
+        cm.dispose();
+        return;
+    }
+    var currentBaseHair = parseInt(currentHair / 10) * 10;
     for (var i = 0; i <= 7; i++) {
         let newHairsId = currentBaseHair + i;
-        if (cm.itemExists(newHairsId)) {
+        if (ItemConstants.isNewHair(newHairsId) && cm.itemExists(newHairsId)) {
             if (当前发色不显示 && cm.isCosmeticEquipped(newHairsId)) {
                 continue;
             }
@@ -44,7 +51,7 @@ function 发色展示() {
     }
     // 判断newHairs是否为空
     if (newHairs.length === 0) {
-        cm.sendOk("该发型不支持颜色改变,请更换一个发型!");
+        cm.sendOk("该发型不支持改变颜色，请先更换发型！");
         cm.dispose(); // 结束对话
     } else {
         cm.sendStyle("挑选一款发色吧！#b需要消耗" + DRAW_COST + "点卷！", newHairs);

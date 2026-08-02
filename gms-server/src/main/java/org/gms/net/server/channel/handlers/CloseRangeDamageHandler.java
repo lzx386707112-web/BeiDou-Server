@@ -60,6 +60,7 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.WeakHashMap;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 
@@ -101,13 +102,15 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
         14850
     };
     private static final int[] SEA_DRAGON_SPIRAL_TIMES_MS = intervalTimes(0, 240, 23760);
-    private static final int[] LIGHTNING_SPEAR_STRIKE_1_TIMES_MS = {0, 1080};
-    private static final int[] LIGHTNING_SPEAR_STRIKE_2_TIMES_MS = {180, 1260};
-    private static final int[] LIGHTNING_SPEAR_STRIKE_3_TIMES_MS = {360, 1440};
-    private static final int[] LIGHTNING_SPEAR_STRIKE_4_TIMES_MS = {540, 1620};
-    private static final int[] LIGHTNING_SPEAR_STRIKE_5_TIMES_MS = {720, 1800};
-    private static final int[] LIGHTNING_SPEAR_STRIKE_6_TIMES_MS = {900, 1980};
-    private static final int[] LIGHTNING_SPEAR_THUNDER_TIMES_MS = {360, 900, 1440, 1980};
+    private static final int LIGHTNING_SPEAR_MAX_PRESSES = 12;
+    private static final int LIGHTNING_SPEAR_COMBO_WINDOW_MS = 60000;
+    private static final int LIGHTNING_SPEAR_MIN_PRESS_INTERVAL_MS = 180;
+    private static final int LIGHTNING_SPEAR_THUNDERS_PER_PRESS = 3;
+    private static final int[] LIGHTNING_SPEAR_FINISH_TIMES_MS = {510};
+    private static final int[] LIGHTNING_SPEAR_GIANT_THUNDER_TIMES_MS = {840, 1170, 1500};
+    private static final Map<Character, LightningSpearComboState> LIGHTNING_SPEAR_COMBOS =
+            Collections.synchronizedMap(new WeakHashMap<>());
+    private static long lightningSpearGeneration;
     private static final int[] WAVE_RIDING_THUNDER_OPENING_TIMES_MS = {
         300, 360, 420, 480, 540, 600, 660, 720, 780, 840, 900, 960,
         1020, 1080, 1140, 1200, 1260, 1320, 1380, 1440, 1500, 2940, 3060, 3180,
@@ -139,6 +142,24 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
 
     private static boolean canContinueAnimatedAttack(Character chr, MapleMap expectedMap) {
         return chr.isLoggedIn() && chr.isAlive() && chr.getMap() == expectedMap;
+    }
+
+    private static void showThunderBreakerStandardEffect(Character chr, int skillId) {
+        chr.sendPacket(PacketCreator.showOwnBuffEffect(skillId, 1));
+        chr.getMap().broadcastMessage(
+                chr,
+                PacketCreator.showBuffEffect(chr.getId(), skillId, 1),
+                false
+        );
+    }
+
+    private static void showThunderBreakerSpecialEffect(Character chr, int skillId) {
+        chr.sendPacket(PacketCreator.showOwnBuffEffect(skillId, 2));
+        chr.getMap().broadcastMessage(
+                chr,
+                PacketCreator.showBuffEffect(chr.getId(), skillId, 2),
+                false
+        );
     }
 
     private static int decodeRepeatedDamage(int damage) {
@@ -298,6 +319,63 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
                 || skillId == ThunderBreaker.SWIFT_ANNIHILATION;
     }
 
+    private static boolean isLightningSpearStage(int skillId) {
+        return skillId >= ThunderBreaker.LIGHTNING_SPEAR_STRIKE_1
+                && skillId <= ThunderBreaker.LIGHTNING_SPEAR_GIANT_THUNDER;
+    }
+
+    private static boolean isServerOnlyLightningSpearSkill(int skillId) {
+        return isLightningSpearStage(skillId)
+                || (skillId >= ThunderBreaker.LIGHTNING_SPEAR_COMBO_VISUAL_FIRST
+                && skillId <= ThunderBreaker.LIGHTNING_SPEAR_COMBO_VISUAL_LAST);
+    }
+
+    private static final class LightningSpearComboState {
+        private final long startedAt;
+        private final long generation;
+        private final long lifecycleGeneration;
+        private final MapleMap map;
+        private long lastPressAt;
+        private int pressCount;
+        private boolean finishing;
+
+        private LightningSpearComboState(
+                long startedAt,
+                long generation,
+                long lifecycleGeneration,
+                MapleMap map
+        ) {
+            this.startedAt = startedAt;
+            this.generation = generation;
+            this.lifecycleGeneration = lifecycleGeneration;
+            this.map = map;
+        }
+    }
+
+    private static boolean isCurrentLightningSpearState(
+            Character chr,
+            LightningSpearComboState expected
+    ) {
+        synchronized (LIGHTNING_SPEAR_COMBOS) {
+            LightningSpearComboState current = LIGHTNING_SPEAR_COMBOS.get(chr);
+            return current == expected
+                    && current.generation == expected.generation
+                    && chr.getCombatLifecycleGeneration() == expected.lifecycleGeneration
+                    && canContinueAnimatedAttack(chr, expected.map);
+        }
+    }
+
+    private static void expireLightningSpearCombo(
+            Character chr,
+            LightningSpearComboState expected
+    ) {
+        synchronized (LIGHTNING_SPEAR_COMBOS) {
+            if (LIGHTNING_SPEAR_COMBOS.get(chr) == expected && !expected.finishing) {
+                LIGHTNING_SPEAR_COMBOS.remove(chr);
+            }
+        }
+    }
+
     private static Map<Integer, List<Integer>> collectTrackingCloseTargets(
             MapleMap expectedMap,
             Point attackOrigin,
@@ -334,6 +412,7 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
             int mobCount,
             List<Integer> damageTemplate,
             StatEffect replayEffect,
+            StatEffect targetingEffect,
             Point fixedAttackOrigin
     ) {
         if (!canContinueAnimatedAttack(chr, expectedMap)) {
@@ -342,8 +421,11 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
         Point attackOrigin = fixedAttackOrigin != null
                 ? fixedAttackOrigin
                 : new Point(chr.getPosition());
-        Rectangle attackBounds = replayEffect.hasBoundingBox()
-                ? replayEffect.calculateBoundingBox(attackOrigin, attack.direction == 0)
+        if (isLightningSpearStage(replaySkillId)) {
+            showThunderBreakerStandardEffect(chr, replaySkillId);
+        }
+        Rectangle attackBounds = targetingEffect.hasBoundingBox()
+                ? targetingEffect.calculateBoundingBox(attackOrigin, attack.direction == 0)
                 : null;
         Map<Integer, List<Integer>> damage = collectTrackingCloseTargets(
                 expectedMap, attackOrigin, attackBounds, mobCount, damageTemplate
@@ -393,6 +475,7 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
         Skill replaySkill = SkillFactory.getSkill(replaySkillId);
         int replayLevel = Math.max(1, Math.min(attack.skilllevel, replaySkill.getMaxLevel()));
         StatEffect replayEffect = replaySkill.getEffect(replayLevel);
+        StatEffect targetingEffect = attack.skill == ThunderBreaker.LIGHTNING_SPEAR_MULTISTRIKE ? originalEffect : replayEffect;
         int replayAttackCount = Math.max(1, Math.min(15, replayEffect.getAttackCount()));
         int mobCount = Math.max(1, Math.min(15, replayEffect.getMobCount()));
         List<Integer> sourceDamageTemplate = copyCapturedDamageTemplate(attack);
@@ -430,37 +513,220 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
                         mobCount,
                         damageTemplate,
                         replayEffect,
+                        targetingEffect,
                         fixedAttackOrigin
                 );
             }, attackTimesMs[index]);
         }
     }
 
-    private void scheduleLightningSpearMultistrike(AttackInfo attack, Character chr) {
-        scheduleTrackingCloseAttacks(
-                attack, chr, new int[]{LIGHTNING_SPEAR_STRIKE_1_TIMES_MS[0]},
-                ThunderBreaker.LIGHTNING_SPEAR_MULTISTRIKE, true
+    private static void repeatLightningSpearThunder(
+            AttackInfo attack,
+            Character chr,
+            MapleMap expectedMap,
+            List<Integer> targetObjectIds,
+            StatEffect originalEffect
+    ) {
+        Skill thunderSkill = SkillFactory.getSkill(ThunderBreaker.LIGHTNING_SPEAR_THUNDER);
+        int thunderLevel = Math.max(1, Math.min(attack.skilllevel, thunderSkill.getMaxLevel()));
+        StatEffect thunderEffect = thunderSkill.getEffect(thunderLevel);
+        List<Integer> sourceDamageTemplate = copyCapturedDamageTemplate(attack);
+        if (sourceDamageTemplate.isEmpty()) {
+            sourceDamageTemplate = Collections.singletonList(
+                    calculateFallbackCloseDamage(chr, originalEffect)
+            );
+        }
+        List<Integer> damageTemplate = adaptDamageTemplate(
+                sourceDamageTemplate,
+                Math.max(1, Math.min(15, thunderEffect.getAttackCount())),
+                originalEffect.getDamage(),
+                thunderEffect.getDamage()
         );
-        scheduleTrackingCloseAttacks(
-                attack, chr, new int[]{LIGHTNING_SPEAR_STRIKE_1_TIMES_MS[1]},
-                ThunderBreaker.LIGHTNING_SPEAR_STRIKE_1, false
+        int triggered = 0;
+        for (Integer objectId : targetObjectIds) {
+            if (triggered >= LIGHTNING_SPEAR_THUNDERS_PER_PRESS
+                    || !canContinueAnimatedAttack(chr, expectedMap)) {
+                break;
+            }
+            Monster monster = expectedMap.getMonsterByOid(objectId);
+            if (monster == null || !monster.isAlive()) {
+                continue;
+            }
+            Map<Integer, List<Integer>> damage = new LinkedHashMap<>();
+            damage.put(objectId, new ArrayList<>(damageTemplate));
+            showThunderBreakerStandardEffect(
+                    chr, ThunderBreaker.LIGHTNING_SPEAR_THUNDER
+            );
+            int packedCount = (1 << 4) | (thunderEffect.getAttackCount() & 0xF);
+            Packet packet = PacketCreator.closeRangeAttack(
+                    chr,
+                    ThunderBreaker.LIGHTNING_SPEAR_THUNDER,
+                    thunderLevel,
+                    attack.stance,
+                    packedCount,
+                    damage,
+                    attack.speed,
+                    attack.direction,
+                    attack.display
+            );
+            chr.sendPacket(packet);
+            expectedMap.broadcastMessage(chr, packet, false, true);
+            int total = 0;
+            for (Integer hit : damageTemplate) {
+                total = (int) Math.min(
+                        Integer.MAX_VALUE, (long) total + decodeRepeatedDamage(hit)
+                );
+            }
+            chr.sendPacket(PacketCreator.damageMonster(monster.getObjectId(), total));
+            monster.aggroMonsterDamage(chr, total);
+            expectedMap.damageMonster(chr, monster, total);
+            triggered++;
+        }
+    }
+
+    private void scheduleLightningSpearFinisher(
+            AttackInfo attack,
+            Character chr,
+            LightningSpearComboState state
+    ) {
+        Skill originalSkill = SkillFactory.getSkill(attack.skill);
+        StatEffect originalEffect = originalSkill.getEffect(chr.getSkillLevel(originalSkill));
+        List<Integer> sourceDamageTemplate = copyCapturedDamageTemplate(attack);
+        if (sourceDamageTemplate.isEmpty()) {
+            sourceDamageTemplate = Collections.singletonList(
+                    calculateFallbackCloseDamage(chr, originalEffect)
+            );
+        }
+        int[] times = {
+            LIGHTNING_SPEAR_FINISH_TIMES_MS[0],
+            LIGHTNING_SPEAR_GIANT_THUNDER_TIMES_MS[0],
+            LIGHTNING_SPEAR_GIANT_THUNDER_TIMES_MS[1],
+            LIGHTNING_SPEAR_GIANT_THUNDER_TIMES_MS[2]
+        };
+        for (int index = 0; index < times.length; index++) {
+            final int stageIndex = index;
+            final int replaySkillId = stageIndex == 0
+                    ? ThunderBreaker.LIGHTNING_SPEAR_FINISH
+                    : ThunderBreaker.LIGHTNING_SPEAR_GIANT_THUNDER;
+            Skill replaySkill = SkillFactory.getSkill(replaySkillId);
+            int replayLevel = Math.max(1, Math.min(attack.skilllevel, replaySkill.getMaxLevel()));
+            StatEffect replayEffect = replaySkill.getEffect(replayLevel);
+            int replayAttackCount = Math.max(1, Math.min(15, replayEffect.getAttackCount()));
+            int mobCount = Math.max(1, Math.min(15, replayEffect.getMobCount()));
+            List<Integer> damageTemplate = adaptDamageTemplate(
+                    sourceDamageTemplate,
+                    replayAttackCount,
+                    originalEffect.getDamage(),
+                    replayEffect.getDamage()
+            );
+            TimerManager.getInstance().schedule(() -> {
+                if (!isCurrentLightningSpearState(chr, state)) {
+                    synchronized (LIGHTNING_SPEAR_COMBOS) {
+                        if (LIGHTNING_SPEAR_COMBOS.get(chr) == state) {
+                            LIGHTNING_SPEAR_COMBOS.remove(chr);
+                        }
+                    }
+                    return;
+                }
+                repeatTrackingCloseAttack(
+                        attack,
+                        chr,
+                        state.map,
+                        replaySkillId,
+                        replayAttackCount,
+                        mobCount,
+                        damageTemplate,
+                        replayEffect,
+                        replayEffect,
+                        null
+                );
+                if (stageIndex == times.length - 1) {
+                    synchronized (LIGHTNING_SPEAR_COMBOS) {
+                        if (LIGHTNING_SPEAR_COMBOS.get(chr) == state) {
+                            LIGHTNING_SPEAR_COMBOS.remove(chr);
+                        }
+                    }
+                }
+            }, times[index]);
+        }
+    }
+
+    private void advanceLightningSpearCombo(
+            AttackInfo attack,
+            Character chr,
+            int attackCount
+    ) {
+        long now = currentServerTime();
+        MapleMap currentMap = chr.getMap();
+        LightningSpearComboState state;
+        boolean newState = false;
+        synchronized (LIGHTNING_SPEAR_COMBOS) {
+            state = LIGHTNING_SPEAR_COMBOS.get(chr);
+            long lifecycleGeneration = chr.getCombatLifecycleGeneration();
+            if (state != null
+                    && state.finishing
+                    && state.map == currentMap
+                    && state.lifecycleGeneration == lifecycleGeneration) {
+                return;
+            }
+            if (state == null
+                    || state.map != currentMap
+                    || state.lifecycleGeneration != lifecycleGeneration
+                    || now - state.startedAt >= LIGHTNING_SPEAR_COMBO_WINDOW_MS) {
+                state = new LightningSpearComboState(
+                        now,
+                        ++lightningSpearGeneration,
+                        lifecycleGeneration,
+                        currentMap
+                );
+                LIGHTNING_SPEAR_COMBOS.put(chr, state);
+                newState = true;
+            } else if (now - state.lastPressAt < LIGHTNING_SPEAR_MIN_PRESS_INTERVAL_MS) {
+                return;
+            }
+            state.lastPressAt = now;
+            state.pressCount++;
+            if (state.pressCount >= LIGHTNING_SPEAR_MAX_PRESSES) {
+                state.finishing = true;
+            }
+        }
+        if (newState) {
+            LightningSpearComboState expiringState = state;
+            TimerManager.getInstance().schedule(
+                    () -> expireLightningSpearCombo(chr, expiringState),
+                    LIGHTNING_SPEAR_COMBO_WINDOW_MS
+            );
+        }
+
+        int visualSkillId = ThunderBreaker.LIGHTNING_SPEAR_COMBO_VISUAL_FIRST
+                + state.pressCount - 1;
+        Packet visualAttack = PacketCreator.closeRangeAttack(
+                chr,
+                visualSkillId,
+                attack.skilllevel,
+                attack.stance,
+                attack.numAttackedAndDamage,
+                attack.allDamage,
+                attack.speed,
+                attack.direction,
+                attack.display
         );
-        scheduleTrackingCloseAttacks(attack, chr, LIGHTNING_SPEAR_STRIKE_2_TIMES_MS,
-                ThunderBreaker.LIGHTNING_SPEAR_STRIKE_2, false);
-        scheduleTrackingCloseAttacks(attack, chr, LIGHTNING_SPEAR_STRIKE_3_TIMES_MS,
-                ThunderBreaker.LIGHTNING_SPEAR_STRIKE_3, false);
-        scheduleTrackingCloseAttacks(attack, chr, LIGHTNING_SPEAR_STRIKE_4_TIMES_MS,
-                ThunderBreaker.LIGHTNING_SPEAR_STRIKE_4, false);
-        scheduleTrackingCloseAttacks(attack, chr, LIGHTNING_SPEAR_STRIKE_5_TIMES_MS,
-                ThunderBreaker.LIGHTNING_SPEAR_STRIKE_5, false);
-        scheduleTrackingCloseAttacks(attack, chr, LIGHTNING_SPEAR_STRIKE_6_TIMES_MS,
-                ThunderBreaker.LIGHTNING_SPEAR_STRIKE_6, false);
-        scheduleTrackingCloseAttacks(attack, chr, LIGHTNING_SPEAR_THUNDER_TIMES_MS,
-                ThunderBreaker.LIGHTNING_SPEAR_THUNDER, false);
-        scheduleTrackingCloseAttacks(attack, chr, new int[]{2490},
-                ThunderBreaker.LIGHTNING_SPEAR_FINISH, false);
-        scheduleTrackingCloseAttacks(attack, chr, new int[]{2820},
-                ThunderBreaker.LIGHTNING_SPEAR_GIANT_THUNDER, false);
+        showThunderBreakerStandardEffect(chr, visualSkillId);
+        chr.sendPacket(visualAttack);
+        currentMap.broadcastMessage(chr, visualAttack, false, true);
+        List<Integer> targetObjectIds = new ArrayList<>(attack.allDamage.keySet());
+        showCapturedDamageNumbers(attack, chr, currentMap);
+        applyAttack(attack, chr, attackCount);
+        if (!targetObjectIds.isEmpty()) {
+            Skill originalSkill = SkillFactory.getSkill(attack.skill);
+            StatEffect originalEffect = originalSkill.getEffect(chr.getSkillLevel(originalSkill));
+            repeatLightningSpearThunder(
+                    attack, chr, currentMap, targetObjectIds, originalEffect
+            );
+        }
+        if (state.finishing) {
+            scheduleLightningSpearFinisher(attack, chr, state);
+        }
     }
 
     private void scheduleAnimatedAttacks(
@@ -547,6 +813,9 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
         chr.getAutobanManager().spam(8);*/
 
         AttackInfo attack = parseDamage(p, chr, false, false);
+        if (isServerOnlyLightningSpearSkill(attack.skill)) {
+            return;
+        }
         if (chr.getBuffEffect(BuffStat.MORPH) != null) {
             if (chr.getBuffEffect(BuffStat.MORPH).isMorphWithoutAttack()) {
                 // How are they attacking when the client won't let them?
@@ -564,7 +833,9 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
             c.sendPacket(PacketCreator.getEnergy("energy", chr.getDojoEnergy()));
         }
 
-        chr.getMap().broadcastMessage(chr, PacketCreator.closeRangeAttack(chr, attack.skill, attack.skilllevel, attack.stance, attack.numAttackedAndDamage, attack.allDamage, attack.speed, attack.direction, attack.display), false, true);
+        if (attack.skill != ThunderBreaker.LIGHTNING_SPEAR_MULTISTRIKE) {
+            chr.getMap().broadcastMessage(chr, PacketCreator.closeRangeAttack(chr, attack.skill, attack.skilllevel, attack.stance, attack.numAttackedAndDamage, attack.allDamage, attack.speed, attack.direction, attack.display), false, true);
+        }
         int numFinisherOrbs = 0;
         Integer comboBuff = chr.getBuffedValue(BuffStat.COMBO);
         if (GameConstants.isFinisherSkill(attack.skill)) {
@@ -694,26 +965,27 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
             chr.sendPacket(PacketCreator.showEffect(SOUL_ECLIPSE_VIDEO_LAYER));
             scheduleAnimatedAttacks(attack, chr, attackCount, SOUL_ECLIPSE_ATTACK_TIMES_MS);
         } else if (attack.skill == DawnWarrior.COSMOS) {
-            scheduleAnimatedAttacks(attack, chr, attackCount, COSMOS_ATTACK_TIMES_MS);
+            scheduleTrackingCloseAttacks(
+                    attack, chr, COSMOS_ATTACK_TIMES_MS, DawnWarrior.COSMOS, true
+            );
         } else if (attack.skill == ThunderBreaker.SEA_DRAGON_SPIRAL) {
+            MapleMap expectedMap = chr.getMap();
+            // SHOW_*_EFFECT type 2 is the legacy client's supported `special`
+            // path. Use it for the TMS start and the remapped end animation.
+            showThunderBreakerSpecialEffect(chr, ThunderBreaker.SEA_DRAGON_SPIRAL);
             scheduleTrackingCloseAttacks(
                     attack, chr, SEA_DRAGON_SPIRAL_TIMES_MS,
-                    ThunderBreaker.SEA_DRAGON_SPIRAL, true
+                    ThunderBreaker.SEA_DRAGON_SPIRAL_TICK, true
             );
+            TimerManager.getInstance().schedule(() -> {
+                if (canContinueAnimatedAttack(chr, expectedMap)) {
+                    showThunderBreakerSpecialEffect(
+                            chr, ThunderBreaker.SEA_DRAGON_SPIRAL_TICK
+                    );
+                }
+            }, SEA_DRAGON_SPIRAL_TIMES_MS[SEA_DRAGON_SPIRAL_TIMES_MS.length - 1]);
         } else if (attack.skill == ThunderBreaker.LIGHTNING_SPEAR_MULTISTRIKE) {
-            scheduleLightningSpearMultistrike(attack, chr);
-        } else if (attack.skill == ThunderBreaker.THUNDERBOLT_VI) {
-            applyAttack(attack, chr, attackCount);
-            if (!chr.skillIsCooling(ThunderBreaker.THUNDERBOLT_FLASH)) {
-                chr.addCooldown(
-                        ThunderBreaker.THUNDERBOLT_FLASH,
-                        currentServerTime(),
-                        SECONDS.toMillis(6)
-                );
-                scheduleTrackingCloseAttacks(
-                        attack, chr, new int[]{0}, ThunderBreaker.THUNDERBOLT_FLASH, false
-                );
-            }
+            advanceLightningSpearCombo(attack, chr, attackCount);
         } else if (attack.skill == ThunderBreaker.GOD_OF_THE_SEA_VI) {
             chr.sendPacket(PacketCreator.showEffect(GOD_OF_THE_SEA_VI_VIDEO_LAYER));
             applyAttack(attack, chr, attackCount);

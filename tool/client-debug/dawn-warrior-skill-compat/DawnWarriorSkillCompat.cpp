@@ -44,7 +44,7 @@ constexpr int kNightWalkerLastSkill = 14121036;
 constexpr int kWindArcherFirstSkill = 13121003;
 constexpr int kWindArcherLastSkill = 13121023;
 constexpr int kThunderBreakerFirstSkill = 15121000;
-constexpr int kThunderBreakerLastSkill = 15121020;
+constexpr int kThunderBreakerLastSkill = 15121033;
 constexpr int kMaxTrackedProjectiles = 256;
 
 using PlayFileFn = int(__stdcall*)(const char*);
@@ -130,6 +130,7 @@ bool gVideoRenderedThisFrame = false;
 bool gRenderingVideo = false;
 bool gMissingMarkerLogged = false;
 DWORD gMissingMarkerFrames = 0;
+volatile LONG gPendingVideoSkillId = 0;
 IDirect3DBaseTexture8* gVideoMarkerTextures[kMaxVideoMarkerTextures] = {};
 int gVideoMarkerTextureCount = 0;
 DWORD gNightWalkerProjectileWindowEnd = 0;
@@ -1062,7 +1063,7 @@ bool InstallMagicBulletHook() {
 
 LONG CustomRangedTargetLimit(int skillId) {
     switch (skillId) {
-        case 14121003: return 15;
+        case 14121003: return 10;
         case 14121016: return 3;
         case 14121017: return 1;
         case 13121003: return 10;
@@ -1072,7 +1073,6 @@ LONG CustomRangedTargetLimit(int skillId) {
         case 13121011: return 12;
         case 13121013: return 15;
         case 13121019: return 15;
-        case 15121001: return 15;
         default: return 0;
     }
 }
@@ -1472,6 +1472,8 @@ HRESULT WINAPI HookDrawIndexedPrimitiveUp(
         stride);
 }
 
+extern "C" void StartVideoSkill(int skillId);
+
 HRESULT WINAPI HookPresent(
     IDirect3DDevice8* device,
     const RECT* source,
@@ -1483,6 +1485,10 @@ HRESULT WINAPI HookPresent(
         gVideoDeviceAttached = true;
         LogLine("VIDEO OK: active D3D8 device attached on first Present");
     }
+    const LONG pendingVideoSkillId = InterlockedExchange(&gPendingVideoSkillId, 0);
+    if (pendingVideoSkillId != 0) {
+        StartVideoSkill(static_cast<int>(pendingVideoSkillId));
+    }
     if (gVideoPlaying && gVideoGetStatus != nullptr) {
         BdvStatus status = {};
         status.structureSize = sizeof(status);
@@ -1493,8 +1499,17 @@ HRESULT WINAPI HookPresent(
     }
     if (gVideoPlaying && !gVideoRenderedThisFrame) {
         ++gMissingMarkerFrames;
-        if (!gMissingMarkerLogged && gMissingMarkerFrames >= 30) {
-            LogLine("VIDEO ERROR: active video has no Gr2D field-layer marker draw");
+        if (gVideoDeviceAttached && gRender != nullptr) {
+            gVideoRenderedThisFrame = true;
+            gRenderingVideo = true;
+            gRender();
+            gRenderingVideo = false;
+            if (!gMissingMarkerLogged) {
+                LogLine("VIDEO OK: Present fallback active (field marker was not drawn)");
+                gMissingMarkerLogged = true;
+            }
+        } else if (!gMissingMarkerLogged && gMissingMarkerFrames >= 30) {
+            LogLine("VIDEO ERROR: active video has no renderable D3D8 path");
             gMissingMarkerLogged = true;
         }
     } else {
@@ -1801,6 +1816,10 @@ extern "C" __attribute__((used, noinline)) void StartVideoSkill(int skillId) {
     LogLine(mapping->successMessage);
 }
 
+extern "C" __attribute__((used, noinline)) void QueueVideoSkill(int skillId) {
+    InterlockedExchange(&gPendingVideoSkillId, static_cast<LONG>(skillId));
+}
+
 // Each naked stub preserves the register contract of the overwritten client
 // instructions and returns to fixed, non-ASLR BeiDou.exe addresses.
 extern "C" __attribute__((naked, noinline)) void HookKeyboardDispatch() {
@@ -1809,7 +1828,7 @@ extern "C" __attribute__((naked, noinline)) void HookKeyboardDispatch() {
         "mov ecx, dword ptr [esi+1]\n"
         "cmp ecx, 15121000\n"
         "jb thunder_keyboard_next\n"
-        "cmp ecx, 15121020\n"
+        "cmp ecx, 15121021\n"
         "jbe 2f\n"
         "thunder_keyboard_next:\n"
         "cmp ecx, 13121003\n"
@@ -1850,21 +1869,16 @@ extern "C" __attribute__((naked, noinline)) void HookActiveSkillDispatch() {
         ".intel_syntax noprefix\n"
         "cmp esi, 15121000\n"
         "jb thunder_active_next\n"
-        "cmp esi, 15121020\n"
+        "cmp esi, 15121033\n"
         "ja thunder_active_next\n"
-        "cmp esi, 15121001\n"
-        "je thunder_active_ranged\n"
         "pushfd\n"
         "pushad\n"
         "push esi\n"
-        "call _StartVideoSkill\n"
+        "call _QueueVideoSkill\n"
         "add esp, 4\n"
         "popad\n"
         "popfd\n"
         "push 0x009690AE\n"
-        "ret\n"
-        "thunder_active_ranged:\n"
-        "push 0x009690E9\n"
         "ret\n"
         "thunder_active_next:\n"
         "cmp esi, 13121003\n"
@@ -1954,7 +1968,7 @@ extern "C" __attribute__((naked, noinline)) void HookHighSkillVisualBranch() {
         ".intel_syntax noprefix\n"
         "cmp esi, 15121000\n"
         "jb thunder_visual_next\n"
-        "cmp esi, 15121020\n"
+        "cmp esi, 15121033\n"
         "jbe 5f\n"
         "thunder_visual_next:\n"
         "cmp esi, 13121003\n"
@@ -1998,13 +2012,6 @@ extern "C" __attribute__((naked, noinline)) void HookHighSkillVisualBranch() {
 extern "C" __attribute__((naked, noinline)) void HookBrandishActionType() {
     __asm__ __volatile__(
         ".intel_syntax noprefix\n"
-        "cmp eax, 15121000\n"
-        "jb thunder_action_next\n"
-        "cmp eax, 15121020\n"
-        "ja thunder_action_next\n"
-        "cmp eax, 15121001\n"
-        "jne 2f\n"
-        "thunder_action_next:\n"
         "cmp eax, 11121005\n"
         "jb 1f\n"
         "cmp eax, 11121012\n"
@@ -2025,13 +2032,6 @@ extern "C" __attribute__((naked, noinline)) void HookBrandishActionType() {
 extern "C" __attribute__((naked, noinline)) void HookBrandishVisualOffset() {
     __asm__ __volatile__(
         ".intel_syntax noprefix\n"
-        "cmp eax, 15121000\n"
-        "jb thunder_offset_next\n"
-        "cmp eax, 15121020\n"
-        "ja thunder_offset_next\n"
-        "cmp eax, 15121001\n"
-        "jne 2f\n"
-        "thunder_offset_next:\n"
         "cmp eax, 11121005\n"
         "jb 1f\n"
         "cmp eax, 11121012\n"
@@ -2052,13 +2052,6 @@ extern "C" __attribute__((naked, noinline)) void HookBrandishVisualOffset() {
 extern "C" __attribute__((naked, noinline)) void HookBrandishStateSwitch() {
     __asm__ __volatile__(
         ".intel_syntax noprefix\n"
-        "cmp esi, 15121000\n"
-        "jb thunder_state_next\n"
-        "cmp esi, 15121020\n"
-        "ja thunder_state_next\n"
-        "cmp esi, 15121001\n"
-        "jne 3f\n"
-        "thunder_state_next:\n"
         "cmp esi, 11121005\n"
         "jb 1f\n"
         "cmp esi, 11121012\n"
@@ -2084,13 +2077,6 @@ extern "C" __attribute__((naked, noinline)) void HookBrandishStateSwitch() {
 extern "C" __attribute__((naked, noinline)) void HookBrandishHit() {
     __asm__ __volatile__(
         ".intel_syntax noprefix\n"
-        "cmp ebx, 15121000\n"
-        "jb thunder_hit_next\n"
-        "cmp ebx, 15121020\n"
-        "ja thunder_hit_next\n"
-        "cmp ebx, 15121001\n"
-        "jne 2f\n"
-        "thunder_hit_next:\n"
         "cmp ebx, 11121005\n"
         "jb 1f\n"
         "cmp ebx, 11121012\n"
@@ -2130,7 +2116,7 @@ HookSite kHooks[] = {
 };
 
 DWORD WINAPI InstallHooks(LPVOID) {
-    LogLine("LOAD: Dawn Warrior/Blaze Wizard/Wind Archer/Night Walker/Thunder Breaker Skill Compat v28");
+    LogLine("LOAD: Dawn Warrior/Blaze Wizard/Wind Archer/Night Walker/Thunder Breaker Skill Compat v38");
     if (reinterpret_cast<uintptr_t>(GetModuleHandleA(nullptr)) != kExpectedImageBase) {
         LogLine("ERROR: unexpected BeiDou.exe image base; no hooks installed");
         return 1;
@@ -2147,7 +2133,7 @@ DWORD WINAPI InstallHooks(LPVOID) {
             return 3;
         }
     }
-    LogLine("OK: unified skill compat v28 hooks installed (melee/magic/ranged dispatch)");
+    LogLine("OK: unified skill compat v38 hooks installed");
     InstallRangedSkillRangeClassifierHook();
     InstallRangedMultiTargetClassifierHook();
     InstallRangedTargetCollectorHook();
