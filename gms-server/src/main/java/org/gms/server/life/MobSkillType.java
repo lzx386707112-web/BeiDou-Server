@@ -46,6 +46,7 @@ public enum MobSkillType {
     EVA(155),
     SPEED(156),
     SEAL_SKILL(157),
+    SUMMON_170(170),
     CYGNUS_UNSUPPORTED_171(171),
     CYGNUS_UNSUPPORTED_172(172),
     AKAYRUM_BLACK_HOLE_VISUAL(174),
@@ -54,8 +55,16 @@ public enum MobSkillType {
     WILL_WEB_BURST(183),
     MAGNUS_METEOR_STORM(184),
     LUCID_DREAM_BURST(185),
+    SUMMON_186(186),
     SEREN_SACRED_BURST(187),
-    SUMMON(200);
+    SUMMON_188(188),
+    SUMMON_189(189),
+    SUMMON_190(190),
+    SUMMON_191(191),
+    SUMMON(200),
+    SUMMON_201(201),
+    SUMMON_202(202),
+    SUMMON_203(203);
 
     private final int id;
 
@@ -74,7 +83,7 @@ public enum MobSkillType {
     }
 
     private static boolean isOutOfIdRange(int id) {
-        return id < 100 || id > 200;
+        return id < 100 || id > 203;
     }
 
     public int getId() {

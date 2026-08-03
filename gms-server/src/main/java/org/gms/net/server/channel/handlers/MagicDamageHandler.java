@@ -31,6 +31,7 @@ import org.gms.constants.id.MapId;
 import org.gms.constants.skills.BlazeWizard;
 import org.gms.constants.skills.Bishop;
 import org.gms.constants.skills.Evan;
+import org.gms.constants.skills.ExplorerOtherSkillCompat;
 import org.gms.constants.skills.FPArchMage;
 import org.gms.constants.skills.ILArchMage;
 import org.gms.net.packet.InPacket;
@@ -374,6 +375,10 @@ public final class MagicDamageHandler extends AbstractDealDamageHandler {
         Packet packet = PacketCreator.magicAttack(chr, attack.skill, attack.skilllevel, attack.stance, attack.numAttackedAndDamage, attack.allDamage, charge, attack.speed, attack.direction, attack.display);
 
         chr.getMap().broadcastMessage(chr, packet, false, true);
+        String explorerVideoLayer = ExplorerOtherSkillCompat.videoLayer(attack.skill);
+        if (explorerVideoLayer != null) {
+            chr.sendPacket(PacketCreator.showEffect(explorerVideoLayer));
+        }
         StatEffect effect = attack.getAttackEffect(chr, null);
         Skill skill = SkillFactory.getSkill(attack.skill);
         StatEffect effect_ = skill.getEffect(chr.getSkillLevel(skill));
@@ -385,7 +390,16 @@ public final class MagicDamageHandler extends AbstractDealDamageHandler {
                 chr.addCooldown(attack.skill, currentServerTime(), SECONDS.toMillis(effect_.getCooldown()));
             }
         }
-        if (attack.skill == BlazeWizard.FLAME_DISCHARGE_LION) {
+        ExplorerOtherSkillCompat.Replay[] explorerReplays =
+                ExplorerOtherSkillCompat.multiAttacks(attack.skill);
+        if (explorerReplays != null) {
+            for (int index = 0; index < explorerReplays.length; index++) {
+                ExplorerOtherSkillCompat.Replay replay = explorerReplays[index];
+                scheduleAnimatedAttacks(
+                        attack, chr, replay.timesMs(), replay.skillId(), index == 0
+                );
+            }
+        } else if (attack.skill == BlazeWizard.FLAME_DISCHARGE_LION) {
             scheduleAnimatedAttacks(
                     attack, chr, FLAME_DISCHARGE_LION_MAIN_TIMES_MS,
                     BlazeWizard.FLAME_DISCHARGE_LION_BURST, true

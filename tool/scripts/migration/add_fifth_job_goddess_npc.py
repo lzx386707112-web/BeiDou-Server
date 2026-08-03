@@ -80,7 +80,6 @@ SERVER_ITEM_BLOCK = '''  <imgdir name="04310060">
       <int name="notSale" value="1"/>
       <int name="price" value="1"/>
       <int name="slotMax" value="1000"/>
-      <int name="tradeBlock" value="1"/>
     </imgdir>
   </imgdir>'''
 
@@ -145,11 +144,13 @@ def hero_coin_item_is_current(image: WzImage, source: Image.Image) -> bool:
     if not isinstance(info, WzSubProperty):
         return False
 
-    expected_ints = {"notSale": 1, "price": 1, "slotMax": 1000, "tradeBlock": 1}
+    expected_ints = {"notSale": 1, "price": 1, "slotMax": 1000}
     for name, value in expected_ints.items():
         prop = info.child(name)
         if not isinstance(prop, WzIntProperty) or int(prop.value) != value:
             return False
+    if info.child("tradeBlock") is not None:
+        return False
 
     for name in ("icon", "iconRaw"):
         canvas = info.child(name)
@@ -177,7 +178,7 @@ def patch_client_item() -> bool:
     info = WzSubProperty("info", node)
     info.add(make_hero_coin_canvas("icon", info, source))
     info.add(make_hero_coin_canvas("iconRaw", info, source))
-    for name, value in (("notSale", 1), ("price", 1), ("slotMax", 1000), ("tradeBlock", 1)):
+    for name, value in (("notSale", 1), ("price", 1), ("slotMax", 1000)):
         info.add(WzIntProperty(name, value, info))
     node.add(info)
     image.root.add(node)

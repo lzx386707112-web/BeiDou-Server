@@ -71721,4 +71721,524 @@
       </imgdir>
     </imgdir>
   </imgdir>
+<imgdir name="30000">
+    <imgdir name="0"/>
+    <imgdir name="1">
+      <string name="0" value="你好。是不是有什么问题要问我啊？"/>
+      <imgdir name="yes">
+        <string name="0" value="简单来说，就是最近 #b里恩#k的冰川正在破碎，而且情况很严重。"/>
+      </imgdir>
+      <imgdir name="stop"/>
+    </imgdir>
+  </imgdir>
+<imgdir name="30002">
+    <imgdir name="0"/>
+    <imgdir name="1">
+      <string name="0" value="你找到离开这里的办法了吗？"/>
+      <imgdir name="stop">
+        <imgdir name="default">
+          <string name="0" value="麻烦你找找离开这里的办法吧！"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+<imgdir name="30003">
+    <imgdir name="0"/>
+    <imgdir name="1">
+      <imgdir name="stop">
+        <imgdir name="default">
+          <string name="0" value="你还没查看好出口是否安全吗？快去啊！"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+<imgdir name="30004">
+    <imgdir name="0">
+      <int name="ask" value="1"/>
+      <string name="0" value="看样子利用出口逃出去是不可能了。\r\n#L0##b那该怎么办？#l\n#k"/>
+      <string name="1" value="这是我来这里时带来的卷轴。据说可以用它移动到附近的村庄，我才带的。可是我使用后却什么变化也没有。估计是假货。你帮我瞧瞧吧。\r\n"/>
+      <imgdir name="stop">
+        <imgdir name="0">
+          <int name="answer" value="1"/>
+        </imgdir>
+      </imgdir>
+      <imgdir name="yes">
+        <string name="0" value="给，这是卷轴！"/>
+      </imgdir>
+      <imgdir name="no">
+        <string name="0" value="我实在没法利用出口逃出去啊。我没骗你……求求你帮帮我……"/>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <imgdir name="stop">
+        <imgdir name="default">
+          <string name="0" value="现在没时间磨蹭！你快检查看看吧。"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+<imgdir name="30005">
+    <imgdir name="0"/>
+    <imgdir name="1"/>
+  </imgdir>
+<imgdir name="30006">
+    <imgdir name="0"/>
+    <imgdir name="1">
+      <int name="ask" value="1"/>
+      <string name="0" value="啊，#b#h0##k！你又回来了！"/>
+      <imgdir name="stop"/>
+    </imgdir>
+  </imgdir>
+<imgdir name="30007">
+    <imgdir name="0"/>
+    <imgdir name="1"/>
+  </imgdir>
+<imgdir name="30008">
+    <imgdir name="0"/>
+    <imgdir name="1">
+      <string name="0" value="谢谢你。多亏了你，这下我们可以好好保护世界树了。"/>
+      <string name="1" value="为了嘉赏你的功劳，冒险岛联盟决定给你发放#r&amp;lt;世界树的守护者&amp;gt;#k称号。"/>
+      <imgdir name="yes">
+        <string name="0" value="虽然幸运地平安救出了世界树，可是所有的危险并没有消失。之前封印世界树的势力好像晚一步得知了世界树被运往圣地的事。他们#r复活了封印守护者#k，意图利用强大的黑暗力量吞噬金银岛。"/>
+        <string name="1" value="为了阻止他们的阴谋，我们需要你持续不断的支援。希望你今后也为了冒险岛世界的和平而努力。"/>
+      </imgdir>
+      <imgdir name="stop">
+        <imgdir name="default">
+          <string name="0" value="请你解除世界树的封印，把世界树安全护送到圣地。"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+<imgdir name="30009">
+    <imgdir name="0"/>
+    <imgdir name="1">
+      <string name="0" value="东侧的封印解除了吗？"/>
+      <imgdir name="yes">
+        <string name="0" value="勒紧身体的黑暗气息好像有点减弱了！"/>
+      </imgdir>
+      <imgdir name="stop">
+        <imgdir name="default">
+          <string name="0" value="请你消灭那扇画着时钟的门外面的封印守护者！"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+<imgdir name="30010">
+    <imgdir name="0">
+      <string name="0" value="这次请你消灭那扇画着茶壶的门外面的封印守护者。"/>
+      <imgdir name="stop"/>
+      <imgdir name="yes">
+        <string name="0" value="这次感觉到的气息更加强劲，你必须做好十足的准备。"/>
+      </imgdir>
+      <imgdir name="no">
+        <string name="0" value="不消灭封印守护者的话，则无法解除封印。"/>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <string name="0" value="西侧的封印解除了吗？"/>
+      <imgdir name="yes">
+        <string name="0" value="勒紧身体的黑暗气息减弱了许多！"/>
+      </imgdir>
+      <imgdir name="stop">
+        <imgdir name="default">
+          <string name="0" value="请你去消灭那扇画着茶壶的门外面的封印守护者。"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+<imgdir name="30011">
+    <imgdir name="0">
+      <string name="0" value="这次请你消灭那扇画着王冠的门外面的封印守护者。"/>
+      <imgdir name="stop"/>
+      <imgdir name="yes">
+        <string name="0" value="从画着王冠的门外面传来的气息也很厉害。你不能掉以轻心！"/>
+      </imgdir>
+      <imgdir name="no">
+        <string name="0" value="不消灭封印守护者的话，则无法解除封印。"/>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <string name="0" value="南侧的封印解除了吗？"/>
+      <imgdir name="yes">
+        <string name="0" value="勒紧身体的黑暗气息已经变得很微弱了！"/>
+        <string name="1" value="现在就剩下最后一个封印守护者了。我能感觉到它的力量比之前的守护者要强上无数倍。你的等级至少得在#r110级#k以上，才是它的对手。等你超过#r110级#k后，再和我对话吧。"/>
+      </imgdir>
+      <imgdir name="stop">
+        <imgdir name="default">
+          <string name="0" value="请你消灭那扇画着王冠的门外面的封印守护者！"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+<imgdir name="30012">
+    <imgdir name="0">
+      <string name="0" value="现在就剩下最后一个封印了。请你消灭那扇画着龙的门外面的封印守护者。"/>
+      <imgdir name="stop"/>
+      <imgdir name="yes">
+        <string name="0" value="现在就剩下最后一个封印了。请你消灭那扇画着龙的门外面的封印守护者。这个守护者的力量比起之前的那些强上无数倍。因此接下来必然会是一场激烈的战斗。你做好完全准备后再去。"/>
+      </imgdir>
+      <imgdir name="no">
+        <string name="0" value="眼看就可以解除封印了。你再帮帮忙吧。"/>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <imgdir name="stop">
+        <imgdir name="default">
+          <string name="0" value="请你消灭那扇画着龙的门外面的封印守护者！"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+<imgdir name="30013">
+    <imgdir name="0"/>
+    <imgdir name="1"/>
+  </imgdir>
+<imgdir name="30027">
+    <imgdir name="0">
+      <string name="0" value="你好哇～！你问我来做什么？？也没什么要紧事，我是受圣地那边的委托，来给你转交#b古树钥匙#k的。你前往那些鲁塔比斯的封印守护者所在的地方时，肯定要用到这个的，这点常识你有的哦？你还不快拿去？"/>
+      <string name="1" value="嘿嘿～！给你。你记住，这是用魔法制作的，所以#r过了一天之后#k，就会因为魔法力量耗尽而#r消失#k。"/>
+      <imgdir name="stop"/>
+      <imgdir name="no">
+        <string name="0" value="你不想要？你要花钱跟我买吗？那我当然更愿意咯！"/>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1"/>
+  </imgdir>
+<imgdir name="31165">
+    <imgdir name="0"/>
+    <imgdir name="1"/>
+  </imgdir>
+<imgdir name="31166">
+    <imgdir name="0">
+      <int name="ask" value="1"/>
+      <string name="0" value="我是时间女神#p2144000#。我的时间所剩无几了，请听我说。\r\n#L0##b好的，到底发生了什么事情？#l\n#k"/>
+      <string name="1" value="曾经是时间神官的#r#p2144010##k正企图逆转时间，解除黑魔法师的封印。一定要阻止他。\r\n#L0##b怎么会这样……#l\n#k"/>
+      <string name="2" value="他用通过时空门搜集的混沌的力量弄裂了时间神殿，打开了通向过去的门。我没时间跟你说太多。请你到过去的时空去阻止阿卡伊勒！"/>
+      <imgdir name="stop">
+        <imgdir name="0">
+          <int name="answer" value="1"/>
+          <int name="flip" value="1"/>
+        </imgdir>
+        <imgdir name="1">
+          <int name="answer" value="1"/>
+          <int name="flip" value="1"/>
+        </imgdir>
+      </imgdir>
+      <imgdir name="yes">
+        <string name="0" value="请你一定要打破#p2144010#的阴谋，守护冒险岛世界的和平……"/>
+      </imgdir>
+      <imgdir name="no">
+        <string name="0" value="如果不阻止#p2144010#，冒险岛世界将被黑暗吞噬。我需要你的帮助。"/>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <string name="0" value="要赶快把伦娜的话告诉格莱特！\n居然说搞不好黑魔法师能复活……不能让阿卡伊勒解除黑魔法师的封印。"/>
+      <imgdir name="stop"/>
+    </imgdir>
+  </imgdir>
+<imgdir name="31167">
+    <imgdir name="0">
+      <int name="ask" value="1"/>
+      <string name="0" value="你找到什么线索了吗？\r\n#L0##b那里有个门似乎能通往其他空间！还出现了时间女神伦娜！#l\n#k"/>
+      <string name="1" value="时间女神伦娜？！到底怎么回事啊？请你把详细情况告诉我。\r\n#L0##b阿卡伊勒为了解除黑魔法师的封印去了过去！所以才会出现裂痕。时空门是用来搜集制造裂痕的道具。一定要阻止他！#l\n#k"/>
+      <string name="2" value="我们要赶快到裂痕中去找#p2144010#，并阻止他。#h0#，你准备好了吗？"/>
+      <imgdir name="stop">
+        <imgdir name="0">
+          <int name="answer" value="1"/>
+          <int name="flip" value="1"/>
+        </imgdir>
+        <imgdir name="1">
+          <int name="answer" value="1"/>
+          <int name="flip" value="1"/>
+        </imgdir>
+      </imgdir>
+      <imgdir name="yes">
+        <string name="0" value="#b#p2144003##k和#b#p2144004##k也会从那个裂缝进入到过去，请你与他们一起追击阿卡伊勒。"/>
+      </imgdir>
+      <imgdir name="no">
+        <string name="0" value="请你赶快准备。万一黑魔法师的封印一解除，就会有可怕的灾难发生。"/>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <string name="0" value="怎么又是你？这次的任务很重要，你要注意不要妨碍我们。"/>
+      <imgdir name="stop"/>
+    </imgdir>
+  </imgdir>
+<imgdir name="31168">
+    <imgdir name="0">
+      <int name="ask" value="1"/>
+      <string name="0" value="要做好心理的准备。这里和我们所认识的世界不同，有种奇怪的感觉。连怪物也是…….\r\n#L0##b(克洛乌……看上去很紧张的样子……)知道了，别担心。不过我听说要跟#p2144004#一起来啊，谢丽尔在哪儿啊？#l\n#k"/>
+      <string name="1" value="我也不知道啊，我们得找到谢丽尔。明明是一起进入时间裂缝的，出来之后才发现只有我自己。真是个奇怪的地方。难道是因为时间被扭曲了？\r\n#L0##b那赶快去找#p2144004#吧！要是一个人陷入危险就糟了！#l\n#k"/>
+      <string name="2" value="你去找#p2144004#吧，我在这里有事情要处理。#p2144004#是个优秀的十字猎人，应该没什么问题……可是这里……"/>
+      <imgdir name="stop">
+        <imgdir name="0">
+          <int name="answer" value="1"/>
+          <int name="flip" value="1"/>
+        </imgdir>
+        <imgdir name="1">
+          <int name="answer" value="1"/>
+          <int name="flip" value="1"/>
+        </imgdir>
+      </imgdir>
+      <imgdir name="yes">
+        <string name="0" value="#h0#，去找谢丽尔。要打起精神啊，还有……要小心！"/>
+      </imgdir>
+      <imgdir name="no">
+        <string name="0" value="先做一个深呼吸，等你准备好了就跟我说一声。要赶快去找谢丽尔。"/>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <int name="ask" value="1"/>
+      <string name="0" value="……!\n(发现了倒在地上的谢丽尔。)\r\n#L0##b谢丽尔！！这是怎么回事？！你还好吗？#l\n#k"/>
+      <string name="1" value="#h0#，伤势不是很严重，不用担心。我明明和#p2144003#一起移动的，不知是怎么回事，出来之后发现只有我一个人被围在残暴的怪物当中。我在击退怪物的过程中稍微大意了一下就……"/>
+      <imgdir name="yes">
+        <string name="0" value="不管怎么样，在这个陌生的地方遇见你真是万幸。现在我可以喘口气儿了。"/>
+      </imgdir>
+      <imgdir name="stop">
+        <imgdir name="0">
+          <int name="answer" value="1"/>
+          <int name="flip" value="1"/>
+        </imgdir>
+        <imgdir name="npc">
+          <string name="0" value="#h0#, 快去找谢丽尔！"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+<imgdir name="31169">
+    <imgdir name="0">
+      <int name="ask" value="1"/>
+      <string name="0" value="虽然伤得不严重，但还是不能马上动起来。你能帮帮我吗？\r\n#L0##b(她每次都装病骗我，可这次看上去真的很疼……怎么办呢……？）你要我怎么帮你？#l\n#k"/>
+      <string name="1" value="我想我休息一会儿就能缓解疼痛了，请你在我休息的时候去除掉周围的怪物。"/>
+      <imgdir name="stop">
+        <imgdir name="0">
+          <int name="answer" value="1"/>
+          <int name="flip" value="1"/>
+        </imgdir>
+      </imgdir>
+      <imgdir name="yes">
+        <string name="0" value="在这么重要的时候我还受伤……那拜托你了～你不用那么担心，吼吼。稍微休息一下就会好起来的。"/>
+      </imgdir>
+      <imgdir name="no">
+        <string name="0" value="我需要你帮忙，准备好了就跟我说一声吧。"/>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <string name="0" value="哎哟～才一会儿的功夫，感觉你变得更强了啊。我这么一休息也好多了。虽然可以自己走动，但要继续完成任务还是有点……"/>
+      <imgdir name="yes">
+        <string name="0" value="我似乎无法继续调查这个地方了。就拜托给#h0#了，请你继续调查这里。我们一定要阻止阿卡伊勒的阴谋。"/>
+      </imgdir>
+      <imgdir name="stop">
+        <imgdir name="mob">
+          <string name="0" value="现在……还需要再休息一会儿。请你击退怪物直到我完全恢复为止。你击退50只怪物的时间就足够我休息了。"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+<imgdir name="31170">
+    <imgdir name="0"/>
+    <imgdir name="1"/>
+  </imgdir>
+<imgdir name="31171">
+    <imgdir name="0"/>
+    <imgdir name="1"/>
+  </imgdir>
+<imgdir name="31172">
+    <imgdir name="0"/>
+    <imgdir name="1"/>
+  </imgdir>
+<imgdir name="31173">
+    <imgdir name="0"/>
+    <imgdir name="1">
+      <imgdir name="stop">
+        <imgdir name="default">
+          <string name="0" value="你没把#b#t4033081##k拿来啊。"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+<imgdir name="31174">
+    <imgdir name="0"/>
+    <imgdir name="1"/>
+  </imgdir>
+<imgdir name="31175">
+    <imgdir name="0">
+      <int name="ask" value="1"/>
+      <string name="0" value="这样就可以保证英雄们的安全了。他们虽然会沉睡很久，但总有一天会醒过来。这都是托你的福啊。但还是有一点让我放心不下。之前他们暂时恢复力量时我感受到了一种邪恶的力量，这和我面对黑魔法师时的感觉很像。\r\n#L0##b（不会是阿卡伊勒吧？）你是从哪里感觉到那股力量的？#l\n#k"/>
+      <string name="1" value="虽然模糊，但那股力量是从神殿方向传来的。正因为如此我才会更加怀疑。虽然封印时就做好了以防万一的准备，但还是需要再确认一下封印是否完好。可我现在没有精力再去确认了，所以请你去时间神殿查探一下情况。"/>
+      <imgdir name="stop">
+        <imgdir name="0">
+          <int name="answer" value="1"/>
+        </imgdir>
+      </imgdir>
+      <imgdir name="yes">
+        <string name="0" value="你知道要去时间神殿，只能变身为龙飞过去。神木村应该还有知道怎么变身为龙的哈夫林。我记得他叫……#b#p2144009##k还是什么来着，你去找他就可以了。"/>
+      </imgdir>
+      <imgdir name="no">
+        <string name="0" value="这事不能就这么算了，这样下去迟早会出大事。"/>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <int name="ask" value="1"/>
+      <string name="0" value="哎呀！别过来！\r\n#L0##b我对你没有恶意，我只是来找一个能让我变身为龙的哈夫林的。#l\n#k"/>
+      <string name="1" value="……哦？这附近居然还有人走动真是稀奇。"/>
+      <imgdir name="yes">
+        <string name="0" value="你过一会儿再来找我吧？我刚才被你吓得不轻，心还在怦怦跳呢。"/>
+      </imgdir>
+      <imgdir name="stop">
+        <imgdir name="0">
+          <int name="answer" value="1"/>
+        </imgdir>
+        <imgdir name="default">
+          <string name="0" value="#b#p2144009##k应该在神木村的某个深处。你可以通过右边的传送门过去。"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+<imgdir name="31176">
+    <imgdir name="0"/>
+    <imgdir name="1">
+      <int name="ask" value="1"/>
+      <string name="0" value="哎呀……这是怎么回事？\r\n#L0##b这应该是我问你才对。你为什么要突然攻击我？你刚才就像我碰到的阿卡伊勒的怪物一样。#l\n#k"/>
+      <string name="1" value="#h0#如果有那种感觉，那肯定是我在不知不觉中被#p2144010#操控了。身为十字猎人的首领，居然被人操控……我真是没脸见你啊，#h0#。\r\n#L0##b(连#p2144002#都遭到#p2144010#的暗算……）还好你现在已经清醒了。接下来该怎么办呢？#l\n#k"/>
+      <string name="2" value="我先回去确认一下还有没有别人受到过#p2144010#的操控。#h0#就继续去追#p2144010#，他比我们想象的还要恶毒，你绝不能大意啊。"/>
+      <imgdir name="stop">
+        <imgdir name="0">
+          <int name="answer" value="1"/>
+        </imgdir>
+        <imgdir name="1">
+          <int name="answer" value="1"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+<imgdir name="31177">
+    <imgdir name="0">
+      <int name="ask" value="1"/>
+      <string name="0" value="哎，总算恢复平静了。你说你为什么来找我的？\r\n#L0##b(这么看来他长得很像#p2082003#，莫非塔米尔是克鲁巴的……？）#l\n#k"/>
+      <string name="1" value="这次轮到你被吓到了？你怎么不回答我？\r\n#L0##b哦，对不起。我有事要去时间神殿，我想请你把我变成龙。#l\n#k"/>
+      <string name="2" value="什么？时间神殿？你疯了吗？那里现在被黑魔法师变成了非常危险的地方，你去肯定会很惨的。\r\n#L0##b那也要去，这事我必须去做。#l\n#k"/>
+      <string name="3" value="……好吧，那就没办法了。不过我也有个条件，请你帮我除掉这周围的怪物，好让我离开这里。"/>
+      <imgdir name="stop">
+        <imgdir name="0">
+          <int name="answer" value="1"/>
+        </imgdir>
+        <imgdir name="1">
+          <int name="answer" value="1"/>
+        </imgdir>
+        <imgdir name="2">
+          <int name="answer" value="1"/>
+        </imgdir>
+      </imgdir>
+      <imgdir name="yes">
+        <string name="0" value="不用很多，只要消灭#b#o8220018#和#b#o8220017#各50只#k就可以了。你既然能找到这里，应该一会儿就能完成。"/>
+      </imgdir>
+      <imgdir name="no">
+        <string name="0" value="不要就算了，反正这附近只有我一个哈夫林，哼。"/>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <string name="0" value="这下我可以安全的离开这里了。谢谢你。你比我想象的还要厉害嘛？"/>
+      <imgdir name="yes">
+        <string name="0" value="你再来找我的话，我就让你变身为龙，嘻嘻。"/>
+      </imgdir>
+      <imgdir name="stop">
+        <imgdir name="mob">
+          <string name="0" value="怪物还这么多呢！你如果不抓够我说的数量，我是不会帮你的！"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+<imgdir name="31178">
+    <imgdir name="0">
+      <int name="ask" value="1"/>
+      <string name="0" value="又见面了啊，冒险家。我能跟你说几句吗？\r\n#L0##b是什么事？#l\n#k"/>
+      <string name="1" value="刚才#p2144010#路过了这里，他既然都到了这儿，那他的目的只有一个。\r\n#L0##b他的目的是什么？莫非……#l\n#k"/>
+      <string name="2" value="是的，你猜的没错，#p2144010#是用来解除黑魔法师封印的。因为他具有足够的实力可以解除那个封印。\r\n#L0##b为什么偏偏要在这时候回来解除封印呢？更早以前回到这，直接阻止封印不是更好嘛？#l\n#k"/>
+      <string name="3" value="因为那是不可能的。在进行封印时弗里德和#p2144006#用尽浑身的魔力把封印时间点的时空扭曲掉了。所以那个封印时间点就变成了一个特异点，人们是回不到更早的过去的。\r\n#L0##b（弗里德和#p2144006#是预见到了事情会变成现在这个样子了吗？）#l\n#k"/>
+      <string name="4" value="如果#p2144010#将封印解除，后果无法想象。请追上他，保护好黑魔法师的封印吧。"/>
+      <imgdir name="stop">
+        <imgdir name="0">
+          <int name="answer" value="1"/>
+        </imgdir>
+        <imgdir name="1">
+          <int name="answer" value="1"/>
+        </imgdir>
+        <imgdir name="2">
+          <int name="answer" value="1"/>
+        </imgdir>
+        <imgdir name="3">
+          <int name="answer" value="1"/>
+        </imgdir>
+      </imgdir>
+      <imgdir name="yes">
+        <string name="0" value="但愿我们能来得及阻止#p2144010#……"/>
+      </imgdir>
+      <imgdir name="no">
+        <string name="0" value="这件事很重要，请你不要拒绝。"/>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <int name="ask" value="1"/>
+      <string name="0" value="幸好还不迟。\r\n#L0##b#p2144010#已被打败！现在一切都解决了吗？#l\n#k"/>
+      <string name="1" value="很遗憾，刚才打败的不过是#p2144010#的分身而已。现在#p2144010#的真身正在他自己的根据地#r次元缝隙#k。不过，他为了回到过去，强行生成了时间裂缝，所以消耗了很大的力量，加上分身也已经被消灭，所以#p2144010#现在的状态一定很虚弱。所以现在是消灭他的最好时机。\r\n#L0##b怎样才能进入次元缝隙呢？#l\n#k"/>
+      <string name="2" value="可以通过来时的#b时间裂缝#k移动到次元缝隙。要赶在#p2144010#恢复体力之前阻止他。"/>
+      <imgdir name="yes">
+        <string name="0" value="由于#p2144010#变得虚弱，我的力量也恢复了不少。我把左边的传送门设置为直通现实世界的通道，你可以从那里回去。不要忘了。"/>
+      </imgdir>
+      <imgdir name="stop">
+        <imgdir name="0">
+          <int name="answer" value="1"/>
+        </imgdir>
+        <imgdir name="1">
+          <int name="answer" value="1"/>
+        </imgdir>
+        <imgdir name="mob">
+          <string name="0" value="还没去阻止#p2144010#吗？要抓紧时间啊。"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+<imgdir name="31179">
+    <imgdir name="0">
+      <int name="ask" value="1"/>
+    </imgdir>
+    <imgdir name="1"/>
+  </imgdir>
+<imgdir name="31180">
+    <imgdir name="0">
+      <string name="0" value="#h0#一直很好的证明了自己的实力。你现在可以算是十字猎人中的顶尖人物。#h0#，我要给你一个只有你才能完成的任务。请你从时间裂缝进入到次元缝隙，去消灭这所有事件的元凶#b#p2144010##k。"/>
+      <imgdir name="stop"/>
+      <imgdir name="yes">
+        <string name="0" value="#h0#不要忘了你肩负着世界的命运啊。"/>
+      </imgdir>
+      <imgdir name="no">
+        <string name="0" value="这个任务除了#h0#，没有别的人可以做了。请你为了世界的和平再考虑一下吧。"/>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <int name="ask" value="1"/>
+      <string name="0" value="终于打败了#p2144010#。你把我从封印中解救出来了。\r\n#L0##b真是万幸啊，已经找回了被夺去的力量了吗？#l\n#k"/>
+      <string name="1" value="#p2144010#虽然找回了自己的力量，但还是很微弱的。可能是因为黑魔法师的力量太强大了吧。可是#p2144010#目前很难回到这个世界。\r\n#L0##b这么说，我们算是暂时度过危机了。#l\n#k"/>
+      <string name="2" value="……关于这个，我有一个坏消息。我发现在我被封印的期间过去的英雄们都回来了。战神、龙神还有双弩精灵……但是，英雄们的出现也意味着黑魔法师的封印变弱了。因为英雄们所受到的诅咒的力量和封印的力量成正比的。\r\n#L0##b什么？这么说来那时候#p2144010#他已经……？！#l\n#k"/>
+      <string name="3" value="是的，遗憾的是#p2144010#通过自己的分身解除了部分封印。已经解除的封印是无法复原的。早晚封印都会被完全解除的。冒险家啊，黑魔法师很快就会回来了。"/>
+      <imgdir name="yes">
+        <string name="0" value="为了提前防备他的归来，一定要积蓄力量才行。这次一定要让黑魔法师永远睡去……我会按照我的方式进行准备。虽然不知何时才能完成，但到时我们一定还会再见的。那我先走啦……"/>
+      </imgdir>
+      <imgdir name="stop">
+        <imgdir name="0">
+          <int name="answer" value="1"/>
+        </imgdir>
+        <imgdir name="1">
+          <int name="answer" value="1"/>
+        </imgdir>
+        <imgdir name="2">
+          <int name="answer" value="1"/>
+        </imgdir>
+        <imgdir name="mob">
+          <string name="0" value="#p2144010#现在还活着，我们不能给他喘息的机会。"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
 </imgdir>

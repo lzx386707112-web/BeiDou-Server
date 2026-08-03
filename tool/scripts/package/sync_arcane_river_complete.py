@@ -89,11 +89,12 @@ def sync_server(deps: dict[str, object]) -> None:
         for name in ("Act", "Check", "QuestInfo", "Say"):
             copy_relative(source, target, f"{tree}/Quest.wz/{name}.img.xml")
     copy_relative(source, target, "wz/Item.wz/Etc/0403.img.xml")
-    copy_relative(
-        source,
-        target,
-        "src/main/resources/db/migration/V2.1.42__add_arcane_river_mob_and_quest_drops.sql",
-    )
+    for migration_name in (
+        "V2.1.42__add_arcane_river_mob_and_quest_drops.sql",
+        "V2.1.45__add_arcane_river_core_gemstone_drop.sql",
+        "V2.1.46__increase_arcane_river_core_gemstone_drop_rate.sql",
+    ):
+        copy_relative(source, target, f"src/main/resources/db/migration/{migration_name}")
     copy_relative(
         source,
         target,

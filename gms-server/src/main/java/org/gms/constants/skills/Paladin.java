@@ -37,4 +37,24 @@ public class Paladin {
     public static final int HEAVENS_HAMMER = 1221011;
     public static final int HEROS_WILL = 1221012;
     public static final int BLAST = 1221009;
+    public static final int GRAND_GUARDIAN = 1221015;
+    public static final int GRAND_GUARDIAN_ATTACK = 1221032;
+    public static final int MIGHTY_MJOLNIR = 1221016;
+    public static final int MIGHTY_MJOLNIR_EXPLOSION = 1221017;
+    public static final int SACRED_BASTION = 1221020;
+    public static final int SACRED_BASTION_STRIKE = 1221021;
+    public static final int SACRED_BASTION_FINISH = 1221022;
+    public static final int HEAVENS_HAMMER_VI = 1221027;
+    public static final int HEAVENS_HAMMER_VI_AFTERSHOCK = 1221028;
+    public static final int RISING_JUSTICE = 1221029;
+    public static final int DOMINUS_OBRION = 1221030;
+    public static final int DOMINUS_OBRION_FINISH = 1221031;
+
+    public static final int[] V_VI_ACTIVE_ATTACKS = {
+        GRAND_GUARDIAN,
+        MIGHTY_MJOLNIR,
+        SACRED_BASTION,
+        HEAVENS_HAMMER_VI,
+        DOMINUS_OBRION
+    };
 }

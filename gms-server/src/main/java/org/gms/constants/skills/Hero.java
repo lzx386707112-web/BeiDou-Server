@@ -37,4 +37,23 @@ public class Hero {
     public static final int DEATH_FAULT = 1121012;
     public static final int RAGING_BLOW_VI = 1121013;
     public static final int BRANDISH = 1121008;
+    public static final int SWORD_ILLUSION = 1121020;
+    public static final int BURNING_SOUL_BLADE = 1121014;
+    public static final int BURNING_SOUL_BLADE_ATTACK = 1121015;
+    public static final int SWORD_ILLUSION_SLASH = 1121021;
+    public static final int SWORD_ILLUSION_EXPLOSION = 1121022;
+    public static final int SPIRIT_CALIBER = 1121023;
+    public static final int SPIRIT_CALIBER_FINISH = 1121024;
+    public static final int RAGE_UPRISING_VI = 1121025;
+    public static final int INCISING_VI = 1121030;
+
+    public static final int[] V_VI_ACTIVE_ATTACKS = {
+        SWORD_ILLUSION,
+        DEATH_FAULT,
+        RAGING_BLOW_VI,
+        BURNING_SOUL_BLADE,
+        SPIRIT_CALIBER,
+        RAGE_UPRISING_VI,
+        INCISING_VI
+    };
 }

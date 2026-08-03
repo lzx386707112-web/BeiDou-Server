@@ -31,6 +31,7 @@ import org.gms.client.inventory.Item;
 import org.gms.client.inventory.WeaponType;
 import org.gms.client.status.MonsterStatusEffect;
 import org.gms.constants.skills.Bishop;
+import org.gms.constants.skills.Hero;
 import org.gms.constants.skills.Outlaw;
 import org.gms.net.packet.InPacket;
 import org.slf4j.Logger;
@@ -103,6 +104,10 @@ public final class SummonDamageHandler extends AbstractDealDamageHandler {
             allDamage.add(new SummonAttackEntry(monsterOid, damage));
         }
         player.getMap().broadcastMessage(player, PacketCreator.summonAttack(player.getId(), summon.getObjectId(), direction, allDamage), summon.getPosition());
+
+        if (summon.getSkill() == Hero.BURNING_SOUL_BLADE) {
+            return;
+        }
 
         if (player.getMap().isOwnershipRestricted(player)) {
             return;

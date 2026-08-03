@@ -216,7 +216,7 @@ function 完成当前任务() {
     完成奖励文本 += "\r\n" + icon + ` × ${奖励金币[选中任务索引]} W \t`;
     // 提示完成
     cm.sendOk(`恭喜你完成了 Lv.${任务等级} 主线任务！\r\n获得以下奖励：\r\n${完成奖励文本}`);
-    cm.getPlayer().sendAllWordNoticeNew("主线任务",`恭喜玩家${cm.getPlayer().getName()}完成${任务等级}级主线任务!`)
+    sendRandomSceneMegaphone(cm.getPlayer(), "主线任务", `恭喜玩家${cm.getPlayer().getName()}完成${任务等级}级主线任务!`)
     //蓝色文本
     // cm.getPlayer().dropMessage(6, "完成任务！获得奖励："+完成奖励文本);
     cm.dispose();
@@ -264,4 +264,37 @@ function sendEquipment(fashionItemId) {
         0,
         -1
     );
+}
+function sendRandomSceneMegaphone(player, typeOrTitle, titleOrContent, content) {
+    if (player.checkoutBroadcast()) {
+        return;
+    }
+    var title = content === undefined ? typeOrTitle : titleOrContent;
+    var message = content === undefined ? titleOrContent : content;
+    var fullMessage = "[" + title + "] : " + message;
+    var lineLength = Math.max(1, Math.ceil(fullMessage.length / 4));
+    var lines = new (Java.type("java.util.LinkedList"))();
+    for (var i = 0; i < 4; i++) {
+        var start = i * lineLength;
+        lines.add(start < fullMessage.length
+            ? fullMessage.substring(start, Math.min(start + lineLength, fullMessage.length))
+            : "");
+    }
+
+    var itemIds = [5390005, 5390001, 5390002];
+    var itemId = itemIds[Math.floor(Math.random() * itemIds.length)];
+    var Server = Java.type("org.gms.net.server.Server");
+    var PacketCreator = Java.type("org.gms.util.PacketCreator");
+    var world = player.getWorld();
+    Server.getInstance().broadcastMessage(
+        world,
+        PacketCreator.getAvatarMega(player, "", player.getClient().getChannel(), itemId, lines, true)
+    );
+
+    var clearTask = new (Java.type("java.lang.Runnable"))({
+        run: function () {
+            Server.getInstance().broadcastMessage(world, PacketCreator.byeAvatarMega());
+        }
+    });
+    Java.type("org.gms.server.TimerManager").getInstance().schedule(clearTask, 10000);
 }

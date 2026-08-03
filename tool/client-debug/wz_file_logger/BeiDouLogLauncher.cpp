@@ -130,6 +130,6 @@ int wmain(int argc, WCHAR **argv) {
         return 2;
     }
 
-    wprintf(L"Client started with logger. Log file: %s\\beidou_wz_access.log\n", workDir);
+    wprintf(L"Client started with diagnostics. Logs: %s\\diagnostics\\session-*.log\n", workDir);
     return 0;
 }

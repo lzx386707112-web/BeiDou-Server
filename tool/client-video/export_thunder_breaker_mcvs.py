@@ -254,10 +254,18 @@ def encode_tracks(
         delays.extend([delays[-1]] * (frame_count - len(delays)))
     with tempfile.TemporaryDirectory(prefix=f"{key}-mcv-") as directory_name:
         directory = Path(directory_name)
-        cover_bounds = decoded_alpha_union_bounds(tracks, ffmpeg, directory)
+        dimensions = {(track.width, track.height) for track in tracks}
+        if len(dimensions) == 1:
+            cover_bounds = decoded_alpha_union_bounds(tracks, ffmpeg, directory)
+            cover_bounds_by_track = [cover_bounds] * len(tracks)
+        else:
+            cover_bounds_by_track = [
+                decoded_alpha_union_bounds((track,), ffmpeg, directory)
+                for track in tracks
+            ]
         decoders = [
             start_decoder(ffmpeg, track, directory, index, cover_bounds)
-            for index, track in enumerate(tracks)
+            for index, (track, cover_bounds) in enumerate(zip(tracks, cover_bounds_by_track))
         ]
         color_path = directory / "color.ivf"
         alpha_path = directory / "alpha.ivf"

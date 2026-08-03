@@ -868,7 +868,7 @@ function 确认制作(index) {
 //     cm.gainItem(targetItem.id, 1);
 //     cm.sendOk(`恭喜您,制作 #i${targetItem.id}# #t${targetItem.id}# 成功！`);
 //     const tipType = targetItem.tipType || 6;
-//     cm.getPlayer().sendAllWordNoticeNew(tipType, "装备制作", `恭喜玩家${cm.getPlayer().getName()}成功制作出【${cm.getPlayer().getItemName(targetItem.id)}】!`);
+//     sendRandomSceneMegaphone(cm.getPlayer(), tipType, "装备制作", `恭喜玩家${cm.getPlayer().getName()}成功制作出【${cm.getPlayer().getItemName(targetItem.id)}】!`);
 //     cm.dispose();
 // }
 //
@@ -1092,4 +1092,37 @@ function 获取金币显示(meso) {
     } else {
         return `${realMeso}`;
     }
+}
+function sendRandomSceneMegaphone(player, typeOrTitle, titleOrContent, content) {
+    if (player.checkoutBroadcast()) {
+        return;
+    }
+    var title = content === undefined ? typeOrTitle : titleOrContent;
+    var message = content === undefined ? titleOrContent : content;
+    var fullMessage = "[" + title + "] : " + message;
+    var lineLength = Math.max(1, Math.ceil(fullMessage.length / 4));
+    var lines = new (Java.type("java.util.LinkedList"))();
+    for (var i = 0; i < 4; i++) {
+        var start = i * lineLength;
+        lines.add(start < fullMessage.length
+            ? fullMessage.substring(start, Math.min(start + lineLength, fullMessage.length))
+            : "");
+    }
+
+    var itemIds = [5390005, 5390001, 5390002];
+    var itemId = itemIds[Math.floor(Math.random() * itemIds.length)];
+    var Server = Java.type("org.gms.net.server.Server");
+    var PacketCreator = Java.type("org.gms.util.PacketCreator");
+    var world = player.getWorld();
+    Server.getInstance().broadcastMessage(
+        world,
+        PacketCreator.getAvatarMega(player, "", player.getClient().getChannel(), itemId, lines, true)
+    );
+
+    var clearTask = new (Java.type("java.lang.Runnable"))({
+        run: function () {
+            Server.getInstance().broadcastMessage(world, PacketCreator.byeAvatarMega());
+        }
+    });
+    Java.type("org.gms.server.TimerManager").getInstance().schedule(clearTask, 10000);
 }

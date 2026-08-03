@@ -37,6 +37,7 @@ import org.gms.constants.id.MapId;
 import org.gms.constants.inventory.ItemConstants;
 import org.gms.constants.skills.Aran;
 import org.gms.constants.skills.Buccaneer;
+import org.gms.constants.skills.ExplorerOtherSkillCompat;
 import org.gms.constants.skills.NightLord;
 import org.gms.constants.skills.NightWalker;
 import org.gms.constants.skills.Shadower;
@@ -129,7 +130,6 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
     private static final int[] MISTRAL_SPIRIT_ENABLE_DELAYS_MS = {270, 120, 120};
     private static final int[] ELEMENTAL_TEMPEST_WAVE_TIMES_MS = intervalTimes(960, 30, 1260);
     private static final int[] ELEMENTAL_TEMPEST_ARROW_TIMES_MS = intervalTimes(2040, 30, 2340);
-
     private static int[] intervalTimes(int first, int interval, int last) {
         int[] result = new int[((last - first) / interval) + 1];
         for (int index = 0; index < result.length; index++) {
@@ -193,7 +193,8 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
     }
 
     private static boolean usesScheduledDamageOnly(int skillId) {
-        return skillId == NightWalker.RAPID_THROW
+        return ExplorerOtherSkillCompat.multiAttacks(skillId) != null
+                || skillId == NightWalker.RAPID_THROW
                 || skillId == NightWalker.DARK_OMEN_VI
                 || skillId == NightWalker.DOMINION_VI
                 || skillId == NightWalker.SILENT_NIGHT
@@ -1241,6 +1242,10 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
                         break;
                 }
                 chr.getMap().broadcastMessage(chr, packet, false, true);
+                String explorerVideoLayer = ExplorerOtherSkillCompat.videoLayer(attack.skill);
+                if (explorerVideoLayer != null) {
+                    chr.sendPacket(PacketCreator.showEffect(explorerVideoLayer));
+                }
 
                 if (attack.skill != 0) {
                     Skill skill = SkillFactory.getSkill(attack.skill);
@@ -1273,6 +1278,15 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
                 }
                 if (isWindArcherVViSkill(attack.skill)) {
                     scheduleWindArcherSkill(attack, chr);
+                }
+                ExplorerOtherSkillCompat.Replay[] explorerReplays =
+                        ExplorerOtherSkillCompat.multiAttacks(attack.skill);
+                if (explorerReplays != null) {
+                    for (ExplorerOtherSkillCompat.Replay replay : explorerReplays) {
+                        scheduleTrackingAttacks(
+                                attack, chr, replay.timesMs(), replay.skillId()
+                        );
+                    }
                 }
             }
         }

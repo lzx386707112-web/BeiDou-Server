@@ -6,6 +6,7 @@
 
 - [095 内容迁移概览](migrations/095-overview.md)
 - [095 内容迁移手册](migrations/095-migration.md)
+- [阿卡伊勒与鲁塔比斯任务、Boss、远征迁移](migrations/akayrum-root-abyss-content-migration.md)
 
 ## 补丁记录
 
@@ -15,6 +16,7 @@
 - [魂骑士五、六转主动攻击技能迁移](patches/dawn-warrior-v-vi-migration.md)
 - [炎术士五、六转攻击技能迁移](patches/blaze-wizard-v-vi-migration.md)
 - [夜行者五、六转技能迁移](patches/night-walker-v-vi-migration.md)
+- [冒险家战士五、六转攻击技能迁移](patches/explorer-warrior-v-vi-attacks-migration.md)
 - [Boss 视觉资源与 MobSkill 兼容记录](patches/boss-mobskill-visual-migration.md)
 
 ## 工具说明

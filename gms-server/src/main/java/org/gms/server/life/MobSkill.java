@@ -54,6 +54,7 @@ public class MobSkill {
     private static final int AKAYRUM_SCREEN_CRACK_DAMAGE_DELAY_MS = 1100;
     private static final int AKAYRUM_SCREEN_CRACK_PRONE_RADIUS_REDUCTION = 55;
     private static final int BOSS_COMPAT_EFFECT_DAMAGE_DELAY_MS = 1400;
+    private static final int MAGNUS_METEOR_STORM_DAMAGE_PERCENT = 35;
     private static final int[][] AKAYRUM_SCREEN_CRACK_VORTEXES = {
             {-610, -181, 115},
             {-305, -181, 110},
@@ -270,11 +271,31 @@ public class MobSkill {
             case AKAYRUM_BLACK_HOLE_VISUAL, AKAYRUM_GREEN_ORB_VISUAL -> {
                 // Visual-only Akayrum compatibility skills; damage/rules are handled separately.
             }
-            case WILL_WEB_BURST -> castBossCompatEffect(monster, "customBossWill/webBurst");
-            case MAGNUS_METEOR_STORM -> castBossCompatEffect(monster, "customBossMagnus/meteorStorm");
+            case WILL_WEB_BURST -> {
+                if (monster.getId() == 8920102) {
+                    summonMonsters(monster);
+                } else {
+                    castBossCompatEffect(monster, "customBossWill/webBurst");
+                }
+            }
+            case MAGNUS_METEOR_STORM -> {
+                if (monster.getId() == 8910100) {
+                    summonMonsters(monster);
+                } else {
+                    castBossCompatEffect(monster, "customBossMagnus/meteorStorm",
+                            MAGNUS_METEOR_STORM_DAMAGE_PERCENT);
+                }
+            }
             case LUCID_DREAM_BURST -> castBossCompatEffect(monster, "customBossLucid/dreamBurst");
-            case SEREN_SACRED_BURST -> castBossCompatEffect(monster, "customBossSeren/sacredBurst");
-            case SUMMON -> summonMonsters(monster);
+            case SEREN_SACRED_BURST -> {
+                if (monster.getId() == 8900101 || monster.getId() == 8900102) {
+                    summonMonsters(monster);
+                } else {
+                    castBossCompatEffect(monster, "customBossSeren/sacredBurst");
+                }
+            }
+            case SUMMON, SUMMON_170, SUMMON_186, SUMMON_188, SUMMON_189,
+                 SUMMON_190, SUMMON_191, SUMMON_201, SUMMON_202, SUMMON_203 -> summonMonsters(monster);
         }
         if (stats.size() > 0) {
             applyMonsterBuffs(stats, skill, monster, reflection);
@@ -366,13 +387,17 @@ public class MobSkill {
     }
 
     private void castBossCompatEffect(Monster monster, String effectPath) {
+        castBossCompatEffect(monster, effectPath, getX());
+    }
+
+    private void castBossCompatEffect(Monster monster, String effectPath, int damagePercent) {
         monster.getMap().broadcastMessage(PacketCreator.showEffect(effectPath));
         TimerManager.getInstance().schedule(() -> {
             if (!monster.isAlive()) {
                 return;
             }
             for (Character character : monster.getMap().getAllPlayers()) {
-                damageCharacterByPercent(monster, character, getX());
+                damageCharacterByPercent(monster, character, damagePercent);
             }
         }, BOSS_COMPAT_EFFECT_DAMAGE_DELAY_MS);
     }

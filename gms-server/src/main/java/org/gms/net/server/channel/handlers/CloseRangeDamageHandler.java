@@ -32,9 +32,12 @@ import org.gms.constants.game.GameConstants;
 import org.gms.constants.id.MapId;
 import org.gms.constants.skills.Crusader;
 import org.gms.constants.skills.DawnWarrior;
+import org.gms.constants.skills.DarkKnight;
+import org.gms.constants.skills.ExplorerOtherSkillCompat;
 import org.gms.constants.skills.DragonKnight;
 import org.gms.constants.skills.Hero;
 import org.gms.constants.skills.NightWalker;
+import org.gms.constants.skills.Paladin;
 import org.gms.constants.skills.Rogue;
 import org.gms.constants.skills.ThunderBreaker;
 import org.gms.constants.skills.WindArcher;
@@ -46,6 +49,8 @@ import org.gms.server.life.Monster;
 import org.gms.server.maps.MapObject;
 import org.gms.server.maps.MapObjectType;
 import org.gms.server.maps.MapleMap;
+import org.gms.server.maps.Summon;
+import org.gms.server.maps.SummonMovementType;
 import org.gms.util.PacketCreator;
 import org.gms.util.Pair;
 import org.slf4j.Logger;
@@ -67,7 +72,6 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
     private static final Logger log = LoggerFactory.getLogger(CloseRangeDamageHandler.class);
     private static final String ANIMATED_ATTACK_LOG_VERSION = "DW_ANIM v3";
-    private static final int SWORD_ILLUSION_HIT_DELAY_MS = 1000;
     private static final int DEATH_FAULT_HIT_DELAY_MS = 1000;
     private static final String DEATH_FAULT_FIELD_EFFECT = "customSkill/deathFault/full";
     private static final String GALAXY_STAR_BURST_VIDEO_LAYER =
@@ -82,6 +86,16 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
             "customSkill/thunderBreaker/waveRidingThunderVideoLayer";
     private static final String SWIFT_ANNIHILATION_VIDEO_LAYER =
             "customSkill/thunderBreaker/swiftAnnihilationVideoLayer";
+    private static final String SPIRIT_CALIBER_VIDEO_LAYER =
+            "customSkill/hero/spiritCaliberVideoLayer";
+    private static final String SACRED_BASTION_VIDEO_LAYER =
+            "customSkill/paladin/sacredBastionVideoLayer";
+    private static final String DOMINUS_OBRION_VIDEO_LAYER =
+            "customSkill/paladin/dominusObrionVideoLayer";
+    private static final String DEAD_SPACE_VIDEO_LAYER =
+            "customSkill/darkKnight/deadSpaceVideoLayer";
+    private static final String DARK_HALIDOM_VIDEO_LAYER =
+            "customSkill/darkKnight/darkHalidomVideoLayer";
     private static final int[] GALAXY_STAR_BURST_ATTACK_TIMES_MS = {
         1200, 1380, 1560, 1740, 3180, 3360, 3540, 3720, 4560, 4740, 6240, 6420, 6600, 6780
     };
@@ -131,7 +145,69 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
         1620, 1680, 1740, 1800, 1860, 1920, 1980, 2010, 2040,
         2070, 2100, 2130, 2160, 2190, 2220, 2250, 2280, 2310
     };
-
+    private static final int[] SWORD_ILLUSION_SLASH_TIMES_MS = {
+        1320, 1470, 1590, 1710, 1800, 1950, 2070, 2190, 2280, 2430, 2550, 2670
+    };
+    private static final int[] SWORD_ILLUSION_EXPLOSION_TIMES_MS = {
+        2790, 2820, 2880, 2940, 3000
+    };
+    private static final int[] RAGE_UPRISING_VI_TIMES_MS = {0, 60, 180, 300};
+    private static final int[] BURNING_SOUL_BLADE_TIMES_MS = intervalTimes(0, 1000, 19000);
+    private static final int[] SPIRIT_CALIBER_TIMES_MS = {
+        840, 900, 960, 1020, 1080, 1140, 1200, 1260, 1320, 1380, 1440,
+        1500, 1560, 1620, 1680, 1740, 1800, 1860, 1920, 1980, 2040, 2100,
+        2160, 2220, 2280, 2340, 2400, 2460, 2520, 2580, 2640, 2700, 2760
+    };
+    private static final int[] SPIRIT_CALIBER_FINISH_TIMES_MS = {
+        4020, 4050, 4080, 4110, 4140, 4170, 4200, 4230, 4260, 4290, 4320,
+        4350, 4380, 4410, 4440, 4470, 4500, 4530, 4560, 4590, 4620, 4650,
+        4680, 4710, 5550, 5580, 5610, 5640, 5670, 5700, 5730, 5760, 5790,
+        5820, 5850, 5880, 5910, 5940, 5970, 6000, 6030, 6060, 6090, 6120,
+        6150, 6180, 6210, 6240
+    };
+    private static final int[] GRAND_GUARDIAN_TIMES_MS = intervalTimes(900, 150, 4800);
+    private static final int MIGHTY_MJOLNIR_PROJECTILE_DURATION_MS = 1170;
+    private static final int[] MIGHTY_MJOLNIR_TIMES_MS = {960};
+    private static final int[] MIGHTY_MJOLNIR_EXPLOSION_TIMES_MS = {1170};
+    private static final int[] HEAVENS_HAMMER_VI_TIMES_MS = {0, 180, 360, 540};
+    private static final int[] RISING_JUSTICE_TIMES_MS = {960, 1080, 1200, 1320};
+    private static final int[] SACRED_BASTION_TIMES_MS = {
+        1320, 1350, 1380, 1410, 1440, 1470, 1500, 1530, 1560, 2640, 2670,
+        2700, 2730, 2760, 2790, 2820, 2850, 2880, 2910, 2940, 2970, 3000,
+        3030, 3060, 3090, 3120, 3150, 3180
+    };
+    private static final int[] SACRED_BASTION_FINISH_TIMES_MS = {
+        3780, 3810, 3840, 3870, 3900, 3930, 3960, 3990, 4020, 4050, 4080,
+        4110, 4140, 4170, 4200, 4230, 4260
+    };
+    private static final int[] SACRED_BASTION_FIELD_TIMES_MS = intervalTimes(420, 300, 29820);
+    private static final int[] DOMINUS_OBRION_TIMES_MS = {
+        660, 720, 780, 840, 900, 960, 1020, 1080, 1140, 1200, 1260
+    };
+    private static final int[] DOMINUS_OBRION_FINISH_TIMES_MS = {
+        1680, 1710, 1740, 1770, 1800, 1830, 1860, 1890, 1920, 1980, 2040,
+        2100, 2160, 2220, 2280, 2340
+    };
+    private static final int[] CALAMITOUS_CYCLONE_TIMES_MS = intervalTimes(0, 140, 3920);
+    private static final int[] CALAMITOUS_CYCLONE_FINISH_TIMES_MS = {
+        4150, 4180, 4210, 4240, 4270, 4300, 4330, 4360
+    };
+    private static final int[] DEAD_SPACE_TIMES_MS = {60, 120, 180, 240, 300, 360};
+    private static final int[] DEAD_SPACE_FINISH_TIMES_MS = {
+        1500, 1530, 1560, 1590, 1620, 1650, 1680, 1710, 1740, 1770, 1800,
+        1830, 1860, 1890, 1920, 4170, 4200, 4230, 4260, 4290, 4320, 4350,
+        4380, 4410, 4440, 4470, 4500, 4530, 4560, 4590, 4620, 4650, 4680,
+        4710, 4740, 4770, 4800, 4830, 4860, 4890, 4920, 4950, 4980, 5010,
+        5040, 5070, 5100, 5130, 5160, 5190, 5220, 5250, 5280, 5310, 5340,
+        5370, 5400, 5430
+    };
+    private static final int[] DARK_HALIDOM_TIMES_MS = {
+        960, 1020, 1080, 1140, 1200, 1260, 1320, 1380, 1440, 1500, 1560, 1620
+    };
+    private static final int[] DARK_HALIDOM_FINISH_TIMES_MS = {
+        1920, 1950, 1980, 2010, 2040, 2070, 2100, 2130, 2160, 2190, 2220,
+        2250, 2280, 2310, 2340, 2370
+    };
     private static int[] intervalTimes(int first, int interval, int last) {
         int[] result = new int[((last - first) / interval) + 1];
         for (int index = 0; index < result.length; index++) {
@@ -314,9 +390,91 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
     }
 
     private static boolean usesFixedThunderBreakerOrigin(int skillId) {
-        return skillId == ThunderBreaker.LIGHTNING_SPEAR_MULTISTRIKE
+        return skillId == Hero.BURNING_SOUL_BLADE
+                || skillId == ThunderBreaker.LIGHTNING_SPEAR_MULTISTRIKE
                 || skillId == ThunderBreaker.WAVE_RIDING_THUNDER
-                || skillId == ThunderBreaker.SWIFT_ANNIHILATION;
+                || skillId == ThunderBreaker.SWIFT_ANNIHILATION
+                || skillId == Hero.SPIRIT_CALIBER
+                || skillId == Paladin.SACRED_BASTION
+                || skillId == Paladin.DOMINUS_OBRION
+                || skillId == DarkKnight.DEAD_SPACE
+                || skillId == DarkKnight.DARK_HALIDOM;
+    }
+
+    private static void removeTimedSummon(
+            Character chr,
+            int skillId,
+            MapleMap expectedMap,
+            Summon expectedSummon
+    ) {
+        if (chr.getSummonByKey(skillId) != expectedSummon) {
+            return;
+        }
+        expectedMap.broadcastMessage(PacketCreator.removeSummon(expectedSummon, true));
+        expectedMap.removeMapObject(expectedSummon);
+        chr.removeVisibleMapObject(expectedSummon);
+        chr.getSummonsValues().remove(expectedSummon);
+    }
+
+    private static void spawnTimedSummon(
+            Character chr,
+            int skillId,
+            SummonMovementType movementType,
+            int durationMs
+    ) {
+        MapleMap expectedMap = chr.getMap();
+        Summon previous = chr.getSummonByKey(skillId);
+        if (previous != null) {
+            removeTimedSummon(chr, skillId, expectedMap, previous);
+        }
+        Summon summon = new Summon(
+                chr,
+                skillId,
+                new Point(chr.getPosition()),
+                movementType
+        );
+        expectedMap.spawnSummon(summon);
+        chr.addSummon(skillId, summon);
+        TimerManager.getInstance().schedule(
+                () -> removeTimedSummon(chr, skillId, expectedMap, summon),
+                durationMs
+        );
+    }
+
+    private static void removeTransientSummon(
+            Character chr,
+            MapleMap expectedMap,
+            Summon summon
+    ) {
+        expectedMap.broadcastMessage(PacketCreator.removeSummon(summon, true));
+        expectedMap.removeMapObject(summon);
+        chr.removeVisibleMapObject(summon);
+    }
+
+    private static void spawnMightyMjolnirProjectiles(AttackInfo attack, Character chr) {
+        MapleMap expectedMap = chr.getMap();
+        int projectileCount = 0;
+        for (Integer objectId : attack.allDamage.keySet()) {
+            if (projectileCount >= 4) {
+                break;
+            }
+            Monster monster = expectedMap.getMonsterByOid(objectId);
+            if (monster == null || !monster.isAlive()) {
+                continue;
+            }
+            Summon projectile = new Summon(
+                    chr,
+                    Paladin.MIGHTY_MJOLNIR,
+                    new Point(monster.getPosition()),
+                    SummonMovementType.STATIONARY
+            );
+            expectedMap.spawnSummon(projectile);
+            TimerManager.getInstance().schedule(
+                    () -> removeTransientSummon(chr, expectedMap, projectile),
+                    MIGHTY_MJOLNIR_PROJECTILE_DURATION_MS
+            );
+            projectileCount++;
+        }
     }
 
     private static boolean isLightningSpearStage(int skillId) {
@@ -948,13 +1106,126 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
             chr.cancelBuffStats(BuffStat.WIND_WALK);
         }
 
-        if (attack.skill == Hero.MONSTER_MAGNET) {
-            final int delayedAttackCount = attackCount;
-            TimerManager.getInstance().schedule(() -> applyAttack(attack, chr, delayedAttackCount), SWORD_ILLUSION_HIT_DELAY_MS);
+        String explorerVideoLayer = ExplorerOtherSkillCompat.videoLayer(attack.skill);
+        if (explorerVideoLayer != null) {
+            chr.sendPacket(PacketCreator.showEffect(explorerVideoLayer));
+        }
+        ExplorerOtherSkillCompat.Replay[] explorerReplays =
+                ExplorerOtherSkillCompat.multiAttacks(attack.skill);
+        if (explorerReplays != null) {
+            for (int index = 0; index < explorerReplays.length; index++) {
+                ExplorerOtherSkillCompat.Replay replay = explorerReplays[index];
+                scheduleTrackingCloseAttacks(
+                        attack, chr, replay.timesMs(), replay.skillId(), index == 0
+                );
+            }
+        } else if (attack.skill == Hero.SWORD_ILLUSION) {
+            scheduleTrackingCloseAttacks(
+                    attack, chr, SWORD_ILLUSION_SLASH_TIMES_MS,
+                    Hero.SWORD_ILLUSION_SLASH, true
+            );
+            scheduleTrackingCloseAttacks(
+                    attack, chr, SWORD_ILLUSION_EXPLOSION_TIMES_MS,
+                    Hero.SWORD_ILLUSION_EXPLOSION, false
+            );
         } else if (attack.skill == Hero.DEATH_FAULT) {
             chr.getMap().broadcastMessage(PacketCreator.showEffect(DEATH_FAULT_FIELD_EFFECT));
             final int delayedAttackCount = attackCount;
             TimerManager.getInstance().schedule(() -> applyAttack(attack, chr, delayedAttackCount), DEATH_FAULT_HIT_DELAY_MS);
+        } else if (attack.skill == Hero.BURNING_SOUL_BLADE) {
+            spawnTimedSummon(
+                    chr,
+                    Hero.BURNING_SOUL_BLADE,
+                    SummonMovementType.STATIONARY,
+                    20000
+            );
+            scheduleTrackingCloseAttacks(
+                    attack, chr, BURNING_SOUL_BLADE_TIMES_MS,
+                    Hero.BURNING_SOUL_BLADE_ATTACK, true
+            );
+        } else if (attack.skill == Hero.SPIRIT_CALIBER) {
+            chr.sendPacket(PacketCreator.showEffect(SPIRIT_CALIBER_VIDEO_LAYER));
+            scheduleTrackingCloseAttacks(
+                    attack, chr, SPIRIT_CALIBER_TIMES_MS, Hero.SPIRIT_CALIBER, true
+            );
+            scheduleTrackingCloseAttacks(
+                    attack, chr, SPIRIT_CALIBER_FINISH_TIMES_MS,
+                    Hero.SPIRIT_CALIBER_FINISH, false
+            );
+        } else if (attack.skill == Hero.RAGE_UPRISING_VI) {
+            scheduleTrackingCloseAttacks(
+                    attack, chr, RAGE_UPRISING_VI_TIMES_MS, Hero.RAGE_UPRISING_VI, true
+            );
+        } else if (attack.skill == Paladin.GRAND_GUARDIAN) {
+            scheduleTrackingCloseAttacks(
+                    attack, chr, GRAND_GUARDIAN_TIMES_MS,
+                    Paladin.GRAND_GUARDIAN_ATTACK, true
+            );
+        } else if (attack.skill == Paladin.MIGHTY_MJOLNIR) {
+            spawnMightyMjolnirProjectiles(attack, chr);
+            scheduleTrackingCloseAttacks(
+                    attack, chr, MIGHTY_MJOLNIR_TIMES_MS, Paladin.MIGHTY_MJOLNIR, true
+            );
+            scheduleTrackingCloseAttacks(
+                    attack, chr, MIGHTY_MJOLNIR_EXPLOSION_TIMES_MS,
+                    Paladin.MIGHTY_MJOLNIR_EXPLOSION, false
+            );
+        } else if (attack.skill == Paladin.SACRED_BASTION) {
+            chr.sendPacket(PacketCreator.showEffect(SACRED_BASTION_VIDEO_LAYER));
+            scheduleTrackingCloseAttacks(
+                    attack, chr, SACRED_BASTION_TIMES_MS, Paladin.SACRED_BASTION, true
+            );
+            scheduleTrackingCloseAttacks(
+                    attack, chr, SACRED_BASTION_FINISH_TIMES_MS,
+                    Paladin.SACRED_BASTION_FINISH, false
+            );
+            scheduleTrackingCloseAttacks(
+                    attack, chr, SACRED_BASTION_FIELD_TIMES_MS,
+                    Paladin.SACRED_BASTION_STRIKE, false
+            );
+        } else if (attack.skill == Paladin.HEAVENS_HAMMER_VI) {
+            scheduleTrackingCloseAttacks(
+                    attack, chr, HEAVENS_HAMMER_VI_TIMES_MS,
+                    Paladin.HEAVENS_HAMMER_VI_AFTERSHOCK, true
+            );
+            scheduleTrackingCloseAttacks(
+                    attack, chr, RISING_JUSTICE_TIMES_MS, Paladin.RISING_JUSTICE, false
+            );
+        } else if (attack.skill == Paladin.DOMINUS_OBRION) {
+            chr.sendPacket(PacketCreator.showEffect(DOMINUS_OBRION_VIDEO_LAYER));
+            scheduleTrackingCloseAttacks(
+                    attack, chr, DOMINUS_OBRION_TIMES_MS, Paladin.DOMINUS_OBRION, true
+            );
+            scheduleTrackingCloseAttacks(
+                    attack, chr, DOMINUS_OBRION_FINISH_TIMES_MS,
+                    Paladin.DOMINUS_OBRION_FINISH, false
+            );
+        } else if (attack.skill == DarkKnight.CALAMITOUS_CYCLONE) {
+            scheduleTrackingCloseAttacks(
+                    attack, chr, CALAMITOUS_CYCLONE_TIMES_MS,
+                    DarkKnight.CALAMITOUS_CYCLONE, true
+            );
+            scheduleTrackingCloseAttacks(
+                    attack, chr, CALAMITOUS_CYCLONE_FINISH_TIMES_MS,
+                    DarkKnight.CALAMITOUS_CYCLONE_FINISH, false
+            );
+        } else if (attack.skill == DarkKnight.DEAD_SPACE) {
+            chr.sendPacket(PacketCreator.showEffect(DEAD_SPACE_VIDEO_LAYER));
+            scheduleTrackingCloseAttacks(
+                    attack, chr, DEAD_SPACE_TIMES_MS, DarkKnight.DEAD_SPACE, true
+            );
+            scheduleTrackingCloseAttacks(
+                    attack, chr, DEAD_SPACE_FINISH_TIMES_MS, DarkKnight.DEAD_SPACE_FINISH, false
+            );
+        } else if (attack.skill == DarkKnight.DARK_HALIDOM) {
+            chr.sendPacket(PacketCreator.showEffect(DARK_HALIDOM_VIDEO_LAYER));
+            scheduleTrackingCloseAttacks(
+                    attack, chr, DARK_HALIDOM_TIMES_MS, DarkKnight.DARK_HALIDOM, true
+            );
+            scheduleTrackingCloseAttacks(
+                    attack, chr, DARK_HALIDOM_FINISH_TIMES_MS,
+                    DarkKnight.DARK_HALIDOM_FINISH, false
+            );
         } else if (attack.skill == DawnWarrior.GALAXY_STAR_BURST) {
             chr.sendPacket(PacketCreator.showEffect(GALAXY_STAR_BURST_VIDEO_LAYER));
             scheduleAnimatedAttacks(attack, chr, attackCount, GALAXY_STAR_BURST_ATTACK_TIMES_MS);

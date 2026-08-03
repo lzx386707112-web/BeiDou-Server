@@ -964,7 +964,7 @@ function jobChange(jobId) {
     for (var i = 1; i < Job_list[job_list_sel].length; i++) {
         cm.teachSkill(Job_list[job_list_sel][i].id, maxSkills ? Job_list[job_list_sel][i].max_Level : 0, Job_list[job_list_sel][i].max_Level, -1);
     }
-    cm.getPlayer().sendAllWordNoticeNew(3, "转职系统", `恭喜玩家【${cm.getPlayer().getName()}】转职成为【${Job_list[job_list_sel][0].name}】!`);
+    sendRandomSceneMegaphone(cm.getPlayer(), 3, "转职系统", `恭喜玩家【${cm.getPlayer().getName()}】转职成为【${Job_list[job_list_sel][0].name}】!`);
     cm.sendOk("转职成功！加油锻炼，当你变的强大的时候记的来找我哦！");
     cm.dispose();
 }
@@ -990,4 +990,37 @@ function 获取更换职业次数() {
 
 function 保存更换职业次数() {
     cm.saveOrUpdateAccountExtendValue("更换职业次数", String(获取更换职业次数() + 1));
+}
+function sendRandomSceneMegaphone(player, typeOrTitle, titleOrContent, content) {
+    if (player.checkoutBroadcast()) {
+        return;
+    }
+    var title = content === undefined ? typeOrTitle : titleOrContent;
+    var message = content === undefined ? titleOrContent : content;
+    var fullMessage = "[" + title + "] : " + message;
+    var lineLength = Math.max(1, Math.ceil(fullMessage.length / 4));
+    var lines = new (Java.type("java.util.LinkedList"))();
+    for (var i = 0; i < 4; i++) {
+        var start = i * lineLength;
+        lines.add(start < fullMessage.length
+            ? fullMessage.substring(start, Math.min(start + lineLength, fullMessage.length))
+            : "");
+    }
+
+    var itemIds = [5390005, 5390001, 5390002];
+    var itemId = itemIds[Math.floor(Math.random() * itemIds.length)];
+    var Server = Java.type("org.gms.net.server.Server");
+    var PacketCreator = Java.type("org.gms.util.PacketCreator");
+    var world = player.getWorld();
+    Server.getInstance().broadcastMessage(
+        world,
+        PacketCreator.getAvatarMega(player, "", player.getClient().getChannel(), itemId, lines, true)
+    );
+
+    var clearTask = new (Java.type("java.lang.Runnable"))({
+        run: function () {
+            Server.getInstance().broadcastMessage(world, PacketCreator.byeAvatarMega());
+        }
+    });
+    Java.type("org.gms.server.TimerManager").getInstance().schedule(clearTask, 10000);
 }

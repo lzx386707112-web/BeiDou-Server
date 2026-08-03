@@ -746,7 +746,7 @@ def sanitize_mob(root: WzSubProperty) -> None:
             set_int(info, name, value)
     # Modern Arcane River EVA values (up to 930) make the legacy client miss
     # even at 999 accuracy. Keep the imported mobs on the old-client scale.
-    set_int(info, "eva", 200)
+    set_int(info, "eva", 100)
     max_hp = info.child("maxHP")
     if max_hp is not None and int(max_hp.value) > 2_147_483_647:
         set_int(info, "maxHP", 2_147_483_647)

@@ -27,7 +27,7 @@ constexpr int kFirstSkill = 11121005;
 constexpr int kLastSkill = 11121012;
 constexpr UINT kVideoMarkerWidth = 7;
 constexpr UINT kVideoMarkerHeight = 5;
-constexpr int kMaxVideoMarkerTextures = 16;
+constexpr int kMaxVideoMarkerTextures = 64;
 constexpr uintptr_t kMagicBulletNodeUpdateAddress = 0x00441090;
 constexpr uintptr_t kMagicBulletManagerAddress = 0x00BEBF6C;
 constexpr uintptr_t kMagicBulletCreateAddress = 0x00435F47;
@@ -1063,6 +1063,55 @@ bool InstallMagicBulletHook() {
 
 LONG CustomRangedTargetLimit(int skillId) {
     switch (skillId) {
+        case 3121010: return 10;
+        case 3121011: return 1;
+        case 3121013: return 6;
+        case 3121015: return 1;
+        case 3121020: return 1;
+        case 3121022: return 8;
+        case 3121024: return 4;
+        case 3121025: return 6;
+        case 3121026: return 5;
+        case 3121028: return 12;
+        case 3121029: return 15;
+        case 3121031: return 15;
+        case 3221009: return 12;
+        case 3221011: return 10;
+        case 3221013: return 10;
+        case 3221014: return 1;
+        case 3221016: return 1;
+        case 3221017: return 1;
+        case 3221022: return 8;
+        case 3221029: return 6;
+        case 3221030: return 8;
+        case 3221031: return 12;
+        case 3221032: return 15;
+        case 3221034: return 15;
+        case 4121010: return 1;
+        case 4121011: return 6;
+        case 4121012: return 7;
+        case 4121013: return 8;
+        case 4121015: return 1;
+        case 4121016: return 4;
+        case 4121019: return 6;
+        case 4121021: return 1;
+        case 4121022: return 15;
+        case 4121023: return 8;
+        case 4121026: return 15;
+        case 4121028: return 15;
+        case 5221011: return 15;
+        case 5221012: return 12;
+        case 5221013: return 15;
+        case 5221016: return 7;
+        case 5221018: return 4;
+        case 5221020: return 6;
+        case 5221022: return 4;
+        case 5221024: return 8;
+        case 5221028: return 1;
+        case 5221029: return 15;
+        case 5221030: return 15;
+        case 5221032: return 15;
+        case 5221034: return 15;
         case 14121003: return 10;
         case 14121016: return 3;
         case 14121017: return 1;
@@ -1077,8 +1126,16 @@ LONG CustomRangedTargetLimit(int skillId) {
     }
 }
 
+bool IsExplorerRangedSkill(int skillId) {
+    return (skillId >= 3121010 && skillId <= 3121032) ||
+        (skillId >= 3221009 && skillId <= 3221035) ||
+        (skillId >= 4121010 && skillId <= 4121029) ||
+        (skillId >= 5221011 && skillId <= 5221035);
+}
+
 bool IsCustomRangedSkill(int skillId) {
     return CustomRangedTargetLimit(skillId) > 0 ||
+        IsExplorerRangedSkill(skillId) ||
         (skillId >= kWindArcherFirstSkill && skillId <= kWindArcherLastSkill);
 }
 
@@ -1786,6 +1843,29 @@ constexpr VideoSkillMapping kVideoSkills[] = {
     {15121016, "Data\\Video\\god-of-sea-vi.mcv", "VIDEO OK: God of the Sea VI started"},
     {15121017, "Data\\Video\\wave-riding-thunder.mcv", "VIDEO OK: Wave Riding Thunder started"},
     {15121019, "Data\\Video\\swift-annihilation.mcv", "VIDEO OK: Swift Annihilation started"},
+    {1121023, "Data\\Video\\spirit-caliber.mcv", "VIDEO OK: Spirit Caliber started"},
+    {1221020, "Data\\Video\\sacred-bastion.mcv", "VIDEO OK: Sacred Bastion started"},
+    {1221030, "Data\\Video\\dominus-obrion.mcv", "VIDEO OK: Dominus Obrion started"},
+    {1321018, "Data\\Video\\dead-space.mcv", "VIDEO OK: Dead Space started"},
+    {1321025, "Data\\Video\\dark-halidom.mcv", "VIDEO OK: Dark Halidom started"},
+    {2121032, "Data\\Video\\explorer-2121032.mcv", "VIDEO OK: Infernal Venom started"},
+    {2121035, "Data\\Video\\explorer-2121035.mcv", "VIDEO OK: Blaze started"},
+    {2221027, "Data\\Video\\explorer-2221027.mcv", "VIDEO OK: Frozen Realm started"},
+    {2221030, "Data\\Video\\explorer-2221030.mcv", "VIDEO OK: Arc Lightning started"},
+    {2321037, "Data\\Video\\explorer-2321037.mcv", "VIDEO OK: Divine Punishment started"},
+    {2321042, "Data\\Video\\explorer-2321042.mcv", "VIDEO OK: Holy Command started"},
+    {3121029, "Data\\Video\\explorer-3121029.mcv", "VIDEO OK: Arrow Rain Origin started"},
+    {3121031, "Data\\Video\\explorer-3121031.mcv", "VIDEO OK: Zero Shot started"},
+    {3221032, "Data\\Video\\explorer-3221032.mcv", "VIDEO OK: Split Space started"},
+    {3221034, "Data\\Video\\explorer-3221034.mcv", "VIDEO OK: Death Trigger started"},
+    {4121026, "Data\\Video\\explorer-4121026.mcv", "VIDEO OK: Forbidden Talisman started"},
+    {4121028, "Data\\Video\\explorer-4121028.mcv", "VIDEO OK: Fatal Assault started"},
+    {4221036, "Data\\Video\\explorer-4221036.mcv", "VIDEO OK: Severance started"},
+    {4221039, "Data\\Video\\explorer-4221039.mcv", "VIDEO OK: Dark Truth started"},
+    {5121029, "Data\\Video\\explorer-5121029.mcv", "VIDEO OK: Sea Dragon Fist started"},
+    {5121035, "Data\\Video\\explorer-5121035.mcv", "VIDEO OK: Power Strike started"},
+    {5221032, "Data\\Video\\explorer-5221032.mcv", "VIDEO OK: Emergency Muster started"},
+    {5221034, "Data\\Video\\explorer-5221034.mcv", "VIDEO OK: Burst Scatter started"},
 };
 
 extern "C" __attribute__((used, noinline)) void StartVideoSkill(int skillId) {
@@ -1867,6 +1947,66 @@ extern "C" __attribute__((naked, noinline)) void HookKeyboardDispatch() {
 extern "C" __attribute__((naked, noinline)) void HookActiveSkillDispatch() {
     __asm__ __volatile__(
         ".intel_syntax noprefix\n"
+        "cmp esi, 1121012\n"
+        "jb explorer_hero_active_next\n"
+        "cmp esi, 1121030\n"
+        "jbe explorer_melee_active\n"
+        "explorer_hero_active_next:\n"
+        "cmp esi, 1221015\n"
+        "jb explorer_paladin_active_next\n"
+        "cmp esi, 1221032\n"
+        "jbe explorer_melee_active\n"
+        "explorer_paladin_active_next:\n"
+        "cmp esi, 1321011\n"
+        "jb explorer_dark_knight_active_next\n"
+        "cmp esi, 1321026\n"
+        "jbe explorer_melee_active\n"
+        "explorer_dark_knight_active_next:\n"
+        "cmp esi, 2121009\n"
+        "jb explorer_fp_active_next\n"
+        "cmp esi, 2121036\n"
+        "jbe explorer_magic_active\n"
+        "explorer_fp_active_next:\n"
+        "cmp esi, 2221009\n"
+        "jb explorer_il_active_next\n"
+        "cmp esi, 2221031\n"
+        "jbe explorer_magic_active\n"
+        "explorer_il_active_next:\n"
+        "cmp esi, 2321020\n"
+        "jb explorer_bishop_active_next\n"
+        "cmp esi, 2321043\n"
+        "jbe explorer_magic_active\n"
+        "explorer_bishop_active_next:\n"
+        "cmp esi, 3121010\n"
+        "jb explorer_bowmaster_active_next\n"
+        "cmp esi, 3121032\n"
+        "jbe explorer_ranged_active\n"
+        "explorer_bowmaster_active_next:\n"
+        "cmp esi, 3221009\n"
+        "jb explorer_marksman_active_next\n"
+        "cmp esi, 3221035\n"
+        "jbe explorer_ranged_active\n"
+        "explorer_marksman_active_next:\n"
+        "cmp esi, 4121010\n"
+        "jb explorer_night_lord_active_next\n"
+        "cmp esi, 4121029\n"
+        "jbe explorer_ranged_active\n"
+        "explorer_night_lord_active_next:\n"
+        "cmp esi, 4221009\n"
+        "jb explorer_shadower_active_next\n"
+        "cmp esi, 4221040\n"
+        "jbe explorer_melee_active\n"
+        "explorer_shadower_active_next:\n"
+        "cmp esi, 5121011\n"
+        "jb explorer_buccaneer_active_next\n"
+        "cmp esi, 5121036\n"
+        "jbe explorer_melee_active\n"
+        "explorer_buccaneer_active_next:\n"
+        "cmp esi, 5221011\n"
+        "jb explorer_corsair_active_next\n"
+        "cmp esi, 5221035\n"
+        "jbe explorer_ranged_active\n"
+        "explorer_corsair_active_next:\n"
         "cmp esi, 15121000\n"
         "jb thunder_active_next\n"
         "cmp esi, 15121033\n"
@@ -1960,12 +2100,52 @@ extern "C" __attribute__((naked, noinline)) void HookActiveSkillDispatch() {
         "popfd\n"
         "push 0x009690E9\n"
         "ret\n"
+        "explorer_melee_active:\n"
+        "pushfd\n"
+        "pushad\n"
+        "push esi\n"
+        "call _StartVideoSkill\n"
+        "add esp, 4\n"
+        "popad\n"
+        "popfd\n"
+        "push 0x009690AE\n"
+        "ret\n"
+        "explorer_magic_active:\n"
+        "pushfd\n"
+        "pushad\n"
+        "push esi\n"
+        "call _StartVideoSkill\n"
+        "add esp, 4\n"
+        "popad\n"
+        "popfd\n"
+        "push 0x0096928B\n"
+        "ret\n"
+        "explorer_ranged_active:\n"
+        "pushfd\n"
+        "pushad\n"
+        "push esi\n"
+        "call _StartVideoSkill\n"
+        "add esp, 4\n"
+        "popad\n"
+        "popfd\n"
+        "push 0x009690E9\n"
+        "ret\n"
         ".att_syntax prefix\n");
 }
 
 extern "C" __attribute__((naked, noinline)) void HookHighSkillVisualBranch() {
     __asm__ __volatile__(
         ".intel_syntax noprefix\n"
+        "cmp esi, 1121012\n"
+        "jb explorer_hero_visual_next\n"
+        "cmp esi, 1121030\n"
+        "jbe 5f\n"
+        "explorer_hero_visual_next:\n"
+        "cmp esi, 1221015\n"
+        "jb explorer_paladin_visual_next\n"
+        "cmp esi, 1221032\n"
+        "jbe 5f\n"
+        "explorer_paladin_visual_next:\n"
         "cmp esi, 15121000\n"
         "jb thunder_visual_next\n"
         "cmp esi, 15121033\n"
@@ -2012,6 +2192,11 @@ extern "C" __attribute__((naked, noinline)) void HookHighSkillVisualBranch() {
 extern "C" __attribute__((naked, noinline)) void HookBrandishActionType() {
     __asm__ __volatile__(
         ".intel_syntax noprefix\n"
+        "cmp eax, 1121012\n"
+        "jb explorer_hero_action_next\n"
+        "cmp eax, 1121030\n"
+        "jbe 2f\n"
+        "explorer_hero_action_next:\n"
         "cmp eax, 11121005\n"
         "jb 1f\n"
         "cmp eax, 11121012\n"
@@ -2032,6 +2217,11 @@ extern "C" __attribute__((naked, noinline)) void HookBrandishActionType() {
 extern "C" __attribute__((naked, noinline)) void HookBrandishVisualOffset() {
     __asm__ __volatile__(
         ".intel_syntax noprefix\n"
+        "cmp eax, 1121012\n"
+        "jb explorer_hero_offset_next\n"
+        "cmp eax, 1121030\n"
+        "jbe 2f\n"
+        "explorer_hero_offset_next:\n"
         "cmp eax, 11121005\n"
         "jb 1f\n"
         "cmp eax, 11121012\n"
@@ -2052,6 +2242,11 @@ extern "C" __attribute__((naked, noinline)) void HookBrandishVisualOffset() {
 extern "C" __attribute__((naked, noinline)) void HookBrandishStateSwitch() {
     __asm__ __volatile__(
         ".intel_syntax noprefix\n"
+        "cmp esi, 1121012\n"
+        "jb explorer_hero_state_next\n"
+        "cmp esi, 1121030\n"
+        "jbe 3f\n"
+        "explorer_hero_state_next:\n"
         "cmp esi, 11121005\n"
         "jb 1f\n"
         "cmp esi, 11121012\n"
@@ -2077,6 +2272,11 @@ extern "C" __attribute__((naked, noinline)) void HookBrandishStateSwitch() {
 extern "C" __attribute__((naked, noinline)) void HookBrandishHit() {
     __asm__ __volatile__(
         ".intel_syntax noprefix\n"
+        "cmp ebx, 1121012\n"
+        "jb explorer_hero_hit_next\n"
+        "cmp ebx, 1121030\n"
+        "jbe 2f\n"
+        "explorer_hero_hit_next:\n"
         "cmp ebx, 11121005\n"
         "jb 1f\n"
         "cmp ebx, 11121012\n"
@@ -2116,7 +2316,13 @@ HookSite kHooks[] = {
 };
 
 DWORD WINAPI InstallHooks(LPVOID) {
-    LogLine("LOAD: Dawn Warrior/Blaze Wizard/Wind Archer/Night Walker/Thunder Breaker Skill Compat v38");
+    LogLine("LOAD: Cygnus/Explorer V-VI Attack Skill Compat v43");
+    HMODULE diagnostics = LoadLibraryA("WzFileLogger.dll");
+    if (diagnostics != nullptr) {
+        LogLine("OK: client diagnostics loaded");
+    } else {
+        LogLine("INFO: WzFileLogger.dll not present; client diagnostics disabled");
+    }
     if (reinterpret_cast<uintptr_t>(GetModuleHandleA(nullptr)) != kExpectedImageBase) {
         LogLine("ERROR: unexpected BeiDou.exe image base; no hooks installed");
         return 1;
@@ -2133,7 +2339,7 @@ DWORD WINAPI InstallHooks(LPVOID) {
             return 3;
         }
     }
-    LogLine("OK: unified skill compat v38 hooks installed");
+    LogLine("OK: unified skill compat v43 hooks installed");
     InstallRangedSkillRangeClassifierHook();
     InstallRangedMultiTargetClassifierHook();
     InstallRangedTargetCollectorHook();

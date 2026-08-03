@@ -66,7 +66,7 @@ function action(mode, type, selection) {
                     }
                 });
                 gainEquip(item_id, 8, 8, 10, 8, 50, 50, 5, 8, 1440 * 5);
-                cm.getPlayer().sendAllWordNoticeNew("新手福利", `恭喜玩家${cm.getPlayer().getName()}来到冒险岛!`)
+                sendRandomSceneMegaphone(cm.getPlayer(), "新手福利", `恭喜玩家${cm.getPlayer().getName()}来到冒险岛!`)
                 cm.sendOk("恭喜您获得新手奖励，祝您游戏愉快！");
                 cm.dispose();
             }
@@ -143,4 +143,37 @@ function gainEquip(itemId, str, dex, int, luk, hp, mp, watk, matk, time) {
         time
     );
     chr.message("恭喜你获装备！");
+}
+function sendRandomSceneMegaphone(player, typeOrTitle, titleOrContent, content) {
+    if (player.checkoutBroadcast()) {
+        return;
+    }
+    var title = content === undefined ? typeOrTitle : titleOrContent;
+    var message = content === undefined ? titleOrContent : content;
+    var fullMessage = "[" + title + "] : " + message;
+    var lineLength = Math.max(1, Math.ceil(fullMessage.length / 4));
+    var lines = new (Java.type("java.util.LinkedList"))();
+    for (var i = 0; i < 4; i++) {
+        var start = i * lineLength;
+        lines.add(start < fullMessage.length
+            ? fullMessage.substring(start, Math.min(start + lineLength, fullMessage.length))
+            : "");
+    }
+
+    var itemIds = [5390005, 5390001, 5390002];
+    var itemId = itemIds[Math.floor(Math.random() * itemIds.length)];
+    var Server = Java.type("org.gms.net.server.Server");
+    var PacketCreator = Java.type("org.gms.util.PacketCreator");
+    var world = player.getWorld();
+    Server.getInstance().broadcastMessage(
+        world,
+        PacketCreator.getAvatarMega(player, "", player.getClient().getChannel(), itemId, lines, true)
+    );
+
+    var clearTask = new (Java.type("java.lang.Runnable"))({
+        run: function () {
+            Server.getInstance().broadcastMessage(world, PacketCreator.byeAvatarMega());
+        }
+    });
+    Java.type("org.gms.server.TimerManager").getInstance().schedule(clearTask, 10000);
 }

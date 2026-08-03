@@ -62542,9 +62542,9 @@
     </imgdir>
   </imgdir>
   <imgdir name="30000">
-    <imgdir name="0">
-    </imgdir>
+    <imgdir name="0"/>
     <imgdir name="1">
+      <string name="expTable" value="3060theme"/>
     </imgdir>
   </imgdir>
   <imgdir name="30001">
@@ -62554,28 +62554,31 @@
     </imgdir>
   </imgdir>
   <imgdir name="30002">
-    <imgdir name="0">
-    </imgdir>
+    <imgdir name="0"/>
     <imgdir name="1">
+      <int name="exp" value="270000"/>
     </imgdir>
   </imgdir>
   <imgdir name="30003">
-    <imgdir name="0">
-    </imgdir>
-    <imgdir name="1">
-    </imgdir>
+    <imgdir name="0"/>
+    <imgdir name="1"/>
   </imgdir>
   <imgdir name="30004">
     <imgdir name="0">
+      <imgdir name="item">
+        <imgdir name="0">
+          <int name="id" value="2431151"/>
+          <int name="count" value="1"/>
+          <string name="potentialGrade" value="C级"/>
+          <int name="resignRemove" value="1"/>
+        </imgdir>
+      </imgdir>
     </imgdir>
-    <imgdir name="1">
-    </imgdir>
+    <imgdir name="1"/>
   </imgdir>
   <imgdir name="30005">
-    <imgdir name="0">
-    </imgdir>
-    <imgdir name="1">
-    </imgdir>
+    <imgdir name="0"/>
+    <imgdir name="1"/>
   </imgdir>
   <imgdir name="52015">
     <imgdir name="0">
@@ -63334,6 +63337,158 @@
     <imgdir name="0"></imgdir>
     <imgdir name="1">
       <int name="exp" value="30000000"/>
+    </imgdir>
+  </imgdir>
+<imgdir name="30006">
+    <imgdir name="0"/>
+    <imgdir name="1">
+      <int name="exp" value="286000"/>
+    </imgdir>
+  </imgdir>
+<imgdir name="30007">
+    <imgdir name="0"/>
+    <imgdir name="1"/>
+  </imgdir>
+<imgdir name="30008">
+    <imgdir name="0"/>
+    <imgdir name="1">
+      <int name="exp" value="710000"/>
+      <imgdir name="item">
+        <imgdir name="0">
+          <int name="id" value="1142536"/>
+          <int name="count" value="1"/>
+          <string name="potentialGrade" value="C级"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+<imgdir name="30009">
+    <imgdir name="0"/>
+    <imgdir name="1">
+      <int name="exp" value="640000"/>
+    </imgdir>
+  </imgdir>
+<imgdir name="30010">
+    <imgdir name="0"/>
+    <imgdir name="1">
+      <int name="exp" value="640000"/>
+    </imgdir>
+  </imgdir>
+<imgdir name="30011">
+    <imgdir name="0"/>
+    <imgdir name="1">
+      <int name="exp" value="714000"/>
+    </imgdir>
+  </imgdir>
+<imgdir name="30012">
+    <imgdir name="0"/>
+    <imgdir name="1">
+      <int name="exp" value="886000"/>
+    </imgdir>
+  </imgdir>
+<imgdir name="30013">
+    <imgdir name="0"/>
+    <imgdir name="1"/>
+  </imgdir>
+<imgdir name="30027">
+    <imgdir name="0">
+      <imgdir name="item">
+        <imgdir name="0">
+          <int name="id" value="4033611"/>
+          <int name="count" value="1"/>
+          <string name="potentialGrade" value="C级"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1"/>
+  </imgdir>
+<imgdir name="31165">
+    <imgdir name="0"/>
+    <imgdir name="1"/>
+  </imgdir>
+<imgdir name="31166">
+    <imgdir name="0"/>
+    <imgdir name="1">
+      <int name="exp" value="301891"/>
+    </imgdir>
+  </imgdir>
+<imgdir name="31167">
+    <imgdir name="0"/>
+    <imgdir name="1">
+      <int name="exp" value="301891"/>
+    </imgdir>
+  </imgdir>
+<imgdir name="31168">
+    <imgdir name="0"/>
+    <imgdir name="1">
+      <int name="exp" value="301891"/>
+    </imgdir>
+  </imgdir>
+<imgdir name="31169">
+    <imgdir name="0"/>
+    <imgdir name="1">
+      <int name="exp" value="301891"/>
+    </imgdir>
+  </imgdir>
+<imgdir name="31170">
+    <imgdir name="0"/>
+    <imgdir name="1"/>
+  </imgdir>
+<imgdir name="31171">
+    <imgdir name="0"/>
+    <imgdir name="1">
+      <imgdir name="item">
+        <imgdir name="0">
+          <int name="count" value="-50"/>
+          <int name="id" value="4033080"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+<imgdir name="31172">
+    <imgdir name="0"/>
+    <imgdir name="1"/>
+  </imgdir>
+<imgdir name="31173">
+    <imgdir name="0"/>
+    <imgdir name="1"/>
+  </imgdir>
+<imgdir name="31174">
+    <imgdir name="0"/>
+    <imgdir name="1"/>
+  </imgdir>
+<imgdir name="31175">
+    <imgdir name="0"/>
+    <imgdir name="1">
+      <int name="exp" value="301891"/>
+    </imgdir>
+  </imgdir>
+<imgdir name="31176">
+    <imgdir name="0"/>
+    <imgdir name="1">
+      <int name="exp" value="301891"/>
+    </imgdir>
+  </imgdir>
+<imgdir name="31177">
+    <imgdir name="0"/>
+    <imgdir name="1">
+      <int name="exp" value="301891"/>
+    </imgdir>
+  </imgdir>
+<imgdir name="31178">
+    <imgdir name="0"/>
+    <imgdir name="1">
+      <int name="exp" value="301891"/>
+    </imgdir>
+  </imgdir>
+<imgdir name="31179">
+    <imgdir name="0"/>
+    <imgdir name="1"/>
+  </imgdir>
+<imgdir name="31180">
+    <imgdir name="0"/>
+    <imgdir name="1">
+      <int name="exp" value="301891"/>
     </imgdir>
   </imgdir>
 </imgdir>

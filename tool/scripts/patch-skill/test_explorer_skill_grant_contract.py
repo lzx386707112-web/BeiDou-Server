@@ -1,0 +1,123 @@
+#!/usr/bin/env python3
+
+from __future__ import annotations
+
+import re
+import unittest
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[3]
+CONSTANTS = ROOT / "gms-server/src/main/java/org/gms/constants/skills"
+CHARACTER = ROOT / "gms-server/src/main/java/org/gms/client/Character.java"
+SCRIPT = ROOT / "gms-server/scripts-zh-CN/BeiDouSpecial/冒险家五六转攻击技能.js"
+SKILL_CENTER = ROOT / "gms-server/scripts-zh-CN/BeiDouSpecial/技能中心.js"
+
+EXPLORER_CLASSES = {
+    112: "Hero",
+    122: "Paladin",
+    132: "DarkKnight",
+    212: "FPArchMage",
+    222: "ILArchMage",
+    232: "Bishop",
+    312: "Bowmaster",
+    322: "Marksman",
+    412: "NightLord",
+    422: "Shadower",
+    512: "Buccaneer",
+    522: "Corsair",
+}
+KNIGHT_CLASSES = ("DawnWarrior", "BlazeWizard", "WindArcher", "ThunderBreaker")
+A_TO_Z_KEY_CODES = [
+    30, 48, 46, 32, 18, 33, 34, 35, 23, 36, 37, 38, 50,
+    49, 24, 25, 16, 19, 31, 20, 22, 47, 17, 45, 21, 44,
+]
+
+
+def active_ids(class_name: str) -> list[int]:
+    text = (CONSTANTS / f"{class_name}.java").read_text(encoding="utf-8")
+    block = re.search(r"V_VI_ACTIVE_ATTACKS\s*=\s*\{([^}]*)}", text, re.S)
+    if block is None:
+        raise AssertionError(f"missing active attack array: {class_name}")
+    constants = {
+        name: int(value)
+        for name, value in re.findall(
+            r"public static final int\s+([A-Z0-9_]+)\s*=\s*(\d+);", text
+        )
+    }
+    values = []
+    for token in re.findall(r"[A-Z][A-Z0-9_]*|\d+", block.group(1)):
+        values.append(int(token) if token.isdigit() else constants[token])
+    return values
+
+
+class ExplorerSkillGrantContractTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.script = SCRIPT.read_text(encoding="utf-8")
+        character = CHARACTER.read_text(encoding="utf-8")
+        cls.character = character
+        cls.masteries = character[character.index("public void setMasteries"):
+                                   character.index("private void broadcastChangeJob")]
+
+    def test_script_only_maps_supported_explorer_jobs(self):
+        mapped = {
+            int(job): class_name
+            for job, class_name in re.findall(
+                r'(\d+):\s*\{[^}]*?skills:\s*Java\.type\('
+                r'"org\.gms\.constants\.skills\.([A-Za-z]+)"\)\.V_VI_ACTIVE_ATTACKS[^}]*}',
+                self.script,
+                re.S,
+            )
+        }
+        self.assertEqual(EXPLORER_CLASSES, mapped)
+        for class_name in KNIGHT_CLASSES:
+            self.assertNotIn(class_name, self.script)
+
+    def test_every_active_array_fits_a_to_z(self):
+        for class_name in EXPLORER_CLASSES.values():
+            skills = active_ids(class_name)
+            self.assertTrue(skills, class_name)
+            self.assertLessEqual(len(skills), len(A_TO_Z_KEY_CODES), class_name)
+
+    def test_keyboard_codes_are_a_to_z_order(self):
+        block = re.search(r"KEY_CODES\s*=\s*\[([^]]*)]", self.script, re.S)
+        self.assertIsNotNone(block)
+        actual = [int(value) for value in re.findall(r"\d+", block.group(1))]
+        self.assertEqual(A_TO_Z_KEY_CODES, actual)
+        self.assertIn('KEY_NAMES = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"', self.script)
+
+    def test_script_grants_full_level_and_sends_one_keymap(self):
+        self.assertIn(
+            "cm.teachSkill(skillId, SKILL_LEVEL, SKILL_LEVEL, -1, true)",
+            self.script,
+        )
+        self.assertIn("player.removeBySkillId(skillId)", self.script)
+        self.assertIn("player.changeKeybinding(KEY_CODES[index]", self.script)
+        self.assertIn("player.removeSkillById(retiredSkills[skillIndex])", self.script)
+        self.assertEqual(1, self.script.count("player.sendKeymap()"))
+
+    def test_removed_skill_ids_can_be_deleted_after_wz_cleanup(self):
+        self.assertIn("public void removeSkillById(int skillId)", self.character)
+        self.assertIn("SkillsDO.builder().skillid(skillId)", self.character)
+
+    def test_explorers_are_not_auto_granted_or_mastered(self):
+        for class_name in EXPLORER_CLASSES.values():
+            self.assertNotIn(f"{class_name}.V_VI_ACTIVE_ATTACKS", self.masteries)
+        self.assertNotIn("Hero.MONSTER_MAGNET", self.masteries)
+        self.assertNotIn("Hero.RAGING_BLOW_VI", self.masteries)
+
+    def test_knight_auto_grant_branches_remain(self):
+        for class_name in KNIGHT_CLASSES:
+            self.assertIn(f"{class_name}.V_VI_ACTIVE_ATTACKS", self.masteries)
+        self.assertIn("Job.THUNDERBREAKER3", self.masteries)
+        self.assertIn("Job.THUNDERBREAKER4", self.masteries)
+
+    def test_skill_center_opens_explorer_script(self):
+        center = SKILL_CENTER.read_text(encoding="utf-8")
+        self.assertIn("冒险家五、六转攻击技能", center)
+        self.assertIn('openNpc("冒险家五六转攻击技能")', center)
+
+
+if __name__ == "__main__":
+    unittest.main()

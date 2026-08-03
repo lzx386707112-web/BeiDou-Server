@@ -1054,9 +1054,7 @@ public class Character extends AbstractCharacterObject {
         )];
         if (jobId == 112) {
             skills[0] = Hero.ACHILLES;
-            skills[1] = Hero.MONSTER_MAGNET;
-            skills[2] = Hero.BRANDISH;
-            skills[3] = Hero.RAGING_BLOW_VI;
+            skills[1] = Hero.BRANDISH;
         } else if (jobId == 122) {
             skills[0] = Paladin.ACHILLES;
             skills[1] = Paladin.MONSTER_MAGNET;
@@ -1139,8 +1137,6 @@ public class Character extends AbstractCharacterObject {
                     changeSkillLevel(skill, (byte) 30, 30, -1);
                 } else if (skilllevel > 0) {
                     continue;
-                } else if (skillId == Hero.RAGING_BLOW_VI) {
-                    changeSkillLevel(skill, (byte) 30, 30, -1);
                 } else {
                     changeSkillLevel(skill, (byte) 0, 10, -1);
                 }
@@ -1968,6 +1964,23 @@ public class Character extends AbstractCharacterObject {
             sendPacket(PacketCreator.updateSkill(skill.getId(), newLevel, newMasterlevel, -1)); //Shouldn't use expiration anymore :)
             characterService.removeSkill(SkillsDO.builder().skillid(skill.getId()).characterid(getId()).build());
         }
+    }
+
+    public void removeSkillById(int skillId) {
+        Skill learnedSkill = null;
+        for (Skill skill : skills.keySet()) {
+            if (skill.getId() == skillId) {
+                learnedSkill = skill;
+                break;
+            }
+        }
+        if (learnedSkill != null) {
+            skills.remove(learnedSkill);
+        }
+        sendPacket(PacketCreator.updateSkill(skillId, (byte) -1, 0, -1));
+        characterService.removeSkill(
+                SkillsDO.builder().skillid(skillId).characterid(getId()).build()
+        );
     }
 
     public void changeTab(int tab) {

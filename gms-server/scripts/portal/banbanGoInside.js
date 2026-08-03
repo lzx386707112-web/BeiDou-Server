@@ -1,4 +1,4 @@
 function enter(pi) {
-    pi.getPlayer().dropMessage(5, "Root Abyss boss mechanics are not open yet.");
+    pi.getPlayer().dropMessage(5, "鲁塔比斯 Boss 机制暂未开放。");
     return false;
 }

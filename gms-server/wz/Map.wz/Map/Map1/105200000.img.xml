@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<imgdir name="105200000.img">
+<imgdir indent="2" media="NONE" name="105200000.img">
   <imgdir name="info">
     <int name="version" value="10"/>
     <int name="cloud" value="0"/>
@@ -1657,7 +1657,7 @@
     </imgdir>
   </imgdir>
   <imgdir name="miniMap">
-    <canvas name="canvas" width="205" height="77" format="1"/>
+    <canvas format="1" height="77" name="canvas" scale="0" width="205"/>
     <int name="width" value="3283"/>
     <int name="height" value="1238"/>
     <int name="centerX" value="1663"/>
@@ -1692,7 +1692,7 @@
       <int name="tm" value="999999999"/>
       <string name="tn" value=""/>
       <int name="horizontalImpact" value="0"/>
-      <string name="script" value="rootafirstDoor"/>
+      <string name="script" value="rootasecondDoor"/>
     </imgdir>
     <imgdir name="3">
       <string name="pn" value="boss01"/>
@@ -1702,7 +1702,7 @@
       <int name="tm" value="999999999"/>
       <string name="tn" value=""/>
       <int name="horizontalImpact" value="0"/>
-      <string name="script" value="rootasecondDoor"/>
+      <string name="script" value="rootafirstDoor"/>
     </imgdir>
     <imgdir name="4">
       <string name="pn" value="boss02"/>

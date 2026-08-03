@@ -1,5 +1,4 @@
 function enter(pi) {
-    pi.playPortalSound();
-    pi.warp(272000500, "west00");
+    pi.openNpc(2144008,"out272000410b");
     return true;
 }

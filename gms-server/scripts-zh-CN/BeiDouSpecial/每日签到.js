@@ -150,7 +150,7 @@ function level0() {
             dailyRewards.forEach(reward => {
                 cm.gainItem(reward.id, reward.qty);
             });
-            cm.getPlayer().sendAllWordNoticeNew("每日签到", `恭喜玩家${cm.getPlayer().getName()}签到成功!`);
+            sendRandomSceneMegaphone(cm.getPlayer(), "每日签到", `恭喜玩家${cm.getPlayer().getName()}签到成功!`);
             cm.dispose();
         }
     }
@@ -220,7 +220,7 @@ function levelChooseInventory(choose) {
                 cm.gainItem(reward.id, reward.qty);
             });
             cm.saveOrUpdateAccountExtendValue(tag, "1");
-            cm.getPlayer().sendAllWordNoticeNew("累计签到", `恭喜玩家${cm.getPlayer().getName()}领取${index}天累计签到奖励!`);
+            sendRandomSceneMegaphone(cm.getPlayer(), "累计签到", `恭喜玩家${cm.getPlayer().getName()}领取${index}天累计签到奖励!`);
             cm.dispose();
         }
     }
@@ -236,4 +236,37 @@ function getCurCheckInCount() {
 //当前签到次数+1并保存
 function saveCheckInCount() {
     cm.saveOrUpdateAccountExtendValue(DAILY_CHECK_IN_TOTAL, String(getCurCheckInCount() + 1));
+}
+function sendRandomSceneMegaphone(player, typeOrTitle, titleOrContent, content) {
+    if (player.checkoutBroadcast()) {
+        return;
+    }
+    var title = content === undefined ? typeOrTitle : titleOrContent;
+    var message = content === undefined ? titleOrContent : content;
+    var fullMessage = "[" + title + "] : " + message;
+    var lineLength = Math.max(1, Math.ceil(fullMessage.length / 4));
+    var lines = new (Java.type("java.util.LinkedList"))();
+    for (var i = 0; i < 4; i++) {
+        var start = i * lineLength;
+        lines.add(start < fullMessage.length
+            ? fullMessage.substring(start, Math.min(start + lineLength, fullMessage.length))
+            : "");
+    }
+
+    var itemIds = [5390005, 5390001, 5390002];
+    var itemId = itemIds[Math.floor(Math.random() * itemIds.length)];
+    var Server = Java.type("org.gms.net.server.Server");
+    var PacketCreator = Java.type("org.gms.util.PacketCreator");
+    var world = player.getWorld();
+    Server.getInstance().broadcastMessage(
+        world,
+        PacketCreator.getAvatarMega(player, "", player.getClient().getChannel(), itemId, lines, true)
+    );
+
+    var clearTask = new (Java.type("java.lang.Runnable"))({
+        run: function () {
+            Server.getInstance().broadcastMessage(world, PacketCreator.byeAvatarMega());
+        }
+    });
+    Java.type("org.gms.server.TimerManager").getInstance().schedule(clearTask, 10000);
 }

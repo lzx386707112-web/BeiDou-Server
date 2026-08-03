@@ -119,7 +119,7 @@ function 发放奖励() {
     // sendEquipment(1702920, -1);
     cm.saveOrUpdateAccountExtendValue(奖励_KEY, "1");
     cm.sendOk("恭喜你领取成功");
-    cm.getPlayer().sendAllWordNoticeNew(3, "节日礼物", `恭喜玩家【${cm.getPlayer().getName()}】领取【${节日str}】礼物! 祝大家节日快来，玩的开心~~`);
+    sendRandomSceneMegaphone(cm.getPlayer(), 3, "节日礼物", `恭喜玩家【${cm.getPlayer().getName()}】领取【${节日str}】礼物! 祝大家节日快来，玩的开心~~`);
     全服通告();
     cm.dispose();
 }
@@ -168,4 +168,37 @@ function sendEquipment(fashionItemId, time) {
         0,
         time
     );
+}
+function sendRandomSceneMegaphone(player, typeOrTitle, titleOrContent, content) {
+    if (player.checkoutBroadcast()) {
+        return;
+    }
+    var title = content === undefined ? typeOrTitle : titleOrContent;
+    var message = content === undefined ? titleOrContent : content;
+    var fullMessage = "[" + title + "] : " + message;
+    var lineLength = Math.max(1, Math.ceil(fullMessage.length / 4));
+    var lines = new (Java.type("java.util.LinkedList"))();
+    for (var i = 0; i < 4; i++) {
+        var start = i * lineLength;
+        lines.add(start < fullMessage.length
+            ? fullMessage.substring(start, Math.min(start + lineLength, fullMessage.length))
+            : "");
+    }
+
+    var itemIds = [5390005, 5390001, 5390002];
+    var itemId = itemIds[Math.floor(Math.random() * itemIds.length)];
+    var Server = Java.type("org.gms.net.server.Server");
+    var PacketCreator = Java.type("org.gms.util.PacketCreator");
+    var world = player.getWorld();
+    Server.getInstance().broadcastMessage(
+        world,
+        PacketCreator.getAvatarMega(player, "", player.getClient().getChannel(), itemId, lines, true)
+    );
+
+    var clearTask = new (Java.type("java.lang.Runnable"))({
+        run: function () {
+            Server.getInstance().broadcastMessage(world, PacketCreator.byeAvatarMega());
+        }
+    });
+    Java.type("org.gms.server.TimerManager").getInstance().schedule(clearTask, 10000);
 }

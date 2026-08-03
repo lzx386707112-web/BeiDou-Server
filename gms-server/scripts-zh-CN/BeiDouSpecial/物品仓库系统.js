@@ -318,7 +318,8 @@ function action(mode, type, selection) {
         text += "\r\n";
         text += "#L5#高级卷轴#l\t\t \r\n";
         text += "\r\n";
-        text += "#L6##r一键存储所有矿石#l\t\t\t #L7##r一键存储所有卷轴#l\r\n";
+        text += "#L6##r一键存储所有矿石#l\t\t\t #L8##r一键取出所有矿石#l\r\n";
+        text += "#L7##r一键存储所有卷轴#l\r\n";
         cm.sendSimple(text);
     } else if (status == 1) {// 物品管理列表（各类物品）
         // 处理一键存储操作
@@ -327,6 +328,10 @@ function action(mode, type, selection) {
             return;
         } else if (selection == 7) {
             prepareBatchStoreAllScroll(); // 一键存储所有卷轴（2+3）
+            return;
+        } else if (selection == 8) {
+            cm.sendYesNo("#r注意背包位置，不够位置丢了不关我事哦！#k\r\n\r\n确定要一键取出所有矿石吗？");
+            status = 4;
             return;
         }
 
@@ -450,6 +455,10 @@ function action(mode, type, selection) {
         cm.sendOk(resultText);
         cm.dispose();
     }
+    // 确认后一键取出所有矿石
+    else if (status == 5) {
+        takeOutAllItem();
+    }
     // 所有其他情况都直接关闭对话框
     else {
         cm.dispose();
@@ -540,6 +549,43 @@ function prepareBatchStoreAllItem() {
         // **修复点3：明确设置下一个状态为a=4，用于处理确认**
         status = 3;
     }
+}
+
+// 一键取出所有矿石（type0和type1）
+function takeOutAllItem() {
+    const player = cm.getPlayer();
+    const storage = player.getExtraStorage();
+    const batchTakeOutItems = [];
+
+    [itemlist0, itemlist1].forEach((items, type) => {
+        items.forEach(itemId => {
+            const quantity = storage.getItemQuantity(itemId, type);
+            if (quantity > 0) {
+                batchTakeOutItems.push({itemId, quantity, type});
+            }
+        });
+    });
+
+    if (batchTakeOutItems.length === 0) {
+        cm.sendOk("仓库中没有可取出的矿石！");
+        cm.dispose();
+        return;
+    }
+
+    let successCount = 0;
+    let resultText = "一键取出结果：\r\n\r\n";
+    batchTakeOutItems.forEach(item => {
+        if (player.takeOutExtraItem(item.itemId, item.quantity, item.type)) {
+            resultText += `#v${item.itemId}# #z${item.itemId}# 成功取出 ${item.quantity} 个\r\n`;
+            successCount++;
+        } else {
+            resultText += `#v${item.itemId}# #z${item.itemId}# 取出失败\r\n`;
+        }
+    });
+
+    resultText += `\r\n共处理${batchTakeOutItems.length}种矿石，成功${successCount}种。`;
+    cm.sendOk(resultText);
+    cm.dispose();
 }
 
 // 准备一键存储所有卷轴（type2和type3）

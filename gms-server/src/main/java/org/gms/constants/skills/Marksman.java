@@ -34,4 +34,8 @@ public class Marksman {
     public static final int BLIND = 3221006;
     public static final int SNIPE = 3221007;
     public static final int HEROS_WILL = 3221008;
+    public static final int[] V_VI_ACTIVE_ATTACKS = {
+            3221009, 3221011, 3221013, 3221014, 3221016, 3221017,
+            3221022, 3221029, 3221030, 3221031, 3221032, 3221034
+    };
 }

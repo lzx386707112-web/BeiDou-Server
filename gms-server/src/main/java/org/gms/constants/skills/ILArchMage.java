@@ -34,4 +34,9 @@ public class ILArchMage {
     public static final int BLIZZARD = 2221007;
     public static final int HEROS_WILL = 2221008;
     public static final int CHAIN_LIGHTNING = 2221006;
+    public static final int[] V_VI_ACTIVE_ATTACKS = {
+            2221009, 2221010, 2221013, 2221014, 2221016,
+            2221017, 2221018, 2221019, 2221020, 2221022,
+            2221023, 2221025, 2221027, 2221030
+    };
 }

@@ -212,14 +212,14 @@ function do强化() {
         var itemName = cm.getPlayer().getItemName(equip.getItemId());
         var tip = `恭喜玩家【${player.getName()}】走了狗屎运，将【${itemName}】强化到${currentLevel + 1}级！`;
         cm.sendOk("恭喜！#v" + equip.getItemId() + "##t" + equip.getItemId() + "#强化成功！\r\n当前强化等级：" + (currentLevel + 1) + "级");
-        player.sendAllWordNoticeNew(2, "项链升级", tip);
+        sendRandomSceneMegaphone(player, 2, "项链升级", tip);
         全服通告(tip);
     } else {
         var itemName = cm.getPlayer().getItemName(equip.getItemId());
         InventoryManipulator.removeFromSlot(cm.getClient(), InventoryType.EQUIP, 1, 1, true);
         cm.sendOk("很遗憾！" + itemName + "强化失败！\r\n失败后装备炸掉消失");
         var tip = `倒霉孩子【${player.getName()}】强化【${itemName}】到${currentLevel + 1}级失败！装备消失！`;
-        player.sendAllWordNoticeNew(3, "项链升级",tip);
+        sendRandomSceneMegaphone(player, 3, "项链升级", tip);
         全服通告(tip);
     }
     cm.dispose();
@@ -227,4 +227,37 @@ function do强化() {
 
 function 全服通告(tip) {
     cm.getPlayer().sendFullServerBroadcast(tip);
+}
+function sendRandomSceneMegaphone(player, typeOrTitle, titleOrContent, content) {
+    if (player.checkoutBroadcast()) {
+        return;
+    }
+    var title = content === undefined ? typeOrTitle : titleOrContent;
+    var message = content === undefined ? titleOrContent : content;
+    var fullMessage = "[" + title + "] : " + message;
+    var lineLength = Math.max(1, Math.ceil(fullMessage.length / 4));
+    var lines = new (Java.type("java.util.LinkedList"))();
+    for (var i = 0; i < 4; i++) {
+        var start = i * lineLength;
+        lines.add(start < fullMessage.length
+            ? fullMessage.substring(start, Math.min(start + lineLength, fullMessage.length))
+            : "");
+    }
+
+    var itemIds = [5390005, 5390001, 5390002];
+    var itemId = itemIds[Math.floor(Math.random() * itemIds.length)];
+    var Server = Java.type("org.gms.net.server.Server");
+    var PacketCreator = Java.type("org.gms.util.PacketCreator");
+    var world = player.getWorld();
+    Server.getInstance().broadcastMessage(
+        world,
+        PacketCreator.getAvatarMega(player, "", player.getClient().getChannel(), itemId, lines, true)
+    );
+
+    var clearTask = new (Java.type("java.lang.Runnable"))({
+        run: function () {
+            Server.getInstance().broadcastMessage(world, PacketCreator.byeAvatarMega());
+        }
+    });
+    Java.type("org.gms.server.TimerManager").getInstance().schedule(clearTask, 10000);
 }

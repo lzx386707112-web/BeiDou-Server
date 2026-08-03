@@ -1,5 +1,4 @@
 function enter(pi) {
-    pi.playPortalSound();
-    pi.warp(272030400, "sp");
+    pi.openNpc(1104209,"akayrumbattle");
     return true;
 }

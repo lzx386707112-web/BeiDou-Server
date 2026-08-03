@@ -70,7 +70,7 @@ function action(mode, type, selection) {
             equip = false;
         } else if (selectedType == 3) { //Crystal refine
             var selStr = "想制作稀有宝石吗？你想制作哪一种呢？#b";
-            var items = ["#i4011007##t4011007#", "#i4021009##t4021009#"];
+            var items = ["#i4011007##t4011007#", "#i4021009##t4021009#", "#i4251200##t4251200#"];
             for (var i = 0; i < items.length; i++) {
                 selStr += "\r\n#L" + i + "# " + items[i] + "#l";
             }
@@ -121,10 +121,10 @@ function action(mode, type, selection) {
             matQty = matQtySet[selectedItem];
             cost = costSet[selectedItem];
         } else if (selectedType == 3) { //Crystal refine
-            var itemSet = [4011007, 4021009];
-            var matSet = [[4011000, 4011001, 4011002, 4011003, 4011004, 4011005, 4011006], [4021000, 4021001, 4021002, 4021003, 4021004, 4021005, 4021006, 4021007, 4021008]];
-            var matQtySet = [[1, 1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1, 1, 1, 1]];
-            var costSet = [10000, 15000];
+            var itemSet = [4011007, 4021009, 4251200];
+            var matSet = [[4011000, 4011001, 4011002, 4011003, 4011004, 4011005, 4011006], [4021000, 4021001, 4021002, 4021003, 4021004, 4021005, 4021006, 4021007, 4021008], [4005000, 4005001, 4005002, 4005003, 4005004]];
+            var matQtySet = [[1, 1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1, 1, 1, 1], [30, 30, 30, 30, 30]];
+            var costSet = [10000, 15000, 0];
             item = itemSet[selectedItem];
             mats = matSet[selectedItem];
             matQty = matQtySet[selectedItem];
@@ -195,15 +195,8 @@ function action(mode, type, selection) {
         } else {
             if (mats instanceof Array) {
                 for (var i = 0; complete && i < mats.length; i++) {
-                    if (matQty[i] * qty == 1) {
-                        if (!cm.haveItem(mats[i])) {
-                            complete = false;
-                        }
-                    } else {
-
-                        if (cm.haveItem(mats[i], matQty[i] * qty)) {
-                            complete = false;
-                        }
+                    if (!cm.haveItem(mats[i], matQty[i] * qty)) {
+                        complete = false;
                     }
                 }
             } else {

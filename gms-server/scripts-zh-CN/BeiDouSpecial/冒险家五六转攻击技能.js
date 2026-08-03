@@ -1,0 +1,90 @@
+/*
+ * 冒险家五、六转攻击技能学习与键位绑定。
+ * 只授予各职业公开的攻击入口，隐藏攻击阶段由服务器回放。
+ */
+var status = -1;
+var SKILL_LEVEL = 30;
+var KEY_CODES = [
+    30, 48, 46, 32, 18, 33, 34, 35, 23, 36, 37, 38, 50,
+    49, 24, 25, 16, 19, 31, 20, 22, 47, 17, 45, 21, 44
+];
+var KEY_NAMES = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+var KeyBinding = Java.type("org.gms.client.keybind.KeyBinding");
+var JOBS = {
+    112: {
+        name: "英雄",
+        skills: Java.type("org.gms.constants.skills.Hero").V_VI_ACTIVE_ATTACKS,
+        retiredBindings: [1121001, 1121016, 1121017, 1121018, 1121019, 1121026, 1121027, 1121028, 1121029],
+        retiredSkills: [1121001]
+    },
+    122: {
+        name: "圣骑士",
+        skills: Java.type("org.gms.constants.skills.Paladin").V_VI_ACTIVE_ATTACKS,
+        retiredBindings: [1221013, 1221015, 1221016, 1221018, 1221020, 1221023, 1221025, 1221027, 1221030],
+        retiredSkills: [1221013, 1221014, 1221018, 1221019, 1221023, 1221024, 1221025, 1221026]
+    },
+    132: {
+        name: "黑骑士",
+        skills: Java.type("org.gms.constants.skills.DarkKnight").V_VI_ACTIVE_ATTACKS,
+        retiredBindings: [1321011, 1321012, 1321014, 1321015, 1321017, 1321018, 1321020, 1321022, 1321023, 1321024, 1321025],
+        retiredSkills: [1321012, 1321013, 1321014, 1321017, 1321023, 1321024]
+    },
+    212: {name: "火毒大魔导士", skills: Java.type("org.gms.constants.skills.FPArchMage").V_VI_ACTIVE_ATTACKS},
+    222: {name: "冰雷大魔导士", skills: Java.type("org.gms.constants.skills.ILArchMage").V_VI_ACTIVE_ATTACKS},
+    232: {name: "主教", skills: Java.type("org.gms.constants.skills.Bishop").V_VI_ACTIVE_ATTACKS},
+    312: {name: "箭神", skills: Java.type("org.gms.constants.skills.Bowmaster").V_VI_ACTIVE_ATTACKS},
+    322: {name: "神射手", skills: Java.type("org.gms.constants.skills.Marksman").V_VI_ACTIVE_ATTACKS},
+    412: {name: "夜使者", skills: Java.type("org.gms.constants.skills.NightLord").V_VI_ACTIVE_ATTACKS},
+    422: {name: "暗影神偷", skills: Java.type("org.gms.constants.skills.Shadower").V_VI_ACTIVE_ATTACKS},
+    512: {name: "拳霸", skills: Java.type("org.gms.constants.skills.Buccaneer").V_VI_ACTIVE_ATTACKS},
+    522: {name: "枪神", skills: Java.type("org.gms.constants.skills.Corsair").V_VI_ACTIVE_ATTACKS}
+};
+
+function start() {
+    action(1, 0, 0);
+}
+
+function action(mode, type, selection) {
+    if (mode != 1) {
+        cm.dispose();
+        return;
+    }
+    status++;
+    var job = JOBS[cm.getPlayer().getJob().getId()];
+    if (job == null) {
+        cm.sendOk("当前职业不是支持的冒险家四转职业。");
+        cm.dispose();
+        return;
+    }
+    if (status == 0) {
+        var lastKey = KEY_NAMES.charAt(job.skills.length - 1);
+        cm.sendYesNo("#e#b" + job.name + "五、六转攻击技能#k#n\r\n\r\n" +
+            "将一次学习 " + job.skills.length + " 个可施放攻击技能，并按顺序绑定到 #rA-" +
+            lastKey + "#k。\r\n这些字母键上的原有设置会被覆盖，是否继续？");
+    } else if (status == 1) {
+        learnAndBind(job);
+    }
+}
+
+function learnAndBind(job) {
+    var player = cm.getPlayer();
+    var mappings = [];
+    var retiredBindings = job.retiredBindings || [];
+    var retiredSkills = job.retiredSkills || [];
+    for (var retiredIndex = 0; retiredIndex < retiredBindings.length; retiredIndex++) {
+        player.removeBySkillId(retiredBindings[retiredIndex]);
+    }
+    for (var skillIndex = 0; skillIndex < retiredSkills.length; skillIndex++) {
+        player.removeSkillById(retiredSkills[skillIndex]);
+    }
+    for (var index = 0; index < job.skills.length; index++) {
+        var skillId = Number(job.skills[index]);
+        cm.teachSkill(skillId, SKILL_LEVEL, SKILL_LEVEL, -1, true);
+        player.removeBySkillId(skillId);
+        player.changeKeybinding(KEY_CODES[index], new KeyBinding(1, skillId));
+        mappings.push(KEY_NAMES.charAt(index) + ": #s" + skillId + "# #q" + skillId + "#");
+    }
+    player.sendKeymap();
+    cm.sendOk("#e#b" + job.name + "技能学习完成#k#n\r\n\r\n" + mappings.join("\r\n"));
+    cm.dispose();
+}

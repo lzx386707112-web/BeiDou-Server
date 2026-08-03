@@ -32,6 +32,7 @@ CAVE_OFFSET = 0x006EFA20
 CAVE_SIZE = 0x80
 DLL_NAME_OFFSET = 0x50
 DLL_NAME = b"WzFileLogger.dll\x00"
+COMPAT_LOADER_NAME = b"DawnWarriorSkillCompat.dll\x00"
 
 LOAD_LIBRARY_A_IAT = 0x00AF00C0
 
@@ -85,6 +86,13 @@ def patch(dry_run: bool) -> int:
     already_patched = current_entry == entry_jump and current_cave == cave
     if already_patched:
         print("BeiDou.exe already has the WzFileLogger startup patch.")
+        return 0
+
+    if current_entry == entry_jump and COMPAT_LOADER_NAME in current_cave:
+        print(
+            "BeiDou.exe loads DawnWarriorSkillCompat.dll; that runtime loads "
+            "WzFileLogger.dll without a second EXE patch."
+        )
         return 0
 
     if current_entry != ENTRY_ORIGINAL:

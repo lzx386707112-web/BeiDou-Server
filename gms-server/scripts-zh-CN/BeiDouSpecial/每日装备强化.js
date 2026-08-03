@@ -124,7 +124,7 @@ function do强化() {
     保存强化状态();
     // 8. 发送强化成功提示
     cm.sendOk(`恭喜你！#v${强化目标项链Id}##t${强化目标项链Id}##n每日强化成功`);
-    player.sendAllWordNoticeNew("每日强化", `恭喜玩家${player.getName()}完成每日精灵吊坠强化!`)
+    sendRandomSceneMegaphone(player, "每日强化", `恭喜玩家${player.getName()}完成每日精灵吊坠强化!`)
     cm.dispose();
 }
 
@@ -134,4 +134,37 @@ function 是否已强化过() {
 
 function 保存强化状态() {
     cm.saveOrUpdateAccountExtendValue(精灵项链强化key, 已强化值, true);
+}
+function sendRandomSceneMegaphone(player, typeOrTitle, titleOrContent, content) {
+    if (player.checkoutBroadcast()) {
+        return;
+    }
+    var title = content === undefined ? typeOrTitle : titleOrContent;
+    var message = content === undefined ? titleOrContent : content;
+    var fullMessage = "[" + title + "] : " + message;
+    var lineLength = Math.max(1, Math.ceil(fullMessage.length / 4));
+    var lines = new (Java.type("java.util.LinkedList"))();
+    for (var i = 0; i < 4; i++) {
+        var start = i * lineLength;
+        lines.add(start < fullMessage.length
+            ? fullMessage.substring(start, Math.min(start + lineLength, fullMessage.length))
+            : "");
+    }
+
+    var itemIds = [5390005, 5390001, 5390002];
+    var itemId = itemIds[Math.floor(Math.random() * itemIds.length)];
+    var Server = Java.type("org.gms.net.server.Server");
+    var PacketCreator = Java.type("org.gms.util.PacketCreator");
+    var world = player.getWorld();
+    Server.getInstance().broadcastMessage(
+        world,
+        PacketCreator.getAvatarMega(player, "", player.getClient().getChannel(), itemId, lines, true)
+    );
+
+    var clearTask = new (Java.type("java.lang.Runnable"))({
+        run: function () {
+            Server.getInstance().broadcastMessage(world, PacketCreator.byeAvatarMega());
+        }
+    });
+    Java.type("org.gms.server.TimerManager").getInstance().schedule(clearTask, 10000);
 }

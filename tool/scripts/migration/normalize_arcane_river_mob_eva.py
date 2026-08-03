@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Set the 83 installed Arcane River mobs to legacy-safe EVA 200."""
+"""Set the 83 installed Arcane River mobs to legacy-safe EVA 100."""
 
 from __future__ import annotations
 
@@ -12,8 +12,8 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[3]
-BACKUP_ROOT = Path("/private/tmp/arcane-river-eva-backup")
-TARGET_EVA = 200
+BACKUP_ROOT = Path("/private/tmp/arcane-river-eva100-backup")
+TARGET_EVA = 100
 REGION_PREFIXES = {"450001", "450002", "450003", "450005", "450006", "450007"}
 
 sys.path.insert(0, str(ROOT / "tool/wz-python"))

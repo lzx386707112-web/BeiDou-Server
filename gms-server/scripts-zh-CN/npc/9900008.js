@@ -6,6 +6,7 @@ var HERO_COIN_ID = 4310060;
 var HERO_COIN_MATERIALS = [4251200, 4251201, 4251202];
 var CORE_GEMSTONE_ID = 2435719;
 var CORE_GEMSTONE_COUNT = 100;
+var SHORTCUT_CORE_GEMSTONE_COUNT = 20;
 var ADVANCEMENT_LEVEL = 180;
 var ADVANCEMENT_MESO = 500000000;
 var CYGNUS_FOURTH_JOBS = {
@@ -49,7 +50,8 @@ function action(mode, type, selection) {
 
         var menu = "#e#b五转女神#k#n\r\n\r\n";
         menu += "#L0##b完成骑士团四转#k#l\r\n";
-        menu += "#L1##b合成英雄币#k#l";
+        menu += "#L1##b合成英雄币#k#l\r\n";
+        menu += "#L2##r我是富豪我想走捷径#k#l";
         cm.sendSimple(menu);
         return;
     }
@@ -64,6 +66,12 @@ function action(mode, type, selection) {
             cm.sendYesNo(buildCraftPrompt());
             return;
         }
+        if (selectedOption === 2) {
+            cm.sendYesNo("是否使用 #i" + HERO_COIN_ID + "# #b#t" + HERO_COIN_ID + "##k × 1 兑换 "
+                + "#i" + CORE_GEMSTONE_ID + "# #b#t" + CORE_GEMSTONE_ID + "##k × "
+                + SHORTCUT_CORE_GEMSTONE_COUNT + "？");
+            return;
+        }
         cm.dispose();
         return;
     }
@@ -75,6 +83,10 @@ function action(mode, type, selection) {
         }
         if (selectedOption === 1) {
             craftHeroCoin();
+            return;
+        }
+        if (selectedOption === 2) {
+            exchangeCoreGemstones();
             return;
         }
         return;
@@ -181,5 +193,24 @@ function craftHeroCoin() {
     }
     cm.gainItem(HERO_COIN_ID, 1);
     cm.sendOk("合成成功，获得 #i" + HERO_COIN_ID + "# #b#t" + HERO_COIN_ID + "##k × 1。");
+    cm.dispose();
+}
+
+function exchangeCoreGemstones() {
+    if (!cm.haveItem(HERO_COIN_ID, 1)) {
+        cm.sendOk("你没有足够的 #i" + HERO_COIN_ID + "# #b#t" + HERO_COIN_ID + "##k。");
+        cm.dispose();
+        return;
+    }
+    if (!cm.canHold(CORE_GEMSTONE_ID, SHORTCUT_CORE_GEMSTONE_COUNT)) {
+        cm.sendOk("消耗栏背包空间不足，请整理后再来。");
+        cm.dispose();
+        return;
+    }
+
+    cm.gainItem(HERO_COIN_ID, -1);
+    cm.gainItem(CORE_GEMSTONE_ID, SHORTCUT_CORE_GEMSTONE_COUNT);
+    cm.sendOk("兑换成功，获得 #i" + CORE_GEMSTONE_ID + "# #b#t" + CORE_GEMSTONE_ID + "##k × "
+        + SHORTCUT_CORE_GEMSTONE_COUNT + "。");
     cm.dispose();
 }

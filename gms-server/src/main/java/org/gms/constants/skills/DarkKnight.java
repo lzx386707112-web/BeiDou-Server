@@ -35,4 +35,23 @@ public class DarkKnight {
     public static final int AURA_OF_BEHOLDER = 1320008;
     public static final int HEX_OF_BEHOLDER = 1320009;
     public static final int HEROS_WILL = 1321010;
+    public static final int SPEAR_OF_DARKNESS = 1321011;
+    public static final int CALAMITOUS_CYCLONE = 1321015;
+    public static final int CALAMITOUS_CYCLONE_FINISH = 1321016;
+    public static final int DEAD_SPACE = 1321018;
+    public static final int DEAD_SPACE_FINISH = 1321019;
+    public static final int DARK_IMPALE_VI = 1321020;
+    public static final int DARK_SPEAR_VI = 1321021;
+    public static final int DARK_SYNTHESIS_VI = 1321022;
+    public static final int DARK_HALIDOM = 1321025;
+    public static final int DARK_HALIDOM_FINISH = 1321026;
+
+    public static final int[] V_VI_ACTIVE_ATTACKS = {
+        SPEAR_OF_DARKNESS,
+        CALAMITOUS_CYCLONE,
+        DEAD_SPACE,
+        DARK_IMPALE_VI,
+        DARK_SYNTHESIS_VI,
+        DARK_HALIDOM
+    };
 }

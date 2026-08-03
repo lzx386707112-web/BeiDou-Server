@@ -54,6 +54,10 @@ public class Bishop {
     public static final int DRAGON_5TH_6TH_DIVE = 2331017;
     public static final int DRAGON_5TH_6TH_BREATH = 2331018;
     public static final int NEW_SKILL_TEST = DRAGON_2217_SWIFT;
+    public static final int[] V_VI_ACTIVE_ATTACKS = {
+            2321020, 2321022, 2321024, 2321025, 2321027, 2321031,
+            2321032, 2321033, 2321035, 2321036, 2321037, 2321042
+    };
 
     public static boolean isDragonCopySkill(int skill) {
         return skill == DRAGON_2217_SWIFT || skill == DRAGON_5TH_SWIFT;

@@ -18,4 +18,25 @@
       <int name="npc" value="0"/>
     </imgdir>
   </imgdir>
+<imgdir name="02431151">
+    <imgdir name="info">
+      <canvas format="1" height="30" name="icon" scale="0" width="32">
+        <vector name="origin" x="-1" y="30"/>
+        <string name="_hash" value="2792c8b6ed3b06cce7c6c5aea1c6747139ac97719e0ce7bd3d3d58954c2eab66"/>
+      </canvas>
+      <canvas format="1" height="28" name="iconRaw" scale="0" width="32">
+        <vector name="origin" x="-1" y="30"/>
+        <string name="_hash" value="d842e30ae6d936818ab8f9be12e24b0285534a742de27d7230109885972eab93"/>
+      </canvas>
+      <int name="quest" value="1"/>
+      <int name="notSale" value="1"/>
+      <int name="price" value="1"/>
+      <int name="slotMax" value="1"/>
+      <int name="tradeBlock" value="1"/>
+    </imgdir>
+    <imgdir name="spec">
+      <string name="script" value="consume_2431151"/>
+      <int name="npc" value="9010000"/>
+    </imgdir>
+  </imgdir>
 </imgdir>

@@ -5,6 +5,8 @@
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#include <dbghelp.h>
+#include <psapi.h>
 #include <tlhelp32.h>
 
 typedef HANDLE(WINAPI *CreateFileWFn)(LPCWSTR, DWORD, DWORD, LPSECURITY_ATTRIBUTES, DWORD, DWORD, HANDLE);
@@ -21,6 +23,10 @@ typedef HANDLE(WINAPI *CreateFileMappingAFn)(HANDLE, LPSECURITY_ATTRIBUTES, DWOR
 typedef HANDLE(WINAPI *OpenFileMappingAFn)(DWORD, BOOL, LPCSTR);
 typedef LPVOID(WINAPI *MapViewOfFileFn)(HANDLE, DWORD, DWORD, DWORD, SIZE_T);
 typedef BOOL(WINAPI *ReadFileFn)(HANDLE, LPVOID, DWORD, LPDWORD, LPOVERLAPPED);
+typedef BOOL(WINAPI *CloseHandleFn)(HANDLE);
+typedef LPTOP_LEVEL_EXCEPTION_FILTER(WINAPI *SetUnhandledExceptionFilterFn)(LPTOP_LEVEL_EXCEPTION_FILTER);
+typedef BOOL(WINAPI *GetProcessMemoryInfoFn)(HANDLE, PPROCESS_MEMORY_COUNTERS, DWORD);
+typedef BOOL(WINAPI *MiniDumpWriteDumpFn)(HANDLE, DWORD, HANDLE, MINIDUMP_TYPE, PMINIDUMP_EXCEPTION_INFORMATION, PMINIDUMP_USER_STREAM_INFORMATION, PMINIDUMP_CALLBACK_INFORMATION);
 typedef DWORD(WINAPI *GetFinalPathNameByHandleWFn)(HANDLE, LPWSTR, DWORD, DWORD);
 typedef void *(__cdecl *FopenFn)(const char *, const char *);
 typedef size_t(__cdecl *FreadFn)(void *, size_t, size_t, void *);
@@ -49,20 +55,49 @@ static CreateFileMappingAFn RealCreateFileMappingA = NULL;
 static OpenFileMappingAFn RealOpenFileMappingA = NULL;
 static MapViewOfFileFn RealMapViewOfFile = NULL;
 static ReadFileFn RealReadFile = NULL;
+static CloseHandleFn RealCloseHandle = NULL;
+static SetUnhandledExceptionFilterFn RealSetUnhandledExceptionFilter = NULL;
 static GetFinalPathNameByHandleWFn RealGetFinalPathNameByHandleW = NULL;
 static FopenFn RealFopen = NULL;
 static FreadFn RealFread = NULL;
 
 static CRITICAL_SECTION g_logLock;
+static CRITICAL_SECTION g_resourceLock;
 static HMODULE g_selfModule = NULL;
 static WCHAR g_logPath[MAX_PATH];
 static WCHAR g_exeDir[MAX_PATH];
+static WCHAR g_diagnosticsDir[MAX_PATH];
+static WCHAR g_sessionId[64];
 static volatile LONG g_patching = 0;
 static volatile LONG g_verboseFileLogs = 300;
 static volatile LONG g_patchSummaryLogs = 30;
+static volatile LONG g_eventSequence = 0;
+static volatile LONG g_shutdownRequested = 0;
 static BOOL g_inLog = FALSE;
 static WCHAR g_wideLogLine[4096];
 static CHAR g_utf8LogLine[16384];
+static HANDLE g_watchdogThread = NULL;
+static LPTOP_LEVEL_EXCEPTION_FILTER g_previousExceptionFilter = NULL;
+static DWORD g_healthIntervalMs = 1000;
+static DWORD g_hangThresholdMs = 5000;
+static DWORD g_highCpuThreshold = 70;
+static DWORD g_highCpuThresholdMs = 3000;
+static BOOL g_dumpOnHang = TRUE;
+static BOOL g_manualDumpHotkey = TRUE;
+
+struct ResourceHandleEntry {
+    HANDLE handle;
+    WCHAR path[MAX_PATH];
+    ULONGLONG openedTick;
+    ULONGLONG totalBytesRead;
+};
+
+static const int kMaxResourceHandles = 256;
+static ResourceHandleEntry g_resourceHandles[kMaxResourceHandles];
+static WCHAR g_lastResourcePath[MAX_PATH];
+static ULONGLONG g_lastResourceOffset = 0;
+static DWORD g_lastResourceBytes = 0;
+static ULONGLONG g_lastResourceTick = 0;
 
 static void PatchAllModules();
 static HMODULE WINAPI HookLoadLibraryW(LPCWSTR fileName);
@@ -76,6 +111,10 @@ static HANDLE WINAPI HookCreateFileMappingA(HANDLE file, LPSECURITY_ATTRIBUTES a
 static HANDLE WINAPI HookOpenFileMappingA(DWORD desiredAccess, BOOL inheritHandle, LPCSTR name);
 static LPVOID WINAPI HookMapViewOfFile(HANDLE mapping, DWORD desiredAccess, DWORD offsetHigh, DWORD offsetLow, SIZE_T bytesToMap);
 static BOOL WINAPI HookReadFile(HANDLE file, LPVOID buffer, DWORD bytesToRead, LPDWORD bytesRead, LPOVERLAPPED overlapped);
+static BOOL WINAPI HookCloseHandle(HANDLE object);
+static LPTOP_LEVEL_EXCEPTION_FILTER WINAPI HookSetUnhandledExceptionFilter(LPTOP_LEVEL_EXCEPTION_FILTER filter);
+static LONG WINAPI DiagnosticExceptionFilter(EXCEPTION_POINTERS *exceptionPointers);
+static BOOL ShouldLogPath(const WCHAR *path);
 static void *__cdecl HookFopen(const char *fileName, const char *mode);
 static size_t __cdecl HookFread(void *buffer, size_t size, size_t count, void *stream);
 
@@ -96,6 +135,8 @@ static void RefreshOriginalFunctions() {
         RealOpenFileMappingA = (OpenFileMappingAFn)GetProcAddress(kernel32, "OpenFileMappingA");
         RealMapViewOfFile = (MapViewOfFileFn)GetProcAddress(kernel32, "MapViewOfFile");
         RealReadFile = (ReadFileFn)GetProcAddress(kernel32, "ReadFile");
+        RealCloseHandle = (CloseHandleFn)GetProcAddress(kernel32, "CloseHandle");
+        RealSetUnhandledExceptionFilter = (SetUnhandledExceptionFilterFn)GetProcAddress(kernel32, "SetUnhandledExceptionFilter");
         RealGetFinalPathNameByHandleW = (GetFinalPathNameByHandleWFn)GetProcAddress(kernel32, "GetFinalPathNameByHandleW");
     }
     if (user32 != NULL) {
@@ -179,6 +220,74 @@ static BOOL ContainsNoCase(const WCHAR *s, const WCHAR *needle) {
     return FALSE;
 }
 
+static ULONGLONG CurrentTick() {
+    return GetTickCount64();
+}
+
+static int FindResourceHandleLocked(HANDLE handle) {
+    for (int i = 0; i < kMaxResourceHandles; ++i) {
+        if (g_resourceHandles[i].handle == handle) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+static void TrackResourceHandle(HANDLE handle, const WCHAR *path) {
+    if (handle == NULL || handle == INVALID_HANDLE_VALUE || !ShouldLogPath(path)) {
+        return;
+    }
+    EnterCriticalSection(&g_resourceLock);
+    int slot = FindResourceHandleLocked(handle);
+    if (slot < 0) {
+        for (int i = 0; i < kMaxResourceHandles; ++i) {
+            if (g_resourceHandles[i].handle == NULL) {
+                slot = i;
+                break;
+            }
+        }
+    }
+    if (slot >= 0) {
+        g_resourceHandles[slot].handle = handle;
+        lstrcpynW(g_resourceHandles[slot].path, path, MAX_PATH);
+        g_resourceHandles[slot].openedTick = CurrentTick();
+        g_resourceHandles[slot].totalBytesRead = 0;
+    }
+    LeaveCriticalSection(&g_resourceLock);
+}
+
+static BOOL RecordResourceRead(HANDLE handle, DWORD bytesRead, ULONGLONG offset, WCHAR *pathOut, DWORD pathCount) {
+    BOOL tracked = FALSE;
+    EnterCriticalSection(&g_resourceLock);
+    int slot = FindResourceHandleLocked(handle);
+    if (slot >= 0) {
+        tracked = TRUE;
+        g_resourceHandles[slot].totalBytesRead += bytesRead;
+        lstrcpynW(pathOut, g_resourceHandles[slot].path, pathCount);
+        lstrcpynW(g_lastResourcePath, g_resourceHandles[slot].path, MAX_PATH);
+        g_lastResourceOffset = offset;
+        g_lastResourceBytes = bytesRead;
+        g_lastResourceTick = CurrentTick();
+    }
+    LeaveCriticalSection(&g_resourceLock);
+    return tracked;
+}
+
+static BOOL UntrackResourceHandle(HANDLE handle, WCHAR *pathOut, DWORD pathCount, ULONGLONG *totalBytes, ULONGLONG *lifetimeMs) {
+    BOOL tracked = FALSE;
+    EnterCriticalSection(&g_resourceLock);
+    int slot = FindResourceHandleLocked(handle);
+    if (slot >= 0) {
+        tracked = TRUE;
+        lstrcpynW(pathOut, g_resourceHandles[slot].path, pathCount);
+        *totalBytes = g_resourceHandles[slot].totalBytesRead;
+        *lifetimeMs = CurrentTick() - g_resourceHandles[slot].openedTick;
+        ZeroMemory(&g_resourceHandles[slot], sizeof(g_resourceHandles[slot]));
+    }
+    LeaveCriticalSection(&g_resourceLock);
+    return tracked;
+}
+
 static void AppendLine(const WCHAR *line) {
     if (g_inLog || RealCreateFileW == NULL || g_logPath[0] == L'\0') {
         return;
@@ -200,9 +309,10 @@ static void AppendLine(const WCHAR *line) {
         GetLocalTime(&st);
         wsprintfW(
             g_wideLogLine,
-            L"%04u-%02u-%02u %02u:%02u:%02u.%03u [tid=%lu] %s\r\n",
+            L"%04u-%02u-%02u %02u:%02u:%02u.%03u [seq=%ld] [tid=%lu] %s\r\n",
             st.wYear, st.wMonth, st.wDay,
             st.wHour, st.wMinute, st.wSecond, st.wMilliseconds,
+            InterlockedIncrement(&g_eventSequence),
             GetCurrentThreadId(),
             line);
         if (GetFileSize(file, NULL) == 0) {
@@ -258,7 +368,8 @@ static void LogCreateFileW(LPCWSTR path, DWORD desiredAccess, DWORD creationDisp
     DWORD err = (result == INVALID_HANDLE_VALUE) ? GetLastError() : 0;
     wsprintfW(
         line,
-        L"CreateFileW result=%p err=%lu access=0x%08lx disp=%lu path=%s",
+        L"event=resource_open status=%s handle=%p error=%lu access=0x%08lx disposition=%lu path=\"%s\"",
+        result == INVALID_HANDLE_VALUE ? L"failed" : L"ok",
         result,
         err,
         desiredAccess,
@@ -276,7 +387,8 @@ static void LogLopenW(LPCWSTR path, int flags, HFILE result) {
     DWORD err = (result == HFILE_ERROR) ? GetLastError() : 0;
     wsprintfW(
         line,
-        L"_lopen result=0x%08lx err=%lu flags=0x%08x path=%s",
+        L"event=resource_open api=_lopen status=%s handle=0x%08lx error=%lu flags=0x%08x path=\"%s\"",
+        result == HFILE_ERROR ? L"failed" : L"ok",
         (DWORD)result,
         err,
         flags,
@@ -293,7 +405,8 @@ static void LogFindFirstFileW(LPCWSTR path, HANDLE result) {
     DWORD err = (result == INVALID_HANDLE_VALUE) ? GetLastError() : 0;
     wsprintfW(
         line,
-        L"FindFirstFileA result=%p err=%lu pattern=%s",
+        L"event=resource_search status=%s handle=%p error=%lu pattern=\"%s\"",
+        result == INVALID_HANDLE_VALUE ? L"failed" : L"ok",
         result,
         err,
         path);
@@ -309,8 +422,9 @@ static void LogLoadLibraryW(LPCWSTR path, HMODULE result, const WCHAR *apiName) 
     DWORD err = (result == NULL) ? GetLastError() : 0;
     wsprintfW(
         line,
-        L"%s result=%p err=%lu path=%s",
+        L"event=module_load api=%s status=%s module=%p error=%lu path=\"%s\"",
         apiName,
+        result == NULL ? L"failed" : L"ok",
         result,
         err,
         path);
@@ -343,27 +457,6 @@ static void LogMappingW(const WCHAR *apiName, HANDLE input, HANDLE result, const
     AppendLine(line);
 }
 
-static void LogReadFile(HANDLE file, DWORD bytesToRead, DWORD bytesReadValue, BOOL result) {
-    if (g_verboseFileLogs <= 0 && result) {
-        return;
-    }
-    if (g_verboseFileLogs > 0) {
-        --g_verboseFileLogs;
-    }
-
-    WCHAR line[512];
-    DWORD err = result ? 0 : GetLastError();
-    wsprintfW(
-        line,
-        L"ReadFile file=%p result=%lu err=%lu requested=%lu read=%lu",
-        file,
-        result ? 1 : 0,
-        err,
-        bytesToRead,
-        bytesReadValue);
-    AppendLine(line);
-}
-
 static void AnsiToWide(LPCSTR input, WCHAR *out, size_t outCount) {
     if (input == NULL) {
         lstrcpynW(out, L"(null)", (int)outCount);
@@ -389,7 +482,15 @@ static HANDLE WINAPI HookCreateFileW(
         creationDisposition,
         flagsAndAttributes,
         templateFile);
+    DWORD savedError = result == INVALID_HANDLE_VALUE ? GetLastError() : 0;
+    TrackResourceHandle(result, fileName);
+    if (result == INVALID_HANDLE_VALUE) {
+        SetLastError(savedError);
+    }
     LogCreateFileW(fileName, desiredAccess, creationDisposition, result);
+    if (result == INVALID_HANDLE_VALUE) {
+        SetLastError(savedError);
+    }
     return result;
 }
 
@@ -409,28 +510,51 @@ static HANDLE WINAPI HookCreateFileA(
         creationDisposition,
         flagsAndAttributes,
         templateFile);
+    DWORD savedError = result == INVALID_HANDLE_VALUE ? GetLastError() : 0;
 
     WCHAR widePath[2048];
     AnsiToWide(fileName, widePath, 2048);
+    TrackResourceHandle(result, widePath);
+    if (result == INVALID_HANDLE_VALUE) {
+        SetLastError(savedError);
+    }
     LogCreateFileW(widePath, desiredAccess, creationDisposition, result);
+    if (result == INVALID_HANDLE_VALUE) {
+        SetLastError(savedError);
+    }
     return result;
 }
 
 static HFILE WINAPI HookLopen(LPCSTR fileName, int flags) {
     HFILE result = RealLopen(fileName, flags);
+    DWORD savedError = result == HFILE_ERROR ? GetLastError() : 0;
 
     WCHAR widePath[2048];
     AnsiToWide(fileName, widePath, 2048);
+    TrackResourceHandle((HANDLE)result, widePath);
+    if (result == HFILE_ERROR) {
+        SetLastError(savedError);
+    }
     LogLopenW(widePath, flags, result);
+    if (result == HFILE_ERROR) {
+        SetLastError(savedError);
+    }
     return result;
 }
 
 static HANDLE WINAPI HookFindFirstFileA(LPCSTR fileName, LPWIN32_FIND_DATAA findFileData) {
     HANDLE result = RealFindFirstFileA(fileName, findFileData);
+    DWORD savedError = result == INVALID_HANDLE_VALUE ? GetLastError() : 0;
 
     WCHAR widePath[2048];
     AnsiToWide(fileName, widePath, 2048);
+    if (result == INVALID_HANDLE_VALUE) {
+        SetLastError(savedError);
+    }
     LogFindFirstFileW(widePath, result);
+    if (result == INVALID_HANDLE_VALUE) {
+        SetLastError(savedError);
+    }
     return result;
 }
 
@@ -442,21 +566,35 @@ static HANDLE WINAPI HookCreateFileMappingA(
     DWORD maxSizeLow,
     LPCSTR name) {
     HANDLE result = RealCreateFileMappingA(file, attrs, protect, maxSizeHigh, maxSizeLow, name);
+    DWORD savedError = result == NULL ? GetLastError() : 0;
 
     WCHAR wideName[1024];
     WCHAR filePath[2048];
     AnsiToWide(name, wideName, 1024);
     GetPathForHandle(file, filePath, 2048);
+    if (result == NULL) {
+        SetLastError(savedError);
+    }
     LogMappingW(L"CreateFileMappingA", file, result, wideName, filePath);
+    if (result == NULL) {
+        SetLastError(savedError);
+    }
     return result;
 }
 
 static HANDLE WINAPI HookOpenFileMappingA(DWORD desiredAccess, BOOL inheritHandle, LPCSTR name) {
     HANDLE result = RealOpenFileMappingA(desiredAccess, inheritHandle, name);
+    DWORD savedError = result == NULL ? GetLastError() : 0;
 
     WCHAR wideName[1024];
     AnsiToWide(name, wideName, 1024);
+    if (result == NULL) {
+        SetLastError(savedError);
+    }
     LogMappingW(L"OpenFileMappingA", NULL, result, wideName, L"");
+    if (result == NULL) {
+        SetLastError(savedError);
+    }
     return result;
 }
 
@@ -481,6 +619,9 @@ static LPVOID WINAPI HookMapViewOfFile(
         offsetLow,
         (DWORD)bytesToMap);
     AppendLine(line);
+    if (result == NULL) {
+        SetLastError(err);
+    }
     return result;
 }
 
@@ -490,9 +631,80 @@ static BOOL WINAPI HookReadFile(
     DWORD bytesToRead,
     LPDWORD bytesRead,
     LPOVERLAPPED overlapped) {
+    ULONGLONG started = CurrentTick();
     BOOL result = RealReadFile(file, buffer, bytesToRead, bytesRead, overlapped);
-    LogReadFile(file, bytesToRead, bytesRead ? *bytesRead : 0, result);
+    DWORD savedError = result ? 0 : GetLastError();
+    DWORD actualBytes = bytesRead ? *bytesRead : 0;
+    ULONGLONG offset = 0;
+    if (overlapped != NULL) {
+        offset = ((ULONGLONG)overlapped->OffsetHigh << 32) | overlapped->Offset;
+    } else {
+        LARGE_INTEGER zero;
+        LARGE_INTEGER current;
+        zero.QuadPart = 0;
+        if (SetFilePointerEx(file, zero, &current, FILE_CURRENT) && current.QuadPart >= actualBytes) {
+            offset = (ULONGLONG)current.QuadPart - actualBytes;
+        }
+    }
+
+    WCHAR path[MAX_PATH];
+    path[0] = L'\0';
+    BOOL tracked = RecordResourceRead(file, actualBytes, offset, path, MAX_PATH);
+    DWORD elapsedMs = (DWORD)(CurrentTick() - started);
+    if (tracked && (!result || elapsedMs >= 50)) {
+        WCHAR line[1024];
+        wsprintfW(
+            line,
+            L"event=resource_read status=%s error=%lu offset=%I64u requested=%lu read=%lu elapsed_ms=%lu path=\"%s\"",
+            result ? L"ok" : L"failed",
+            savedError,
+            offset,
+            bytesToRead,
+            actualBytes,
+            elapsedMs,
+            path);
+        AppendLine(line);
+    }
+    if (!result) {
+        SetLastError(savedError);
+    }
     return result;
+}
+
+static BOOL WINAPI HookCloseHandle(HANDLE object) {
+    WCHAR path[MAX_PATH];
+    ULONGLONG totalBytes = 0;
+    ULONGLONG lifetimeMs = 0;
+    path[0] = L'\0';
+    BOOL tracked = UntrackResourceHandle(object, path, MAX_PATH, &totalBytes, &lifetimeMs);
+    BOOL result = RealCloseHandle(object);
+    DWORD savedError = result ? 0 : GetLastError();
+    if (tracked) {
+        WCHAR line[1024];
+        wsprintfW(
+            line,
+            L"event=resource_close status=%s error=%lu bytes_read=%I64u lifetime_ms=%I64u path=\"%s\"",
+            result ? L"ok" : L"failed",
+            savedError,
+            totalBytes,
+            lifetimeMs,
+            path);
+        AppendLine(line);
+    }
+    if (!result) {
+        SetLastError(savedError);
+    }
+    return result;
+}
+
+static LPTOP_LEVEL_EXCEPTION_FILTER WINAPI HookSetUnhandledExceptionFilter(LPTOP_LEVEL_EXCEPTION_FILTER filter) {
+    LPTOP_LEVEL_EXCEPTION_FILTER previous = g_previousExceptionFilter;
+    if (filter != NULL && filter != DiagnosticExceptionFilter) {
+        g_previousExceptionFilter = filter;
+        AppendLine(L"event=exception_filter action=preserved_client_filter");
+    }
+    RealSetUnhandledExceptionFilter(DiagnosticExceptionFilter);
+    return previous;
 }
 
 static void *__cdecl HookFopen(const char *fileName, const char *mode) {
@@ -504,7 +716,13 @@ static void *__cdecl HookFopen(const char *fileName, const char *mode) {
     AnsiToWide(mode, wideMode, 64);
     if (ShouldLogFileApiPath(widePath)) {
         WCHAR line[4096];
-        wsprintfW(line, L"fopen result=%p mode=%s path=%s", result, wideMode, widePath);
+        wsprintfW(
+            line,
+            L"event=resource_open api=fopen status=%s stream=%p mode=%s path=\"%s\"",
+            result ? L"ok" : L"failed",
+            result,
+            wideMode,
+            widePath);
         AppendLine(line);
     }
     return result;
@@ -537,6 +755,10 @@ static FARPROC WINAPI HookGetProcAddress(HMODULE module, LPCSTR procName) {
         replacement = (FARPROC)HookMapViewOfFile;
     } else if (EqualsNoCaseA(procName, "ReadFile")) {
         replacement = (FARPROC)HookReadFile;
+    } else if (EqualsNoCaseA(procName, "CloseHandle")) {
+        replacement = (FARPROC)HookCloseHandle;
+    } else if (EqualsNoCaseA(procName, "SetUnhandledExceptionFilter")) {
+        replacement = (FARPROC)HookSetUnhandledExceptionFilter;
     } else if (EqualsNoCaseA(procName, "LoadLibraryW")) {
         replacement = (FARPROC)HookLoadLibraryW;
     } else if (EqualsNoCaseA(procName, "LoadLibraryA")) {
@@ -574,7 +796,7 @@ static int WINAPI HookMessageBoxW(HWND hwnd, LPCWSTR text, LPCWSTR caption, UINT
     WCHAR line[4096];
     wsprintfW(
         line,
-        L"MessageBoxW caption=%s text=%s",
+        L"event=message_box api=MessageBoxW caption=\"%s\" text=\"%s\"",
         caption ? caption : L"(null)",
         text ? text : L"(null)");
     AppendLine(line);
@@ -590,7 +812,7 @@ static int WINAPI HookMessageBoxA(HWND hwnd, LPCSTR text, LPCSTR caption, UINT t
     WCHAR line[4096];
     AnsiToWide(text, wideText, 2048);
     AnsiToWide(caption, wideCaption, 512);
-    wsprintfW(line, L"MessageBoxA caption=%s text=%s", wideCaption, wideText);
+    wsprintfW(line, L"event=message_box api=MessageBoxA caption=\"%s\" text=\"%s\"", wideCaption, wideText);
     AppendLine(line);
     if (RealMessageBoxA != NULL) {
         return RealMessageBoxA(hwnd, text, caption, type);
@@ -723,6 +945,8 @@ static int PatchModule(HMODULE module, BOOL logResult) {
     int openFileMappingA = PatchImport(module, "KERNEL32.dll", "OpenFileMappingA", (void *)RealOpenFileMappingA, (void *)HookOpenFileMappingA);
     int mapViewOfFile = PatchImport(module, "KERNEL32.dll", "MapViewOfFile", (void *)RealMapViewOfFile, (void *)HookMapViewOfFile);
     int readFile = PatchImport(module, "KERNEL32.dll", "ReadFile", (void *)RealReadFile, (void *)HookReadFile);
+    int closeHandle = PatchImport(module, "KERNEL32.dll", "CloseHandle", (void *)RealCloseHandle, (void *)HookCloseHandle);
+    int exceptionFilter = PatchImport(module, "KERNEL32.dll", "SetUnhandledExceptionFilter", (void *)RealSetUnhandledExceptionFilter, (void *)HookSetUnhandledExceptionFilter);
     int loadLibraryW = PatchImport(module, "KERNEL32.dll", "LoadLibraryW", (void *)RealLoadLibraryW, (void *)HookLoadLibraryW);
     int loadLibraryA = PatchImport(module, "KERNEL32.dll", "LoadLibraryA", (void *)RealLoadLibraryA, (void *)HookLoadLibraryA);
     int loadLibraryExA = PatchImport(module, "KERNEL32.dll", "LoadLibraryExA", (void *)RealLoadLibraryExA, (void *)HookLoadLibraryExA);
@@ -742,7 +966,7 @@ static int PatchModule(HMODULE module, BOOL logResult) {
     }
 
     int total = createFileW + createFileA + lopen + findFirstFileA + getProcAddress
-        + createFileMappingA + openFileMappingA + mapViewOfFile + readFile
+        + createFileMappingA + openFileMappingA + mapViewOfFile + readFile + closeHandle + exceptionFilter
         + loadLibraryW + loadLibraryA + loadLibraryExA + messageBoxW + messageBoxA
         + fopen + fread;
     if (total > 0 && logResult && g_patchSummaryLogs > 0) {
@@ -750,7 +974,7 @@ static int PatchModule(HMODULE module, BOOL logResult) {
         WCHAR line[4096];
         wsprintfW(
             line,
-            L"PatchModule total=%d CreateFileW=%d CreateFileA=%d _lopen=%d FindFirstFileA=%d GetProcAddress=%d Mapping=%d/%d/%d ReadFile=%d LoadLibrary=%d/%d/%d MessageBox=%d/%d fopen=%d fread=%d module=%s",
+            L"event=hook_summary total=%d CreateFileW=%d CreateFileA=%d _lopen=%d FindFirstFileA=%d GetProcAddress=%d Mapping=%d/%d/%d ReadFile=%d CloseHandle=%d ExceptionFilter=%d LoadLibrary=%d/%d/%d MessageBox=%d/%d fopen=%d fread=%d module=\"%s\"",
             total,
             createFileW,
             createFileA,
@@ -761,6 +985,8 @@ static int PatchModule(HMODULE module, BOOL logResult) {
             openFileMappingA,
             mapViewOfFile,
             readFile,
+            closeHandle,
+            exceptionFilter,
             loadLibraryW,
             loadLibraryA,
             loadLibraryExA,
@@ -805,27 +1031,331 @@ static void PatchAllModules() {
 
 static HMODULE WINAPI HookLoadLibraryW(LPCWSTR fileName) {
     HMODULE module = RealLoadLibraryW(fileName);
+    DWORD savedError = module == NULL ? GetLastError() : 0;
     LogLoadLibraryW(fileName, module, L"LoadLibraryW");
     PatchAllModules();
+    if (module == NULL) {
+        SetLastError(savedError);
+    }
     return module;
 }
 
 static HMODULE WINAPI HookLoadLibraryA(LPCSTR fileName) {
     HMODULE module = RealLoadLibraryA(fileName);
+    DWORD savedError = module == NULL ? GetLastError() : 0;
     WCHAR widePath[2048];
     AnsiToWide(fileName, widePath, 2048);
+    if (module == NULL) {
+        SetLastError(savedError);
+    }
     LogLoadLibraryW(widePath, module, L"LoadLibraryA");
     PatchAllModules();
+    if (module == NULL) {
+        SetLastError(savedError);
+    }
     return module;
 }
 
 static HMODULE WINAPI HookLoadLibraryExA(LPCSTR fileName, HANDLE file, DWORD flags) {
     HMODULE module = RealLoadLibraryExA(fileName, file, flags);
+    DWORD savedError = module == NULL ? GetLastError() : 0;
     WCHAR widePath[2048];
     AnsiToWide(fileName, widePath, 2048);
+    if (module == NULL) {
+        SetLastError(savedError);
+    }
     LogLoadLibraryW(widePath, module, L"LoadLibraryExA");
     PatchAllModules();
+    if (module == NULL) {
+        SetLastError(savedError);
+    }
     return module;
+}
+
+static ULONGLONG FileTimeValue(const FILETIME &value) {
+    return ((ULONGLONG)value.dwHighDateTime << 32) | value.dwLowDateTime;
+}
+
+struct WindowSearch {
+    DWORD pid;
+    HWND result;
+};
+
+static BOOL CALLBACK FindClientWindowCallback(HWND window, LPARAM param) {
+    WindowSearch *search = (WindowSearch *)param;
+    DWORD pid = 0;
+    GetWindowThreadProcessId(window, &pid);
+    if (pid == search->pid && IsWindowVisible(window) && GetWindow(window, GW_OWNER) == NULL) {
+        search->result = window;
+        return FALSE;
+    }
+    return TRUE;
+}
+
+static HWND FindClientWindow() {
+    WindowSearch search = {GetCurrentProcessId(), NULL};
+    EnumWindows(FindClientWindowCallback, (LPARAM)&search);
+    return search.result;
+}
+
+static void SnapshotLastResource(WCHAR *path, DWORD pathCount, ULONGLONG *offset, DWORD *bytes, ULONGLONG *ageMs) {
+    EnterCriticalSection(&g_resourceLock);
+    lstrcpynW(path, g_lastResourcePath[0] ? g_lastResourcePath : L"(none)", pathCount);
+    *offset = g_lastResourceOffset;
+    *bytes = g_lastResourceBytes;
+    *ageMs = g_lastResourceTick ? CurrentTick() - g_lastResourceTick : 0;
+    LeaveCriticalSection(&g_resourceLock);
+}
+
+static BOOL WriteDiagnosticDump(const WCHAR *reason, EXCEPTION_POINTERS *exceptionPointers) {
+    HMODULE dbghelp = RealLoadLibraryW ? RealLoadLibraryW(L"dbghelp.dll") : LoadLibraryW(L"dbghelp.dll");
+    if (dbghelp == NULL) {
+        WCHAR line[256];
+        wsprintfW(line, L"event=dump status=failed reason=%s error=%lu detail=load_dbghelp", reason, GetLastError());
+        AppendLine(line);
+        return FALSE;
+    }
+
+    MiniDumpWriteDumpFn writeDump = (MiniDumpWriteDumpFn)GetProcAddress(dbghelp, "MiniDumpWriteDump");
+    if (writeDump == NULL) {
+        WCHAR line[256];
+        wsprintfW(line, L"event=dump status=failed reason=%s error=%lu detail=missing_export", reason, GetLastError());
+        AppendLine(line);
+        FreeLibrary(dbghelp);
+        return FALSE;
+    }
+
+    WCHAR dumpPath[MAX_PATH];
+    wsprintfW(dumpPath, L"%s\\%s-%s-%lu.dmp", g_diagnosticsDir, reason, g_sessionId, GetTickCount());
+    HANDLE dumpFile = RealCreateFileW(
+        dumpPath,
+        GENERIC_WRITE,
+        FILE_SHARE_READ,
+        NULL,
+        CREATE_ALWAYS,
+        FILE_ATTRIBUTE_NORMAL,
+        NULL);
+    if (dumpFile == INVALID_HANDLE_VALUE) {
+        WCHAR line[512];
+        wsprintfW(line, L"event=dump status=failed reason=%s error=%lu detail=create_file path=\"%s\"", reason, GetLastError(), dumpPath);
+        AppendLine(line);
+        FreeLibrary(dbghelp);
+        return FALSE;
+    }
+
+    MINIDUMP_EXCEPTION_INFORMATION exceptionInfo;
+    PMINIDUMP_EXCEPTION_INFORMATION exceptionInfoPtr = NULL;
+    if (exceptionPointers != NULL) {
+        exceptionInfo.ThreadId = GetCurrentThreadId();
+        exceptionInfo.ExceptionPointers = exceptionPointers;
+        exceptionInfo.ClientPointers = FALSE;
+        exceptionInfoPtr = &exceptionInfo;
+    }
+    MINIDUMP_TYPE dumpType = (MINIDUMP_TYPE)(
+        MiniDumpNormal
+        | MiniDumpWithDataSegs
+        | MiniDumpWithHandleData);
+    BOOL result = writeDump(
+        GetCurrentProcess(),
+        GetCurrentProcessId(),
+        dumpFile,
+        dumpType,
+        exceptionInfoPtr,
+        NULL,
+        NULL);
+    DWORD savedError = result ? 0 : GetLastError();
+    RealCloseHandle(dumpFile);
+    FreeLibrary(dbghelp);
+
+    WCHAR line[768];
+    wsprintfW(
+        line,
+        L"event=dump status=%s reason=%s error=%lu path=\"%s\"",
+        result ? L"ok" : L"failed",
+        reason,
+        savedError,
+        dumpPath);
+    AppendLine(line);
+    return result;
+}
+
+static LONG WINAPI DiagnosticExceptionFilter(EXCEPTION_POINTERS *exceptionPointers) {
+    DWORD code = 0;
+    PVOID address = NULL;
+    if (exceptionPointers != NULL && exceptionPointers->ExceptionRecord != NULL) {
+        code = exceptionPointers->ExceptionRecord->ExceptionCode;
+        address = exceptionPointers->ExceptionRecord->ExceptionAddress;
+    }
+
+    WCHAR modulePath[MAX_PATH];
+    modulePath[0] = L'\0';
+    HMODULE faultModule = NULL;
+    DWORD moduleOffset = 0;
+    if (address != NULL && GetModuleHandleExW(
+            GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+            (LPCWSTR)address,
+            &faultModule)) {
+        GetModuleFileNameW(faultModule, modulePath, MAX_PATH);
+        moduleOffset = (DWORD)((BYTE *)address - (BYTE *)faultModule);
+    }
+
+    WCHAR resourcePath[MAX_PATH];
+    ULONGLONG resourceOffset = 0;
+    DWORD resourceBytes = 0;
+    ULONGLONG resourceAgeMs = 0;
+    SnapshotLastResource(resourcePath, MAX_PATH, &resourceOffset, &resourceBytes, &resourceAgeMs);
+
+    WCHAR line[2048];
+    wsprintfW(
+        line,
+        L"event=crash code=0x%08lx address=%p module=\"%s\" module_offset=0x%08lx last_resource=\"%s\" resource_offset=%I64u resource_bytes=%lu resource_age_ms=%I64u",
+        code,
+        address,
+        modulePath[0] ? modulePath : L"(unknown)",
+        moduleOffset,
+        resourcePath,
+        resourceOffset,
+        resourceBytes,
+        resourceAgeMs);
+    AppendLine(line);
+    WriteDiagnosticDump(L"crash", exceptionPointers);
+
+    if (g_previousExceptionFilter != NULL && g_previousExceptionFilter != DiagnosticExceptionFilter) {
+        return g_previousExceptionFilter(exceptionPointers);
+    }
+    return EXCEPTION_CONTINUE_SEARCH;
+}
+
+static DWORD WINAPI WatchdogThreadProc(LPVOID) {
+    HMODULE psapi = RealLoadLibraryW ? RealLoadLibraryW(L"psapi.dll") : LoadLibraryW(L"psapi.dll");
+    GetProcessMemoryInfoFn getMemoryInfo = psapi
+        ? (GetProcessMemoryInfoFn)GetProcAddress(psapi, "GetProcessMemoryInfo")
+        : NULL;
+    HANDLE process = GetCurrentProcess();
+    FILETIME createTime;
+    FILETIME exitTime;
+    FILETIME kernelTime;
+    FILETIME userTime;
+    GetProcessTimes(process, &createTime, &exitTime, &kernelTime, &userTime);
+    ULONGLONG previousCpu = FileTimeValue(kernelTime) + FileTimeValue(userTime);
+    ULONGLONG previousTick = CurrentTick();
+    ULONGLONG hungSince = 0;
+    ULONGLONG highCpuSince = 0;
+    BOOL hangDumpWritten = FALSE;
+    BOOL highCpuDumpWritten = FALSE;
+    BOOL manualDumpWritten = FALSE;
+
+    while (InterlockedCompareExchange(&g_shutdownRequested, 0, 0) == 0) {
+        Sleep(g_healthIntervalMs);
+        if (InterlockedCompareExchange(&g_shutdownRequested, 0, 0) != 0) {
+            break;
+        }
+
+        ULONGLONG now = CurrentTick();
+        GetProcessTimes(process, &createTime, &exitTime, &kernelTime, &userTime);
+        ULONGLONG cpu = FileTimeValue(kernelTime) + FileTimeValue(userTime);
+        ULONGLONG elapsedMs = now - previousTick;
+        ULONGLONG cpuDelta = cpu - previousCpu;
+        DWORD cpuTenths = elapsedMs ? (DWORD)(cpuDelta / elapsedMs / 10) : 0;
+        previousCpu = cpu;
+        previousTick = now;
+
+        PROCESS_MEMORY_COUNTERS memory;
+        ZeroMemory(&memory, sizeof(memory));
+        memory.cb = sizeof(memory);
+        if (getMemoryInfo != NULL) {
+            getMemoryInfo(process, &memory, sizeof(memory));
+        }
+        DWORD handleCount = 0;
+        GetProcessHandleCount(process, &handleCount);
+        DWORD gdiObjects = GetGuiResources(process, GR_GDIOBJECTS);
+        DWORD userObjects = GetGuiResources(process, GR_USEROBJECTS);
+        HWND window = FindClientWindow();
+        BOOL windowHung = window != NULL && IsHungAppWindow(window);
+
+        WCHAR resourcePath[MAX_PATH];
+        ULONGLONG resourceOffset = 0;
+        DWORD resourceBytes = 0;
+        ULONGLONG resourceAgeMs = 0;
+        SnapshotLastResource(resourcePath, MAX_PATH, &resourceOffset, &resourceBytes, &resourceAgeMs);
+
+        WCHAR line[2048];
+        wsprintfW(
+            line,
+            L"event=health cpu_core_pct=%lu.%lu working_set_mb=%lu commit_mb=%lu handles=%lu gdi=%lu user=%lu window=%s last_resource=\"%s\" resource_offset=%I64u resource_bytes=%lu resource_age_ms=%I64u",
+            cpuTenths / 10,
+            cpuTenths % 10,
+            (DWORD)(memory.WorkingSetSize / (1024 * 1024)),
+            (DWORD)(memory.PagefileUsage / (1024 * 1024)),
+            handleCount,
+            gdiObjects,
+            userObjects,
+            window == NULL ? L"missing" : (windowHung ? L"hung" : L"responsive"),
+            resourcePath,
+            resourceOffset,
+            resourceBytes,
+            resourceAgeMs);
+        AppendLine(line);
+
+        if (g_manualDumpHotkey && !manualDumpWritten
+                && (GetAsyncKeyState(VK_CONTROL) & 0x8000)
+                && (GetAsyncKeyState(VK_F12) & 0x8000)) {
+            AppendLine(L"event=manual_dump hotkey=Ctrl+F12");
+            WriteDiagnosticDump(L"manual", NULL);
+            manualDumpWritten = TRUE;
+        }
+
+        if (windowHung) {
+            if (hungSince == 0) {
+                hungSince = now;
+            }
+            if (!hangDumpWritten && now - hungSince >= g_hangThresholdMs) {
+                AppendLine(L"event=hang_detected reason=window_unresponsive");
+                if (g_dumpOnHang) {
+                    WriteDiagnosticDump(L"hang", NULL);
+                }
+                hangDumpWritten = TRUE;
+            }
+        } else {
+            hungSince = 0;
+            hangDumpWritten = FALSE;
+        }
+
+        if (cpuTenths >= g_highCpuThreshold * 10) {
+            if (highCpuSince == 0) {
+                highCpuSince = now;
+            }
+            if (g_highCpuThresholdMs > 0 && !highCpuDumpWritten && now - highCpuSince >= g_highCpuThresholdMs) {
+                AppendLine(L"event=hang_detected reason=sustained_high_cpu");
+                if (g_dumpOnHang) {
+                    WriteDiagnosticDump(L"high-cpu", NULL);
+                }
+                highCpuDumpWritten = TRUE;
+            }
+        } else {
+            highCpuSince = 0;
+        }
+    }
+
+    if (psapi != NULL) {
+        FreeLibrary(psapi);
+    }
+    return 0;
+}
+
+static void LoadConfiguration() {
+    WCHAR configPath[MAX_PATH];
+    lstrcpynW(configPath, g_exeDir, MAX_PATH);
+    lstrcatW(configPath, L"beidou_diagnostics.ini");
+    g_healthIntervalMs = GetPrivateProfileIntW(L"diagnostics", L"health_interval_ms", 1000, configPath);
+    g_hangThresholdMs = GetPrivateProfileIntW(L"diagnostics", L"hang_threshold_ms", 5000, configPath);
+    g_highCpuThreshold = GetPrivateProfileIntW(L"diagnostics", L"high_cpu_threshold", 70, configPath);
+    g_highCpuThresholdMs = GetPrivateProfileIntW(L"diagnostics", L"high_cpu_threshold_ms", 3000, configPath);
+    g_dumpOnHang = GetPrivateProfileIntW(L"diagnostics", L"dump_on_hang", 1, configPath) != 0;
+    g_manualDumpHotkey = GetPrivateProfileIntW(L"diagnostics", L"manual_dump_hotkey", 1, configPath) != 0;
+    if (g_healthIntervalMs < 1000) {
+        g_healthIntervalMs = 1000;
+    }
 }
 
 static void InitPaths(HMODULE self) {
@@ -836,8 +1366,25 @@ static void InitPaths(HMODULE self) {
     if (lastSlash != NULL) {
         *(lastSlash + 1) = L'\0';
     }
-    lstrcpynW(g_logPath, g_exeDir, MAX_PATH);
-    lstrcatW(g_logPath, L"beidou_wz_access.log");
+    lstrcpynW(g_diagnosticsDir, g_exeDir, MAX_PATH);
+    lstrcatW(g_diagnosticsDir, L"diagnostics");
+    if (!CreateDirectoryW(g_diagnosticsDir, NULL) && GetLastError() != ERROR_ALREADY_EXISTS) {
+        lstrcpynW(g_diagnosticsDir, g_exeDir, MAX_PATH);
+    }
+
+    SYSTEMTIME st;
+    GetLocalTime(&st);
+    wsprintfW(
+        g_sessionId,
+        L"%04u%02u%02u-%02u%02u%02u-pid%lu",
+        st.wYear,
+        st.wMonth,
+        st.wDay,
+        st.wHour,
+        st.wMinute,
+        st.wSecond,
+        GetCurrentProcessId());
+    wsprintfW(g_logPath, L"%s\\session-%s.log", g_diagnosticsDir, g_sessionId);
 }
 
 BOOL APIENTRY DllMain(HMODULE module, DWORD reason, LPVOID reserved) {
@@ -845,14 +1392,43 @@ BOOL APIENTRY DllMain(HMODULE module, DWORD reason, LPVOID reserved) {
         g_selfModule = module;
         DisableThreadLibraryCalls(module);
         InitializeCriticalSection(&g_logLock);
+        InitializeCriticalSection(&g_resourceLock);
         InitPaths(module);
 
         RefreshOriginalFunctions();
+        LoadConfiguration();
 
-        AppendLine(L"WzFileLogger attached");
+        WCHAR line[1024];
+        wsprintfW(
+            line,
+            L"event=session_start session=%s pid=%lu exe_dir=\"%s\" health_interval_ms=%lu hang_threshold_ms=%lu high_cpu_threshold=%lu high_cpu_threshold_ms=%lu dump_on_hang=%lu manual_dump_hotkey=%lu",
+            g_sessionId,
+            GetCurrentProcessId(),
+            g_exeDir,
+            g_healthIntervalMs,
+            g_hangThresholdMs,
+            g_highCpuThreshold,
+            g_highCpuThresholdMs,
+            g_dumpOnHang ? 1 : 0,
+            g_manualDumpHotkey ? 1 : 0);
+        AppendLine(line);
+        g_previousExceptionFilter = SetUnhandledExceptionFilter(DiagnosticExceptionFilter);
         PatchAllModules();
+        g_watchdogThread = CreateThread(NULL, 0, WatchdogThreadProc, NULL, 0, NULL);
+        if (g_watchdogThread == NULL) {
+            AppendLine(L"event=watchdog status=failed");
+        } else {
+            AppendLine(L"event=watchdog status=started");
+        }
     } else if (reason == DLL_PROCESS_DETACH) {
-        AppendLine(L"WzFileLogger detached");
+        InterlockedExchange(&g_shutdownRequested, 1);
+        AppendLine(L"event=session_end reason=process_detach");
+        if (g_watchdogThread != NULL) {
+            CloseHandle(g_watchdogThread);
+            g_watchdogThread = NULL;
+        }
+        SetUnhandledExceptionFilter(g_previousExceptionFilter);
+        DeleteCriticalSection(&g_resourceLock);
         DeleteCriticalSection(&g_logLock);
     }
     return TRUE;

@@ -803,28 +803,77 @@ def upsert_server_imgdir_child(path: Path, parent_name: str, child_name: str, ch
 
 
 def migrate_connect_compat() -> dict[str, int]:
-    stats = {"client": 0, "server": 0}
-    src = source_img(SRC_CLIENT / "Map/Obj/connect.img")
-    source_rope = src.get("rope/59")
-    if source_rope is None:
-        raise RuntimeError("source Map/Obj/connect.img missing rope/59")
-
     client_path = ROOT / "clien/Data/Map/Obj/connect.img"
     dst = WzImage.from_bytes(client_path.read_bytes(), key=TARGET_KEY, name=client_path.name)
     dst.parse()
-    rope = dst.get("rope")
-    if not isinstance(rope, WzSubProperty):
-        raise RuntimeError("target Map/Obj/connect.img missing rope")
-    remove_child(rope, "59")
-    rope.add(clone_property(source_rope, name="59", parent=rope))
-    backup(client_path)
-    atomic_write_bytes(client_path, encode_image_body(dst, gms_reader()))
-    stats["client"] = 1
+    rope59 = dst.get("rope/59")
+    expected_canvases = {
+        "0": (18, 41),
+        "1": (17, 30),
+        "2": (17, 39),
+        "3": (26, 120),
+    }
+    errors = []
+    if not isinstance(rope59, WzSubProperty):
+        errors.append("rope/59 is missing or is not a Property")
+    else:
+        for name, dimensions in expected_canvases.items():
+            branch = rope59.child(name)
+            canvas = branch.child("0") if isinstance(branch, WzSubProperty) else None
+            if not isinstance(canvas, WzCanvasProperty):
+                errors.append(f"rope/59/{name}/0 is not a canvas")
+                continue
+            actual_dimensions = (int(canvas.width), int(canvas.height))
+            actual_format = int(canvas.format) + int(canvas.format2)
+            if actual_dimensions != dimensions or actual_format != 1:
+                errors.append(
+                    f"rope/59/{name}/0 is {actual_dimensions} format {actual_format}, "
+                    f"expected {dimensions} format 1"
+                )
+            convex = canvas.child("rope")
+            if not isinstance(convex, WzConvexProperty) or len(convex.points) != 2:
+                errors.append(f"rope/59/{name}/0/rope is not a two-point convex property")
+    if errors:
+        details = "; ".join(errors)
+        raise RuntimeError(
+            "target Map/Obj/connect.img has an old-client-incompatible rope/59 "
+            f"({details}); run tool/scripts/patch-client/"
+            "repair_root_abyss_connect_rope59.py"
+        )
 
     server_path = ROOT / "gms-server/wz/Map.wz/Obj/connect.img.xml"
-    upsert_server_imgdir_child(server_path, "rope", "59", property_to_xml(source_rope, 2))
-    stats["server"] = 1
-    return stats
+    server_root = ET.parse(server_path).getroot()
+    server_rope59 = direct_xml_child(direct_xml_child(server_root, "rope"), "59")
+    server_errors = []
+    if server_rope59 is None:
+        server_errors.append("rope/59 is missing")
+    else:
+        for name, dimensions in expected_canvases.items():
+            branch = direct_xml_child(server_rope59, name)
+            canvas = direct_xml_child(branch, "0")
+            if canvas is None or canvas.tag != "canvas":
+                server_errors.append(f"rope/59/{name}/0 is not a canvas")
+                continue
+            actual_dimensions = (int(canvas.get("width", 0)), int(canvas.get("height", 0)))
+            actual_format = int(canvas.get("format", 0))
+            if actual_dimensions != dimensions or actual_format != 1:
+                server_errors.append(
+                    f"rope/59/{name}/0 is {actual_dimensions} format {actual_format}, "
+                    f"expected {dimensions} format 1"
+                )
+            convex = direct_xml_child(canvas, "rope")
+            vectors = list(convex) if convex is not None and convex.tag == "extended" else []
+            if len(vectors) != 2 or any(vector.tag != "vector" for vector in vectors):
+                server_errors.append(
+                    f"rope/59/{name}/0/rope is not a two-point convex property"
+                )
+    if server_errors:
+        raise RuntimeError(
+            "server Map.wz/Obj/connect.img.xml has an old-client-incompatible rope/59 "
+            f"({'; '.join(server_errors)}); run tool/scripts/patch-client/"
+            "repair_root_abyss_connect_rope59.py"
+        )
+    return {"client": 0, "server": 0}
 
 
 def migrate_effect_compat() -> dict[str, int]:

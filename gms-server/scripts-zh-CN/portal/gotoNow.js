@@ -1,5 +1,4 @@
 function enter(pi) {
-    pi.playPortalSound();
-    pi.warp(272020000, "sp");
+    pi.openNpc(2144000,"outAkayrum");
     return true;
 }

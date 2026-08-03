@@ -10,6 +10,12 @@ Blaze Wizard is routed through the native magic branch and its original flat
 high-ID visual exit so the old client keeps direct `effect`, magic `hit`, and
 damage-number paths. Night Walker uses the native ranged entry `0x009690E9` and
 arms a skill-whitelisted MagicBullet trajectory hook for its migrated darts.
+Version 41 also routes all migrated Explorer attack nodes through their legacy
+melee, magic, or ranged constructors. Explorer Bowmaster, Marksman, Night Lord,
+and Corsair active attacks use their migrated per-skill target limits and WZ
+`lt/rb` ranges; their hidden replay stages remain renderable but cannot be put
+on a hotkey. All 23 Explorer Origin video skills call the shared MCV player from
+the same active dispatch before continuing through the native attack branch.
 Thunder Breaker skills use the knuckle melee branch. `15121021` is the hidden Sea Dragon Spiral tick node,
 so continuous hits do not replay the complete cast animation. The Lightning
 Spear visual IDs `15121022..15121033` are accepted by the active-skill and
@@ -55,8 +61,10 @@ rtk python3 tool/scripts/patch-client/patch_dawn_warrior_skill_dll_loader.py
 ```
 
 At runtime, inspect `clien/DawnWarriorSkillCompat.log`. A successful load
-writes `LOAD: Dawn Warrior/Blaze Wizard/Wind Archer/Night Walker/Thunder Breaker Skill Compat v38`
-followed by the recognition-hook result. Version 38 removes the unsupported
+writes `LOAD: Cygnus/Explorer V-VI Attack Skill Compat v41`
+followed by the recognition-hook result. Version 40 routes the migrated Hero
+`1121012..1121030` attack stages through the legacy Brandish active-skill,
+visual, state and hit branches. Version 38 removes the unsupported
 Thunder Breaker projectile compatibility path and keeps Lightning Spear on the
 supported melee visual path. Version 33 also renders an active MCV
 from the D3D8 Present hook when the field-layer marker is not drawn, so Origin
