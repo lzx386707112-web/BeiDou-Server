@@ -3,7 +3,7 @@ set -euo pipefail
 
 root_dir="$(cd "$(dirname "$0")/../../.." && pwd)"
 source_file="$root_dir/tool/client-debug/fps-limit/BeiDouFpsLimit.cpp"
-output_file="$root_dir/clien/BeiDouFpsLimit.dll"
+output_file="$root_dir/clien/BeiDou30FpsLimit.dll"
 
 i686-w64-mingw32-g++ \
   -std=c++17 -Os -s -shared -nostdlib -fno-exceptions -fno-rtti \

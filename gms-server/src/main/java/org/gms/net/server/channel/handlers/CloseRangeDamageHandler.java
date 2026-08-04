@@ -614,7 +614,6 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
             for (Integer hit : entry.getValue()) {
                 total = (int) Math.min(Integer.MAX_VALUE, (long) total + decodeRepeatedDamage(hit));
             }
-            chr.sendPacket(PacketCreator.damageMonster(monster.getObjectId(), total));
             monster.aggroMonsterDamage(chr, total);
             expectedMap.damageMonster(chr, monster, total);
         }
@@ -658,7 +657,6 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
                     return;
                 }
                 if (originalTick) {
-                    showCapturedDamageNumbers(attack, chr, expectedMap);
                     applyAttack(attack, chr, originalEffect.getAttackCount());
                     return;
                 }

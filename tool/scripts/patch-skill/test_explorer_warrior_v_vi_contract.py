@@ -173,6 +173,19 @@ class ExplorerWarriorPatchContractTest(unittest.TestCase):
             java_int_array(self.handler, "RISING_JUSTICE_TIMES_MS"),
         )
 
+    def test_tracking_close_replays_only_use_stacked_attack_damage_numbers(self) -> None:
+        repeat_start = self.handler.index("private static void repeatTrackingCloseAttack(")
+        repeat_end = self.handler.index("\n    private void scheduleTrackingCloseAttacks(", repeat_start)
+        repeat_block = self.handler[repeat_start:repeat_end]
+        self.assertIn("PacketCreator.closeRangeAttack(", repeat_block)
+        self.assertNotIn("PacketCreator.damageMonster(", repeat_block)
+
+        schedule_start = repeat_end
+        schedule_end = self.handler.index("\n    private static void repeatLightningSpearThunder(", schedule_start)
+        schedule_block = self.handler[schedule_start:schedule_end]
+        self.assertIn("applyAttack(attack, chr, originalEffect.getAttackCount())", schedule_block)
+        self.assertNotIn("showCapturedDamageNumbers(attack, chr, expectedMap)", schedule_block)
+
     def test_hero_removed_swordsman_idea_and_uses_free_melee_id(self) -> None:
         hero = next(job for job in patch.JOBS if job.key == "hero")
         target_ids = {spec.target_id for spec in hero.skills}

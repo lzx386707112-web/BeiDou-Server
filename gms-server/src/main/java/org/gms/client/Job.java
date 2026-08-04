@@ -337,7 +337,7 @@ public enum Job {
             } else if (level < 120) {
                 return Job.DAWNWARRIOR3;
             } else {
-                return Job.DAWNWARRIOR3;
+                return Job.DAWNWARRIOR4;
             }
         }
 
@@ -352,7 +352,7 @@ public enum Job {
             } else if (level < 120) {
                 return Job.BLAZEWIZARD3;
             } else {
-                return Job.BLAZEWIZARD3;
+                return Job.BLAZEWIZARD4;
             }
         }
 
@@ -367,7 +367,7 @@ public enum Job {
             } else if (level < 120) {
                 return Job.WINDARCHER3;
             } else {
-                return Job.WINDARCHER3;
+                return Job.WINDARCHER4;
             }
         }
 
@@ -382,7 +382,7 @@ public enum Job {
             } else if (level < 120) {
                 return Job.NIGHTWALKER3;
             } else {
-                return Job.NIGHTWALKER3;
+                return Job.NIGHTWALKER4;
             }
         }
 
@@ -397,7 +397,7 @@ public enum Job {
             } else if (level < 120) {
                 return Job.THUNDERBREAKER3;
             } else {
-                return Job.THUNDERBREAKER3;
+                return Job.THUNDERBREAKER4;
             }
         }
 
@@ -486,5 +486,4 @@ public enum Job {
 
 
 }
-
 

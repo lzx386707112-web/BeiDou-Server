@@ -1,4 +1,4 @@
-// 60 FPS limiter for the legacy Direct3D 8 BeiDou client.
+// 30 FPS limiter for the legacy Direct3D 8 BeiDou client.
 
 #include <windows.h>
 #include <d3d8.h>
@@ -12,7 +12,7 @@ constexpr size_t kCreateDeviceVtableIndex = 15;
 constexpr size_t kPresentVtableIndex = 15;
 constexpr DWORD kInstallRetryMilliseconds = 100;
 constexpr int kInstallRetryCount = 300;
-constexpr LONGLONG kFramesPerSecond = 60;
+constexpr LONGLONG kFramesPerSecond = 30;
 
 using Direct3DCreate8Fn = IDirect3D8*(WINAPI*)(UINT);
 using CreateDeviceFn = HRESULT(WINAPI*)(
@@ -57,7 +57,7 @@ Function FunctionFromPointer(void* pointer) {
 
 void LogLine(const char* text) {
     HANDLE file = CreateFileA(
-        "BeiDouFpsLimit.log",
+        "BeiDou30FpsLimit.log",
         FILE_APPEND_DATA,
         FILE_SHARE_READ | FILE_SHARE_WRITE,
         nullptr,
@@ -186,7 +186,7 @@ DWORD WINAPI InstallLimiter(LPVOID) {
         if (InstallPresentHook()) {
             timeBeginPeriod(1);
             QueryPerformanceFrequency(&gPerformanceFrequency);
-            LogLine("OK: Direct3D 8 frame rate limited to 60 FPS");
+            LogLine("OK: Direct3D 8 frame rate limited to 30 FPS");
             return 0;
         }
         Sleep(kInstallRetryMilliseconds);

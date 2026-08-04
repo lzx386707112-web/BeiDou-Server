@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Create a 60 FPS BeiDou client copy without modifying BeiDou.exe."""
+"""Create a 30 FPS BeiDou client copy without modifying BeiDou.exe."""
 
 from __future__ import annotations
 
@@ -10,9 +10,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
 SOURCE_EXE = ROOT / "clien" / "BeiDou.exe"
-OUTPUT_EXE = ROOT / "clien" / "BeiDou-60FPS.exe"
+OUTPUT_EXE = ROOT / "clien" / "BeiDou-30FPS.exe"
 COMPAT_DLL = ROOT / "clien" / "DawnWarriorSkillCompat.dll"
-FPS_DLL = ROOT / "clien" / "BeiDouFpsLimit.dll"
+FPS_DLL = ROOT / "clien" / "BeiDou30FpsLimit.dll"
 
 IMAGE_BASE = 0x00400000
 ENTRY_VA = 0x00A63FF3
@@ -27,7 +27,7 @@ COMPAT_NAME_OFFSET = 0x30
 FPS_NAME_OFFSET = 0x50
 ORIGINAL_COMPAT_NAME_OFFSET = 0x48
 COMPAT_NAME = b"DawnWarriorSkillCompat.dll\x00"
-FPS_NAME = b"BeiDouFpsLimit.dll\x00"
+FPS_NAME = b"BeiDou30FpsLimit.dll\x00"
 LOAD_LIBRARY_A_IAT = 0x00AF00C0
 
 
@@ -54,7 +54,7 @@ def build_original_cave() -> bytes:
     return bytes(code) + b"\x00" * (CAVE_SIZE - len(code))
 
 
-def build_60fps_cave() -> bytes:
+def build_30fps_cave() -> bytes:
     code = bytearray(b"\x9C\x60")
     add_load_library(code, CAVE_VA + COMPAT_NAME_OFFSET)
     add_load_library(code, CAVE_VA + FPS_NAME_OFFSET)
@@ -69,7 +69,7 @@ def build_60fps_cave() -> bytes:
     code += b"\x00" * (FPS_NAME_OFFSET - len(code))
     code += FPS_NAME
     if len(code) > CAVE_SIZE:
-        raise RuntimeError("60 FPS loader exceeds the existing code cave")
+        raise RuntimeError("30 FPS loader exceeds the existing code cave")
     return bytes(code) + b"\x00" * (CAVE_SIZE - len(code))
 
 
@@ -95,7 +95,7 @@ def main() -> int:
         raise RuntimeError("BeiDou.exe compatibility loader differs from the audited layout")
 
     output = bytearray(source)
-    output[CAVE_OFFSET : CAVE_OFFSET + CAVE_SIZE] = build_60fps_cave()
+    output[CAVE_OFFSET : CAVE_OFFSET + CAVE_SIZE] = build_30fps_cave()
     atomic_write(OUTPUT_EXE, output)
 
     generated = OUTPUT_EXE.read_bytes()
@@ -107,7 +107,7 @@ def main() -> int:
         raise RuntimeError("source BeiDou.exe changed while generating the copy")
 
     print(f"generated: {OUTPUT_EXE}")
-    print("original BeiDou.exe unchanged; copied client loads BeiDouFpsLimit.dll at 60 FPS")
+    print("original BeiDou.exe unchanged; copied client loads BeiDou30FpsLimit.dll at 30 FPS")
     return 0
 
 
