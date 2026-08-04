@@ -234,13 +234,13 @@ function doUpgrade() {
         let newName = ItemInformationProvider.getInstance().getName(newRingId);
         cm.sendOk(`升级成功！获得【#v${newRingId}##t${newRingId}#】\n四维+5 物攻+5 魔攻+10`);
         let notice = `恭喜玩家【${player.getName()}】将【${oldName}】升级为【${newName}】，全属性+5，物攻+5，魔攻+10！`;
-        sendRandomSceneMegaphone(player, 2, "灵魂戒指升级", notice);
+        sendSuperMegaphone(player, 2, "灵魂戒指升级", notice);
         sendServerMsg(notice);
         player.dropMessage(6, notice);
     } else {
         cm.sendOk(`升级失败！`);
         let notice = `倒霉孩子【${player.getName()}】升级【${oldName}】失败！`;
-        sendRandomSceneMegaphone(player, 3, "灵魂戒指升级", notice);
+        sendSuperMegaphone(player, 3, "灵魂戒指升级", notice);
         sendServerMsg(notice);
         player.dropMessage(6, notice);
     }
@@ -250,36 +250,24 @@ function doUpgrade() {
 function sendServerMsg(text) {
     cm.getPlayer().sendFullServerBroadcast("[灵魂戒指升级] " + text);
 }
-function sendRandomSceneMegaphone(player, typeOrTitle, titleOrContent, content) {
+function sendSuperMegaphone(player, typeOrTitle, titleOrContent, content) {
     if (player.checkoutBroadcast()) {
         return;
     }
     var title = content === undefined ? typeOrTitle : titleOrContent;
     var message = content === undefined ? titleOrContent : content;
     var fullMessage = "[" + title + "] : " + message;
-    var lineLength = Math.max(1, Math.ceil(fullMessage.length / 4));
-    var lines = new (Java.type("java.util.LinkedList"))();
-    for (var i = 0; i < 4; i++) {
-        var start = i * lineLength;
-        lines.add(start < fullMessage.length
-            ? fullMessage.substring(start, Math.min(start + lineLength, fullMessage.length))
-            : "");
-    }
-
-    var itemIds = [5390005, 5390001, 5390002];
-    var itemId = itemIds[Math.floor(Math.random() * itemIds.length)];
     var Server = Java.type("org.gms.net.server.Server");
     var PacketCreator = Java.type("org.gms.util.PacketCreator");
-    var world = player.getWorld();
-    Server.getInstance().broadcastMessage(
-        world,
-        PacketCreator.getAvatarMega(player, "", player.getClient().getChannel(), itemId, lines, true)
-    );
 
-    var clearTask = new (Java.type("java.lang.Runnable"))({
-        run: function () {
-            Server.getInstance().broadcastMessage(world, PacketCreator.byeAvatarMega());
-        }
-    });
-    Java.type("org.gms.server.TimerManager").getInstance().schedule(clearTask, 10000);
+    // 5072000（高质地喇叭）使用类型 3 的全服喇叭封包。
+    Server.getInstance().broadcastMessage(
+        player.getWorld(),
+        PacketCreator.serverNotice(
+            3,
+            player.getClient().getChannel(),
+            player.getName() + " : " + fullMessage,
+            true
+        )
+    );
 }

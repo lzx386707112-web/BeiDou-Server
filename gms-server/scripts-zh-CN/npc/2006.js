@@ -99,7 +99,7 @@ function action(mode, type, selection) {
                 cm.gainItem(selectedReward.item, 1);
                 cm.sendOk("成功领取奖励：#v" + selectedReward.item + "# #b#t" + selectedReward.item + "##k！");
                 var itemName = ItemInformationProvider.getInstance().getName(selectedReward.item);
-                sendRandomSceneMegaphone(cm.getPlayer(), 3, "怪物卡姐", `恭喜肝帝${cm.getPlayer().getName()}肝出[${itemName}]!`)
+                sendSuperMegaphone(cm.getPlayer(), 3, "怪物卡姐", `恭喜肝帝${cm.getPlayer().getName()}肝出[${itemName}]!`)
             }
         } else {
             cm.sendOk("你还没有收集足够的怪物卡。");
@@ -109,36 +109,24 @@ function action(mode, type, selection) {
         cm.dispose();
     }
 }
-function sendRandomSceneMegaphone(player, typeOrTitle, titleOrContent, content) {
+function sendSuperMegaphone(player, typeOrTitle, titleOrContent, content) {
     if (player.checkoutBroadcast()) {
         return;
     }
     var title = content === undefined ? typeOrTitle : titleOrContent;
     var message = content === undefined ? titleOrContent : content;
     var fullMessage = "[" + title + "] : " + message;
-    var lineLength = Math.max(1, Math.ceil(fullMessage.length / 4));
-    var lines = new (Java.type("java.util.LinkedList"))();
-    for (var i = 0; i < 4; i++) {
-        var start = i * lineLength;
-        lines.add(start < fullMessage.length
-            ? fullMessage.substring(start, Math.min(start + lineLength, fullMessage.length))
-            : "");
-    }
-
-    var itemIds = [5390005, 5390001, 5390002];
-    var itemId = itemIds[Math.floor(Math.random() * itemIds.length)];
     var Server = Java.type("org.gms.net.server.Server");
     var PacketCreator = Java.type("org.gms.util.PacketCreator");
-    var world = player.getWorld();
-    Server.getInstance().broadcastMessage(
-        world,
-        PacketCreator.getAvatarMega(player, "", player.getClient().getChannel(), itemId, lines, true)
-    );
 
-    var clearTask = new (Java.type("java.lang.Runnable"))({
-        run: function () {
-            Server.getInstance().broadcastMessage(world, PacketCreator.byeAvatarMega());
-        }
-    });
-    Java.type("org.gms.server.TimerManager").getInstance().schedule(clearTask, 10000);
+    // 5072000（高质地喇叭）使用类型 3 的全服喇叭封包。
+    Server.getInstance().broadcastMessage(
+        player.getWorld(),
+        PacketCreator.serverNotice(
+            3,
+            player.getClient().getChannel(),
+            player.getName() + " : " + fullMessage,
+            true
+        )
+    );
 }

@@ -19,7 +19,7 @@ import patch_explorer_other_v_vi as migration  # noqa: E402
 from export_thunder_breaker_mcvs import parse_mcv  # noqa: E402
 from wzpy import WzImage, WzKey  # noqa: E402
 from wzpy.canvas import decode_canvas  # noqa: E402
-from wzpy.properties import WzCanvasProperty, WzSubProperty  # noqa: E402
+from wzpy.properties import WzCanvasProperty, WzSubProperty, WzUolProperty  # noqa: E402
 
 
 CLASS_FILES = {
@@ -115,7 +115,7 @@ class ExplorerOtherPatchContractTest(unittest.TestCase):
             root = image.parse()
             for spec in job.skills:
                 node = root.get(f"skill/{spec.target_id}")
-                self.assertEqual(job.config.action, node.get("action/0").value)
+                self.assertEqual(migration.legacy_action(job, spec), node.get("action/0").value)
                 canvas_count = 0
                 decoded_representative = False
                 stack = [node]
@@ -178,7 +178,6 @@ class ExplorerOtherPatchContractTest(unittest.TestCase):
     def test_overloaded_tms_time_fields_use_legacy_seconds(self):
         expected = {
             2221014: 40,
-            2221019: 4,
             3121012: None,
             3121024: 60,
             3221017: None,
@@ -192,6 +191,63 @@ class ExplorerOtherPatchContractTest(unittest.TestCase):
         specs = {spec.target_id: spec for job in self.jobs for spec in job.skills}
         for skill_id, duration in expected.items():
             self.assertEqual(duration, specs[skill_id].duration_seconds, skill_id)
+
+    def test_removed_il_vi_skills_are_absent_without_shifting_later_ids(self):
+        job = next(job for job in self.jobs if job.config.key == "ilArchMage")
+        self.assertTrue(migration.IL_EXCLUDED_VI_IDS.isdisjoint(job.target_by_source))
+        self.assertEqual(2241003, job.source_by_target[2221020])
+        self.assertEqual(2241005, job.source_by_target[2221022])
+        self.assertEqual(2241500, job.source_by_target[2221027])
+        self.assertEqual(2241505, job.source_by_target[2221030])
+
+        removed_ids = (2221019, 2221023, 2221024, 2221025)
+        client_path = ROOT / "clien/Data/Skill/222.img"
+        client = WzImage.from_bytes(
+            client_path.read_bytes(), key=WzKey.for_region("GMS"), name=client_path.name
+        ).parse()
+        client_string_path = ROOT / "clien/Data/String/Skill.img"
+        client_string = WzImage.from_bytes(
+            client_string_path.read_bytes(),
+            key=WzKey.for_region("GMS"),
+            name=client_string_path.name,
+        ).parse()
+        server = ET.parse(ROOT / "gms-server/wz/Skill.wz/222.img.xml").getroot()
+        server_skills = server.find("./imgdir[@name='skill']")
+        server_string = ET.parse(ROOT / "gms-server/wz/String.wz/Skill.img.xml").getroot()
+        for skill_id in removed_ids:
+            self.assertIsNone(client.get(f"skill/{skill_id}"), skill_id)
+            self.assertIsNone(client_string.get(str(skill_id)), skill_id)
+            self.assertIsNone(server_skills.find(f"./imgdir[@name='{skill_id}']"), skill_id)
+            self.assertIsNone(server_string.find(f"./imgdir[@name='{skill_id}']"), skill_id)
+
+    def test_il_internal_vi_nodes_are_hidden_from_active_skill_grants(self):
+        job = next(job for job in self.jobs if job.config.key == "ilArchMage")
+        specs = {spec.target_id: spec for spec in job.skills}
+        self.assertEqual(2240006, specs[2221016].source_id)
+        self.assertEqual(2241001, specs[2221018].source_id)
+        for skill_id in (2221016, 2221018):
+            self.assertTrue(specs[skill_id].hidden, skill_id)
+
+        client_path = ROOT / "clien/Data/Skill/222.img"
+        client = WzImage.from_bytes(
+            client_path.read_bytes(), key=WzKey.for_region("GMS"), name=client_path.name
+        ).parse()
+        server = ET.parse(ROOT / "gms-server/wz/Skill.wz/222.img.xml").getroot()
+        server_skills = server.find("./imgdir[@name='skill']")
+        for skill_id in (2221016, 2221018):
+            self.assertEqual(1, client.get(f"skill/{skill_id}/invisible").value, skill_id)
+            invisible = server_skills.find(
+                f"./imgdir[@name='{skill_id}']/int[@name='invisible']"
+            )
+            self.assertIsNotNone(invisible, skill_id)
+            self.assertEqual("1", invisible.get("value"), skill_id)
+
+        constants = (ROOT / "gms-server/src/main/java/org/gms/constants/skills/ILArchMage.java").read_text(
+            encoding="utf-8"
+        )
+        block = re.search(r"V_VI_ACTIVE_ATTACKS\s*=\s*\{([^}]*)}", constants, re.S)
+        active_ids = {int(value) for value in re.findall(r"\d+", block.group(1))}
+        self.assertTrue({2221016, 2221018}.isdisjoint(active_ids))
 
     def test_mcv_headers_alpha_and_dll_mappings(self):
         cpp = (ROOT / "tool/client-debug/dawn-warrior-skill-compat/DawnWarriorSkillCompat.cpp").read_text(
@@ -245,6 +301,121 @@ class ExplorerOtherPatchContractTest(unittest.TestCase):
                     self.assertRegex(compat, rf"replay\s*\(\s*{replay_id}\s*,")
                     self.assertEqual(list(times), sorted(times))
         self.assertEqual(20, source_count)
+
+    def test_il_v_levels_follow_tms_formulas(self):
+        job = next(job for job in self.jobs if job.config.key == "ilArchMage")
+        client_path = ROOT / "clien/Data/Skill/222.img"
+        client = WzImage.from_bytes(
+            client_path.read_bytes(), key=WzKey.for_region("GMS"), name=client_path.name
+        ).parse()
+        server = ET.parse(ROOT / "gms-server/wz/Skill.wz/222.img.xml").getroot()
+        server_skills = server.find("./imgdir[@name='skill']")
+        for spec in job.skills:
+            if spec.source_id not in migration.IL_LEGACY_ACTIONS:
+                continue
+            for level in (1, 15, 30):
+                expected = migration.level_parameters(spec, level)
+                client_level = client.get(f"skill/{spec.target_id}/level/{level}")
+                server_level = server_skills.find(
+                    f"./imgdir[@name='{spec.target_id}']/imgdir[@name='level']"
+                    f"/imgdir[@name='{level}']"
+                )
+                server_values = {child.get("name"): child.get("value") for child in server_level}
+                for name in ("damage", "attackCount", "mobCount", "mpCon", "cooltime"):
+                    self.assertEqual(expected[name], int(client_level.get(name).value), (spec.target_id, level, name))
+                    self.assertEqual(expected[name], int(server_values[name]), (spec.target_id, level, name))
+                client_time = client_level.get("time")
+                self.assertEqual(expected["time"], None if client_time is None else int(client_time.value))
+                self.assertEqual(expected["time"], int(server_values["time"]) if "time" in server_values else None)
+
+    def test_il_v_legacy_visual_nodes_are_recognizable(self):
+        path = ROOT / "clien/Data/Skill/222.img"
+        root = WzImage.from_bytes(
+            path.read_bytes(), key=WzKey.for_region("GMS"), name=path.name
+        ).parse()
+        expected_actions = {
+            2221009: "blizzard",
+            2221010: "chainlightning",
+            2221013: "alert2",
+            2221014: "chainlightning",
+        }
+        for skill_id, action in expected_actions.items():
+            self.assertEqual(action, root.get(f"skill/{skill_id}/action/0").value)
+        self.assertTrue(migration.engine.base.numeric_canvases(root.get("skill/2221010/hit/0")))
+        for skill_id in (2221009, 2221013, 2221014):
+            summon = root.get(f"skill/{skill_id}/summon")
+            self.assertIsInstance(summon, WzSubProperty)
+            self.assertEqual(
+                {"summoned", "stand", "attack1", "die"},
+                {child.name for child in summon.children()},
+            )
+            for action in summon.children():
+                direct_canvas = (
+                    skill_id == 2221013
+                    or (skill_id == 2221009 and action.name != "attack1")
+                    or action.name in {"summoned", "die"}
+                )
+                if direct_canvas:
+                    self.assertTrue(migration.engine.base.numeric_canvases(action), (skill_id, action.name))
+                    continue
+                frames = action.children()
+                self.assertTrue(frames, (skill_id, action.name))
+                for frame in frames:
+                    self.assertIsInstance(frame, WzUolProperty, (skill_id, action.name, frame.name))
+                    resolved = frame.parent.get(frame.value)
+                    self.assertIsInstance(resolved, WzCanvasProperty, (skill_id, action.name, frame.value))
+
+    def test_il_nodes_use_only_legacy_shapes(self):
+        path = ROOT / "clien/Data/Skill/222.img"
+        root = WzImage.from_bytes(
+            path.read_bytes(), key=WzKey.for_region("GMS"), name=path.name
+        ).parse()
+        for skill_id, branch in (
+            (2221009, "special2"),
+            (2221009, "special3"),
+            (2221013, "hit2"),
+        ):
+            self.assertIsNone(root.get(f"skill/{skill_id}/{branch}"), (skill_id, branch))
+
+        merged_hit = root.get("skill/2221013/hit")
+        self.assertGreaterEqual(len(merged_hit.children()), 6)
+        for skill_id in (2221016, 2221017):
+            mob = root.get(f"skill/{skill_id}/mob")
+            self.assertTrue(migration.engine.base.numeric_canvases(mob), skill_id)
+            self.assertTrue(all(
+                isinstance(child, WzCanvasProperty)
+                for child in mob.children()
+            ), skill_id)
+
+        for skill_id in (2221009, 2221014):
+            summon = root.get(f"skill/{skill_id}/summon")
+            for action_name in ("summoned", "die"):
+                action = summon.get(action_name)
+                self.assertTrue(migration.engine.base.numeric_canvases(action))
+                self.assertTrue(all(
+                    isinstance(child, WzCanvasProperty)
+                    for child in action.children()
+                ), (skill_id, action_name))
+
+    def test_il_v_runtime_compatibility_is_wired(self):
+        compat = (ROOT / "gms-server/src/main/java/org/gms/constants/skills/ExplorerOtherSkillCompat.java").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("Map.entry(2221010,", compat)
+        self.assertIn("replay(2221011, points(0, 600, 1200, 1800))", compat)
+        self.assertIn("replay(2221012, points(300, 900, 1500, 2100))", compat)
+        handler = (ROOT / "gms-server/src/main/java/org/gms/net/server/channel/handlers/MagicDamageHandler.java").read_text(
+            encoding="utf-8"
+        )
+        for name, duration in {
+            "ICE_AGE": "20_000",
+            "SPIRIT_OF_SNOW": "30_000",
+            "JUPITER_THUNDER": "40_000",
+        }.items():
+            self.assertIn(f"{name}_DURATION_MS = {duration}", handler)
+            self.assertIn(f"attack.skill == ILArchMage.{name}", handler)
+        self.assertIn("intervalTimes(3400, 3400, 37400)", handler)
+        self.assertIn("ILArchMage.JUPITER_THUNDER_EXPLOSION, false", handler)
 
 
 if __name__ == "__main__":

@@ -14,6 +14,10 @@ public final class ExplorerOtherSkillCompat {
                     replay(2121035, concat(range(1080, 60, 2100), points(2340))),
                     replay(2121036, range(2370, 30, 2940))
             )),
+            Map.entry(2221010, replays(
+                    replay(2221011, points(0, 600, 1200, 1800)),
+                    replay(2221012, points(300, 900, 1500, 2100))
+            )),
             Map.entry(2221027, replays(
                     replay(2221027, concat(
                             range(1320, 120, 2520), range(2610, 90, 3420),

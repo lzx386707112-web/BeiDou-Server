@@ -113,7 +113,6 @@ PARAMETER_FIELDS = {
 # seconds, so overloaded fields need explicit semantic conversion.
 DURATION_OVERRIDES = {
     400021094: 40,
-    2241002: 4,
     400031021: None,
     3141004: 60,
     3241000: None,
@@ -124,6 +123,43 @@ DURATION_OVERRIDES = {
     400051021: None,
     400051040: None,
 }
+IL_EXCLUDED_VI_IDS = frozenset({2241002, 2241007, 2241008, 2241009})
+IL_LEGACY_ACTIONS = {
+    400021002: "blizzard",
+    400021030: "chainlightning",
+    400021031: "chainlightning",
+    400021040: "chainlightning",
+    400021067: "alert2",
+    400021094: "chainlightning",
+    400021112: "chainlightning",
+}
+IL_HIT_SOURCE_IDS = {
+    400021030: 400021031,
+}
+# The v83 client only understands the legacy summon action names below. The
+# modern Ice Age and Jupiter Thunder field objects are projected onto that
+# structure so their persistent visuals can be spawned by the server.
+IL_LEGACY_SUMMONS = {
+    400021002: (
+        ("summoned", "special3", 0),
+        ("stand", "special2", 0),
+        ("attack1", "special", 0),
+        ("die", "special3", 0),
+    ),
+    400021067: (
+        ("summoned", "summon/summoned", 0),
+        ("stand", "summon/stand", 0),
+        ("attack1", "summon/attack1", 0),
+        ("die", "summon/die", 0),
+    ),
+    400021094: (
+        ("summoned", "ball", 0),
+        ("stand", "ball", 0),
+        ("attack1", "special", 0),
+        ("die", "ball", 0),
+    ),
+}
+IL_LINKED_LEGACY_SUMMONS = frozenset({400021002, 400021094})
 EFFECT_CANDIDATES = (
     "effect", "effect0", "effect1", "effect2", "effect3", "effect4",
     "keydown", "keydown0", "repeat", "repeat0", "start", "start0",
@@ -141,19 +177,19 @@ CURRENT_JOB: RuntimeJob | None = None
 ORIGINAL_BUILD_SKILL = engine.build_skill
 
 
-def expression_value(value: str | None, default: int = 0) -> int:
+def expression_value(value: str | None, default: int = 0, level: int = MASTER_LEVEL) -> int:
     if value is None:
         return default
     value = re.sub(r"(?<=\d)(?=(?:d|u|log(?:10|20|30))\()", "*", value)
     return int(eval(value, {"__builtins__": {}}, {
-        "x": MASTER_LEVEL,
+        "x": level,
         "d": math.floor,
         "u": math.ceil,
         "min": min,
         "max": max,
-        "log10": lambda level: int(level >= 10),
-        "log20": lambda level: int(level >= 20),
-        "log30": lambda level: int(level >= 30),
+        "log10": lambda value: int(value >= 10),
+        "log20": lambda value: int(value >= 20),
+        "log30": lambda value: int(value >= 30),
     }))
 
 
@@ -163,9 +199,14 @@ def named_child(node: ET.Element | None, name: str) -> ET.Element | None:
     return next((child for child in node if child.get("name") == name), None)
 
 
-def scalar(node: ET.Element | None, name: str, default: int = 0) -> int:
+def scalar(
+    node: ET.Element | None,
+    name: str,
+    default: int = 0,
+    level: int = MASTER_LEVEL,
+) -> int:
     child = named_child(node, name)
-    return expression_value(None if child is None else child.get("value"), default)
+    return expression_value(None if child is None else child.get("value"), default, level)
 
 
 def vector(node: ET.Element | None, name: str, default: tuple[int, int]) -> tuple[int, int]:
@@ -255,7 +296,7 @@ def make_spec(
     projectiles = tuple(name for name in PROJECTILE_CANDIDATES if name in top_names)
     duration = (DURATION_OVERRIDES[source_id]
                 if source_id in DURATION_OVERRIDES else scalar(own_common, "time"))
-    return engine.SkillSpec(
+    spec = engine.SkillSpec(
         target_id=target_id,
         source_id=source_id,
         source_group=root.get("sourceGroup"),
@@ -276,6 +317,10 @@ def make_spec(
         duration_seconds=duration if duration is not None and duration > 0 else None,
         include_hit=has_renderable_canvas(named_child(root, "hit")),
     )
+    hit_source_id = IL_HIT_SOURCE_IDS.get(source_id) if config.key == "ilArchMage" else None
+    if hit_source_id is not None:
+        spec = replace(spec, hit_source_id=hit_source_id, include_hit=True)
+    return spec
 
 
 def build_runtime_jobs() -> tuple[RuntimeJob, ...]:
@@ -291,13 +336,20 @@ def build_runtime_jobs() -> tuple[RuntimeJob, ...]:
             if root is None:
                 raise RuntimeError(f"source {source_id} was not exported")
             invisible = named_child(root, "invisible") is not None
+            recognizable_il_action = (
+                config.key != "ilArchMage" or named_child(root, "action") is not None
+            )
             active = source_id in config.active_v_ids or (
-                root.get("sourceGroup") == config.vi_group and not invisible
+                root.get("sourceGroup") == config.vi_group
+                and not invisible
+                and recognizable_il_action
             )
             spec = make_spec(config, source_id, target_id, active, roots, names)
             if spec is not None:
-                specs.append(spec)
                 target_id += 1
+                if config.key == "ilArchMage" and source_id in IL_EXCLUDED_VI_IDS:
+                    continue
+                specs.append(spec)
         source_by_target = {spec.target_id: spec.source_id for spec in specs}
         target_by_source = {spec.source_id: spec.target_id for spec in specs}
         jobs.append(RuntimeJob(config, tuple(specs), source_by_target, target_by_source))
@@ -317,6 +369,147 @@ def multi_attack_schedule(job: RuntimeJob, spec: engine.SkillSpec) -> dict[int, 
         replay_id = job.target_by_source.get(source_id, spec.target_id)
         grouped.setdefault(replay_id, []).append(elapsed)
     return {skill_id: tuple(times) for skill_id, times in grouped.items()}
+
+
+def legacy_action(job: RuntimeJob, spec: engine.SkillSpec) -> str:
+    if job.config.key == "ilArchMage":
+        return IL_LEGACY_ACTIONS.get(spec.source_id, job.config.action)
+    return job.config.action
+
+
+def level_parameters(spec: engine.SkillSpec, level: int) -> dict[str, int | None | tuple[int, int]]:
+    root = ET.parse(MS_EXPORT_ROOT / f"{spec.source_id}.xml").getroot()
+    parameter_id = PARAMETER_SOURCE_IDS.get(spec.source_id, spec.source_id)
+    parameter_root = ET.parse(MS_EXPORT_ROOT / f"{parameter_id}.xml").getroot()
+    own_common = named_child(root, "common")
+    parameter_common = named_child(parameter_root, "common")
+    fields = PARAMETER_FIELDS.get(spec.source_id, {})
+    duration = (DURATION_OVERRIDES[spec.source_id]
+                if spec.source_id in DURATION_OVERRIDES
+                else scalar(own_common, "time", level=level))
+    return {
+        "damage": scalar(parameter_common, fields.get("damage", "damage"), level=level),
+        "attackCount": min(15, max(1, scalar(
+            parameter_common, fields.get("attackCount", "attackCount"), 1, level
+        ))),
+        "mobCount": min(15, max(1, scalar(
+            parameter_common, fields.get("mobCount", "mobCount"), 1, level
+        ))),
+        "mpCon": scalar(own_common, "mpCon", level=level),
+        "cooltime": scalar(own_common, "cooltime", level=level),
+        "lt": vector(parameter_common, "lt", (-700, -500)),
+        "rb": vector(parameter_common, "rb", (700, 300)),
+        "time": duration if duration is not None and duration > 0 else None,
+    }
+
+
+def rewrite_levels(target, spec: engine.SkillSpec) -> None:
+    levels = target.child("level")
+    for level in range(1, MASTER_LEVEL + 1):
+        node = levels.child(str(level))
+        values = level_parameters(spec, level)
+        for name in ("attackCount", "cooltime", "damage", "mobCount", "mpCon"):
+            engine.set_int(node, name, values[name])
+        engine.set_int(node, "mad", values["damage"])
+        engine.set_vector(node, "lt", values["lt"])
+        engine.set_vector(node, "rb", values["rb"])
+        if values["time"] is None:
+            node._children.pop("time", None)
+        else:
+            engine.set_int(node, "time", values["time"])
+
+
+def add_legacy_summon(target, key, groups, metadata, spec: engine.SkillSpec) -> None:
+    animations = IL_LEGACY_SUMMONS.get(spec.source_id)
+    if animations is None:
+        return
+    summon = engine.WzSubProperty("summon", target)
+    for target_name, source_path, variant_index in animations:
+        if spec.source_id in IL_LINKED_LEGACY_SUMMONS:
+            resolved_path = source_path
+            source = target.get(resolved_path)
+            frames = engine.base.numeric_canvases(source)
+            if not frames:
+                resolved_path = f"{source_path}/{variant_index}"
+                source = target.get(resolved_path)
+                frames = engine.base.numeric_canvases(source)
+            if not frames:
+                raise RuntimeError(f"missing linked legacy summon track: {spec.source_id}/{source_path}")
+            action = engine.WzSubProperty(target_name, summon)
+            direct_canvas = (
+                target_name in {"summoned", "die"}
+                or (spec.source_id == 400021002 and target_name == "stand")
+            )
+            for frame in frames:
+                if direct_canvas:
+                    action.add(engine.base.clone_property(frame, frame.name, action))
+                else:
+                    action.add(engine.WzUolProperty(
+                        frame.name,
+                        f"../../{resolved_path}/{frame.name}",
+                        action,
+                    ))
+            summon.add(action)
+            continue
+        variants = engine.tracks(groups, metadata, spec.source_id, source_path)
+        if not variants or variant_index >= len(variants):
+            raise RuntimeError(f"missing legacy summon track: {spec.source_id}/{source_path}")
+        action = engine.WzSubProperty(target_name, summon)
+        engine.base.merge_tracks(variants[variant_index], [], action, key)
+        summon.add(action)
+    target._children.pop("summon", None)
+    target.add(summon)
+
+
+def merge_branch_variants(target, source_name: str, target_name: str) -> None:
+    source = target.child(source_name)
+    destination = target.child(target_name)
+    if not isinstance(source, engine.WzSubProperty):
+        return
+    if not isinstance(destination, engine.WzSubProperty):
+        source.name = target_name
+        target._children.pop(source_name, None)
+        target.add(source)
+        return
+    numeric = [child for child in destination.children() if child.name.isdigit()]
+    next_index = max((int(child.name) for child in numeric), default=-1) + 1
+    for child in source.children():
+        destination.add(engine.base.clone_property(child, str(next_index), destination))
+        next_index += 1
+    target._children.pop(source_name, None)
+
+
+def flatten_legacy_mob_animation(target) -> None:
+    mob = target.child("mob")
+    if not isinstance(mob, engine.WzSubProperty):
+        return
+    frames = engine.base.numeric_canvases(mob)
+    if frames:
+        return
+    variants = sorted(
+        (child for child in mob.children()
+         if isinstance(child, engine.WzSubProperty) and child.name.isdigit()),
+        key=lambda child: int(child.name),
+    )
+    if not variants:
+        target._children.pop("mob", None)
+        return
+    frames = engine.base.numeric_canvases(variants[0])
+    if not frames:
+        target._children.pop("mob", None)
+        return
+    flattened = engine.WzSubProperty("mob", target)
+    for index, frame in enumerate(frames):
+        flattened.add(engine.base.clone_property(frame, str(index), flattened))
+    target._children.pop("mob", None)
+    target.add(flattened)
+
+
+def normalize_il_legacy_nodes(target) -> None:
+    merge_branch_variants(target, "hit2", "hit")
+    flatten_legacy_mob_animation(target)
+    target._children.pop("special2", None)
+    target._children.pop("special3", None)
 
 
 def configured_backup(path: Path) -> None:
@@ -340,7 +533,11 @@ def build_skill(spec, parent, key, groups, metadata):
     if CURRENT_JOB is None:
         raise RuntimeError("job is not configured")
     target = ORIGINAL_BUILD_SKILL(spec, parent, key, groups, metadata)
-    engine.set_string(target.child("action"), "0", CURRENT_JOB.config.action)
+    engine.set_string(target.child("action"), "0", legacy_action(CURRENT_JOB, spec))
+    rewrite_levels(target, spec)
+    if CURRENT_JOB.config.key == "ilArchMage":
+        add_legacy_summon(target, key, groups, metadata, spec)
+        normalize_il_legacy_nodes(target)
     if CURRENT_JOB.config.elem_attr is None:
         target._children.pop("elemAttr", None)
     else:
@@ -360,22 +557,23 @@ def server_skill_block(spec: engine.SkillSpec) -> str:
     if CURRENT_JOB is None:
         raise RuntimeError("job is not configured")
     lines = [f'  <imgdir name="{spec.target_id}">', '    <imgdir name="action">',
-             f'      <string name="0" value="{CURRENT_JOB.config.action}"/>', "    </imgdir>",
+             f'      <string name="0" value="{legacy_action(CURRENT_JOB, spec)}"/>', "    </imgdir>",
              '    <imgdir name="level">']
     for level in range(1, MASTER_LEVEL + 1):
+        values = level_parameters(spec, level)
         lines.extend([
             f'      <imgdir name="{level}">',
-            f'        <int name="attackCount" value="{spec.attack_count}"/>',
-            f'        <int name="cooltime" value="{spec.cooldown}"/>',
-            f'        <int name="damage" value="{spec.damage}"/>',
-            *([f'        <int name="mad" value="{spec.damage}"/>'] if CURRENT_JOB.config.magic else []),
+            f'        <int name="attackCount" value="{values["attackCount"]}"/>',
+            f'        <int name="cooltime" value="{values["cooltime"]}"/>',
+            f'        <int name="damage" value="{values["damage"]}"/>',
+            *([f'        <int name="mad" value="{values["damage"]}"/>'] if CURRENT_JOB.config.magic else []),
             f'        <string name="hs" value="h{level}"/>',
-            f'        <vector name="lt" x="{spec.lt[0]}" y="{spec.lt[1]}"/>',
-            f'        <int name="mobCount" value="{spec.mob_count}"/>',
-            f'        <int name="mpCon" value="{spec.mp_con}"/>',
-            f'        <vector name="rb" x="{spec.rb[0]}" y="{spec.rb[1]}"/>',
-            *([f'        <int name="time" value="{spec.duration_seconds}"/>']
-              if spec.duration_seconds is not None else []),
+            f'        <vector name="lt" x="{values["lt"][0]}" y="{values["lt"][1]}"/>',
+            f'        <int name="mobCount" value="{values["mobCount"]}"/>',
+            f'        <int name="mpCon" value="{values["mpCon"]}"/>',
+            f'        <vector name="rb" x="{values["rb"][0]}" y="{values["rb"][1]}"/>',
+            *([f'        <int name="time" value="{values["time"]}"/>']
+              if values["time"] is not None else []),
             "      </imgdir>",
         ])
     lines.extend(["    </imgdir>", f'    <int name="masterLevel" value="{MASTER_LEVEL}"/>'])
@@ -428,7 +626,10 @@ def configure(job: RuntimeJob) -> None:
         ).read_text(encoding="utf-8")
     )
     engine.MASTER_LEVEL = MASTER_LEVEL
-    engine.CUSTOM_SKILL_IDS = range(config.target_start, config.target_start + len(job.skills))
+    engine.CUSTOM_SKILL_IDS = range(
+        config.target_start,
+        max(spec.target_id for spec in job.skills) + 1,
+    )
     engine.SKILLS = job.skills
     engine.TIMED_EFFECTS = {}
     engine.base.SKILLS = job.skills
