@@ -26,6 +26,8 @@ import org.gms.client.Character;
 import org.gms.client.Client;
 import org.gms.client.Skill;
 import org.gms.client.SkillFactory;
+import org.gms.client.status.MonsterStatus;
+import org.gms.client.status.MonsterStatusEffect;
 import org.gms.config.GameConfig;
 import org.gms.constants.id.MapId;
 import org.gms.constants.skills.BlazeWizard;
@@ -34,6 +36,7 @@ import org.gms.constants.skills.Evan;
 import org.gms.constants.skills.ExplorerOtherSkillCompat;
 import org.gms.constants.skills.FPArchMage;
 import org.gms.constants.skills.ILArchMage;
+import org.gms.constants.skills.ILWizard;
 import org.gms.net.packet.InPacket;
 import org.gms.net.packet.Packet;
 import org.gms.server.StatEffect;
@@ -287,6 +290,30 @@ public final class MagicDamageHandler extends AbstractDealDamageHandler {
         expectedMap.broadcastMessage(chr, packet, false, true);
     }
 
+    private static void applyIceAgeFreeze(
+            Character chr,
+            MapleMap expectedMap,
+            Iterable<Integer> monsterOids
+    ) {
+        if (!canContinueAnimatedAttack(chr, expectedMap)) {
+            return;
+        }
+        Skill freezeSkill = SkillFactory.getSkill(ILWizard.COLD_BEAM);
+        for (Integer monsterOid : monsterOids) {
+            Monster monster = expectedMap.getMonsterByOid(monsterOid);
+            if (monster == null || !monster.isAlive()) {
+                continue;
+            }
+            MonsterStatusEffect freeze = new MonsterStatusEffect(
+                    Collections.singletonMap(MonsterStatus.FREEZE, 1),
+                    freezeSkill,
+                    null,
+                    false
+            );
+            monster.applyStatus(chr, freeze, false, ICE_AGE_DAMAGE_DELAY_MS);
+        }
+    }
+
     private static void repeatAnimatedAttack(
             AttackInfo attack,
             Character chr,
@@ -315,10 +342,13 @@ public final class MagicDamageHandler extends AbstractDealDamageHandler {
         }
     }
 
-    private static void scheduleCapturedAnimatedDamage(
+    private static void scheduleCapturedFrozenAttack(
+            AttackInfo attack,
             Character chr,
             MapleMap expectedMap,
             Map<Integer, List<Integer>> damage,
+            int replaySkillId,
+            int replayAttackCount,
             int delayMs
     ) {
         Map<Integer, List<Integer>> capturedDamage = new LinkedHashMap<>();
@@ -326,8 +356,19 @@ public final class MagicDamageHandler extends AbstractDealDamageHandler {
             capturedDamage.put(entry.getKey(), new ArrayList<>(entry.getValue()));
         }
         if (!capturedDamage.isEmpty()) {
+            applyIceAgeFreeze(chr, expectedMap, capturedDamage.keySet());
             TimerManager.getInstance().schedule(
-                    () -> applyAnimatedDamage(chr, expectedMap, capturedDamage), delayMs
+                    () -> {
+                        if (!canContinueAnimatedAttack(chr, expectedMap)) {
+                            return;
+                        }
+                        broadcastAnimatedAttack(
+                                attack, chr, expectedMap, capturedDamage,
+                                replaySkillId, replayAttackCount
+                        );
+                        applyAnimatedDamage(chr, expectedMap, capturedDamage);
+                    },
+                    delayMs
             );
         }
     }
@@ -372,11 +413,9 @@ public final class MagicDamageHandler extends AbstractDealDamageHandler {
                 if (damage.isEmpty()) {
                     return;
                 }
-                broadcastAnimatedAttack(
-                        attack, chr, expectedMap, damage, replaySkillId, replayAttackCount
-                );
-                TimerManager.getInstance().schedule(
-                        () -> applyAnimatedDamage(chr, expectedMap, damage), damageDelayMs
+                scheduleCapturedFrozenAttack(
+                        attack, chr, expectedMap, damage,
+                        replaySkillId, replayAttackCount, damageDelayMs
                 );
             }, previewTimeMs);
         }
@@ -597,11 +636,14 @@ public final class MagicDamageHandler extends AbstractDealDamageHandler {
         } else if (attack.skill == ILArchMage.ICE_AGE) {
             Skill tickSkill = SkillFactory.getSkill(ILArchMage.ICE_AGE_TICK);
             int tickLevel = Math.max(1, Math.min(attack.skilllevel, tickSkill.getMaxLevel()));
-            Rectangle fieldBounds = tickSkill.getEffect(tickLevel).calculateBoundingBox(
+            StatEffect tickEffect = tickSkill.getEffect(tickLevel);
+            Rectangle fieldBounds = tickEffect.calculateBoundingBox(
                     new Point(chr.getPosition()), attack.direction == 0
             );
-            scheduleCapturedAnimatedDamage(
-                    chr, chr.getMap(), attack.allDamage, ICE_AGE_DAMAGE_DELAY_MS
+            scheduleCapturedFrozenAttack(
+                    attack, chr, chr.getMap(), attack.allDamage,
+                    ILArchMage.ICE_AGE_TICK, tickEffect.getAttackCount(),
+                    ICE_AGE_DAMAGE_DELAY_MS
             );
             schedulePreviewedAnimatedAttacks(
                     attack, chr, ICE_AGE_PREVIEW_TIMES_MS,
