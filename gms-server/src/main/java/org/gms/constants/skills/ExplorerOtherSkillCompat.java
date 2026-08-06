@@ -19,6 +19,17 @@ public final class ExplorerOtherSkillCompat {
                     replay(2221011, points(600, 1200, 1800)),
                     replay(2221012, points(300, 900, 1500, 2100))
             )),
+            Map.entry(2221027, replays(
+                    replay(2221027, concat(
+                            range(1320, 120, 2520), range(2610, 90, 3420),
+                            range(3480, 60, 4080)
+                    )),
+                    replay(2221029, range(4110, 30, 4800))
+            )),
+            Map.entry(2221030, replays(
+                    replay(2221030, concat(range(600, 60, 1080), range(1800, 30, 1890))),
+                    replay(2221031, range(2580, 90, 3210))
+            )),
             Map.entry(2321037, replays(
                     replay(2321037, concat(
                             points(30, 60, 90, 810), range(930, 120, 1170),
@@ -89,6 +100,8 @@ public final class ExplorerOtherSkillCompat {
 
     public static String videoLayer(int skillId) {
         return switch (skillId) {
+            case 2221009, 2221014 -> "customSkill/ilArchMage/video2221027";
+            case 2221027, 2221030 -> "customSkill/ilArchMage/video" + skillId;
             case 2121032, 2121035 -> "customSkill/fpArchMage/video" + skillId;
             case 2321037, 2321042 -> "customSkill/bishop/video" + skillId;
             case 3121029, 3121031 -> "customSkill/bowmaster/video" + skillId;

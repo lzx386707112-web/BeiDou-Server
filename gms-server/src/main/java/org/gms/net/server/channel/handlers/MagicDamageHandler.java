@@ -81,6 +81,9 @@ public final class MagicDamageHandler extends AbstractDealDamageHandler {
         2400, 2430, 2460, 2490, 2520, 2550, 2580
     };
     private static final int[] BLIZZARD_VI_FINAL_ATTACK_TIMES_MS = {990};
+    private static final int[] ICE_AGE_PREVIEW_TIMES_MS = intervalTimes(2000, 2000, 28000);
+    private static final int ICE_AGE_DAMAGE_DELAY_MS = 1000;
+    private static final int[] SPIRIT_OF_SNOW_TICK_TIMES_MS = intervalTimes(3000, 3000, 27000);
     private static final int[] CHAIN_LIGHTNING_VI_FIELD_TICK_TIMES_MS = {
         1960, 2960, 3960, 4960
     };
@@ -236,6 +239,54 @@ public final class MagicDamageHandler extends AbstractDealDamageHandler {
         }
     }
 
+    private static void applyAnimatedDamage(
+            Character chr,
+            MapleMap expectedMap,
+            Map<Integer, List<Integer>> damage
+    ) {
+        if (!canContinueAnimatedAttack(chr, expectedMap)) {
+            return;
+        }
+        showDamageNumbers(chr, expectedMap, damage);
+        for (Map.Entry<Integer, List<Integer>> entry : damage.entrySet()) {
+            Monster monster = expectedMap.getMonsterByOid(entry.getKey());
+            if (monster == null || !monster.isAlive()) {
+                continue;
+            }
+            int total = 0;
+            for (Integer hit : entry.getValue()) {
+                total = (int) Math.min(Integer.MAX_VALUE, (long) total + decodeRepeatedDamage(hit));
+            }
+            monster.aggroMonsterDamage(chr, total);
+            expectedMap.damageMonster(chr, monster, total);
+        }
+    }
+
+    private static void broadcastAnimatedAttack(
+            AttackInfo attack,
+            Character chr,
+            MapleMap expectedMap,
+            Map<Integer, List<Integer>> damage,
+            int replaySkillId,
+            int replayAttackCount
+    ) {
+        int packedCount = (Math.min(15, damage.size()) << 4) | (replayAttackCount & 0xF);
+        Packet packet = PacketCreator.magicAttack(
+                chr,
+                replaySkillId,
+                attack.skilllevel,
+                attack.stance,
+                packedCount,
+                damage,
+                -1,
+                attack.speed,
+                attack.direction,
+                attack.display
+        );
+        chr.sendPacket(packet);
+        expectedMap.broadcastMessage(chr, packet, false, true);
+    }
+
     private static void repeatAnimatedAttack(
             AttackInfo attack,
             Character chr,
@@ -256,36 +307,78 @@ public final class MagicDamageHandler extends AbstractDealDamageHandler {
         if (damage.isEmpty()) {
             return;
         }
-        int packedCount = (Math.min(15, damage.size()) << 4) | (replayAttackCount & 0xF);
-        Packet packet = PacketCreator.magicAttack(
-                chr,
-                replaySkillId,
-                attack.skilllevel,
-                attack.stance,
-                packedCount,
-                damage,
-                -1,
-                attack.speed,
-                attack.direction,
-                attack.display
+        broadcastAnimatedAttack(
+                attack, chr, expectedMap, damage, replaySkillId, replayAttackCount
         );
-        chr.sendPacket(packet);
-        expectedMap.broadcastMessage(chr, packet, false, true);
-        if (!applyDamage) {
-            return;
+        if (applyDamage) {
+            applyAnimatedDamage(chr, expectedMap, damage);
         }
-        showDamageNumbers(chr, expectedMap, damage);
+    }
+
+    private static void scheduleCapturedAnimatedDamage(
+            Character chr,
+            MapleMap expectedMap,
+            Map<Integer, List<Integer>> damage,
+            int delayMs
+    ) {
+        Map<Integer, List<Integer>> capturedDamage = new LinkedHashMap<>();
         for (Map.Entry<Integer, List<Integer>> entry : damage.entrySet()) {
-            Monster monster = expectedMap.getMonsterByOid(entry.getKey());
-            if (monster == null || !monster.isAlive()) {
-                continue;
-            }
-            int total = 0;
-            for (Integer hit : entry.getValue()) {
-                total = (int) Math.min(Integer.MAX_VALUE, (long) total + decodeRepeatedDamage(hit));
-            }
-            monster.aggroMonsterDamage(chr, total);
-            expectedMap.damageMonster(chr, monster, total);
+            capturedDamage.put(entry.getKey(), new ArrayList<>(entry.getValue()));
+        }
+        if (!capturedDamage.isEmpty()) {
+            TimerManager.getInstance().schedule(
+                    () -> applyAnimatedDamage(chr, expectedMap, capturedDamage), delayMs
+            );
+        }
+    }
+
+    private void schedulePreviewedAnimatedAttacks(
+            AttackInfo attack,
+            Character chr,
+            int[] previewTimesMs,
+            int replaySkillId,
+            Rectangle fixedBounds,
+            int damageDelayMs
+    ) {
+        MapleMap expectedMap = chr.getMap();
+        StatEffect originalEffect = SkillFactory.getSkill(attack.skill)
+                .getEffect(chr.getSkillLevel(attack.skill));
+        Skill replaySkill = SkillFactory.getSkill(replaySkillId);
+        int replayLevel = Math.max(1, Math.min(attack.skilllevel, replaySkill.getMaxLevel()));
+        StatEffect replayEffect = replaySkill.getEffect(replayLevel);
+        int mobCount = Math.max(1, Math.min(15, replayEffect.getMobCount()));
+        int replayAttackCount = Math.max(1, Math.min(15, replayEffect.getAttackCount()));
+        List<Integer> sourceDamageTemplate = copyDamageTemplate(attack);
+        if (sourceDamageTemplate.isEmpty()) {
+            sourceDamageTemplate = Collections.singletonList(
+                    calculateFallbackMagicDamage(chr, originalEffect)
+            );
+        }
+        List<Integer> damageTemplate = adaptDamageTemplate(
+                sourceDamageTemplate,
+                replayAttackCount,
+                originalEffect.getDamage(),
+                replayEffect.getDamage()
+        );
+        Rectangle attackBounds = new Rectangle(fixedBounds);
+        for (int previewTimeMs : previewTimesMs) {
+            TimerManager.getInstance().schedule(() -> {
+                if (!canContinueAnimatedAttack(chr, expectedMap)) {
+                    return;
+                }
+                Map<Integer, List<Integer>> damage = collectAnimatedTargets(
+                        attack, expectedMap, attackBounds, mobCount, damageTemplate
+                );
+                if (damage.isEmpty()) {
+                    return;
+                }
+                broadcastAnimatedAttack(
+                        attack, chr, expectedMap, damage, replaySkillId, replayAttackCount
+                );
+                TimerManager.getInstance().schedule(
+                        () -> applyAnimatedDamage(chr, expectedMap, damage), damageDelayMs
+                );
+            }, previewTimeMs);
         }
     }
 
@@ -500,6 +593,30 @@ public final class MagicDamageHandler extends AbstractDealDamageHandler {
             scheduleAnimatedAttacks(
                     attack, chr, FLAME_CONCERTO_FINISH_TIMES_MS,
                     BlazeWizard.FLAME_CONCERTO_FINISH, false
+            );
+        } else if (attack.skill == ILArchMage.ICE_AGE) {
+            Skill tickSkill = SkillFactory.getSkill(ILArchMage.ICE_AGE_TICK);
+            int tickLevel = Math.max(1, Math.min(attack.skilllevel, tickSkill.getMaxLevel()));
+            Rectangle fieldBounds = tickSkill.getEffect(tickLevel).calculateBoundingBox(
+                    new Point(chr.getPosition()), attack.direction == 0
+            );
+            scheduleCapturedAnimatedDamage(
+                    chr, chr.getMap(), attack.allDamage, ICE_AGE_DAMAGE_DELAY_MS
+            );
+            schedulePreviewedAnimatedAttacks(
+                    attack, chr, ICE_AGE_PREVIEW_TIMES_MS,
+                    ILArchMage.ICE_AGE_TICK, fieldBounds, ICE_AGE_DAMAGE_DELAY_MS
+            );
+        } else if (attack.skill == ILArchMage.SPIRIT_OF_SNOW) {
+            Skill tickSkill = SkillFactory.getSkill(ILArchMage.SPIRIT_OF_SNOW_TICK);
+            int tickLevel = Math.max(1, Math.min(attack.skilllevel, tickSkill.getMaxLevel()));
+            Rectangle fieldBounds = tickSkill.getEffect(tickLevel).calculateBoundingBox(
+                    new Point(chr.getPosition()), attack.direction == 0
+            );
+            applyAttack(attack, chr, effect.getAttackCount());
+            scheduleAnimatedAttacks(
+                    attack, chr, SPIRIT_OF_SNOW_TICK_TIMES_MS,
+                    ILArchMage.SPIRIT_OF_SNOW_TICK, false, fieldBounds
             );
         } else if (attack.skill == ILArchMage.BLIZZARD_VI) {
             applyAttack(attack, chr, effect.getAttackCount());
