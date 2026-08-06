@@ -34,9 +34,16 @@ public class ILArchMage {
     public static final int BLIZZARD = 2221007;
     public static final int HEROS_WILL = 2221008;
     public static final int CHAIN_LIGHTNING = 2221006;
+    public static final int BOLT_BARRAGE = 2221010;
+    public static final int BOLT_BARRAGE_FIRST = 2221011;
+    public static final int BOLT_BARRAGE_SECOND = 2221012;
+    public static final int CHAIN_LIGHTNING_VI = 2221017;
+    public static final int CHAIN_LIGHTNING_VI_FIELD = 2221018;
+    public static final int CHAIN_LIGHTNING_VI_FIELD_TICK = 2221019;
+    public static final int BLIZZARD_VI = 2221020;
+    public static final int BLIZZARD_VI_FINAL_ATTACK = 2221021;
+
     public static final int[] V_VI_ACTIVE_ATTACKS = {
-            2221009, 2221010, 2221013, 2221014, 2221016,
-            2221017, 2221018, 2221019, 2221020, 2221022,
-            2221023, 2221025, 2221027, 2221030
+            BOLT_BARRAGE, CHAIN_LIGHTNING_VI, BLIZZARD_VI
     };
 }

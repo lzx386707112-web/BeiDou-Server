@@ -226,8 +226,11 @@ function sendTextHairPage(page) {
 }
 
 function applySelectedHair(hairId) {
-    if (cm.haveItem(5150044)) {
-        cm.gainItem(5150044, -1);
+    var isGM = cm.getPlayer().isGM();
+    if (isGM || cm.haveItem(5150044)) {
+        if (!isGM) {
+            cm.gainItem(5150044, -1);
+        }
         cm.setHair(hairId);
         cm.sendOk("享受你的新发型吧!");
     } else {
@@ -245,11 +248,14 @@ function action(mode, type, selection) {
     status++;
 
     if (status == 0) {
-        cm.sendSimple("#p1012117#是世界上最迷人、最时尚的造型师。如果你想找最好看的发型，就别再找别人了!\r\n#L0##i5150040# #t5150040#  随机发型#l\r\n#L1##i5150044# #t5150044#  自选发型#l");
+        var gmHint = cm.getPlayer().isGM() ? "  #r（GM 免费）#k" : "";
+        cm.sendSimple("#p1012117#是世界上最迷人、最时尚的造型师。如果你想找最好看的发型，就别再找别人了!\r\n#L0##i5150040# #t5150040#  随机发型" + gmHint + "#l\r\n#L1##i5150044# #t5150044#  自选发型" + gmHint + "#l");
     } else if (status == 1) {
         if (selection == 0) {
             beauty = 1;
-            cm.sendYesNo("如果你使用这个普通会员卡，你的头发可能会变成一个随机的新外观。你还想用#b#t5150040##k做头发吗？我无论如何都会为你做的。但别忘了，结果随机的！");
+            cm.sendYesNo(cm.getPlayer().isGM()
+                ? "GM 可免费更换随机发型。确定要继续吗？结果是随机的！"
+                : "如果你使用这个普通会员卡，你的头发可能会变成一个随机的新外观。你还想用#b#t5150040##k做头发吗？我无论如何都会为你做的。但别忘了，结果随机的！");
         } else if (selection == 1) {
             beauty = 2;
             sendHairPageMenu();
@@ -258,12 +264,15 @@ function action(mode, type, selection) {
         }
     } else if (status == 2) {
         if (beauty == 1) {
-            if (cm.haveItem(5150040)) {
+            var isGM = cm.getPlayer().isGM();
+            if (isGM || cm.haveItem(5150040)) {
                 buildHairList(0, Math.min(hairCatalog.length, HAIR_PAGE_SIZE * HAIR_PREVIEW_PAGE_COUNT));
                 if (hairnew.length == 0) {
                     cm.sendOk("当前没有可用的新发型。");
                 } else {
-                    cm.gainItem(5150040, -1);
+                    if (!isGM) {
+                        cm.gainItem(5150040, -1);
+                    }
                     cm.setHair(hairnew[Math.floor(Math.random() * hairnew.length)]);
                     cm.sendOk("享受你的新发型吧!");
                 }
@@ -283,7 +292,10 @@ function action(mode, type, selection) {
                     cm.sendOk("这一批没有可用的新发型。");
                     cm.dispose();
                 } else {
-                    cm.sendStyle("使用高级会员卡，你可以选择你的发型。请选择最能给你带来快乐的款式。", hairnew);
+                    var prompt = cm.getPlayer().isGM()
+                        ? "GM 可免费更换发型。请选择最能给你带来快乐的款式。"
+                        : "使用高级会员卡，你可以选择你的发型。请选择最能给你带来快乐的款式。";
+                    cm.sendStyle(prompt, hairnew);
                 }
             } else if (textPage >= 0 && textPage < textPageCount) {
                 hairSelectionMode = 2;
@@ -306,7 +318,8 @@ function action(mode, type, selection) {
             return;
         }
         pendingHair = hairnew[selection];
-        cm.sendYesNo("你选择了#b" + getHairName(pendingHair) + "#k（ID " + pendingHair + "）。\r\n该发型没有图片预览，确定要消耗#b#t5150044##k更换吗？");
+        var requirement = cm.getPlayer().isGM() ? "#bGM 可免费更换#k" : "消耗#b#t5150044##k#k更换";
+        cm.sendYesNo("你选择了#b" + getHairName(pendingHair) + "#k（ID " + pendingHair + "）。\r\n该发型没有图片预览，确定要" + requirement + "吗？");
     } else if (status == 4 && beauty == 2 && hairSelectionMode == 2) {
         applySelectedHair(pendingHair);
     } else {

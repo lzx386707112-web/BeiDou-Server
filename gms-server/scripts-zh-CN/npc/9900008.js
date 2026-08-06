@@ -18,7 +18,8 @@ var CYGNUS_FOURTH_JOBS = {
 };
 
 function start() {
-    action(1, 0, 0);
+    cm.sendOk("等全部做好再开放好了");
+    cm.dispose();
 }
 
 function action(mode, type, selection) {

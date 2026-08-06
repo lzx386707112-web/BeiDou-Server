@@ -80,6 +80,10 @@ public final class MagicDamageHandler extends AbstractDealDamageHandler {
         2160, 2190, 2220, 2250, 2280, 2310, 2340, 2370,
         2400, 2430, 2460, 2490, 2520, 2550, 2580
     };
+    private static final int[] BLIZZARD_VI_FINAL_ATTACK_TIMES_MS = {990};
+    private static final int[] CHAIN_LIGHTNING_VI_FIELD_TICK_TIMES_MS = {
+        1960, 2960, 3960, 4960
+    };
 
     private static int[] intervalTimes(int first, int interval, int last) {
         int[] result = new int[((last - first) / interval) + 1];
@@ -179,6 +183,36 @@ public final class MagicDamageHandler extends AbstractDealDamageHandler {
             Monster monster = expectedMap.getMonsterByOid(entry.getKey());
             if (monster != null && monster.isAlive() && entry.getValue() != null) {
                 result.put(entry.getKey(), entry.getValue());
+                if (result.size() >= mobCount) {
+                    break;
+                }
+            }
+        }
+        return result;
+    }
+
+    private static Rectangle captureAnimatedAttackBounds(
+            AttackInfo attack,
+            MapleMap map,
+            StatEffect replayEffect,
+            boolean facingLeft
+    ) {
+        if (!replayEffect.hasBoundingBox()) {
+            return null;
+        }
+        Rectangle result = null;
+        for (Integer objectId : attack.allDamage.keySet()) {
+            Monster monster = map.getMonsterByOid(objectId);
+            if (monster == null || !monster.isAlive()) {
+                continue;
+            }
+            Rectangle targetBounds = replayEffect.calculateBoundingBox(
+                    new Point(monster.getPosition()), facingLeft
+            );
+            if (result == null) {
+                result = new Rectangle(targetBounds);
+            } else {
+                result.add(targetBounds);
             }
         }
         return result;
@@ -262,6 +296,19 @@ public final class MagicDamageHandler extends AbstractDealDamageHandler {
             int replaySkillId,
             boolean applyInitialAttack
     ) {
+        scheduleAnimatedAttacks(
+                attack, chr, attackTimesMs, replaySkillId, applyInitialAttack, null
+        );
+    }
+
+    private void scheduleAnimatedAttacks(
+            AttackInfo attack,
+            Character chr,
+            int[] attackTimesMs,
+            int replaySkillId,
+            boolean applyInitialAttack,
+            Rectangle fixedBounds
+    ) {
         MapleMap expectedMap = chr.getMap();
         Skill originalSkill = SkillFactory.getSkill(attack.skill);
         StatEffect originalEffect = originalSkill.getEffect(chr.getSkillLevel(originalSkill));
@@ -269,9 +316,21 @@ public final class MagicDamageHandler extends AbstractDealDamageHandler {
         int replayLevel = Math.max(1, Math.min(attack.skilllevel, replaySkill.getMaxLevel()));
         StatEffect replayEffect = replaySkill.getEffect(replayLevel);
         Point castPosition = new Point(chr.getPosition());
-        Rectangle attackBounds = replayEffect.hasBoundingBox()
-                ? replayEffect.calculateBoundingBox(castPosition, attack.direction == 0)
-                : null;
+        boolean usesCapturedTargets = replaySkillId == ILArchMage.BLIZZARD_VI_FINAL_ATTACK
+                || replaySkillId == ILArchMage.CHAIN_LIGHTNING_VI_FIELD;
+        Rectangle attackBounds;
+        if (fixedBounds != null) {
+            attackBounds = new Rectangle(fixedBounds);
+        } else if (replaySkillId == ILArchMage.CHAIN_LIGHTNING_VI_FIELD_TICK
+                && originalEffect.hasBoundingBox()) {
+            attackBounds = originalEffect.calculateBoundingBox(
+                    castPosition, attack.direction == 0
+            );
+        } else {
+            attackBounds = !usesCapturedTargets && replayEffect.hasBoundingBox()
+                    ? replayEffect.calculateBoundingBox(castPosition, attack.direction == 0)
+                    : null;
+        }
         boolean followsCaster = attack.skill == BlazeWizard.PHOENIX_DRIVE_VI;
         int mobCount = Math.max(1, Math.min(15, replayEffect.getMobCount()));
         int replayAttackCount = Math.max(1, Math.min(15, replayEffect.getAttackCount()));
@@ -441,6 +500,34 @@ public final class MagicDamageHandler extends AbstractDealDamageHandler {
             scheduleAnimatedAttacks(
                     attack, chr, FLAME_CONCERTO_FINISH_TIMES_MS,
                     BlazeWizard.FLAME_CONCERTO_FINISH, false
+            );
+        } else if (attack.skill == ILArchMage.BLIZZARD_VI) {
+            applyAttack(attack, chr, effect.getAttackCount());
+            Skill finalAttack = SkillFactory.getSkill(ILArchMage.BLIZZARD_VI_FINAL_ATTACK);
+            int finalAttackLevel = Math.max(
+                    1, Math.min(attack.skilllevel, finalAttack.getMaxLevel())
+            );
+            if (finalAttack.getEffect(finalAttackLevel).makeChanceResult()) {
+                scheduleAnimatedAttacks(
+                        attack, chr, BLIZZARD_VI_FINAL_ATTACK_TIMES_MS,
+                        ILArchMage.BLIZZARD_VI_FINAL_ATTACK, false
+                );
+            }
+        } else if (attack.skill == ILArchMage.CHAIN_LIGHTNING_VI) {
+            Skill fieldTickSkill = SkillFactory.getSkill(ILArchMage.CHAIN_LIGHTNING_VI_FIELD_TICK);
+            int fieldTickLevel = Math.max(
+                    1, Math.min(attack.skilllevel, fieldTickSkill.getMaxLevel())
+            );
+            Rectangle fieldBounds = captureAnimatedAttackBounds(
+                    attack,
+                    chr.getMap(),
+                    fieldTickSkill.getEffect(fieldTickLevel),
+                    attack.direction == 0
+            );
+            applyAttack(attack, chr, effect.getAttackCount());
+            scheduleAnimatedAttacks(
+                    attack, chr, CHAIN_LIGHTNING_VI_FIELD_TICK_TIMES_MS,
+                    ILArchMage.CHAIN_LIGHTNING_VI_FIELD_TICK, false, fieldBounds
             );
         } else {
             applyAttack(attack, chr, effect.getAttackCount());
