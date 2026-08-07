@@ -31,13 +31,7 @@ var status = 0;
 
 var HAIR_PAGE_SIZE = 128;
 var HAIR_PAGE_SELECTION_BASE = 100;
-var HAIR_PREVIEW_PAGE_COUNT = 5;
-var HAIR_TEXT_PAGE_SIZE = 30;
-var HAIR_TEXT_PAGE_SELECTION_BASE = 200;
-var HAIR_TEXT_MAX_ID = 50000;
 var beauty = 0;
-var hairSelectionMode = 0;
-var pendingHair = 0;
 
 var hairCatalog = Array(
     30000, 30010, 30020, 30030, 30040, 30050, 30060, 30070, 30080, 30090,
@@ -143,8 +137,6 @@ var hairCatalog = Array(
 );
 
 var hairnew = Array();
-var textHairCatalog = Array();
-var ItemInformationProvider = Java.type("org.gms.server.ItemInformationProvider");
 
 function pushIfItemExists(array, itemid) {
     if ((itemid = cm.getCosmeticItem(itemid)) != -1 && !cm.isCosmeticEquipped(itemid)) {
@@ -164,63 +156,14 @@ function buildHairList(startIndex, endIndex) {
     }
 }
 
-function buildTextHairCatalog() {
-    textHairCatalog = Array();
-    var startIndex = HAIR_PAGE_SIZE * HAIR_PREVIEW_PAGE_COUNT;
-    for (var i = startIndex; i < hairCatalog.length; i++) {
-        if (hairCatalog[i] < HAIR_TEXT_MAX_ID) {
-            textHairCatalog.push(hairCatalog[i]);
-        }
-    }
-}
-
-function buildTextHairList(page) {
-    hairnew = Array();
-    var currentColor = parseInt(cm.getPlayer().getHair() % 10);
-    var startIndex = page * HAIR_TEXT_PAGE_SIZE;
-    var endIndex = Math.min(startIndex + HAIR_TEXT_PAGE_SIZE, textHairCatalog.length);
-    for (var i = startIndex; i < endIndex; i++) {
-        pushIfItemExists(hairnew, textHairCatalog[i] + currentColor);
-    }
-}
-
-function getHairName(hairId) {
-    var name = ItemInformationProvider.getInstance().getName(hairId);
-    return name == null || name == "NO-NAME" ? "发型 " + hairId : String(name);
-}
-
 function sendHairPageMenu() {
-    var visibleHairCount = Math.min(hairCatalog.length, HAIR_PAGE_SIZE * HAIR_PREVIEW_PAGE_COUNT);
-    var pageCount = Math.ceil(visibleHairCount / HAIR_PAGE_SIZE);
-    var text = "请选择发型批次。前" + pageCount + "批提供图片预览，后续发型使用纯文字列表。\r\n\r\n";
+    var pageCount = Math.ceil(hairCatalog.length / HAIR_PAGE_SIZE);
+    var text = "请选择发型批次。全部发型均提供图片预览。\r\n\r\n";
     for (var page = 0; page < pageCount; page++) {
         var first = page * HAIR_PAGE_SIZE + 1;
-        var last = Math.min((page + 1) * HAIR_PAGE_SIZE, visibleHairCount);
+        var last = Math.min((page + 1) * HAIR_PAGE_SIZE, hairCatalog.length);
         text += "#L" + (HAIR_PAGE_SELECTION_BASE + page) + "#第" + (page + 1) + "批（" + first + "-" + last + "，有预览）#l";
         text += (page + 1) % 2 == 0 ? "\r\n" : "\t";
-    }
-    buildTextHairCatalog();
-    var textPageCount = Math.ceil(textHairCatalog.length / HAIR_TEXT_PAGE_SIZE);
-    text += "\r\n#r以下发型不加载图片预览，6xxxx 发型暂不开放：#k\r\n";
-    for (var textPage = 0; textPage < textPageCount; textPage++) {
-        var textFirst = visibleHairCount + textPage * HAIR_TEXT_PAGE_SIZE + 1;
-        var textLast = visibleHairCount + Math.min((textPage + 1) * HAIR_TEXT_PAGE_SIZE, textHairCatalog.length);
-        text += "#L" + (HAIR_TEXT_PAGE_SELECTION_BASE + textPage) + "#文字第" + (textPage + 1) + "页（" + textFirst + "-" + textLast + "）#l";
-        text += (textPage + 1) % 2 == 0 ? "\r\n" : "\t";
-    }
-    cm.sendSimple(text);
-}
-
-function sendTextHairPage(page) {
-    buildTextHairList(page);
-    if (hairnew.length == 0) {
-        cm.sendOk("这一页没有可用的新发型。");
-        cm.dispose();
-        return;
-    }
-    var text = "请选择发型。本页不显示图片预览，选中后还会再次确认。\r\n\r\n";
-    for (var i = 0; i < hairnew.length; i++) {
-        text += "#L" + i + "#" + getHairName(hairnew[i]) + "（ID " + hairnew[i] + "）#l\r\n";
     }
     cm.sendSimple(text);
 }
@@ -266,7 +209,7 @@ function action(mode, type, selection) {
         if (beauty == 1) {
             var isGM = cm.getPlayer().isGM();
             if (isGM || cm.haveItem(5150040)) {
-                buildHairList(0, Math.min(hairCatalog.length, HAIR_PAGE_SIZE * HAIR_PREVIEW_PAGE_COUNT));
+                buildHairList(0, hairCatalog.length);
                 if (hairnew.length == 0) {
                     cm.sendOk("当前没有可用的新发型。");
                 } else {
@@ -282,11 +225,8 @@ function action(mode, type, selection) {
             cm.dispose();
         } else if (beauty == 2) {
             var page = selection - HAIR_PAGE_SELECTION_BASE;
-            var pageCount = Math.min(HAIR_PREVIEW_PAGE_COUNT, Math.ceil(hairCatalog.length / HAIR_PAGE_SIZE));
-            var textPage = selection - HAIR_TEXT_PAGE_SELECTION_BASE;
-            var textPageCount = Math.ceil(textHairCatalog.length / HAIR_TEXT_PAGE_SIZE);
+            var pageCount = Math.ceil(hairCatalog.length / HAIR_PAGE_SIZE);
             if (page >= 0 && page < pageCount) {
-                hairSelectionMode = 1;
                 buildHairList(page * HAIR_PAGE_SIZE, (page + 1) * HAIR_PAGE_SIZE);
                 if (hairnew.length == 0) {
                     cm.sendOk("这一批没有可用的新发型。");
@@ -297,31 +237,18 @@ function action(mode, type, selection) {
                         : "使用高级会员卡，你可以选择你的发型。请选择最能给你带来快乐的款式。";
                     cm.sendStyle(prompt, hairnew);
                 }
-            } else if (textPage >= 0 && textPage < textPageCount) {
-                hairSelectionMode = 2;
-                sendTextHairPage(textPage);
             } else {
                 cm.dispose();
             }
         } else {
             cm.dispose();
         }
-    } else if (status == 3 && beauty == 2 && hairSelectionMode == 1) {
+    } else if (status == 3 && beauty == 2) {
         if (selection < 0 || selection >= hairnew.length) {
             cm.dispose();
             return;
         }
         applySelectedHair(hairnew[selection]);
-    } else if (status == 3 && beauty == 2 && hairSelectionMode == 2) {
-        if (selection < 0 || selection >= hairnew.length) {
-            cm.dispose();
-            return;
-        }
-        pendingHair = hairnew[selection];
-        var requirement = cm.getPlayer().isGM() ? "#bGM 可免费更换#k" : "消耗#b#t5150044##k#k更换";
-        cm.sendYesNo("你选择了#b" + getHairName(pendingHair) + "#k（ID " + pendingHair + "）。\r\n该发型没有图片预览，确定要" + requirement + "吗？");
-    } else if (status == 4 && beauty == 2 && hairSelectionMode == 2) {
-        applySelectedHair(pendingHair);
     } else {
         cm.dispose();
     }

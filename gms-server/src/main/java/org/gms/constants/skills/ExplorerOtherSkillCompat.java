@@ -100,7 +100,7 @@ public final class ExplorerOtherSkillCompat {
 
     public static String videoLayer(int skillId) {
         return switch (skillId) {
-            case 2221009, 2221014 -> "customSkill/ilArchMage/video2221027";
+            case 2221014 -> "customSkill/ilArchMage/video2221027";
             case 2221027, 2221030 -> "customSkill/ilArchMage/video" + skillId;
             case 2121032, 2121035 -> "customSkill/fpArchMage/video" + skillId;
             case 2321037, 2321042 -> "customSkill/bishop/video" + skillId;

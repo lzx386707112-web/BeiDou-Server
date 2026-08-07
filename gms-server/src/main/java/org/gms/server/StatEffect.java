@@ -816,6 +816,7 @@ public class StatEffect {
                     ret.duration *= 2; // freezing skills are a little strange
                     break;
                 case ILArchMage.BLIZZARD_VI:
+                case ILArchMage.FREEZING_BREATH:
                     monsterStatus.put(MonsterStatus.FREEZE, 1);
                     break;
                 case ILArchMage.CHAIN_LIGHTNING_VI:

@@ -34,11 +34,10 @@ public class ILArchMage {
     public static final int BLIZZARD = 2221007;
     public static final int HEROS_WILL = 2221008;
     public static final int CHAIN_LIGHTNING = 2221006;
-    public static final int ICE_AGE = 2221009;
+    public static final int FREEZING_BREATH = 2221009;
     public static final int BOLT_BARRAGE = 2221010;
     public static final int BOLT_BARRAGE_FIRST = 2221011;
     public static final int BOLT_BARRAGE_SECOND = 2221012;
-    public static final int ICE_AGE_TICK = 2221013;
     public static final int SPIRIT_OF_SNOW = 2221014;
     public static final int SPIRIT_OF_SNOW_TICK = 2221015;
     public static final int CHAIN_LIGHTNING_VI = 2221017;
@@ -53,7 +52,7 @@ public class ILArchMage {
     public static final int PARABOLIC_VOLT_CURRENT = 2221031;
 
     public static final int[] V_VI_ACTIVE_ATTACKS = {
-            ICE_AGE, BOLT_BARRAGE, SPIRIT_OF_SNOW, CHAIN_LIGHTNING_VI,
+            FREEZING_BREATH, BOLT_BARRAGE, SPIRIT_OF_SNOW, CHAIN_LIGHTNING_VI,
             BLIZZARD_VI, FROZEN_LIGHTNING, PARABOLIC_VOLT
     };
 }

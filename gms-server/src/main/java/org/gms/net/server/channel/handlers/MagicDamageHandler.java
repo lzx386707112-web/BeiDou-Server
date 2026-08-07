@@ -26,8 +26,6 @@ import org.gms.client.Character;
 import org.gms.client.Client;
 import org.gms.client.Skill;
 import org.gms.client.SkillFactory;
-import org.gms.client.status.MonsterStatus;
-import org.gms.client.status.MonsterStatusEffect;
 import org.gms.config.GameConfig;
 import org.gms.constants.id.MapId;
 import org.gms.constants.skills.BlazeWizard;
@@ -36,7 +34,6 @@ import org.gms.constants.skills.Evan;
 import org.gms.constants.skills.ExplorerOtherSkillCompat;
 import org.gms.constants.skills.FPArchMage;
 import org.gms.constants.skills.ILArchMage;
-import org.gms.constants.skills.ILWizard;
 import org.gms.net.packet.InPacket;
 import org.gms.net.packet.Packet;
 import org.gms.server.StatEffect;
@@ -54,6 +51,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 
@@ -84,12 +82,13 @@ public final class MagicDamageHandler extends AbstractDealDamageHandler {
         2400, 2430, 2460, 2490, 2520, 2550, 2580
     };
     private static final int[] BLIZZARD_VI_FINAL_ATTACK_TIMES_MS = {990};
-    private static final int[] ICE_AGE_PREVIEW_TIMES_MS = intervalTimes(2000, 2000, 28000);
-    private static final int ICE_AGE_DAMAGE_DELAY_MS = 1000;
     private static final int[] SPIRIT_OF_SNOW_TICK_TIMES_MS = intervalTimes(3000, 3000, 27000);
     private static final int[] CHAIN_LIGHTNING_VI_FIELD_TICK_TIMES_MS = {
         1960, 2960, 3960, 4960
     };
+    private static final int DOT_PUNISHER_FIREBALL_COUNT = 15;
+    private static final int[] DOT_PUNISHER_SEARCH_TIMES_MS =
+            intervalTimes(600, 180, 19860);
 
     private static int[] intervalTimes(int first, int interval, int last) {
         int[] result = new int[((last - first) / interval) + 1];
@@ -290,30 +289,6 @@ public final class MagicDamageHandler extends AbstractDealDamageHandler {
         expectedMap.broadcastMessage(chr, packet, false, true);
     }
 
-    private static void applyIceAgeFreeze(
-            Character chr,
-            MapleMap expectedMap,
-            Iterable<Integer> monsterOids
-    ) {
-        if (!canContinueAnimatedAttack(chr, expectedMap)) {
-            return;
-        }
-        Skill freezeSkill = SkillFactory.getSkill(ILWizard.COLD_BEAM);
-        for (Integer monsterOid : monsterOids) {
-            Monster monster = expectedMap.getMonsterByOid(monsterOid);
-            if (monster == null || !monster.isAlive()) {
-                continue;
-            }
-            MonsterStatusEffect freeze = new MonsterStatusEffect(
-                    Collections.singletonMap(MonsterStatus.FREEZE, 1),
-                    freezeSkill,
-                    null,
-                    false
-            );
-            monster.applyStatus(chr, freeze, false, ICE_AGE_DAMAGE_DELAY_MS);
-        }
-    }
-
     private static void repeatAnimatedAttack(
             AttackInfo attack,
             Character chr,
@@ -339,85 +314,6 @@ public final class MagicDamageHandler extends AbstractDealDamageHandler {
         );
         if (applyDamage) {
             applyAnimatedDamage(chr, expectedMap, damage);
-        }
-    }
-
-    private static void scheduleCapturedFrozenAttack(
-            AttackInfo attack,
-            Character chr,
-            MapleMap expectedMap,
-            Map<Integer, List<Integer>> damage,
-            int replaySkillId,
-            int replayAttackCount,
-            int delayMs
-    ) {
-        Map<Integer, List<Integer>> capturedDamage = new LinkedHashMap<>();
-        for (Map.Entry<Integer, List<Integer>> entry : damage.entrySet()) {
-            capturedDamage.put(entry.getKey(), new ArrayList<>(entry.getValue()));
-        }
-        if (!capturedDamage.isEmpty()) {
-            applyIceAgeFreeze(chr, expectedMap, capturedDamage.keySet());
-            TimerManager.getInstance().schedule(
-                    () -> {
-                        if (!canContinueAnimatedAttack(chr, expectedMap)) {
-                            return;
-                        }
-                        broadcastAnimatedAttack(
-                                attack, chr, expectedMap, capturedDamage,
-                                replaySkillId, replayAttackCount
-                        );
-                        applyAnimatedDamage(chr, expectedMap, capturedDamage);
-                    },
-                    delayMs
-            );
-        }
-    }
-
-    private void schedulePreviewedAnimatedAttacks(
-            AttackInfo attack,
-            Character chr,
-            int[] previewTimesMs,
-            int replaySkillId,
-            Rectangle fixedBounds,
-            int damageDelayMs
-    ) {
-        MapleMap expectedMap = chr.getMap();
-        StatEffect originalEffect = SkillFactory.getSkill(attack.skill)
-                .getEffect(chr.getSkillLevel(attack.skill));
-        Skill replaySkill = SkillFactory.getSkill(replaySkillId);
-        int replayLevel = Math.max(1, Math.min(attack.skilllevel, replaySkill.getMaxLevel()));
-        StatEffect replayEffect = replaySkill.getEffect(replayLevel);
-        int mobCount = Math.max(1, Math.min(15, replayEffect.getMobCount()));
-        int replayAttackCount = Math.max(1, Math.min(15, replayEffect.getAttackCount()));
-        List<Integer> sourceDamageTemplate = copyDamageTemplate(attack);
-        if (sourceDamageTemplate.isEmpty()) {
-            sourceDamageTemplate = Collections.singletonList(
-                    calculateFallbackMagicDamage(chr, originalEffect)
-            );
-        }
-        List<Integer> damageTemplate = adaptDamageTemplate(
-                sourceDamageTemplate,
-                replayAttackCount,
-                originalEffect.getDamage(),
-                replayEffect.getDamage()
-        );
-        Rectangle attackBounds = new Rectangle(fixedBounds);
-        for (int previewTimeMs : previewTimesMs) {
-            TimerManager.getInstance().schedule(() -> {
-                if (!canContinueAnimatedAttack(chr, expectedMap)) {
-                    return;
-                }
-                Map<Integer, List<Integer>> damage = collectAnimatedTargets(
-                        attack, expectedMap, attackBounds, mobCount, damageTemplate
-                );
-                if (damage.isEmpty()) {
-                    return;
-                }
-                scheduleCapturedFrozenAttack(
-                        attack, chr, expectedMap, damage,
-                        replaySkillId, replayAttackCount, damageDelayMs
-                );
-            }, previewTimeMs);
         }
     }
 
@@ -537,6 +433,70 @@ public final class MagicDamageHandler extends AbstractDealDamageHandler {
         }
     }
 
+    private void scheduleDotPunisherFireballs(AttackInfo attack, Character chr) {
+        MapleMap expectedMap = chr.getMap();
+        Skill originalSkill = SkillFactory.getSkill(FPArchMage.DOT_PUNISHER);
+        StatEffect originalEffect = originalSkill.getEffect(chr.getSkillLevel(originalSkill));
+        Skill fireballSkill = SkillFactory.getSkill(FPArchMage.DOT_PUNISHER_FIREBALL);
+        int fireballLevel = Math.max(
+                1, Math.min(attack.skilllevel, fireballSkill.getMaxLevel())
+        );
+        StatEffect fireballEffect = fireballSkill.getEffect(fireballLevel);
+        int attackCount = Math.max(1, Math.min(15, fireballEffect.getAttackCount()));
+        List<Integer> sourceDamage = copyDamageTemplate(attack);
+        if (sourceDamage.isEmpty()) {
+            sourceDamage = Collections.singletonList(
+                    calculateFallbackMagicDamage(chr, originalEffect)
+            );
+        }
+        List<Integer> damageTemplate = adaptDamageTemplate(
+                sourceDamage,
+                attackCount,
+                originalEffect.getDamage(),
+                fireballEffect.getDamage()
+        );
+        AtomicInteger launched = new AtomicInteger(attack.allDamage.isEmpty() ? 0 : 1);
+        for (int searchTimeMs : DOT_PUNISHER_SEARCH_TIMES_MS) {
+            TimerManager.getInstance().schedule(() -> {
+                if (!canContinueAnimatedAttack(chr, expectedMap)) {
+                    return;
+                }
+                int ordinal = launched.get();
+                if (ordinal >= DOT_PUNISHER_FIREBALL_COUNT) {
+                    return;
+                }
+                Rectangle bounds = fireballEffect.calculateBoundingBox(
+                        new Point(chr.getPosition()), chr.isFacingLeft()
+                );
+                List<MapObject> objects = expectedMap.getMapObjectsInBox(
+                        bounds, Collections.singletonList(MapObjectType.MONSTER)
+                );
+                List<Monster> targets = new ArrayList<>();
+                for (MapObject object : objects) {
+                    Monster monster = (Monster) object;
+                    if (monster.isAlive()) {
+                        targets.add(monster);
+                    }
+                }
+                if (targets.isEmpty() || !launched.compareAndSet(ordinal, ordinal + 1)) {
+                    return;
+                }
+                Monster target = targets.get(ordinal % targets.size());
+                Map<Integer, List<Integer>> damage = new LinkedHashMap<>();
+                damage.put(target.getObjectId(), new ArrayList<>(damageTemplate));
+                broadcastAnimatedAttack(
+                        attack,
+                        chr,
+                        expectedMap,
+                        damage,
+                        FPArchMage.DOT_PUNISHER_FIREBALL,
+                        attackCount
+                );
+                applyAnimatedDamage(chr, expectedMap, damage);
+            }, searchTimeMs);
+        }
+    }
+
     @Override
     public final void handlePacket(InPacket p, Client c) {
         Character chr = c.getPlayer();
@@ -590,6 +550,9 @@ public final class MagicDamageHandler extends AbstractDealDamageHandler {
                         attack, chr, replay.timesMs(), replay.skillId(), index == 0
                 );
             }
+        } else if (attack.skill == FPArchMage.DOT_PUNISHER) {
+            applyAttack(attack, chr, effect.getAttackCount());
+            scheduleDotPunisherFireballs(attack, chr);
         } else if (attack.skill == BlazeWizard.FLAME_DISCHARGE_LION) {
             scheduleAnimatedAttacks(
                     attack, chr, FLAME_DISCHARGE_LION_MAIN_TIMES_MS,
@@ -632,22 +595,6 @@ public final class MagicDamageHandler extends AbstractDealDamageHandler {
             scheduleAnimatedAttacks(
                     attack, chr, FLAME_CONCERTO_FINISH_TIMES_MS,
                     BlazeWizard.FLAME_CONCERTO_FINISH, false
-            );
-        } else if (attack.skill == ILArchMage.ICE_AGE) {
-            Skill tickSkill = SkillFactory.getSkill(ILArchMage.ICE_AGE_TICK);
-            int tickLevel = Math.max(1, Math.min(attack.skilllevel, tickSkill.getMaxLevel()));
-            StatEffect tickEffect = tickSkill.getEffect(tickLevel);
-            Rectangle fieldBounds = tickEffect.calculateBoundingBox(
-                    new Point(chr.getPosition()), attack.direction == 0
-            );
-            scheduleCapturedFrozenAttack(
-                    attack, chr, chr.getMap(), attack.allDamage,
-                    ILArchMage.ICE_AGE_TICK, tickEffect.getAttackCount(),
-                    ICE_AGE_DAMAGE_DELAY_MS
-            );
-            schedulePreviewedAnimatedAttacks(
-                    attack, chr, ICE_AGE_PREVIEW_TIMES_MS,
-                    ILArchMage.ICE_AGE_TICK, fieldBounds, ICE_AGE_DAMAGE_DELAY_MS
             );
         } else if (attack.skill == ILArchMage.SPIRIT_OF_SNOW) {
             Skill tickSkill = SkillFactory.getSkill(ILArchMage.SPIRIT_OF_SNOW_TICK);
