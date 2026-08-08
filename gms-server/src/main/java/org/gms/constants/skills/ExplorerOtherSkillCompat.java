@@ -8,8 +8,13 @@ public final class ExplorerOtherSkillCompat {
     }
 
     private static final Map<Integer, Replay[]> MULTI_ATTACKS = Map.ofEntries(
+            Map.entry(2121012, replays(replay(2121012, range(600, 600, 3000)))),
             Map.entry(2121022, replays(replay(2121022, points(60, 120)))),
-            Map.entry(2121032, replays(replay(2121032, range(2820, 60, 3780)))),
+            Map.entry(2121032, replays(
+                    replay(2121034, range(540, 60, 1500)),
+                    replay(2121032, range(2820, 60, 3780)),
+                    replay(2121033, range(4740, 30, 5970))
+            )),
             Map.entry(2121035, replays(
                     replay(2121035, concat(range(1080, 60, 2100), points(2340))),
                     replay(2121036, range(2370, 30, 2940))

@@ -27,6 +27,7 @@ import org.gms.client.Skill;
 import org.gms.client.SkillFactory;
 import org.gms.constants.skills.BlazeWizard;
 import org.gms.constants.skills.Evan;
+import org.gms.constants.skills.FPArchMage;
 import org.gms.constants.skills.FPMage;
 import org.gms.constants.skills.NightWalker;
 import org.gms.constants.skills.Shadower;
@@ -80,6 +81,7 @@ public class Mist extends AbstractMapObject {
                 break;
 
             case FPMage.POISON_MIST: // FP mist
+            case FPArchMage.FATAL_POISON_MIST: // Flame Haze VI mist
             case BlazeWizard.FLAME_GEAR: // Flame Gear
             case NightWalker.POISON_BOMB: // Poison Bomb
                 isPoisonMist = true;

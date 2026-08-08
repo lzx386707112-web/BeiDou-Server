@@ -34,11 +34,13 @@ public class FPArchMage {
     public static final int PARALYZE = 2121006;
     public static final int METEOR_SHOWER = 2121007;
     public static final int HEROS_WILL = 2121008;
-    public static final int DOT_PUNISHER = 2121009;
-    public static final int DOT_PUNISHER_FIREBALL = 2121037;
+    public static final int FURY_OF_IFRIT = 2121012;
+    public static final int FLAME_HAZE_VI = 2121020;
+    public static final int FATAL_POISON_MIST = 2121021;
+    public static final int INFERNAL_ERUPTION_VI = 2121022;
     public static final int[] V_VI_ACTIVE_ATTACKS = {
-            2121009, 2121010, 2121012, 2121013, 2121017,
-            2121020, 2121022, 2121023, 2121024, 2121025,
-            2121026, 2121028, 2121029, 2121032, 2121035
+            2121012, 2121017, 2121020,
+            2121022, 2121028,
+            2121032, 2121035
     };
 }
