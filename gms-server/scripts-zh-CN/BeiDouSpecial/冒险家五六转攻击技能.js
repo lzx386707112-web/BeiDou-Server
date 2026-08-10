@@ -36,7 +36,12 @@ var JOBS = {
         retiredSkills: [2121009, 2121010, 2121011, 2121013, 2121014, 2121015, 2121016, 2121023, 2121024, 2121025, 2121026, 2121027, 2121029, 2121030, 2121031, 2121037]
     },
     222: {name: "冰雷大魔导士", skills: Java.type("org.gms.constants.skills.ILArchMage").V_VI_ACTIVE_ATTACKS},
-    232: {name: "主教", skills: Java.type("org.gms.constants.skills.Bishop").V_VI_ACTIVE_ATTACKS},
+    232: {
+        name: "主教",
+        skills: Java.type("org.gms.constants.skills.Bishop").V_VI_ACTIVE_ATTACKS,
+        retiredBindings: [2321022, 2321023, 2321025, 2321026, 2321027, 2321028, 2321036],
+        retiredSkills: [2321022, 2321023, 2321025, 2321026, 2321027, 2321028, 2321036]
+    },
     312: {name: "箭神", skills: Java.type("org.gms.constants.skills.Bowmaster").V_VI_ACTIVE_ATTACKS},
     322: {name: "神射手", skills: Java.type("org.gms.constants.skills.Marksman").V_VI_ACTIVE_ATTACKS},
     412: {name: "夜使者", skills: Java.type("org.gms.constants.skills.NightLord").V_VI_ACTIVE_ATTACKS},

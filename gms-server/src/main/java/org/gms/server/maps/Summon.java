@@ -24,6 +24,7 @@ package org.gms.server.maps;
 import org.gms.client.Character;
 import org.gms.client.Client;
 import org.gms.client.SkillFactory;
+import org.gms.constants.skills.Bishop;
 import org.gms.util.PacketCreator;
 
 import java.awt.*;
@@ -81,7 +82,8 @@ public class Summon extends AbstractAnimatedMapObject {
     }
 
     public boolean isStationary() {
-        return (skill == 3111002 || skill == 3211002 || skill == 5211001 || skill == 13111004);
+        return (skill == 3111002 || skill == 3211002 || skill == 5211001
+                || skill == 13111004 || skill == Bishop.FOUNTAIN_FOR_ANGEL_VI);
     }
 
     public byte getSkillLevel() {

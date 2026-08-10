@@ -52,9 +52,11 @@ public final class SummonDamageHandler extends AbstractDealDamageHandler {
         add(2121005);   // 冰魔兽
         add(2311006);   // 圣龙
         add(Bishop.BAHAMUT);   // 强化圣龙
+        add(Bishop.ANGEL_OF_BALANCE);
+        add(Bishop.FOUNTAIN_FOR_ANGEL_VI);
     }});
 
-    public final class SummonAttackEntry {
+    public static final class SummonAttackEntry {
 
         private final int monsterOid;
         private final int damage;
@@ -115,6 +117,10 @@ public final class SummonDamageHandler extends AbstractDealDamageHandler {
 
         boolean magic = summonEffect.getWatk() == 0;
         int maxDmg = calcMaxDamage(summonEffect, player, magic);    // thanks Darter (YungMoozi) for reporting unchecked max dmg
+        if (summon.getSkill() == Bishop.ANGEL_OF_BALANCE) {
+            long collapsedDamage = (long) maxDmg * Math.max(1, summonEffect.getAttackCount());
+            maxDmg = (int) Math.min(Integer.MAX_VALUE, collapsedDamage);
+        }
         for (SummonAttackEntry attackEntry : allDamage) {
             int damage = attackEntry.getDamage();
             Monster target = player.getMap().getMonsterByOid(attackEntry.getMonsterOid());
@@ -144,7 +150,7 @@ public final class SummonDamageHandler extends AbstractDealDamageHandler {
         }
     }
 
-    private static int calcMaxDamage(StatEffect summonEffect, Character player, boolean magic) {
+    static int calcMaxDamage(StatEffect summonEffect, Character player, boolean magic) {
         double maxDamage;
 
         if (magic) {

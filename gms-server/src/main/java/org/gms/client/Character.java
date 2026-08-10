@@ -2795,7 +2795,8 @@ public class Character extends AbstractCharacterObject {
     private static boolean dispelSkills(int skillid) {
         return switch (skillid) {
             case DarkKnight.BEHOLDER, FPArchMage.ELQUINES, ILArchMage.IFRIT, Priest.SUMMON_DRAGON, Bishop.BAHAMUT,
-                 Bishop.DRAGON_2217_SWIFT, Bishop.DRAGON_5TH_SWIFT,
+                 Bishop.DRAGON_2217_SWIFT, Bishop.DRAGON_5TH_SWIFT, Bishop.ANGEL_OF_BALANCE,
+                 Bishop.FOUNTAIN_FOR_ANGEL_VI,
                  Ranger.PUPPET, Ranger.SILVER_HAWK, Sniper.PUPPET, Sniper.GOLDEN_EAGLE, Hermit.SHADOW_PARTNER -> true;
             default -> false;
         };

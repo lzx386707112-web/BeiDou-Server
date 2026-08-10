@@ -51,10 +51,8 @@ import org.gms.net.server.services.task.channel.OverallService;
 import org.gms.net.server.services.type.ChannelServices;
 import org.gms.net.server.world.Party;
 import org.gms.net.server.world.PartyCharacter;
-import org.gms.util.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.gms.scripting.event.EventInstanceManager;
+import org.gms.server.EquipmentEvolutionProgress;
 import org.gms.server.StatEffect;
 import org.gms.server.TimerManager;
 import org.gms.server.life.LifeFactory.BanishInfo;
@@ -63,6 +61,9 @@ import org.gms.server.maps.AbstractAnimatedMapObject;
 import org.gms.server.maps.MapObjectType;
 import org.gms.server.maps.MapleMap;
 import org.gms.server.maps.Summon;
+import org.gms.util.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.awt.*;
 import java.lang.ref.WeakReference;
@@ -756,6 +757,7 @@ public class Monster extends AbstractLoadedLife {
             attacker.gainExp(_personalExp, _partyExp, true, false, white);
             attacker.increaseEquipExp(_personalExp);
             attacker.raiseQuestMobCount(getId());
+            EquipmentEvolutionProgress.recordBossClear(attacker, getId());
         }
     }
 

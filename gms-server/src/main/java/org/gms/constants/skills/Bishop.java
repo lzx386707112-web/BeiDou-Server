@@ -35,6 +35,16 @@ public class Bishop {
     public static final int ANGEL_RAY = 2321007;
     public static final int GENESIS = 2321008;
     public static final int HEROS_WILL = 2321009;
+    public static final int ANGEL_OF_BALANCE = 2321020;
+    public static final int ANGEL_OF_BALANCE_ATTACK = 2321021;
+    public static final int DIVINE_PUNISHMENT = 2321024;
+    public static final int DIVINE_PUNISHMENT_HIT = 2321044;
+    public static final int FOUNTAIN_FOR_ANGEL_VI = 2321031;
+    public static final int ANGELIC_TOUCH_VI = 2321032;
+    public static final int GENESIS_VI = 2321033;
+    public static final int HEAVENS_DOOR_VI = 2321035;
+    public static final int DIVINE_PUNISHMENT_ORIGIN = 2321037;
+    public static final int HOLY_COMMAND_ORIGIN = 2321042;
     public static final int DRAGON_2217_SWIFT = 2321010;
     public static final int DRAGON_2217_DIVE = 2321011;
     public static final int DRAGON_2217_BREATH = 2321012;
@@ -55,8 +65,8 @@ public class Bishop {
     public static final int DRAGON_5TH_6TH_BREATH = 2331018;
     public static final int NEW_SKILL_TEST = DRAGON_2217_SWIFT;
     public static final int[] V_VI_ACTIVE_ATTACKS = {
-            2321020, 2321022, 2321024, 2321025, 2321027, 2321031,
-            2321032, 2321033, 2321035, 2321036, 2321037, 2321042
+            2321020, 2321024, 2321031, 2321032,
+            2321033, 2321035, 2321037, 2321042
     };
 
     public static boolean isDragonCopySkill(int skill) {
@@ -67,4 +77,10 @@ public class Bishop {
         return (skill >= DRAGON_2217_DIVE && skill <= DRAGON_2220_BREATH)
                 || (skill >= DRAGON_5TH_DIVE && skill <= DRAGON_5TH_6TH_BREATH);
     }
+
+    public static boolean isVViSummonSkill(int skill) {
+        return skill == ANGEL_OF_BALANCE
+                || skill == FOUNTAIN_FOR_ANGEL_VI;
+    }
+
 }

@@ -44,12 +44,14 @@ import org.gms.server.maps.MapObject;
 import org.gms.server.maps.MapObjectType;
 import org.gms.server.maps.MapleMap;
 import org.gms.server.maps.Mist;
+import org.gms.server.maps.Summon;
 import org.gms.util.PacketCreator;
 
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -57,6 +59,10 @@ import java.util.Map;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 public final class MagicDamageHandler extends AbstractDealDamageHandler {
+    private static final int[] FOUNTAIN_FOR_ANGEL_VI_ATTACK_TIMES_MS =
+            intervalTimes(2000, 2000, 60000);
+    private static final Rectangle FOUNTAIN_FOR_ANGEL_VI_LOCAL_BOUNDS =
+            new Rectangle(-290, -300, 580, 410);
     private static final String ETERNAL_PHOENIX_VIDEO_LAYER =
             "customSkill/blazeWizard/eternalPhoenixVideoLayer";
     private static final String FLAME_CONCERTO_VIDEO_LAYER =
@@ -171,17 +177,21 @@ public final class MagicDamageHandler extends AbstractDealDamageHandler {
     ) {
         Map<Integer, List<Integer>> result = new LinkedHashMap<>();
         if (attackBounds != null && !damageTemplate.isEmpty()) {
-            List<MapObject> targets = expectedMap.getMapObjectsInBox(
-                    attackBounds,
-                    Collections.singletonList(MapObjectType.MONSTER)
+            Point attackOrigin = new Point(
+                    (int) attackBounds.getCenterX(),
+                    (int) attackBounds.getCenterY()
             );
-            for (MapObject target : targets) {
-                Monster monster = (Monster) target;
-                if (monster.isAlive()) {
-                    result.put(monster.getObjectId(), new ArrayList<>(damageTemplate));
-                    if (result.size() >= mobCount) {
-                        break;
-                    }
+            List<Monster> targets = new ArrayList<>(expectedMap.getAllMonsters());
+            targets.removeIf(monster -> !monster.isAlive()
+                    || !attackBounds.contains(monster.getPosition()));
+            targets.sort(Comparator
+                    .comparing((Monster monster) -> !monster.isBoss())
+                    .thenComparingDouble(monster -> monster.getPosition().distanceSq(attackOrigin))
+                    .thenComparingInt(Monster::getObjectId));
+            for (Monster monster : targets) {
+                result.put(monster.getObjectId(), new ArrayList<>(damageTemplate));
+                if (result.size() >= mobCount) {
+                    break;
                 }
             }
             return result;
@@ -196,6 +206,64 @@ public final class MagicDamageHandler extends AbstractDealDamageHandler {
             }
         }
         return result;
+    }
+
+    private static void scheduleFountainForAngelViAttacks(
+            Character chr,
+            Summon summon,
+            StatEffect effect
+    ) {
+        MapleMap expectedMap = chr.getMap();
+        int mobCount = Math.max(1, Math.min(8, effect.getMobCount()));
+        long oneLineDamage = (long) SummonDamageHandler.calcMaxDamage(effect, chr, true)
+                * Math.max(1, Math.min(15, effect.getAttackCount()));
+        int damage = (int) Math.min(Integer.MAX_VALUE, oneLineDamage);
+        for (int attackTimeMs : FOUNTAIN_FOR_ANGEL_VI_ATTACK_TIMES_MS) {
+            TimerManager.getInstance().schedule(() -> {
+                if (!canContinueAnimatedAttack(chr, expectedMap)
+                        || chr.getSummonByKey(Bishop.FOUNTAIN_FOR_ANGEL_VI) != summon
+                        || expectedMap.isOwnershipRestricted(chr)) {
+                    return;
+                }
+                Point summonPosition = summon.getPosition();
+                Rectangle bounds = new Rectangle(
+                        summonPosition.x + FOUNTAIN_FOR_ANGEL_VI_LOCAL_BOUNDS.x,
+                        summonPosition.y + FOUNTAIN_FOR_ANGEL_VI_LOCAL_BOUNDS.y,
+                        FOUNTAIN_FOR_ANGEL_VI_LOCAL_BOUNDS.width,
+                        FOUNTAIN_FOR_ANGEL_VI_LOCAL_BOUNDS.height
+                );
+                List<SummonDamageHandler.SummonAttackEntry> attacks = new ArrayList<>();
+                for (MapObject target : expectedMap.getMapObjectsInBox(
+                        bounds, Collections.singletonList(MapObjectType.MONSTER)
+                )) {
+                    Monster monster = (Monster) target;
+                    if (monster.isAlive()) {
+                        attacks.add(new SummonDamageHandler.SummonAttackEntry(
+                                monster.getObjectId(), damage
+                        ));
+                        if (attacks.size() >= mobCount) {
+                            break;
+                        }
+                    }
+                }
+                if (attacks.isEmpty()) {
+                    return;
+                }
+                byte direction = chr.isFacingLeft() ? (byte) 1 : (byte) 0;
+                Packet packet = PacketCreator.summonAttack(
+                        chr.getId(), summon.getObjectId(), direction, attacks
+                );
+                chr.sendPacket(packet);
+                expectedMap.broadcastMessage(chr, packet, summonPosition);
+                for (SummonDamageHandler.SummonAttackEntry attack : attacks) {
+                    Monster monster = expectedMap.getMonsterByOid(attack.getMonsterOid());
+                    if (monster != null && monster.isAlive()) {
+                        monster.aggroMonsterDamage(chr, attack.getDamage());
+                        expectedMap.damageMonster(chr, monster, attack.getDamage());
+                    }
+                }
+            }, attackTimeMs);
+        }
     }
 
     private static Rectangle captureAnimatedAttackBounds(
@@ -326,6 +394,24 @@ public final class MagicDamageHandler extends AbstractDealDamageHandler {
         }
     }
 
+    private static void showDamageNumbers(
+            Character chr,
+            MapleMap expectedMap,
+            Map<Integer, List<Integer>> damage
+    ) {
+        for (Map.Entry<Integer, List<Integer>> entry : damage.entrySet()) {
+            Monster monster = expectedMap.getMonsterByOid(entry.getKey());
+            if (monster == null || !monster.isAlive()) {
+                continue;
+            }
+            int total = 0;
+            for (Integer hit : entry.getValue()) {
+                total = (int) Math.min(Integer.MAX_VALUE, (long) total + decodeRepeatedDamage(hit));
+            }
+            chr.sendPacket(PacketCreator.damageMonster(monster.getObjectId(), total));
+        }
+    }
+
     private static Packet animatedAttackPacket(
             AttackInfo attack,
             Character chr,
@@ -387,6 +473,7 @@ public final class MagicDamageHandler extends AbstractDealDamageHandler {
                 attack, chr, expectedMap, damage, replaySkillId, replayAttackCount
         );
         if (applyDamage) {
+            showDamageNumbers(chr, expectedMap, damage);
             applyAnimatedDamage(chr, expectedMap, damage);
         }
     }
@@ -495,6 +582,7 @@ public final class MagicDamageHandler extends AbstractDealDamageHandler {
                                     replayAttackCount
                             ));
                         }
+                        showDamageNumbers(chr, expectedMap, attack.allDamage);
                         applyAttack(attack, chr, originalEffect.getAttackCount());
                     }
                 } else {
@@ -538,17 +626,25 @@ public final class MagicDamageHandler extends AbstractDealDamageHandler {
             c.sendPacket(PacketCreator.getEnergy("energy", chr.getDojoEnergy()));
         }
 
+        StatEffect effect = attack.getAttackEffect(chr, null);
+        Skill skill = SkillFactory.getSkill(attack.skill);
+        StatEffect effect_ = skill.getEffect(chr.getSkillLevel(skill));
         int charge = (attack.skill == Evan.FIRE_BREATH || attack.skill == Evan.ICE_BREATH || attack.skill == FPArchMage.BIG_BANG || attack.skill == ILArchMage.BIG_BANG || attack.skill == Bishop.BIG_BANG) ? attack.charge : -1;
         Packet packet = PacketCreator.magicAttack(chr, attack.skill, attack.skilllevel, attack.stance, attack.numAttackedAndDamage, attack.allDamage, charge, attack.speed, attack.direction, attack.display);
 
+        if (attack.skill == Bishop.HEAVENS_DOOR_VI) {
+            chr.sendPacket(PacketCreator.showOwnBuffEffect(attack.skill, 2));
+            chr.getMap().broadcastMessage(
+                    chr,
+                    PacketCreator.showBuffEffect(chr.getId(), attack.skill, 2),
+                    false
+            );
+        }
         chr.getMap().broadcastMessage(chr, packet, false, true);
         String explorerVideoLayer = ExplorerOtherSkillCompat.videoLayer(attack.skill);
         if (explorerVideoLayer != null) {
             chr.sendPacket(PacketCreator.showEffect(explorerVideoLayer));
         }
-        StatEffect effect = attack.getAttackEffect(chr, null);
-        Skill skill = SkillFactory.getSkill(attack.skill);
-        StatEffect effect_ = skill.getEffect(chr.getSkillLevel(skill));
         if (effect_.getCooldown() > 0) {
             if (chr.skillIsCooling(attack.skill)) {
                 return;
@@ -556,6 +652,16 @@ public final class MagicDamageHandler extends AbstractDealDamageHandler {
                 c.sendPacket(PacketCreator.skillCooldown(attack.skill, effect_.getCooldown()));
                 chr.addCooldown(attack.skill, currentServerTime(), SECONDS.toMillis(effect_.getCooldown()));
             }
+        }
+        if (Bishop.isVViSummonSkill(attack.skill)) {
+            effect_.applyTo(chr, new Point(chr.getPosition()));
+            if (attack.skill == Bishop.FOUNTAIN_FOR_ANGEL_VI) {
+                Summon summon = chr.getSummonByKey(Bishop.FOUNTAIN_FOR_ANGEL_VI);
+                if (summon != null) {
+                    scheduleFountainForAngelViAttacks(chr, summon, effect_);
+                }
+            }
+            return;
         }
         ExplorerOtherSkillCompat.Replay[] explorerReplays =
                 ExplorerOtherSkillCompat.multiAttacks(attack.skill);

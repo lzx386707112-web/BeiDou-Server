@@ -742,6 +742,8 @@ public class StatEffect {
                 case Bishop.BAHAMUT:
                 case Bishop.DRAGON_2217_SWIFT:
                 case Bishop.DRAGON_5TH_SWIFT:
+                case Bishop.ANGEL_OF_BALANCE:
+                case Bishop.FOUNTAIN_FOR_ANGEL_VI:
                 case DarkKnight.BEHOLDER:
                 case Outlaw.GAVIOTA:
                 case DawnWarrior.SOUL:
@@ -821,6 +823,9 @@ public class StatEffect {
                     break;
                 case ILArchMage.CHAIN_LIGHTNING_VI:
                     monsterStatus.put(MonsterStatus.STUN, 1);
+                    break;
+                case Bishop.ANGELIC_TOUCH_VI:
+                    monsterStatus.put(MonsterStatus.WDEF, ret.x);
                     break;
                 case FPWizard.SLOW:
                 case ILWizard.SLOW:
@@ -1842,6 +1847,7 @@ public class StatEffect {
             case WindArcher.PUPPET:
             case Outlaw.OCTOPUS:
             case Corsair.WRATH_OF_THE_OCTOPI:
+            case Bishop.FOUNTAIN_FOR_ANGEL_VI:
                 return SummonMovementType.STATIONARY;
             case Ranger.SILVER_HAWK:
             case Sniper.GOLDEN_EAGLE:
@@ -1856,6 +1862,7 @@ public class StatEffect {
             case Bishop.BAHAMUT:
             case Bishop.DRAGON_2217_SWIFT:
             case Bishop.DRAGON_5TH_SWIFT:
+            case Bishop.ANGEL_OF_BALANCE:
             case DawnWarrior.SOUL:
             case BlazeWizard.FLAME:
             case BlazeWizard.IFRIT:

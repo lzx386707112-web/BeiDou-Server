@@ -571,7 +571,8 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
             List<Integer> damageTemplate,
             StatEffect replayEffect,
             StatEffect targetingEffect,
-            Point fixedAttackOrigin
+            Point fixedAttackOrigin,
+            boolean showLocalDamageNumbers
     ) {
         if (!canContinueAnimatedAttack(chr, expectedMap)) {
             return;
@@ -614,17 +615,38 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
             for (Integer hit : entry.getValue()) {
                 total = (int) Math.min(Integer.MAX_VALUE, (long) total + decodeRepeatedDamage(hit));
             }
+            if (showLocalDamageNumbers) {
+                chr.sendPacket(PacketCreator.damageMonster(monster.getObjectId(), total));
+            }
             monster.aggroMonsterDamage(chr, total);
             expectedMap.damageMonster(chr, monster, total);
         }
     }
 
-    private void scheduleTrackingCloseAttacks(
+    void scheduleTrackingCloseAttacks(
             AttackInfo attack,
             Character chr,
             int[] attackTimesMs,
             int replaySkillId,
             boolean applyOriginalFirst
+    ) {
+        scheduleTrackingCloseAttacks(
+                attack,
+                chr,
+                attackTimesMs,
+                replaySkillId,
+                applyOriginalFirst,
+                attack.skill == DawnWarrior.COSMOS
+        );
+    }
+
+    void scheduleTrackingCloseAttacks(
+            AttackInfo attack,
+            Character chr,
+            int[] attackTimesMs,
+            int replaySkillId,
+            boolean applyOriginalFirst,
+            boolean showLocalDamageNumbers
     ) {
         MapleMap expectedMap = chr.getMap();
         Skill originalSkill = SkillFactory.getSkill(attack.skill);
@@ -657,6 +679,9 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
                     return;
                 }
                 if (originalTick) {
+                    if (showLocalDamageNumbers) {
+                        showCapturedDamageNumbers(attack, chr, expectedMap);
+                    }
                     applyAttack(attack, chr, originalEffect.getAttackCount());
                     return;
                 }
@@ -670,7 +695,8 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
                         damageTemplate,
                         replayEffect,
                         targetingEffect,
-                        fixedAttackOrigin
+                        fixedAttackOrigin,
+                        showLocalDamageNumbers
                 );
             }, attackTimesMs[index]);
         }
@@ -794,7 +820,8 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
                         damageTemplate,
                         replayEffect,
                         replayEffect,
-                        null
+                        null,
+                        false
                 );
                 if (stageIndex == times.length - 1) {
                     synchronized (LIGHTNING_SPEAR_COMBOS) {
