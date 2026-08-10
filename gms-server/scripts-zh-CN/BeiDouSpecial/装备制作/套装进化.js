@@ -102,6 +102,22 @@ var BRANCH_SETS = {
     eternalPants: {items: [1062285, 1062286, 1062287, 1062288, 1062289]}
 };
 
+// The hybrid set fills the Alien series' missing weapon and sixth slot with
+// Supreme Unwelcome Guest equipment. Item order remains weapon, cap,
+// longcoat, glove, shoes and sixth inheritance slot (belt instead of cape).
+var VISITOR_ALIEN_SET = {
+    name: "至尊不速之客·外星人",
+    armor: [1003540, 1052460, 1082432, 1072664, 1132040],
+    weapons: [
+        [1302147, 1312062, 1322090, 1402090, 1412062, 1422063, 1432081, 1442111],
+        [1372078, 1382099],
+        [1452106, 1462091],
+        [1332120, 1472117],
+        [1482079, 1492079]
+    ]
+};
+var VISITOR_ALIEN_SLOT_NOTE = "混合套第6件是不速之客腰带：皇家斗篷的强化会继承到腰带，下一阶段再由腰带继承回新斗篷。";
+
 // Existing weapon-crafting targets are the canonical weapon path. Item order is
 // Fafnir, Absolab, Sweetwater, Arcane and Destiny.
 var WEAPON_PATHS = [
@@ -148,8 +164,9 @@ var STEP_RULES = [
     {theme: "王室封印：用主线纪念物、月石和五彩水晶完成认证", quests: [600006], bosses: [5220003], materials: [[4000313, 5], [4011007, 2], [4251200, 1], [4260009, 1]], meso: 10000000, cash: 3000, chance: 70, pity: 8},
     {theme: "狮王共鸣：用四种下等属性宝石与日月精华唤醒套装", bosses: [6220000, 6220001], materials: [[4250800, 2], [4250900, 2], [4251000, 2], [4251100, 2], [4011007, 2], [4021009, 2]], meso: 15000000, cash: 5000, chance: 65, pity: 8},
     {theme: "皇家试炼：青竹武士与九尾狐资格加三种中等宝石", quests: [31180], bosses: [6090002, 7220001], materials: [[4250001, 1], [4251301, 1], [4251401, 1], [4260009, 2]], meso: 20000000, cash: 7000, chance: 60, pity: 8},
-    {theme: "武陵猎证：收集肯德熊熊掌与妖怪禅师娃娃", route: "pensalir", quests: [600007], bosses: [7220000, 7220002], materials: [[4000283, 10], [4000289, 10], [4251200, 1], [4000313, 5]], meso: 25000000, cash: 8000, chance: 65, pity: 8},
-    {theme: "女皇祝福：以艾利杰角尾、星石和希纳斯宝石授勋", route: "empress", quests: [600007], bosses: [8220000, 8850011], materials: [[4000073, 20], [4000074, 20], [4021009, 2], [4260009, 2]], meso: 30000000, cash: 10000, chance: 55, pity: 9},
+    {theme: "异星校准：以钻机或狮王掉落的红色钻石融合两套装备", quests: [600007], materials: [[4032133, 3], [4011007, 1], [4021009, 1], [4251300, 1]], meso: 22000000, cash: 7000, chance: 70, pity: 8},
+    {theme: "武陵猎证：收集肯德熊熊掌与妖怪禅师娃娃", route: "pensalir", bosses: [7220000, 7220002], materials: [[4000283, 10], [4000289, 10], [4251200, 1], [4000313, 5]], meso: 25000000, cash: 8000, chance: 65, pity: 8},
+    {theme: "女皇祝福：以艾利杰角尾、星石和希纳斯宝石授勋", route: "empress", bosses: [8220000, 8850011], materials: [[4000073, 20], [4000074, 20], [4021009, 2], [4260009, 2]], meso: 30000000, cash: 10000, chance: 55, pity: 9},
     {theme: "时空三印：吉米拉、小吃店与阿卡伊勒共同开启高阶锻造", bosses: [8220002, 8220009, 8860000], materials: [[4260009, 3], [4250001, 2], [4251301, 2], [4011007, 2], [4021009, 2]], meso: 40000000, cash: 12000, chance: 50, pity: 9},
     {theme: "深渊合铸：大海兽与鲁塔比斯四守卫资格激活五晶核心", bosses: [8220003, 8910100, 8900100, 8920100, 8930100], materials: [[4250801, 1], [4250901, 1], [4251001, 1], [4251101, 1], [4251302, 1], [4260009, 5]], meso: 60000000, cash: 15000, chance: 45, pity: 10},
     {theme: "奥术成长：完成奥术河任务并以核心宝石和高阶宝石突破", quests: [34102, 34103, 34104, 34105], materials: [[2435719, 15], [4250002, 1], [4251302, 1], [4251401, 1]], meso: 80000000, cash: 20000, chance: 35, pity: 10},
@@ -231,6 +248,7 @@ function showMainMenu() {
         var starterItems = getSetItems(SHARED_SETS[0], jobIndex);
         text += "#L0##b兑换45级冒险岛宝石整套#k\r\n";
         text += formatSetPreview(starterItems) + "\r\n";
+        text += "玩法：" + STARTER_RULE.theme + "\r\n";
         text += buildOwnedCostText(STARTER_RULE) + "#l\r\n";
     }
 
@@ -244,6 +262,7 @@ function showMainMenu() {
             text += "#L" + (100 + i) + "##b" + availableRecipes[i].sourceName
                 + " → " + availableRecipes[i].targetName + "#k\r\n";
             text += "目标预览：" + formatSetPreview(availableRecipes[i].targetIds) + "#l\r\n";
+            text += "玩法：" + availableRecipes[i].rule.theme + "\r\n";
             if (match) {
                 availableRecipes[i].menuSourceIds = itemIds(match);
             }
@@ -261,6 +280,7 @@ function handleMainSelection(selection) {
         var starterItems = getSetItems(SHARED_SETS[0], getJobIndex());
         cm.sendYesNo(TITLE
             + "#e兑换整套装备：#n\r\n" + formatDetailedPreview(starterItems)
+            + "\r\n#e阶段玩法：#n" + STARTER_RULE.theme + "\r\n"
             + "\r\n#e需要收集：#n\r\n" + buildCostText(STARTER_RULE)
             + buildQualificationText(STARTER_RULE)
             + "\r\n确定兑换吗？");
@@ -277,6 +297,7 @@ function handleMainSelection(selection) {
             + "材料数量是整套一次进化的固定总需求；金币和点券按原六个部位合计。\r\n"
             + "失败会消耗材料、金币和点券，但整套装备不会消失或降级；每次失败使下次成功率提高5%，最多提高25%，达到保底次数后下一次必定成功。\r\n"
             + "强化增量、已用卷轴次数、星级和装备标记会按对应部位继承。最终天命阶段由套服拆分为上衣和裤子，强化增量继承到上衣，裤子为干净属性。\r\n"
+            + VISITOR_ALIEN_SLOT_NOTE + "\r\n"
             + "原装备制作中的帽子、鞋子和披风可替代对应阶段的同部位装备，随整套一起进化。\r\n"
             + "Boss和任务资格永久有效，不会因尝试而消耗。\r\n\r\n"
             + "#r希纳斯、鲁塔比斯、奥术河和神说Boss地图仍有兼容风险。本菜单只检查资格，绝不会传送到这些地图。#k");
@@ -340,6 +361,9 @@ function showPreviewPage(selection) {
         }
     } else if (selection === 903) {
         text += "#e高级防具路线预览#n\r\n#d武器会按所选武器路线同步进化。#k\r\n";
+        text += "#d" + VISITOR_ALIEN_SLOT_NOTE + "#k\r\n";
+        text += "\r\n#b" + VISITOR_ALIEN_SET.name + "混合套#k "
+            + formatSetPreview(getVisitorAlienSetItems(jobIndex, 0).slice(1));
         var armorBranches = ["pensalir", "empress", "sengoku", "absolab", "arcane"];
         for (var k = 0; k < armorBranches.length; k++) {
             var armorSet = BRANCH_SETS[armorBranches[k]];
@@ -352,6 +376,9 @@ function showPreviewPage(selection) {
         var paths = WEAPON_PATHS[jobIndex];
         var path = paths[selection - 910];
         text += "#e" + path.name + "武器路线预览#n\r\n";
+        var visitorWeapon = VISITOR_ALIEN_SET.weapons[jobIndex][selection - 910];
+        text += "\r\n#b" + VISITOR_ALIEN_SET.name + "#k  #v" + visitorWeapon
+            + "# #z" + visitorWeapon + "#";
         for (var p = 0; p < path.items.length; p++) {
             text += "\r\n#b" + WEAPON_STAGE_NAMES[p] + "#k  #v" + path.items[p]
                 + "# #z" + path.items[p] + "#";
@@ -533,7 +560,12 @@ function buildConfirmation(recipe, sourceIds) {
     var costs = getSetCosts(recipe);
     var text = TITLE
         + "#e来源整套：" + recipe.sourceName + "#n\r\n" + formatDetailedPreview(sourceIds)
-        + "\r\n#e目标整套：" + recipe.targetName + "#n\r\n" + formatDetailedPreview(recipe.targetIds)
+        + "\r\n#e目标整套：" + recipe.targetName + "#n\r\n" + formatDetailedPreview(recipe.targetIds);
+    if (recipe.sourceName.indexOf(VISITOR_ALIEN_SET.name) >= 0
+            || recipe.targetName.indexOf(VISITOR_ALIEN_SET.name) >= 0) {
+        text += "\r\n#d" + VISITOR_ALIEN_SLOT_NOTE + "#k";
+    }
+    text += "\r\n#e阶段玩法：#n" + recipe.rule.theme + "\r\n"
         + "\r\n#e整套消耗：#n\r\n" + buildCostText(costs)
         + "当前成功率：#r" + getCurrentChance(recipe, failures) + "%#k";
     if (recipe.rule.pity > 0) {
@@ -769,6 +801,7 @@ function buildSetRecipes() {
             var path = paths[pathIndex];
             var route = "weapon_" + path.items[0];
             var royal = BRANCH_SETS.royal.items[job];
+            var visitorAlien = getVisitorAlienSetItems(job, pathIndex);
             var fafnirPensalir = combineWeaponAndArmor(path.items[0], BRANCH_SETS.pensalir.items[job]);
             var fafnirEmpress = combineWeaponAndArmor(path.items[0], BRANCH_SETS.empress.items[job]);
             var absolabSengoku = combineWeaponAndArmor(path.items[1], BRANCH_SETS.sengoku.items[job]);
@@ -777,44 +810,50 @@ function buildSetRecipes() {
             var destinySet = getFinalSetItems(job, path);
 
             addFullSetRecipe(
-                result, royal, "royal", fafnirPensalir,
+                result, royal, "royal", visitorAlien,
                 job, STEP_RULES[10], BRANCH_SETS.royal.name,
+                VISITOR_ALIEN_SET.name + path.name + "混合套",
+                route + "_visitor_alien", null, null
+            );
+            addFullSetRecipe(
+                result, visitorAlien, null, fafnirPensalir,
+                job, STEP_RULES[11], VISITOR_ALIEN_SET.name + path.name + "混合套",
                 "法弗纳" + path.name + " + " + BRANCH_SETS.pensalir.name + "防具",
                 route + "_pensalir", WEAPON_LEVEL_EXPAND[0], WEAPON_MAX_STAR[0]
             );
             addFullSetRecipe(
-                result, royal, "royal", fafnirEmpress,
-                job, STEP_RULES[11], BRANCH_SETS.royal.name,
+                result, visitorAlien, null, fafnirEmpress,
+                job, STEP_RULES[12], VISITOR_ALIEN_SET.name + path.name + "混合套",
                 "法弗纳" + path.name + " + " + BRANCH_SETS.empress.name + "防具",
                 route + "_empress", WEAPON_LEVEL_EXPAND[0], WEAPON_MAX_STAR[0]
             );
             addFullSetRecipe(
                 result, fafnirPensalir, null, absolabSengoku,
-                job, STEP_RULES[12], "法弗纳" + path.name + " + " + BRANCH_SETS.pensalir.name + "防具",
+                job, STEP_RULES[13], "法弗纳" + path.name + " + " + BRANCH_SETS.pensalir.name + "防具",
                 "埃苏莱布斯" + path.name + " + " + BRANCH_SETS.sengoku.name + "防具",
                 route + "_pensalir", WEAPON_LEVEL_EXPAND[1], WEAPON_MAX_STAR[1]
             );
             addFullSetRecipe(
                 result, fafnirEmpress, null, absolabSengoku,
-                job, STEP_RULES[12], "法弗纳" + path.name + " + " + BRANCH_SETS.empress.name + "防具",
+                job, STEP_RULES[13], "法弗纳" + path.name + " + " + BRANCH_SETS.empress.name + "防具",
                 "埃苏莱布斯" + path.name + " + " + BRANCH_SETS.sengoku.name + "防具",
                 route + "_empress", WEAPON_LEVEL_EXPAND[1], WEAPON_MAX_STAR[1]
             );
             addFullSetRecipe(
                 result, absolabSengoku, "sengoku", sweetwaterAbsolab,
-                job, STEP_RULES[13], "埃苏莱布斯" + path.name + " + " + BRANCH_SETS.sengoku.name + "防具",
+                job, STEP_RULES[14], "埃苏莱布斯" + path.name + " + " + BRANCH_SETS.sengoku.name + "防具",
                 "漩涡" + path.name + " + " + BRANCH_SETS.absolab.name + "防具",
                 route + "_main", WEAPON_LEVEL_EXPAND[2], WEAPON_MAX_STAR[2]
             );
             addFullSetRecipe(
                 result, sweetwaterAbsolab, null, arcaneSet,
-                job, STEP_RULES[14], "漩涡" + path.name + " + " + BRANCH_SETS.absolab.name + "防具",
+                job, STEP_RULES[15], "漩涡" + path.name + " + " + BRANCH_SETS.absolab.name + "防具",
                 "神秘之影" + path.name + "整套",
                 route + "_arcane", WEAPON_LEVEL_EXPAND[3], WEAPON_MAX_STAR[3]
             );
             addFullSetRecipe(
                 result, arcaneSet, null, destinySet,
-                job, STEP_RULES[15], "神秘之影" + path.name + "整套",
+                job, STEP_RULES[16], "神秘之影" + path.name + "整套",
                 BRANCH_SETS.destiny.name + path.name + "整套",
                 route + "_destiny", WEAPON_LEVEL_EXPAND[4], WEAPON_MAX_STAR[4]
             );
@@ -864,6 +903,10 @@ function getSourceOptions(items, stage, jobIndex) {
 
 function combineWeaponAndArmor(weaponId, setItems) {
     return [weaponId].concat(setItems.slice(1));
+}
+
+function getVisitorAlienSetItems(jobIndex, pathIndex) {
+    return [VISITOR_ALIEN_SET.weapons[jobIndex][pathIndex]].concat(VISITOR_ALIEN_SET.armor);
 }
 
 function getFinalSetItems(jobIndex, weaponPath) {

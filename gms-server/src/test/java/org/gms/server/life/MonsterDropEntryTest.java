@@ -1,6 +1,7 @@
 package org.gms.server.life;
 
 import org.gms.client.Job;
+import org.gms.constants.game.ExpTable;
 import org.gms.constants.game.GameConstants;
 import org.gms.manager.ServerManager;
 import org.gms.property.ServiceProperty;
@@ -48,8 +49,10 @@ class MonsterDropEntryTest {
     }
 
     @Test
-    void fourthJobsCanReachLevel250() {
-        assertEquals(250, GameConstants.getJobMaxLevel(Job.HERO));
-        assertEquals(250, GameConstants.getJobMaxLevel(Job.DAWNWARRIOR4));
+    void fourthJobsCanReachLevel255() {
+        assertEquals(255, GameConstants.getJobMaxLevel(Job.HERO));
+        assertEquals(255, GameConstants.getJobMaxLevel(Job.DAWNWARRIOR4));
+        assertEquals(2_100_000_000, ExpTable.getExpNeededForLevel(255));
+        assertEquals(2_100_000_000, ExpTable.getExpNeededForLevel(255, 10));
     }
 }

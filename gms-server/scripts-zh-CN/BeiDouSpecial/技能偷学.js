@@ -42,7 +42,7 @@ function action(mode, type, selection) {
         let 偷学技能点 = getStealKillCount();
         let text = OldTitle;
         text += `\r\n当前拥有的偷学技能点: #r${偷学技能点}#k\r\n`;
-        text += "#b（偷学技能点只有250级后在【职业中心-涅槃】获得）\r\n";
+        text += "#b（偷学技能点只有255级后在【职业中心-涅槃】获得）\r\n";
         text += "#k可偷学技能列表：(#r已偷学的技能,重复设置不消耗偷学点#k)\r\n\r\n";
 
         // 循环生成所有技能选项，已偷学技能显示消耗0点

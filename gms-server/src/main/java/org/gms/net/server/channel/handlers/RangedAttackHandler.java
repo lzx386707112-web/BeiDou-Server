@@ -37,6 +37,7 @@ import org.gms.constants.id.MapId;
 import org.gms.constants.inventory.ItemConstants;
 import org.gms.constants.skills.Aran;
 import org.gms.constants.skills.Buccaneer;
+import org.gms.constants.skills.Bowmaster;
 import org.gms.constants.skills.ExplorerOtherSkillCompat;
 import org.gms.constants.skills.NightLord;
 import org.gms.constants.skills.NightWalker;
@@ -130,6 +131,21 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
     private static final int[] MISTRAL_SPIRIT_ENABLE_DELAYS_MS = {270, 120, 120};
     private static final int[] ELEMENTAL_TEMPEST_WAVE_TIMES_MS = intervalTimes(960, 30, 1260);
     private static final int[] ELEMENTAL_TEMPEST_ARROW_TIMES_MS = intervalTimes(2040, 30, 2340);
+    private static final int ARROW_RAIN_DURATION_MS = 70000;
+    private static final int ARROW_RAIN_FIELD_COOLDOWN_MS = 5000;
+    private static final int[] ARROW_RAIN_FIELD_TIMES_MS = intervalTimes(0, 240, 2400);
+    private static final Map<Character, ArrowRainState> ARROW_RAIN_STATES =
+            new WeakHashMap<>();
+
+    private static final class ArrowRainState {
+        private final long expiresAt;
+        private long nextFieldAt;
+
+        private ArrowRainState(long expiresAt, long nextFieldAt) {
+            this.expiresAt = expiresAt;
+            this.nextFieldAt = nextFieldAt;
+        }
+    }
     private static int[] intervalTimes(int first, int interval, int last) {
         int[] result = new int[((last - first) / interval) + 1];
         for (int index = 0; index < result.length; index++) {
@@ -194,6 +210,7 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
 
     private static boolean usesScheduledDamageOnly(int skillId) {
         return ExplorerOtherSkillCompat.multiAttacks(skillId) != null
+                || skillId == Bowmaster.ARROW_RAIN
                 || skillId == NightWalker.RAPID_THROW
                 || skillId == NightWalker.DARK_OMEN_VI
                 || skillId == NightWalker.DOMINION_VI
@@ -206,7 +223,8 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
     }
 
     private static boolean usesFixedAttackOrigin(int skillId) {
-        return skillId == NightWalker.DARK_OMEN_VI
+        return skillId == Bowmaster.ARROW_RAIN
+                || skillId == NightWalker.DARK_OMEN_VI
                 || skillId == NightWalker.DOMINION_VI
                 || skillId == NightWalker.SILENT_NIGHT
                 || skillId == NightWalker.STYGIAN_COMMAND
@@ -316,6 +334,7 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
             Character chr,
             MapleMap expectedMap,
             int replaySkillId,
+            int replayLevel,
             int replayAttackCount,
             int mobCount,
             List<Integer> damageTemplate,
@@ -337,11 +356,24 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
         if (damage.isEmpty()) {
             return;
         }
-        int packedCount = (damage.size() << 4) | (replayAttackCount & 0xF);
+        int actualAttackCount = replayAttackCount;
+        if (replaySkillId == Bowmaster.ARROW_RAIN_FIELD_ATTACK) {
+            actualAttackCount = Math.min(
+                    15, replayAttackCount + Math.min(8, (damage.size() - 1) * 2)
+            );
+            if (actualAttackCount != replayAttackCount) {
+                for (Map.Entry<Integer, List<Integer>> entry : damage.entrySet()) {
+                    entry.setValue(adaptDamageTemplate(
+                            entry.getValue(), actualAttackCount, 1, 1
+                    ));
+                }
+            }
+        }
+        int packedCount = (damage.size() << 4) | (actualAttackCount & 0xF);
         Packet packet = PacketCreator.rangedAttack(
                 chr,
                 replaySkillId,
-                attack.skilllevel,
+                replayLevel,
                 attack.stance,
                 packedCount,
                 0,
@@ -585,7 +617,10 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
         Skill originalSkill = SkillFactory.getSkill(attack.skill);
         StatEffect originalEffect = originalSkill.getEffect(chr.getSkillLevel(originalSkill));
         Skill replaySkill = SkillFactory.getSkill(replaySkillId);
-        int replayLevel = Math.max(1, Math.min(attack.skilllevel, replaySkill.getMaxLevel()));
+        int requestedLevel = replaySkillId == Bowmaster.ARROW_RAIN_FIELD_ATTACK
+                ? chr.getSkillLevel(Bowmaster.ARROW_RAIN)
+                : attack.skilllevel;
+        int replayLevel = Math.max(1, Math.min(requestedLevel, replaySkill.getMaxLevel()));
         StatEffect replayEffect = replaySkill.getEffect(replayLevel);
         int replayAttackCount = Math.max(1, Math.min(15, replayEffect.getAttackCount()));
         int mobCount = Math.max(1, Math.min(15, replayEffect.getMobCount()));
@@ -601,7 +636,10 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
                 originalEffect.getDamage(),
                 replayEffect.getDamage()
         );
-        Point fixedAttackOrigin = usesFixedAttackOrigin(attack.skill)
+        Point fixedAttackOrigin = (
+                replaySkillId == Bowmaster.ARROW_RAIN_FIELD_ATTACK
+                        || usesFixedAttackOrigin(attack.skill)
+        )
                 ? new Point(chr.getPosition())
                 : null;
         for (int attackTimeMs : attackTimesMs) {
@@ -610,6 +648,7 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
                     chr,
                     expectedMap,
                     replaySkillId,
+                    replayLevel,
                     replayAttackCount,
                     mobCount,
                     damageTemplate,
@@ -617,6 +656,42 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
                     fixedAttackOrigin
             ), attackTimeMs);
         }
+    }
+
+    private static boolean consumeArrowRainField(AttackInfo attack, Character chr) {
+        long now = currentServerTime();
+        synchronized (ARROW_RAIN_STATES) {
+            ArrowRainState state = ARROW_RAIN_STATES.get(chr);
+            if (attack.skill == Bowmaster.ARROW_RAIN) {
+                state = new ArrowRainState(now + ARROW_RAIN_DURATION_MS, now);
+                ARROW_RAIN_STATES.put(chr, state);
+            }
+            if (state == null || now >= state.expiresAt) {
+                ARROW_RAIN_STATES.remove(chr);
+                return false;
+            }
+            if (attack.skill != Bowmaster.ARROW_RAIN && attack.numAttacked <= 0) {
+                return false;
+            }
+            if (now < state.nextFieldAt) {
+                return false;
+            }
+            state.nextFieldAt = now + ARROW_RAIN_FIELD_COOLDOWN_MS;
+            return true;
+        }
+    }
+
+    private static void triggerArrowRainField(AttackInfo attack, Character chr) {
+        if (attack.skill == Bowmaster.ARROW_RAIN_FIELD_ATTACK
+                || !consumeArrowRainField(attack, chr)) {
+            return;
+        }
+        scheduleTrackingAttacks(
+                attack,
+                chr,
+                ARROW_RAIN_FIELD_TIMES_MS,
+                Bowmaster.ARROW_RAIN_FIELD_ATTACK
+        );
     }
 
     private static List<Monster> collectMercilessWindsTargets(
@@ -1279,6 +1354,7 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
                 if (isWindArcherVViSkill(attack.skill)) {
                     scheduleWindArcherSkill(attack, chr);
                 }
+                triggerArrowRainField(attack, chr);
                 ExplorerOtherSkillCompat.Replay[] explorerReplays =
                         ExplorerOtherSkillCompat.multiAttacks(attack.skill);
                 if (explorerReplays != null) {

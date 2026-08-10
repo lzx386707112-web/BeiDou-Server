@@ -478,7 +478,7 @@ public class GameConstants {
                 return 120;   // 3rd job
 
             default:
-                return 250;   // 4th job
+                return 255;   // 4th job
         }
     }
 

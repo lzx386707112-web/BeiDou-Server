@@ -112,6 +112,7 @@ import java.lang.reflect.Field;
 import java.net.InetAddress;
 import java.sql.SQLException;
 import java.util.*;
+import java.util.function.IntFunction;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
@@ -7569,6 +7570,75 @@ public class PacketCreator {
         p.writeByte(hp);
         p.writeByte(mp);
         return p;
+    }
+
+    public static Packet setItemUpdate(Character chr) {
+        SetItemManager.Result result = SetItemManager.compute(chr);
+        ItemInformationProvider ii = ItemInformationProvider.getInstance();
+        return setItemUpdate(result, itemId -> {
+            String name = ii.getName(itemId);
+            return name == null ? Integer.toString(itemId) : name;
+        });
+    }
+
+    static Packet setItemUpdate(SetItemManager.Result result, IntFunction<String> itemNameResolver) {
+        OutPacket p = OutPacket.create(SendOpcode.SET_ITEM_UPDATE);
+        p.writeShort(result.panels().size());
+        for (SetItemManager.Panel panel : result.panels()) {
+            SetItemManager.Definition definition = panel.definition();
+            p.writeInt(definition.id());
+            p.writeString(definition.name());
+            p.writeShort(definition.completeCount());
+            p.writeShort(definition.slots().size());
+            for (List<Integer> slot : definition.slots()) {
+                p.writeShort(slot.size());
+                for (Integer itemId : slot) {
+                    p.writeInt(itemId);
+                    p.writeBool(panel.equippedIds().contains(itemId));
+                    p.writeString(itemNameResolver.apply(itemId));
+                    p.writeString(setItemSlotName(itemId));
+                    p.writeInt(0);
+                }
+            }
+            p.writeShort(definition.tiers().size());
+            for (SetItemManager.Tier tier : definition.tiers()) {
+                p.writeShort(tier.requiredCount());
+                int statCount = 0;
+                for (String key : SetItemManager.STAT_KEYS) {
+                    if (tier.stats().getOrDefault(key, 0) != 0) {
+                        statCount++;
+                    }
+                }
+                p.writeShort(statCount);
+                for (String key : SetItemManager.STAT_KEYS) {
+                    int value = tier.stats().getOrDefault(key, 0);
+                    if (value != 0) {
+                        p.writeString(key);
+                        p.writeInt(value);
+                    }
+                }
+            }
+            p.writeShort(panel.activeTier());
+            p.writeString(definition.story());
+            p.writeInt(panel.equippedCount());
+            p.writeInt(panel.equippedCount());
+        }
+        p.writeShort(0); // Lucky-item support is intentionally not enabled yet.
+        return p;
+    }
+
+    private static String setItemSlotName(int itemId) {
+        return switch (itemId / 10000) {
+            case 100 -> "帽子";
+            case 104 -> "上衣";
+            case 105 -> "套服";
+            case 106 -> "裤子";
+            case 107 -> "鞋子";
+            case 108 -> "手套";
+            case 110 -> "披风";
+            case 113 -> "腰带";
+            default -> itemId / 1000000 == 1 ? "武器" : "装备";
+        };
     }
 
 }

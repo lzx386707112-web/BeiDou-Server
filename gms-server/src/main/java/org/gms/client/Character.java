@@ -207,9 +207,7 @@ public class Character extends AbstractCharacterObject {
     @Setter
     private int vanquisherKills;
     private float expRate = 1;
-    @Getter
     private float mesoRate = 1;
-    @Getter
     private float dropRate = 1;
     private int expCoupon = 1, mesoCoupon = 1, dropCoupon = 1;
     @Getter
@@ -244,6 +242,7 @@ public class Character extends AbstractCharacterObject {
     private long jailExpiration = -1;
     private transient int localstr, localdex, localluk, localint_, localmagic, localwatk;
     private transient int equipmaxhp, equipmaxmp, equipstr, equipdex, equipluk, equipint_, equipmagic, equipwatk, localchairhp, localchairmp;
+    private transient SetItemManager.Bonus setItemBonus = SetItemManager.Bonus.NONE;
     private int localchairrate;
     @Getter
     private boolean hidden;
@@ -2842,6 +2841,7 @@ public class Character extends AbstractCharacterObject {
         getMap().broadcastUpdateCharLookMessage(this, this);
         equipchanged = true;
         updateLocalStats();
+        sendPacket(PacketCreator.setItemUpdate(this));
         if (getMessenger() != null) {
             getWorldServer().updateMessenger(getMessenger(), getName(), getWorld(), client.getChannel());
         }
@@ -3138,7 +3138,7 @@ public class Character extends AbstractCharacterObject {
             long leftover = 0;
             long nextExp = exp.get() + total;
             int needExp = ExpTable.getExpNeededForLevel(level, getRebornsCount());
-            if (nextExp > needExp && level >= 250) {
+            if (nextExp > needExp && level >= getMaxLevel()) {
                 nextExp = needExp;
                 total = nextExp - exp.get();
                 if (total <= 0) {
@@ -4791,7 +4791,7 @@ public class Character extends AbstractCharacterObject {
             return 1;
         }
 
-        return expRate;
+        return expRate * (100 + setItemBonus.get("ExpRate")) / 100.0f;
     }
 
     public float getLevelExpRate() {
@@ -4836,7 +4836,15 @@ public class Character extends AbstractCharacterObject {
 
     public float getBossDropRate() {
         World w = getWorldServer();
-        return (dropRate / w.getDropRate()) * w.getBossDropRate();
+        return (getDropRate() / w.getDropRate()) * w.getBossDropRate();
+    }
+
+    public float getDropRate() {
+        return dropRate * (100 + setItemBonus.get("DropRate")) / 100.0f;
+    }
+
+    public float getMesoRate() {
+        return mesoRate * (100 + setItemBonus.get("MesoRate")) / 100.0f;
     }
 
     public int getCouponMesoRate() {
@@ -5121,17 +5129,21 @@ public class Character extends AbstractCharacterObject {
         return localwatk;
     }
 
+    public int getSetItemBonus(String key) {
+        return setItemBonus.get(key);
+    }
+
     public int getMaxClassLevel() {
         if (mxjMaxLevel == 0) {
             mxjMaxLevel = GameConfig.getServerInt("mxj_max_level");
             if (mxjMaxLevel <= 0) {
-                mxjMaxLevel = 250;
+                mxjMaxLevel = 255;
             }
         }
         if (qstMaxLevel == 0) {
             qstMaxLevel = GameConfig.getServerInt("qst_max_level");
             if (qstMaxLevel <= 0) {
-                qstMaxLevel = 250;
+                qstMaxLevel = 255;
             }
         }
         return isCygnus() ? qstMaxLevel : mxjMaxLevel;
@@ -7175,7 +7187,13 @@ public class Character extends AbstractCharacterObject {
             localwatk = 0;
             localchairrate = -1;
 
+            setItemBonus = SetItemManager.compute(this).bonus();
             recalcEquipStats();
+
+            localMaxHp += setItemBonus.get("HP");
+            localMaxMp += setItemBonus.get("MP");
+            localwatk += setItemBonus.get("PAD");
+            localmagic += setItemBonus.get("MAD");
 
             localmagic = Math.min(localmagic, 2000);
 

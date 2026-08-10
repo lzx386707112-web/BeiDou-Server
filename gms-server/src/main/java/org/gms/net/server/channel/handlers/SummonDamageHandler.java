@@ -31,6 +31,7 @@ import org.gms.client.inventory.Item;
 import org.gms.client.inventory.WeaponType;
 import org.gms.client.status.MonsterStatusEffect;
 import org.gms.constants.skills.Bishop;
+import org.gms.constants.skills.Bowmaster;
 import org.gms.constants.skills.Hero;
 import org.gms.constants.skills.Outlaw;
 import org.gms.net.packet.InPacket;
@@ -54,6 +55,7 @@ public final class SummonDamageHandler extends AbstractDealDamageHandler {
         add(Bishop.BAHAMUT);   // 强化圣龙
         add(Bishop.ANGEL_OF_BALANCE);
         add(Bishop.FOUNTAIN_FOR_ANGEL_VI);
+        add(Bowmaster.PHOENIX_VI);
     }});
 
     public static final class SummonAttackEntry {

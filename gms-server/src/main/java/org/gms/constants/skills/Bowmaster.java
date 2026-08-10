@@ -31,11 +31,14 @@ public class Bowmaster {
     public static final int HURRICANE = 3121004;
     public static final int BOW_EXPERT = 3120005;
     public static final int PHOENIX = 3121006;
+    public static final int ARROW_RAIN = 3121010;
+    public static final int PHOENIX_VI = 3121025;
+    public static final int ARROW_RAIN_FIELD_ATTACK = 3121033;
     public static final int HAMSTRING = 3121007;
     public static final int CONCENTRATE = 3121008;
     public static final int HEROS_WILL = 3121009;
     public static final int[] V_VI_ACTIVE_ATTACKS = {
-            3121010, 3121011, 3121013, 3121015, 3121020, 3121022,
-            3121024, 3121025, 3121026, 3121028, 3121029, 3121031
+            3121010, 3121022, 3121025,
+            3121026, 3121028, 3121029, 3121031
     };
 }

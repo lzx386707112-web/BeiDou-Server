@@ -355,6 +355,7 @@ public enum SendOpcode implements Opcode {
     MAPLELIFE_ERROR(0x15E), // MapleLife错误
     VICIOUS_HAMMER(0x162), // 恶毒锤子
     VEGA_SCROLL(0x166), // VEGA卷轴
+    SET_ITEM_UPDATE(0x17A), // 服务端权威套装面板与激活属性
 
     UPDATE_HPMPAALERT(0x1000), // 更新HP/MP/EXP警报
     ;

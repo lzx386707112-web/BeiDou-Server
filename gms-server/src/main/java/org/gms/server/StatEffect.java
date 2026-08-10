@@ -738,6 +738,7 @@ public class StatEffect {
                     break;
                 case Priest.SUMMON_DRAGON:
                 case Bowmaster.PHOENIX:
+                case Bowmaster.PHOENIX_VI:
                 case ILArchMage.IFRIT:
                 case Bishop.BAHAMUT:
                 case Bishop.DRAGON_2217_SWIFT:
@@ -1854,6 +1855,7 @@ public class StatEffect {
             case Priest.SUMMON_DRAGON:
             case Marksman.FROST_PREY:
             case Bowmaster.PHOENIX:
+            case Bowmaster.PHOENIX_VI:
             case Outlaw.GAVIOTA:
                 return SummonMovementType.CIRCLE_FOLLOW;
             case DarkKnight.BEHOLDER:
