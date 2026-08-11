@@ -733,6 +733,7 @@ public class StatEffect {
                     break;
                 case FPArchMage.ELQUINES:
                 case Marksman.FROST_PREY:
+                case Marksman.FROST_PREY_VI:
                     statups.add(new Pair<>(BuffStat.SUMMON, 1));
                     monsterStatus.put(MonsterStatus.FREEZE, 1);
                     break;
@@ -1854,6 +1855,7 @@ public class StatEffect {
             case Sniper.GOLDEN_EAGLE:
             case Priest.SUMMON_DRAGON:
             case Marksman.FROST_PREY:
+            case Marksman.FROST_PREY_VI:
             case Bowmaster.PHOENIX:
             case Bowmaster.PHOENIX_VI:
             case Outlaw.GAVIOTA:

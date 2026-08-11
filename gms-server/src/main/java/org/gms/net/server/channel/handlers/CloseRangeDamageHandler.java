@@ -30,6 +30,7 @@ import org.gms.client.SkillFactory;
 import org.gms.config.GameConfig;
 import org.gms.constants.game.GameConstants;
 import org.gms.constants.id.MapId;
+import org.gms.constants.skills.Buccaneer;
 import org.gms.constants.skills.Crusader;
 import org.gms.constants.skills.DawnWarrior;
 import org.gms.constants.skills.DarkKnight;
@@ -73,6 +74,7 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
     private static final Logger log = LoggerFactory.getLogger(CloseRangeDamageHandler.class);
     private static final String ANIMATED_ATTACK_LOG_VERSION = "DW_ANIM v3";
     private static final int DEATH_FAULT_HIT_DELAY_MS = 1000;
+    private static final int BUCCANEER_HOWLING_FIST_FINISH_DELAY_MS = 1920;
     private static final String DEATH_FAULT_FIELD_EFFECT = "customSkill/deathFault/full";
     private static final String GALAXY_STAR_BURST_VIDEO_LAYER =
             "customSkill/dawnWarrior/galaxyStarBurstVideoLayer";
@@ -230,6 +232,15 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
     }
 
     private static void showThunderBreakerSpecialEffect(Character chr, int skillId) {
+        chr.sendPacket(PacketCreator.showOwnBuffEffect(skillId, 2));
+        chr.getMap().broadcastMessage(
+                chr,
+                PacketCreator.showBuffEffect(chr.getId(), skillId, 2),
+                false
+        );
+    }
+
+    private static void showBuccaneerSpecialEffect(Character chr, int skillId) {
         chr.sendPacket(PacketCreator.showOwnBuffEffect(skillId, 2));
         chr.getMap().broadcastMessage(
                 chr,
@@ -1138,10 +1149,28 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
         ExplorerOtherSkillCompat.Replay[] explorerReplays =
                 ExplorerOtherSkillCompat.multiAttacks(attack.skill);
         if (explorerReplays != null) {
+            if (attack.skill == Buccaneer.SEA_DRAGON_FIST) {
+                MapleMap expectedMap = chr.getMap();
+                TimerManager.getInstance().schedule(() -> {
+                    if (canContinueAnimatedAttack(chr, expectedMap)) {
+                        showBuccaneerSpecialEffect(
+                                chr, Buccaneer.SEA_DRAGON_FIST_FINISH
+                        );
+                    }
+                }, BUCCANEER_HOWLING_FIST_FINISH_DELAY_MS);
+            }
             for (int index = 0; index < explorerReplays.length; index++) {
                 ExplorerOtherSkillCompat.Replay replay = explorerReplays[index];
+                boolean showLocalDamageNumbers =
+                        attack.skill == Buccaneer.SEA_DRAGON_FIST
+                                && replay.skillId() == Buccaneer.SEA_DRAGON_FIST_FINISH;
                 scheduleTrackingCloseAttacks(
-                        attack, chr, replay.timesMs(), replay.skillId(), index == 0
+                        attack,
+                        chr,
+                        replay.timesMs(),
+                        replay.skillId(),
+                        index == 0,
+                        showLocalDamageNumbers
                 );
             }
         } else if (attack.skill == Hero.SWORD_ILLUSION) {

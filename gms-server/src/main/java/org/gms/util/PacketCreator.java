@@ -7572,6 +7572,12 @@ public class PacketCreator {
         return p;
     }
 
+    public static Packet damageSkinUpdate(int skinId) {
+        OutPacket p = OutPacket.create(SendOpcode.DAMAGE_SKIN_UPDATE);
+        p.writeInt(skinId);
+        return p;
+    }
+
     public static Packet setItemUpdate(Character chr) {
         SetItemManager.Result result = SetItemManager.compute(chr);
         ItemInformationProvider ii = ItemInformationProvider.getInstance();

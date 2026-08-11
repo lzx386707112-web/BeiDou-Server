@@ -33,6 +33,7 @@ import org.gms.client.status.MonsterStatusEffect;
 import org.gms.constants.skills.Bishop;
 import org.gms.constants.skills.Bowmaster;
 import org.gms.constants.skills.Hero;
+import org.gms.constants.skills.Marksman;
 import org.gms.constants.skills.Outlaw;
 import org.gms.net.packet.InPacket;
 import org.slf4j.Logger;
@@ -56,6 +57,7 @@ public final class SummonDamageHandler extends AbstractDealDamageHandler {
         add(Bishop.ANGEL_OF_BALANCE);
         add(Bishop.FOUNTAIN_FOR_ANGEL_VI);
         add(Bowmaster.PHOENIX_VI);
+        add(Marksman.FROST_PREY_VI);
     }});
 
     public static final class SummonAttackEntry {

@@ -247,6 +247,7 @@ def encode_tracks(
         tracks: tuple[McvTrack, ...],
         output: Path,
         ffmpeg: str,
+        cover_bounds_track_index: int | None = None,
 ) -> Path:
     frame_count = max(len(track.delays) for track in tracks)
     delays = list(tracks[0].delays)
@@ -255,7 +256,16 @@ def encode_tracks(
     with tempfile.TemporaryDirectory(prefix=f"{key}-mcv-") as directory_name:
         directory = Path(directory_name)
         dimensions = {(track.width, track.height) for track in tracks}
-        if len(dimensions) == 1:
+        if cover_bounds_track_index is not None:
+            if not 0 <= cover_bounds_track_index < len(tracks):
+                raise RuntimeError(
+                    f"invalid cover-bounds track index: {cover_bounds_track_index}"
+                )
+            cover_bounds = decoded_alpha_union_bounds(
+                (tracks[cover_bounds_track_index],), ffmpeg, directory
+            )
+            cover_bounds_by_track = [cover_bounds] * len(tracks)
+        elif len(dimensions) == 1:
             cover_bounds = decoded_alpha_union_bounds(tracks, ffmpeg, directory)
             cover_bounds_by_track = [cover_bounds] * len(tracks)
         else:

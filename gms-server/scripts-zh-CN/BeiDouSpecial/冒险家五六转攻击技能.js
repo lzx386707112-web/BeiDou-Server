@@ -48,10 +48,20 @@ var JOBS = {
         retiredBindings: [3121011, 3121012, 3121013, 3121014, 3121015, 3121016, 3121020, 3121021, 3121024],
         retiredSkills: [3121011, 3121012, 3121013, 3121014, 3121015, 3121016, 3121020, 3121021, 3121024]
     },
-    322: {name: "神射手", skills: Java.type("org.gms.constants.skills.Marksman").V_VI_ACTIVE_ATTACKS},
+    322: {
+        name: "神射手",
+        skills: Java.type("org.gms.constants.skills.Marksman").V_VI_ACTIVE_ATTACKS,
+        retiredBindings: [3221011, 3221012, 3221014, 3221015, 3221016, 3221017, 3221018, 3221019, 3221020, 3221021, 3221022, 3221023, 3221024, 3221025, 3221026, 3221027, 3221028],
+        retiredSkills: [3221011, 3221012, 3221014, 3221015, 3221016, 3221017, 3221018, 3221019, 3221020, 3221021, 3221022, 3221023, 3221024, 3221025, 3221026, 3221027, 3221028]
+    },
     412: {name: "夜使者", skills: Java.type("org.gms.constants.skills.NightLord").V_VI_ACTIVE_ATTACKS},
     422: {name: "暗影神偷", skills: Java.type("org.gms.constants.skills.Shadower").V_VI_ACTIVE_ATTACKS},
-    512: {name: "拳霸", skills: Java.type("org.gms.constants.skills.Buccaneer").V_VI_ACTIVE_ATTACKS},
+    512: {
+        name: "拳霸",
+        skills: Java.type("org.gms.constants.skills.Buccaneer").V_VI_ACTIVE_ATTACKS,
+        retiredBindings: [5121011, 5121012, 5121013, 5121019, 5121020, 5121021, 5121022, 5121023],
+        retiredSkills: [5121011, 5121012, 5121013, 5121019, 5121020, 5121021, 5121022, 5121023]
+    },
     522: {name: "枪神", skills: Java.type("org.gms.constants.skills.Corsair").V_VI_ACTIVE_ATTACKS}
 };
 

@@ -39,6 +39,7 @@ import org.gms.constants.skills.Aran;
 import org.gms.constants.skills.Buccaneer;
 import org.gms.constants.skills.Bowmaster;
 import org.gms.constants.skills.ExplorerOtherSkillCompat;
+import org.gms.constants.skills.Marksman;
 import org.gms.constants.skills.NightLord;
 import org.gms.constants.skills.NightWalker;
 import org.gms.constants.skills.Shadower;
@@ -136,7 +137,6 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
     private static final int[] ARROW_RAIN_FIELD_TIMES_MS = intervalTimes(0, 240, 2400);
     private static final Map<Character, ArrowRainState> ARROW_RAIN_STATES =
             new WeakHashMap<>();
-
     private static final class ArrowRainState {
         private final long expiresAt;
         private long nextFieldAt;
@@ -170,6 +170,15 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
                 || skillId == WindArcher.ELEMENTAL_TEMPEST
                 || skillId == WindArcher.ELEMENTAL_TEMPEST_ARROW_RAIN
                 || skillId == WindArcher.ELEMENTAL_TEMPEST_WAVE;
+    }
+
+    private static boolean isMarksmanVViRangedSkill(int skillId) {
+        return skillId == Marksman.TRUE_SNIPING
+                || skillId == Marksman.CHARGED_ARROW
+                || skillId == Marksman.SWIFT_SHOT_VI
+                || skillId == Marksman.LONG_RANGE_TRUE_SHOT_VI
+                || skillId == Marksman.SPLIT_SPACE
+                || skillId == Marksman.FATAL_TRIGGER;
     }
 
     private static void scaleDamageLines(List<Integer> damage, int numerator, int denominator) {
@@ -224,6 +233,11 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
 
     private static boolean usesFixedAttackOrigin(int skillId) {
         return skillId == Bowmaster.ARROW_RAIN
+                || skillId == Marksman.TRUE_SNIPING
+                || skillId == Marksman.CHARGED_ARROW
+                || skillId == Marksman.LONG_RANGE_TRUE_SHOT_VI
+                || skillId == Marksman.SPLIT_SPACE
+                || skillId == Marksman.FATAL_TRIGGER
                 || skillId == NightWalker.DARK_OMEN_VI
                 || skillId == NightWalker.DOMINION_VI
                 || skillId == NightWalker.SILENT_NIGHT
@@ -273,6 +287,15 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
             }
         }
         return Collections.emptyList();
+    }
+
+    private static boolean hasPositiveDamageTemplate(List<Integer> damageTemplate) {
+        for (int damage : damageTemplate) {
+            if (decodeRepeatedDamage(damage) > 0) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static int calculateFallbackRangedDamage(Character chr, StatEffect effect) {
@@ -625,7 +648,7 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
         int replayAttackCount = Math.max(1, Math.min(15, replayEffect.getAttackCount()));
         int mobCount = Math.max(1, Math.min(15, replayEffect.getMobCount()));
         List<Integer> sourceDamageTemplate = copyDamageTemplate(attack);
-        if (sourceDamageTemplate.isEmpty()) {
+        if (!hasPositiveDamageTemplate(sourceDamageTemplate)) {
             sourceDamageTemplate = Collections.singletonList(
                     calculateFallbackRangedDamage(chr, originalEffect)
             );
@@ -1271,7 +1294,8 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
                         && attack.skill != 15111007
                         && attack.skill != 14101006) {
                     short bulletConsume = (isNightWalkerVViSkill(attack.skill)
-                            || isWindArcherVViSkill(attack.skill)) ? 1 : bulletCount;
+                            || isWindArcherVViSkill(attack.skill)
+                            || isMarksmanVViRangedSkill(attack.skill)) ? 1 : bulletCount;
 
                     if (effect != null && effect.getBulletConsume() != 0) {
                         bulletConsume = (byte) (effect.getBulletConsume() * (hasShadowPartner ? 2 : 1));
@@ -1287,7 +1311,10 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
                 }
             }
 
-            if (projectile != 0 || soulArrow || attack.skill == 11101004 || attack.skill == 15111007 || attack.skill == 14101006 || attack.skill == 4111004 || attack.skill == 13101005) {
+            if (projectile != 0 || soulArrow || isMarksmanVViRangedSkill(attack.skill)
+                    || attack.skill == 11101004 || attack.skill == 15111007
+                    || attack.skill == 14101006 || attack.skill == 4111004
+                    || attack.skill == 13101005) {
                 int visProjectile = projectile; //visible projectile sent to players
                 if (ItemConstants.isThrowingStar(projectile)) {
                     Inventory cash = chr.getInventory(InventoryType.CASH);
@@ -1300,7 +1327,11 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
                             }
                         }
                     }
-                } else if (soulArrow || isWindArcherVViSkill(attack.skill) || attack.skill == 3111004 || attack.skill == 3211004 || attack.skill == 11101004 || attack.skill == 15111007 || attack.skill == 14101006 || attack.skill == 13101005) {
+                } else if (soulArrow || isWindArcherVViSkill(attack.skill)
+                        || isMarksmanVViRangedSkill(attack.skill)
+                        || attack.skill == 3111004 || attack.skill == 3211004
+                        || attack.skill == 11101004 || attack.skill == 15111007
+                        || attack.skill == 14101006 || attack.skill == 13101005) {
                     visProjectile = 0;
                 }
 

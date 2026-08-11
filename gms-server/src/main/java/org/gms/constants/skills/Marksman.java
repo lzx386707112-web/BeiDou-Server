@@ -34,8 +34,18 @@ public class Marksman {
     public static final int BLIND = 3221006;
     public static final int SNIPE = 3221007;
     public static final int HEROS_WILL = 3221008;
+    public static final int TRUE_SNIPING = 3221009;
+    public static final int TRUE_SNIPING_HIT = 3221010;
+    public static final int CHARGED_ARROW = 3221013;
+    public static final int FROST_PREY_VI = 3221029;
+    public static final int SWIFT_SHOT_VI = 3221030;
+    public static final int LONG_RANGE_TRUE_SHOT_VI = 3221031;
+    public static final int SPLIT_SPACE = 3221032;
+    public static final int SPLIT_SPACE_FINISH = 3221033;
+    public static final int FATAL_TRIGGER = 3221034;
+    public static final int FATAL_TRIGGER_FINISH = 3221035;
     public static final int[] V_VI_ACTIVE_ATTACKS = {
-            3221009, 3221011, 3221013, 3221014, 3221016, 3221017,
-            3221022, 3221029, 3221030, 3221031, 3221032, 3221034
+            3221009, 3221013, 3221029, 3221030,
+            3221031, 3221032, 3221034
     };
 }

@@ -35,8 +35,14 @@ public class Buccaneer {
     public static final int SPEED_INFUSION = 5121009;
     public static final int TIME_LEAP = 5121010;
     public static final int DRAGON_STRIKE = 5121001;
+    public static final int SEA_DRAGON_FIST = 5121015;
+    public static final int SEA_DRAGON_FIST_FINISH = 5121016;
+    public static final int SEA_DRAGON_VI = 5121017;
+    public static final int SEA_DRAGON_STONE_VI = 5121025;
+    public static final int SEA_DRAGON_ASSAULT_VI = 5121026;
+    public static final int SEA_DRAGON_RAGE_VI = 5121027;
     public static final int[] V_VI_ACTIVE_ATTACKS = {
-            5121011, 5121013, 5121014, 5121015, 5121017, 5121019,
-            5121024, 5121025, 5121028, 5121029, 5121035
+            5121014, 5121015, 5121017, 5121024,
+            5121025, 5121028, 5121029, 5121035
     };
 }

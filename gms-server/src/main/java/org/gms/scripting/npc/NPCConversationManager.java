@@ -131,6 +131,22 @@ public class NPCConversationManager extends AbstractPlayerInteraction {
         return npc;
     }
 
+    public int[] getDamageSkinIds() {
+        return DamageSkinService.getSkinIds();
+    }
+
+    public String getDamageSkinName(int skinId) {
+        return DamageSkinService.getSkinName(skinId);
+    }
+
+    public int getDamageSkinId() {
+        return DamageSkinService.getSkinId(getPlayer().getId());
+    }
+
+    public boolean setDamageSkin(int skinId) {
+        return DamageSkinService.setSkin(getPlayer(), skinId);
+    }
+
     public int getNpcObjectId() {
         return npcOid;
     }

@@ -4797,7 +4797,8 @@ public class Character extends AbstractCharacterObject {
     public float getLevelExpRate() {
         if (hasNoviceExpRate()) return 1; // 新手经验保护
 
-        return 1f + GameConfig.getWorldFloat(getWorld(), "level_exp_rate") * level;
+        float configuredRate = 1f + GameConfig.getWorldFloat(getWorld(), "level_exp_rate") * level;
+        return configuredRate * ExpTable.getPostLevel200ExpRate(level);
     }
 
     public float getQuickLevelExpRate() {

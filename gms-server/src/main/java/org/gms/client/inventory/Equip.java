@@ -36,6 +36,7 @@ import org.gms.util.Randomizer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.gms.server.ItemInformationProvider;
+import org.gms.server.EquipmentCubeManager;
 import org.gms.util.Pair;
 
 import java.sql.ResultSet;
@@ -1204,6 +1205,7 @@ public class Equip extends Item {
         // 场景1：升级历史为空 → 所有大于0的属性直接加星级加成
         if (mUpgradeHistoryList.isEmpty()) {
             addStarAttributeToAllValidStats(starLevelAttribute);
+            EquipmentCubeManager.inherit(oldItem, this);
             return;
         }
         setItemLevel(oldItem.getItemLevel());
@@ -1221,6 +1223,7 @@ public class Equip extends Item {
                 addAttributeByType(statType, upgradeValue);
             }
         }
+        EquipmentCubeManager.inherit(oldItem, this);
     }
 
     /**

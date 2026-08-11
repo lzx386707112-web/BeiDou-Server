@@ -55,6 +55,10 @@ public final class ExplorerOtherSkillCompat {
             Map.entry(3121031, replays(replay(
                     3121031, concat(range(600, 60, 780), range(810, 30, 1140))
             ))),
+            Map.entry(3221009, replays(replay(
+                    3221010, points(90, 150, 240, 300, 360, 420)
+            ))),
+            Map.entry(3221013, replays(replay(3221013, points(0, 100)))),
             Map.entry(3221031, replays(replay(3221031, range(270, 180, 1170)))),
             Map.entry(3221032, replays(
                     replay(3221032, concat(
@@ -80,6 +84,18 @@ public final class ExplorerOtherSkillCompat {
             Map.entry(4221039, replays(replay(4221039, concat(
                     range(540, 30, 630), range(1380, 30, 1590)
             )))),
+            Map.entry(5121015, replays(
+                    replay(5121015, points(1920)),
+                    replay(5121016, points(
+                            2040, 2760, 3000, 3180, 3270, 3360, 3450,
+                            3540, 3630, 3720, 3810, 3900, 3990, 4080
+                    ))
+            )),
+            Map.entry(5121025, replays(
+                    replay(5121025, points(0)),
+                    replay(5121026, points(240)),
+                    replay(5121027, points(1080))
+            )),
             Map.entry(5121029, replays(
                     replay(5121029, range(2220, 120, 2580)),
                     replay(5121030, range(3780, 60, 5040))

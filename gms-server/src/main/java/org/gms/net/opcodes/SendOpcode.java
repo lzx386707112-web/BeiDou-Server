@@ -356,6 +356,7 @@ public enum SendOpcode implements Opcode {
     VICIOUS_HAMMER(0x162), // 恶毒锤子
     VEGA_SCROLL(0x166), // VEGA卷轴
     SET_ITEM_UPDATE(0x17A), // 服务端权威套装面板与激活属性
+    DAMAGE_SKIN_UPDATE(0x17B), // 本地角色伤害皮肤选择
 
     UPDATE_HPMPAALERT(0x1000), // 更新HP/MP/EXP警报
     ;

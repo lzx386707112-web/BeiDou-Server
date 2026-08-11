@@ -4,10 +4,13 @@ var PAGE_SIZE = 20;
 var PREVIOUS_PAGE = 1000000;
 var NEXT_PAGE = 1000001;
 var BACK_TO_MAIN = 1000002;
+var DAMAGE_SKIN_PAGE_SIZE = 4;
 
 var stage = "init";
 var currentPage = 0;
 var selectedChair = 0;
+var damageSkinPage = 0;
+var damageSkinIds = null;
 var chairIds = [
     3010000, 3010001, 3010002, 3010003, 3010004, 3010005, 3010006, 3010007, 3010008, 3010009,
     3010010, 3010011, 3010012, 3010013, 3010014, 3010015, 3010016, 3010017, 3010018, 3010019,
@@ -87,6 +90,18 @@ function action(mode, type, selection) {
             cm.openNpc(9900009, "至高无上·逼王戒");
             return;
         }
+        if (selection === 3) {
+            stage = "damageSkins";
+            damageSkinPage = 0;
+            damageSkinIds = cm.getDamageSkinIds();
+            showDamageSkinPage();
+            return;
+        }
+        if (selection === 4) {
+            cm.dispose();
+            cm.openNpc(9900009, "坐骑领取");
+            return;
+        }
         rejectInvalidSelection();
         return;
     }
@@ -101,6 +116,11 @@ function action(mode, type, selection) {
         return;
     }
 
+    if (stage === "damageSkins") {
+        handleDamageSkinSelection(selection);
+        return;
+    }
+
     cm.dispose();
 }
 
@@ -108,8 +128,78 @@ function showMainMenu() {
     var text = "#e#b潮流前线#k#n\r\n\r\n";
     text += "#L0##b时装暖暖#k#l\r\n";
     text += "#L1##b椅子#k（每把 " + CHAIR_PRICE + " 点券）#l\r\n";
-    text += "#L2##b至高无上·逼王戒#k#l";
+    text += "#L2##b至高无上·逼王戒#k#l\r\n";
+    text += "#L3##b伤害皮肤#k#l\r\n";
+    text += "#L4##b坐骑领取#k#l";
     cm.sendSimple(text);
+}
+
+function showDamageSkinPage() {
+    if (damageSkinIds === null || damageSkinIds.length === 0) {
+        cm.sendOk("当前没有可用的伤害皮肤。");
+        cm.dispose();
+        return;
+    }
+
+    var pageCount = Math.ceil(damageSkinIds.length / DAMAGE_SKIN_PAGE_SIZE);
+    if (damageSkinPage < 0 || damageSkinPage >= pageCount) {
+        rejectInvalidSelection();
+        return;
+    }
+
+    var currentSkin = cm.getDamageSkinId();
+    var startIndex = damageSkinPage * DAMAGE_SKIN_PAGE_SIZE;
+    var endIndex = Math.min(startIndex + DAMAGE_SKIN_PAGE_SIZE, damageSkinIds.length);
+    var text = "#e伤害皮肤#n  #d第 " + (damageSkinPage + 1) + "/" + pageCount + " 页#k\r\n";
+    text += "点击预览即可立即更换。\r\n\r\n";
+    for (var i = startIndex; i < endIndex; i++) {
+        var skinId = damageSkinIds[i];
+        var selected = skinId === currentSkin ? " #r[使用中]#k" : "";
+        text += "#L" + i + "##fEffect/DamageSkin.img/preview/" + skinId + "#\r\n";
+        text += "#b" + cm.getDamageSkinName(skinId) + "#k" + selected + "#l\r\n";
+    }
+    if (damageSkinPage > 0) {
+        text += "#L" + PREVIOUS_PAGE + "##b上一页#k#l  ";
+    }
+    if (damageSkinPage + 1 < pageCount) {
+        text += "#L" + NEXT_PAGE + "##b下一页#k#l  ";
+    }
+    text += "#L" + BACK_TO_MAIN + "##d返回主菜单#k#l";
+    cm.sendSimple(text);
+}
+
+function handleDamageSkinSelection(selection) {
+    var pageCount = Math.ceil(damageSkinIds.length / DAMAGE_SKIN_PAGE_SIZE);
+    if (selection === PREVIOUS_PAGE && damageSkinPage > 0) {
+        damageSkinPage--;
+        showDamageSkinPage();
+        return;
+    }
+    if (selection === NEXT_PAGE && damageSkinPage + 1 < pageCount) {
+        damageSkinPage++;
+        showDamageSkinPage();
+        return;
+    }
+    if (selection === BACK_TO_MAIN) {
+        stage = "main";
+        showMainMenu();
+        return;
+    }
+
+    var startIndex = damageSkinPage * DAMAGE_SKIN_PAGE_SIZE;
+    var endIndex = Math.min(startIndex + DAMAGE_SKIN_PAGE_SIZE, damageSkinIds.length);
+    if (selection < startIndex || selection >= endIndex) {
+        rejectInvalidSelection();
+        return;
+    }
+    var skinId = damageSkinIds[selection];
+    if (!cm.setDamageSkin(skinId)) {
+        cm.sendOk("伤害皮肤更换失败，请稍后重试。");
+        cm.dispose();
+        return;
+    }
+    cm.sendOk("已更换为：#b" + cm.getDamageSkinName(skinId) + "#k。\r\n\r\n#fEffect/DamageSkin.img/preview/" + skinId + "#");
+    cm.dispose();
 }
 
 function showChairPage() {

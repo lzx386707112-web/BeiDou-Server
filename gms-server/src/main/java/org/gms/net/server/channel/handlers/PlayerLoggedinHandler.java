@@ -71,6 +71,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.gms.scripting.event.EventInstanceManager;
 import org.gms.server.life.MobSkill;
+import org.gms.server.DamageSkinService;
 import org.gms.service.NoteService;
 import org.gms.util.DatabaseConnection;
 import org.gms.util.PacketCreator;
@@ -247,6 +248,7 @@ public final class PlayerLoggedinHandler extends AbstractPacketHandler {
                 // 后续如需扩展系统设置字段，可在该包尾部追加，保持前两个字节为 HP/MP 警报。
                 player.sendPacket(PacketCreator.updateClientSettings(hpAlert, mpAlert));
             }
+            DamageSkinService.sync(player);
             cserv.addPlayer(player);
             wserv.addPlayer(player);
             player.setEnteredChannelWorld();
