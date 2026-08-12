@@ -74,7 +74,6 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
     private static final Logger log = LoggerFactory.getLogger(CloseRangeDamageHandler.class);
     private static final String ANIMATED_ATTACK_LOG_VERSION = "DW_ANIM v3";
     private static final int DEATH_FAULT_HIT_DELAY_MS = 1000;
-    private static final int BUCCANEER_HOWLING_FIST_FINISH_DELAY_MS = 1920;
     private static final String DEATH_FAULT_FIELD_EFFECT = "customSkill/deathFault/full";
     private static final String GALAXY_STAR_BURST_VIDEO_LAYER =
             "customSkill/dawnWarrior/galaxyStarBurstVideoLayer";
@@ -231,16 +230,17 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
         );
     }
 
-    private static void showThunderBreakerSpecialEffect(Character chr, int skillId) {
-        chr.sendPacket(PacketCreator.showOwnBuffEffect(skillId, 2));
+    private static void showBuccaneerSerpentAssaultEffect(Character chr) {
+        int skillId = Buccaneer.SEA_DRAGON_ASSAULT_VI;
+        chr.sendPacket(PacketCreator.showOwnBuffEffect(skillId, 1));
         chr.getMap().broadcastMessage(
                 chr,
-                PacketCreator.showBuffEffect(chr.getId(), skillId, 2),
+                PacketCreator.showBuffEffect(chr.getId(), skillId, 1),
                 false
         );
     }
 
-    private static void showBuccaneerSpecialEffect(Character chr, int skillId) {
+    private static void showThunderBreakerSpecialEffect(Character chr, int skillId) {
         chr.sendPacket(PacketCreator.showOwnBuffEffect(skillId, 2));
         chr.getMap().broadcastMessage(
                 chr,
@@ -583,23 +583,61 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
             StatEffect replayEffect,
             StatEffect targetingEffect,
             Point fixedAttackOrigin,
-            boolean showLocalDamageNumbers
+            boolean showLocalDamageNumbers,
+            boolean logReplayTargets
     ) {
         if (!canContinueAnimatedAttack(chr, expectedMap)) {
             return;
         }
+        boolean traceBuccaneerSerpent =
+                attack.skill == Buccaneer.SEA_DRAGON_STONE_VI;
         Point attackOrigin = fixedAttackOrigin != null
                 ? fixedAttackOrigin
                 : new Point(chr.getPosition());
         if (isLightningSpearStage(replaySkillId)) {
             showThunderBreakerStandardEffect(chr, replaySkillId);
+        } else if (replaySkillId == Buccaneer.SEA_DRAGON_ASSAULT_VI) {
+            showBuccaneerSerpentAssaultEffect(chr);
+            if (traceBuccaneerSerpent) {
+                log.info(
+                        "BUCCANEER_SERPENT_TRACE stage={} effectContext=type1 sentLocal=true sentRemote=true",
+                        replaySkillId
+                );
+            }
         }
-        Rectangle attackBounds = targetingEffect.hasBoundingBox()
-                ? targetingEffect.calculateBoundingBox(attackOrigin, attack.direction == 0)
-                : null;
+        Rectangle attackBounds;
+        if (replaySkillId == Buccaneer.SEA_DRAGON_FIST_FINISH) {
+            attackBounds = new Rectangle(
+                    attackOrigin.x - 1000,
+                    attackOrigin.y - 450,
+                    2000,
+                    650
+            );
+        } else {
+            attackBounds = targetingEffect.hasBoundingBox()
+                    ? targetingEffect.calculateBoundingBox(attackOrigin, attack.direction == 0)
+                    : null;
+        }
         Map<Integer, List<Integer>> damage = collectTrackingCloseTargets(
                 expectedMap, attackOrigin, attackBounds, mobCount, damageTemplate
         );
+        if (traceBuccaneerSerpent) {
+            log.info(
+                    "BUCCANEER_SERPENT_TRACE stage={} targets={} bounds={} origin={} packet=CLOSE_RANGE_ATTACK",
+                    replaySkillId,
+                    damage.size(),
+                    attackBounds,
+                    attackOrigin
+            );
+        }
+        if (logReplayTargets) {
+            log.info(
+                    "Howling Fist finish skill={} targets={} bounds={}",
+                    replaySkillId,
+                    damage.size(),
+                    attackBounds
+            );
+        }
         if (damage.isEmpty()) {
             return;
         }
@@ -617,6 +655,8 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
         );
         chr.sendPacket(packet);
         expectedMap.broadcastMessage(chr, packet, false, true);
+        int appliedTargets = 0;
+        long appliedDamage = 0;
         for (Map.Entry<Integer, List<Integer>> entry : damage.entrySet()) {
             Monster monster = expectedMap.getMonsterByOid(entry.getKey());
             if (monster == null || !monster.isAlive()) {
@@ -631,6 +671,16 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
             }
             monster.aggroMonsterDamage(chr, total);
             expectedMap.damageMonster(chr, monster, total);
+            appliedTargets++;
+            appliedDamage += total;
+        }
+        if (traceBuccaneerSerpent) {
+            log.info(
+                    "BUCCANEER_SERPENT_TRACE stage={} sentLocal=true sentRemote=true appliedTargets={} appliedDamage={}",
+                    replaySkillId,
+                    appliedTargets,
+                    appliedDamage
+            );
         }
     }
 
@@ -685,6 +735,8 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
                 : null;
         for (int index = 0; index < attackTimesMs.length; index++) {
             final boolean originalTick = applyOriginalFirst && index == 0;
+            final boolean logReplayTargets = showLocalDamageNumbers
+                    && (index == 0 || index == attackTimesMs.length - 1);
             TimerManager.getInstance().schedule(() -> {
                 if (!canContinueAnimatedAttack(chr, expectedMap)) {
                     return;
@@ -707,7 +759,8 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
                         replayEffect,
                         targetingEffect,
                         fixedAttackOrigin,
-                        showLocalDamageNumbers
+                        showLocalDamageNumbers,
+                        logReplayTargets
                 );
             }, attackTimesMs[index]);
         }
@@ -832,6 +885,7 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
                         replayEffect,
                         replayEffect,
                         null,
+                        false,
                         false
                 );
                 if (stageIndex == times.length - 1) {
@@ -1149,15 +1203,13 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
         ExplorerOtherSkillCompat.Replay[] explorerReplays =
                 ExplorerOtherSkillCompat.multiAttacks(attack.skill);
         if (explorerReplays != null) {
-            if (attack.skill == Buccaneer.SEA_DRAGON_FIST) {
-                MapleMap expectedMap = chr.getMap();
-                TimerManager.getInstance().schedule(() -> {
-                    if (canContinueAnimatedAttack(chr, expectedMap)) {
-                        showBuccaneerSpecialEffect(
-                                chr, Buccaneer.SEA_DRAGON_FIST_FINISH
-                        );
-                    }
-                }, BUCCANEER_HOWLING_FIST_FINISH_DELAY_MS);
+            if (attack.skill == Buccaneer.SEA_DRAGON_STONE_VI) {
+                log.info(
+                        "BUCCANEER_SERPENT_TRACE schedule skill={} capturedTargets={} stages={}",
+                        attack.skill,
+                        attack.allDamage.size(),
+                        explorerReplays.length
+                );
             }
             for (int index = 0; index < explorerReplays.length; index++) {
                 ExplorerOtherSkillCompat.Replay replay = explorerReplays[index];

@@ -90,6 +90,7 @@ import static java.util.concurrent.TimeUnit.*;
 
 public class Character extends AbstractCharacterObject {
     private static final Logger log = LoggerFactory.getLogger(Character.class);
+    private static final String CYGNUS_FIFTH_JOB_COMPLETED_KEY = "cygnus_fifth_job_completed";
     private static final Set<Integer> FULL_HP_RESPAWN_MAPS = Set.of(
             262030300, 262031300, 450010100, 221040001,
             450009400, 900000207, 410002060
@@ -1046,6 +1047,39 @@ public class Character extends AbstractCharacterObject {
         this.ci = type;
     }
 
+    private static boolean isCygnusFifthJob(Job job) {
+        return job == Job.DAWNWARRIOR4 || job == Job.BLAZEWIZARD4
+                || job == Job.WINDARCHER4 || job == Job.NIGHTWALKER4
+                || job == Job.THUNDERBREAKER4;
+    }
+
+    private static Job getCygnusThirdJob(Job fifthJob) {
+        return switch (fifthJob) {
+            case DAWNWARRIOR4 -> Job.DAWNWARRIOR3;
+            case BLAZEWIZARD4 -> Job.BLAZEWIZARD3;
+            case WINDARCHER4 -> Job.WINDARCHER3;
+            case NIGHTWALKER4 -> Job.NIGHTWALKER3;
+            case THUNDERBREAKER4 -> Job.THUNDERBREAKER3;
+            default -> fifthJob;
+        };
+    }
+
+    public boolean hasCompletedCygnusFifthJob() {
+        if (isCygnusFifthJob(job)) {
+            return true;
+        }
+        ExtendValueDO value = ExtendUtil.getExtendValue(
+                String.valueOf(id), ExtendType.CHARACTER_EXTEND.getType(), CYGNUS_FIFTH_JOB_COMPLETED_KEY
+        );
+        return value != null && "1".equals(value.getExtendValue());
+    }
+
+    private void markCygnusFifthJobCompleted() {
+        ExtendUtil.saveOrUpdateExtendValue(
+                String.valueOf(id), ExtendType.CHARACTER_EXTEND.getType(), CYGNUS_FIFTH_JOB_COMPLETED_KEY, "1"
+        );
+    }
+
     public void setMasteries(int jobId) {
         int[] skills = new int[Math.max(
                 WindArcher.V_VI_ACTIVE_ATTACKS.length,
@@ -1100,13 +1134,14 @@ public class Character extends AbstractCharacterObject {
             skills[1] = Corsair.BULLSEYE;
             skills[2] = Corsair.WRATH_OF_THE_OCTOPI;
             skills[3] = Corsair.RAPID_FIRE;
-        } else if (jobId == Job.DAWNWARRIOR4.getId()) {
+        } else if (jobId == Job.DAWNWARRIOR4.getId() && hasCompletedCygnusFifthJob()) {
             System.arraycopy(DawnWarrior.V_VI_ACTIVE_ATTACKS, 0, skills, 0, DawnWarrior.V_VI_ACTIVE_ATTACKS.length);
-        } else if (jobId == Job.BLAZEWIZARD4.getId()) {
+        } else if (jobId == Job.BLAZEWIZARD4.getId() && hasCompletedCygnusFifthJob()) {
             System.arraycopy(BlazeWizard.V_VI_ACTIVE_ATTACKS, 0, skills, 0, BlazeWizard.V_VI_ACTIVE_ATTACKS.length);
-        } else if (jobId == Job.WINDARCHER4.getId()) {
+        } else if (jobId == Job.WINDARCHER4.getId() && hasCompletedCygnusFifthJob()) {
             System.arraycopy(WindArcher.V_VI_ACTIVE_ATTACKS, 0, skills, 0, WindArcher.V_VI_ACTIVE_ATTACKS.length);
-        } else if (jobId == Job.THUNDERBREAKER3.getId() || jobId == Job.THUNDERBREAKER4.getId()) {
+        } else if ((jobId == Job.THUNDERBREAKER3.getId() || jobId == Job.THUNDERBREAKER4.getId())
+                && hasCompletedCygnusFifthJob()) {
             System.arraycopy(ThunderBreaker.V_VI_ACTIVE_ATTACKS, 0, skills, 0, ThunderBreaker.V_VI_ACTIVE_ATTACKS.length);
         } else if (jobId == 2112) {
             skills[0] = Aran.OVER_SWING;
@@ -1168,6 +1203,7 @@ public class Character extends AbstractCharacterObject {
         if (newJob == null) {
             return;//the fuck you doing idiot!
         }
+        boolean wasCygnusFifthJob = isCygnusFifthJob(job);
 
         if (canRecvPartySearchInvite && getParty() == null) {
             this.updatePartySearchAvailability(false);
@@ -1175,6 +1211,10 @@ public class Character extends AbstractCharacterObject {
             this.updatePartySearchAvailability(true);
         } else {
             this.job = newJob;
+        }
+
+        if (wasCygnusFifthJob || isCygnusFifthJob(newJob)) {
+            markCygnusFifthJobCompleted();
         }
 
         int spGain = 1;
@@ -10068,14 +10108,18 @@ public class Character extends AbstractCharacterObject {
         if (isClearSkill) {
             resetSkillsAndResetSP(returnSp, level);
         }
-        Job job = null;
+        boolean completedCygnusFifthJob = hasCompletedCygnusFifthJob();
+        Job nextJob = null;
         if (jobId > 0) {
-            job = Job.getById(jobId);
+            nextJob = Job.getById(jobId);
         }
-        if (job == null) {
-            job = Job.changeJobByLevel(getJob(), level);
+        if (nextJob == null) {
+            nextJob = Job.changeJobByLevel(getJob(), level);
         }
-        changeJob(job);
+        if (!completedCygnusFifthJob && isCygnusFifthJob(nextJob)) {
+            nextJob = getCygnusThirdJob(nextJob);
+        }
+        changeJob(nextJob);
         // 2. 处理转生次数与等级重置
         addReborns(); // 增加转生次数
         loseExp(getExp(), false, false); // 清除当前经验

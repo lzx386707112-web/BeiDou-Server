@@ -37,7 +37,7 @@ public class Corsair {
     public static final int SPEED_INFUSION = 5221010;
     public static final int BULLSEYE = 5220011;
     public static final int[] V_VI_ACTIVE_ATTACKS = {
-            5221011, 5221012, 5221013, 5221016, 5221018, 5221020,
-            5221022, 5221024, 5221028, 5221029, 5221030, 5221032, 5221034
+            5221011, 5221012, 5221013, 5221022, 5221024,
+            5221030, 5221032, 5221034
     };
 }

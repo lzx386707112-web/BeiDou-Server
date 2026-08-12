@@ -551,7 +551,7 @@ public final class PlayerLoggedinHandler extends AbstractPacketHandler {
     }
 
     private static void grantDawnWarriorVViAttacks(Character player) {
-        if (!player.getJob().isA(Job.DAWNWARRIOR4)) {
+        if (!player.getJob().isA(Job.DAWNWARRIOR4) || !player.hasCompletedCygnusFifthJob()) {
             return;
         }
         for (int skillId : DawnWarrior.V_VI_ACTIVE_ATTACKS) {
@@ -567,7 +567,7 @@ public final class PlayerLoggedinHandler extends AbstractPacketHandler {
     }
 
     private static void grantBlazeWizardVViAttacks(Character player) {
-        if (!player.getJob().isA(Job.BLAZEWIZARD4)) {
+        if (!player.getJob().isA(Job.BLAZEWIZARD4) || !player.hasCompletedCygnusFifthJob()) {
             return;
         }
         for (int skillId : BlazeWizard.V_VI_ACTIVE_ATTACKS) {
@@ -585,7 +585,7 @@ public final class PlayerLoggedinHandler extends AbstractPacketHandler {
     private static void grantNightWalkerVViSkills(Character player) {
         // v83 Cygnus characters remain on the 1411 final job even though the
         // compatibility skill book is 1412. isA(1411) also accepts custom 1412 jobs.
-        if (!player.getJob().isA(Job.NIGHTWALKER3)) {
+        if (!player.getJob().isA(Job.NIGHTWALKER3) || !player.hasCompletedCygnusFifthJob()) {
             return;
         }
         for (int skillId : NightWalker.V_VI_ACTIVE_SKILLS) {
@@ -603,7 +603,7 @@ public final class PlayerLoggedinHandler extends AbstractPacketHandler {
     private static void grantWindArcherVViAttacks(Character player) {
         // v83 Cygnus characters can remain on 1311 while the compatibility
         // skill resources live in the otherwise empty 1312 book.
-        if (!player.getJob().isA(Job.WINDARCHER3)) {
+        if (!player.getJob().isA(Job.WINDARCHER3) || !player.hasCompletedCygnusFifthJob()) {
             return;
         }
         boolean removedRetiredBinding = false;
@@ -628,7 +628,7 @@ public final class PlayerLoggedinHandler extends AbstractPacketHandler {
     private static void grantThunderBreakerVViAttacks(Character player) {
         // v83 Cygnus characters can remain on 1511 while the compatibility
         // skill resources live in the otherwise empty 1512 book.
-        if (!player.getJob().isA(Job.THUNDERBREAKER3)) {
+        if (!player.getJob().isA(Job.THUNDERBREAKER3) || !player.hasCompletedCygnusFifthJob()) {
             return;
         }
         for (int skillId : ThunderBreaker.V_VI_ACTIVE_ATTACKS) {

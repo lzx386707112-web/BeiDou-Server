@@ -62,7 +62,12 @@ var JOBS = {
         retiredBindings: [5121011, 5121012, 5121013, 5121019, 5121020, 5121021, 5121022, 5121023],
         retiredSkills: [5121011, 5121012, 5121013, 5121019, 5121020, 5121021, 5121022, 5121023]
     },
-    522: {name: "枪神", skills: Java.type("org.gms.constants.skills.Corsair").V_VI_ACTIVE_ATTACKS}
+    522: {
+        name: "枪神",
+        skills: Java.type("org.gms.constants.skills.Corsair").V_VI_ACTIVE_ATTACKS,
+        retiredBindings: [5221016, 5221017, 5221018, 5221019, 5221020, 5221021, 5221028, 5221029],
+        retiredSkills: [5221016, 5221017, 5221018, 5221019, 5221020, 5221021, 5221028, 5221029]
+    }
 };
 
 function start() {

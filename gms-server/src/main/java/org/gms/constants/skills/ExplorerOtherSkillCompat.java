@@ -104,6 +104,10 @@ public final class ExplorerOtherSkillCompat {
                     replay(5121035, range(420, 60, 960)),
                     replay(5121036, range(1740, 30, 2280))
             )),
+            Map.entry(5221013, replays(
+                    replay(5221014, range(990, 120, 1710)),
+                    replay(5221015, range(3420, 100, 6920))
+            )),
             Map.entry(5221032, replays(replay(5221032, concat(
                     range(1020, 30, 1650), range(3030, 30, 3900)
             )))),
@@ -130,8 +134,8 @@ public final class ExplorerOtherSkillCompat {
             case 3221032, 3221034 -> "customSkill/marksman/video" + skillId;
             case 4121026, 4121028 -> "customSkill/nightLord/video" + skillId;
             case 4221036, 4221039 -> "customSkill/shadower/video" + skillId;
-            case 5121029, 5121035 -> "customSkill/buccaneer/video" + skillId;
-            case 5221032, 5221034 -> "customSkill/corsair/video" + skillId;
+            case 5121015, 5121029, 5121035 -> "customSkill/buccaneer/video" + skillId;
+            case 5221012, 5221032, 5221034 -> "customSkill/corsair/video" + skillId;
             default -> null;
         };
     }
