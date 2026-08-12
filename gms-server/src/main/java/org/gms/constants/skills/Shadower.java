@@ -34,8 +34,29 @@ public class Shadower {
     public static final int SMOKE_SCREEN = 4221006;
     public static final int BOOMERANG_STEP = 4221007;
     public static final int HEROS_WILL = 4221008;
+    public static final int BLADE_TEMPEST = 4221009;
+    public static final int BLADE_OF_DESTINY = 4221010;
+    public static final int BLADE_TORNADO = 4221011;
+    public static final int BLADE_TORNADO_WHIRLWIND = 4221012;
+    public static final int HAUNTED_EDGE = 4221013;
+    public static final int HAUNTED_EDGE_ASURA = 4221014;
+    public static final int HAUNTED_EDGE_PROJECTILE = 4221015;
+    public static final int HAUNTED_EDGE_RAKSHASA = 4221016;
+    public static final int SUDDEN_RAID_FINISHER = 4221017;
+    public static final int PHANTOM_BLOW_VI = 4221018;
+    public static final int ASURA_VI = 4221019;
+    public static final int BLADE_FURY_VI = 4221020;
+    public static final int BLADE_FURY_VI_RAGE = 4221021;
+    public static final int SUDDEN_RAID_VI = 4221022;
+    public static final int KARMA_BLADE = 4221023;
+    public static final int KARMA_BLADE_REPEAT = 4221024;
+    public static final int KARMA_BLADE_FINISH = 4221025;
+    public static final int KARMA_BLADE_LAST_HIT = 4221026;
+    public static final int YAMAZ_DECREE = 4221027;
+    public static final int YAMAZ_DECREE_JUDGMENT = 4221028;
+    public static final int YAMAZ_DECREE_FINISH = 4221029;
     public static final int[] V_VI_ACTIVE_ATTACKS = {
-            4221009, 4221013, 4221016, 4221017, 4221022, 4221024,
-            4221026, 4221030, 4221031, 4221032, 4221033, 4221036, 4221039
+            4221009, 4221010, 4221011,
+            4221018, 4221019, 4221020, 4221022, 4221023, 4221027
     };
 }

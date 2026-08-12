@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<imgdir name="01672076.img">
+  <imgdir name="info">
+    <canvas name="icon" width="30" height="32">
+      <vector name="origin" x="-1" y="32"/>
+    </canvas>
+    <canvas name="iconRaw" width="30" height="32">
+      <vector name="origin" x="-1" y="32"/>
+    </canvas>
+    <string name="islot" value="Ht"/>
+    <string name="vslot" value="Ht"/>
+    <int name="reqJob" value="0"/>
+    <int name="reqLevel" value="120"/>
+    <int name="tuc" value="11"/>
+    <int name="incSTR" value="10"/>
+    <int name="incDEX" value="10"/>
+    <int name="incINT" value="10"/>
+    <int name="incLUK" value="10"/>
+    <int name="incMHP" value="100"/>
+    <int name="cash" value="0"/>
+    <int name="price" value="1"/>
+    <int name="grade" value="5"/>
+    <int name="notExtend" value="1"/>
+    <int name="timeLimited" value="1"/>
+    <int name="tradeBlock" value="1"/>
+    <int name="specialGrade" value="1"/>
+    <int name="fixedGrade" value="3"/>
+    <int name="fixedPotential" value="1"/>
+    <imgdir name="option">
+      <imgdir name="0">
+        <int name="option" value="60011"/>
+        <int name="level" value="1"/>
+      </imgdir>
+      <imgdir name="1">
+        <int name="option" value="60010"/>
+        <int name="level" value="1"/>
+      </imgdir>
+    </imgdir>
+    <int name="exceptUpgrade" value="1"/>
+    <int name="setItemID" value="677"/>
+  </imgdir>
+</imgdir>

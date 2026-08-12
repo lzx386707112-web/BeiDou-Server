@@ -40,6 +40,7 @@ import org.gms.constants.skills.Hero;
 import org.gms.constants.skills.NightWalker;
 import org.gms.constants.skills.Paladin;
 import org.gms.constants.skills.Rogue;
+import org.gms.constants.skills.Shadower;
 import org.gms.constants.skills.ThunderBreaker;
 import org.gms.constants.skills.WindArcher;
 import org.gms.net.packet.InPacket;
@@ -126,6 +127,18 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
     private static final Map<Character, LightningSpearComboState> LIGHTNING_SPEAR_COMBOS =
             Collections.synchronizedMap(new WeakHashMap<>());
     private static long lightningSpearGeneration;
+    private static final int SUDDEN_RAID_TRIGGER_HITS = 15;
+    private static final int SUDDEN_RAID_MAX_STORED_HITS = 60;
+    private static final Map<Character, DualBladeFollowUpState> DUAL_BLADE_FOLLOW_UPS =
+            Collections.synchronizedMap(new WeakHashMap<>());
+    private static final int[] HAUNTED_EDGE_ASURA_TIMES_MS = {0};
+    private static final int[] HAUNTED_EDGE_PROJECTILE_TIMES_MS = {
+        120, 240, 360, 480, 600, 720
+    };
+    private static final int[] HAUNTED_EDGE_RAKSHASA_TIMES_MS = {
+        30, 120, 210, 300, 390
+    };
+    private static final int[] SUDDEN_RAID_FINISHER_TIMES_MS = {390, 420, 450, 480};
     private static final int[] WAVE_RIDING_THUNDER_OPENING_TIMES_MS = {
         300, 360, 420, 480, 540, 600, 660, 720, 780, 840, 900, 960,
         1020, 1080, 1140, 1200, 1260, 1320, 1380, 1440, 1500, 2940, 3060, 3180,
@@ -519,6 +532,10 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
             this.lifecycleGeneration = lifecycleGeneration;
             this.map = map;
         }
+    }
+
+    private static final class DualBladeFollowUpState {
+        private int directHitCount;
     }
 
     private static boolean isCurrentLightningSpearState(
@@ -1225,6 +1242,7 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
                         showLocalDamageNumbers
                 );
             }
+            triggerDualBladeFollowUps(attack, chr);
         } else if (attack.skill == Hero.SWORD_ILLUSION) {
             scheduleTrackingCloseAttacks(
                     attack, chr, SWORD_ILLUSION_SLASH_TIMES_MS,
@@ -1388,6 +1406,78 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
             );
         } else {
             applyAttack(attack, chr, attackCount);
+            triggerDualBladeFollowUps(attack, chr);
         }
+    }
+
+    private void triggerDualBladeFollowUps(AttackInfo attack, Character chr) {
+        if (!chr.getJob().isA(Job.SHADOWER) || attack.numAttacked <= 0) {
+            return;
+        }
+        if (attack.skill == Shadower.BLADE_FURY_VI) {
+            if (triggerDualBladeReplay(
+                    attack, chr, Shadower.HAUNTED_EDGE,
+                    Shadower.HAUNTED_EDGE_ASURA,
+                    HAUNTED_EDGE_ASURA_TIMES_MS, 12000
+            )) {
+                scheduleTrackingCloseAttacks(
+                        attack, chr, HAUNTED_EDGE_PROJECTILE_TIMES_MS,
+                        Shadower.HAUNTED_EDGE_PROJECTILE, false
+                );
+            }
+        } else if (attack.skill == Shadower.PHANTOM_BLOW_VI) {
+            triggerDualBladeReplay(
+                    attack, chr, Shadower.HAUNTED_EDGE,
+                    Shadower.HAUNTED_EDGE_RAKSHASA,
+                    HAUNTED_EDGE_RAKSHASA_TIMES_MS, 12000
+            );
+        }
+
+        boolean triggerSuddenRaid = false;
+        synchronized (DUAL_BLADE_FOLLOW_UPS) {
+            DualBladeFollowUpState state = DUAL_BLADE_FOLLOW_UPS.computeIfAbsent(
+                    chr, ignored -> new DualBladeFollowUpState()
+            );
+            state.directHitCount = Math.min(
+                    SUDDEN_RAID_MAX_STORED_HITS, state.directHitCount + 1
+            );
+            if (state.directHitCount >= SUDDEN_RAID_TRIGGER_HITS
+                    && !chr.skillIsCooling(Shadower.SUDDEN_RAID_FINISHER)) {
+                state.directHitCount -= SUDDEN_RAID_TRIGGER_HITS;
+                triggerSuddenRaid = true;
+            }
+        }
+        if (triggerSuddenRaid) {
+            triggerDualBladeReplay(
+                    attack, chr, Shadower.SUDDEN_RAID_FINISHER,
+                    Shadower.SUDDEN_RAID_FINISHER,
+                    SUDDEN_RAID_FINISHER_TIMES_MS, 1000
+            );
+        }
+    }
+
+    private boolean triggerDualBladeReplay(
+            AttackInfo attack,
+            Character chr,
+            int cooldownSkillId,
+            int replaySkillId,
+            int[] attackTimesMs,
+            int cooldownMs
+    ) {
+        if (chr.skillIsCooling(cooldownSkillId)) {
+            return false;
+        }
+        Skill replaySkill = SkillFactory.getSkill(replaySkillId);
+        if (replaySkill == null) {
+            return false;
+        }
+        chr.addCooldown(cooldownSkillId, currentServerTime(), cooldownMs);
+        TimerManager.getInstance().schedule(
+                () -> chr.removeCooldown(cooldownSkillId), cooldownMs
+        );
+        scheduleTrackingCloseAttacks(
+                attack, chr, attackTimesMs, replaySkillId, false
+        );
+        return true;
     }
 }

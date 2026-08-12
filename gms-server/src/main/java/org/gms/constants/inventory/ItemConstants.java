@@ -21,6 +21,7 @@
 */
 package org.gms.constants.inventory;
 
+import org.gms.client.Job;
 import org.gms.client.inventory.BodyPart;
 import org.gms.client.inventory.InventoryType;
 import org.gms.config.GameConfig;
@@ -152,6 +153,10 @@ public final class ItemConstants {
     public static int getEquipSlotType(int itemId) {
         int itemPrefix = getItemPrefix(itemId);
 
+        if (isSecondaryWeapon(itemId)) {
+            return BodyPart.SECONDARY_WEAPON.getValue();
+        }
+
         if (isWeapon(itemId)) {
             return BodyPart.WEAPON.getValue();
         }
@@ -166,7 +171,7 @@ public final class ItemConstants {
             case 106 -> BodyPart.PANTS.getValue();
             case 107 -> BodyPart.SHOES.getValue();
             case 108 -> BodyPart.GLOVE.getValue();
-            case 109, 119, 134 -> BodyPart.SHIELD.getValue();
+            case 109, 134 -> BodyPart.SHIELD.getValue();
             case 110 -> BodyPart.CAPE.getValue();
             case 111 -> BodyPart.RING_1.getValue();
             case 112 -> BodyPart.PENDANT.getValue();
@@ -174,6 +179,8 @@ public final class ItemConstants {
             case 114 -> BodyPart.MEDAL.getValue();
             case 115 -> BodyPart.SHOULDER.getValue();
             case 118 -> BodyPart.BADGE.getValue();
+            case 119 -> BodyPart.EMBLEM.getValue();
+            case 167 -> BodyPart.ROBOT_HEART.getValue();
             default -> 0;
         };
     }
@@ -279,6 +286,45 @@ public final class ItemConstants {
 
     public static boolean isWeapon(int itemId) {
         return itemId >= 1302000 && itemId < 1493000;
+    }
+
+    public static boolean isKatara(int itemId) {
+        return itemId / 10000 == 134;
+    }
+
+    public static boolean isSecondaryWeapon(int itemId) {
+        int prefix = itemId / 10000;
+        return prefix == 134 || prefix == 135;
+    }
+
+    public static boolean canEquipSecondaryWeapon(int itemId, Job job) {
+        if (isKatara(itemId)) {
+            return job.isA(Job.BANDIT);
+        }
+        if (itemId / 10000 != 135) {
+            return false;
+        }
+
+        return switch (itemId / 10) {
+            case 135220 -> job.isA(Job.FIGHTER);
+            case 135221 -> job.isA(Job.PAGE);
+            case 135222 -> job.isA(Job.SPEARMAN);
+            case 135223 -> job.isA(Job.FP_WIZARD);
+            case 135224 -> job.isA(Job.IL_WIZARD);
+            case 135225 -> job.isA(Job.CLERIC);
+            case 135226 -> job.isA(Job.HUNTER);
+            case 135227 -> job.isA(Job.CROSSBOWMAN);
+            case 135228 -> job.isA(Job.BANDIT);
+            case 135229 -> job.isA(Job.ASSASSIN);
+            case 135290 -> job.isA(Job.BRAWLER);
+            case 135291 -> job.isA(Job.GUNSLINGER);
+            case 135297 -> job.isA(Job.DAWNWARRIOR1)
+                    || job.isA(Job.BLAZEWIZARD1)
+                    || job.isA(Job.WINDARCHER1)
+                    || job.isA(Job.NIGHTWALKER1)
+                    || job.isA(Job.THUNDERBREAKER1);
+            default -> false;
+        };
     }
 
     public static boolean isEquipment(int itemId) {

@@ -234,6 +234,26 @@ public class Inventory implements Iterable<Item> {
         if (item.getPosition() < 0 && !type.equals(InventoryType.EQUIPPED)) {
             return;
         }
+        if (type.equals(InventoryType.EQUIPPED)
+                && item.getPosition() == -51
+                && ItemConstants.getItemPrefix(item.getItemId()) == 115) {
+            item.setPosition((short) -BodyPart.SHOULDER.getValue());
+        }
+        if (type.equals(InventoryType.EQUIPPED)
+                && item.getPosition() == -BodyPart.SHIELD.getValue()
+                && ItemConstants.isSecondaryWeapon(item.getItemId())) {
+            item.setPosition((short) -BodyPart.SECONDARY_WEAPON.getValue());
+        }
+        if (type.equals(InventoryType.EQUIPPED)
+                && item.getPosition() == -BodyPart.EMBLEM.getValue()
+                && ItemConstants.getItemPrefix(item.getItemId()) == 118) {
+            item.setPosition((short) -BodyPart.BADGE.getValue());
+        }
+        if (type.equals(InventoryType.EQUIPPED)
+                && item.getPosition() == -BodyPart.SHIELD.getValue()
+                && ItemConstants.getItemPrefix(item.getItemId()) == 119) {
+            item.setPosition((short) -BodyPart.EMBLEM.getValue());
+        }
         addSlotFromDB(item.getPosition(), item);
     }
 

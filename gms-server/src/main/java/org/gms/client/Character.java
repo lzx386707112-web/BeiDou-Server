@@ -7188,6 +7188,10 @@ public class Character extends AbstractCharacterObject {
 
             for (Item item : getInventory(InventoryType.EQUIPPED)) {
                 Equip equip = (Equip) item;
+                if (ItemConstants.isSecondaryWeapon(equip.getItemId())
+                        && !ItemConstants.canEquipSecondaryWeapon(equip.getItemId(), job)) {
+                    continue;
+                }
                 equipmaxhp += equip.getHp();
                 equipmaxmp += equip.getMp();
                 equipdex += equip.getDex();

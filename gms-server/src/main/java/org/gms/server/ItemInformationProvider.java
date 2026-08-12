@@ -212,7 +212,10 @@ public class ItemInformationProvider {
             theData = cashStringData;
         } else if (itemId >= 2000000 && itemId < 3000000) {
             theData = consumeStringData;
-        } else if ((itemId >= 1010000 && itemId < 1040000) || (itemId >= 1122000 && itemId < 1123000) || (itemId >= 1132000 && itemId < 1133000) || (itemId >= 1142000 && itemId < 1143000)) {
+        } else if (itemId >= 1670000 && itemId < 1680000) {
+            theData = eqpStringData;
+            cat = "Eqp/Accessory";
+        } else if ((itemId >= 1010000 && itemId < 1040000) || (itemId >= 1122000 && itemId < 1123000) || (itemId >= 1132000 && itemId < 1133000) || (itemId >= 1142000 && itemId < 1143000) || (itemId >= 1152000 && itemId < 1153000) || (itemId >= 1180000 && itemId < 1200000)) {
             theData = eqpStringData;
             cat = "Eqp/Accessory";
         } else if (itemId >= 1000000 && itemId < 1010000) {
@@ -1660,7 +1663,9 @@ public class ItemInformationProvider {
      */
     private String getItemPathStr(int itemId) {
         String cat = "null";
-        if ((itemId >= 1010000 && itemId < 1040000) || (itemId >= 1122000 && itemId < 1123000) || (itemId >= 1132000 && itemId < 1133000) || (itemId >= 1142000 && itemId < 1143000)) {
+        if (itemId >= 1670000 && itemId < 1680000) {
+            cat = "Eqp/Accessory";
+        } else if ((itemId >= 1010000 && itemId < 1040000) || (itemId >= 1122000 && itemId < 1123000) || (itemId >= 1132000 && itemId < 1133000) || (itemId >= 1142000 && itemId < 1143000) || (itemId >= 1152000 && itemId < 1153000) || (itemId >= 1180000 && itemId < 1200000)) {
             cat = "Eqp/Accessory";
         } else if (itemId >= 1000000 && itemId < 1010000) {
             cat = "Eqp/Cap";
@@ -1918,12 +1923,21 @@ public class ItemInformationProvider {
 
     public Collection<Item> canWearEquipment(Character chr, Collection<Item> items) {
         Inventory inv = chr.getInventory(InventoryType.EQUIPPED);
+        Collection<Item> eligibleItems = new LinkedList<>();
+        for (Item item : items) {
+            if (ItemConstants.isSecondaryWeapon(item.getItemId())
+                    && !ItemConstants.canEquipSecondaryWeapon(item.getItemId(), chr.getJob())) {
+                ((Equip) item).wear(false);
+            } else {
+                eligibleItems.add(item);
+            }
+        }
         if (inv.checked()) {
-            return items;
+            return eligibleItems;
         }
         Collection<Item> itemz = new LinkedList<>();
         if (chr.getJob() == Job.SUPERGM || chr.getJob() == Job.GM) {
-            for (Item item : items) {
+            for (Item item : eligibleItems) {
                 Equip equip = (Equip) item;
                 equip.wear(true);
                 itemz.add(item);
@@ -1953,7 +1967,7 @@ public class ItemInformationProvider {
                 tint += equip.getInt();
             }
         }
-        for (Item item : items) {
+        for (Item item : eligibleItems) {
             Equip equip = (Equip) item;
             int reqLevel = getEquipLevelReq(equip.getItemId());
             if (highfivestamp) {
@@ -1995,13 +2009,39 @@ public class ItemInformationProvider {
     public boolean canWearEquipment(Character chr, Equip equip, int dst) {
         int id = equip.getItemId();
 
+        if (ItemConstants.isSecondaryWeapon(id)
+                && !ItemConstants.canEquipSecondaryWeapon(id, chr.getJob())) {
+            equip.wear(false);
+            chr.dropMessage(5, "该副手只能由对应职业装备。");
+            return false;
+        }
+        if (ItemConstants.isSecondaryWeapon(id)
+                && !EquipSlot.SECONDARY_WEAPON.isAllowed(dst, false)) {
+            equip.wear(false);
+            chr.dropMessage(5, "副手只能装备到副手栏位。");
+            return false;
+        }
+
+        EquipSlot extendedSlot = switch (ItemConstants.getItemPrefix(id)) {
+            case 118 -> EquipSlot.BADGE;
+            case 119 -> EquipSlot.EMBLEM;
+            case 167 -> EquipSlot.ROBOT_HEART;
+            default -> null;
+        };
+        if (extendedSlot != null && !extendedSlot.isAllowed(dst, false)) {
+            equip.wear(false);
+            chr.dropMessage(5, "该装备只能装备到对应的专用栏位。");
+            return false;
+        }
+
         if (ItemId.isWeddingRing(id) && chr.hasJustMarried()) {
             chr.dropMessage(5, "The Wedding Ring cannot be equipped on this map.");  // will dc everyone due to doubled couple effect
             return false;
         }
 
         String islot = getEquipmentSlot(id);
-        if (!EquipSlot.getFromTextSlot(islot).isAllowed(dst, isCash(id))) {
+        if (!ItemConstants.isSecondaryWeapon(id) && extendedSlot == null
+                && !EquipSlot.getFromTextSlot(islot).isAllowed(dst, isCash(id))) {
             equip.wear(false);
             String itemName = ItemInformationProvider.getInstance().getName(equip.getItemId());
             Server.getInstance().broadcastGMMessage(chr.getWorld(), PacketCreator.sendYellowTip("[Warning]: " + chr.getName() + " tried to equip " + itemName + " into slot " + dst + "."));

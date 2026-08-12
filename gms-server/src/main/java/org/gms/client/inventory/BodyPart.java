@@ -60,8 +60,11 @@ public enum BodyPart {
 
     MEDAL(49),
     BELT(50),
-    SHOULDER(51),
-    BADGE(56),
+    SHOULDER(20),
+    SECONDARY_WEAPON(51),
+    ROBOT_HEART(54),
+    BADGE(55),
+    EMBLEM(56),
     PENDANT_EXT(61),
     EQUIPPED_END(60),
 

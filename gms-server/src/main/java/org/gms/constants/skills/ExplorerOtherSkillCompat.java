@@ -80,9 +80,30 @@ public final class ExplorerOtherSkillCompat {
                     replay(4121028, range(420, 30, 690)),
                     replay(4121029, range(1860, 30, 2190))
             )),
-            Map.entry(4221036, replays(replay(4221036, range(180, 30, 840)))),
-            Map.entry(4221039, replays(replay(4221039, concat(
-                    range(540, 30, 630), range(1380, 30, 1590)
+            Map.entry(4221009, replays(replay(
+                    4221009, range(0, 120, 1920)
+            ))),
+            Map.entry(4221010, replays(replay(
+                    4221010, points(0, 180, 360, 540, 720)
+            ))),
+            Map.entry(4221011, replays(
+                    replay(4221011, points(0)),
+                    replay(4221012, points(480, 600, 720, 840, 960, 1080))
+            )),
+            Map.entry(4221019, replays(replay(
+                    4221019, range(0, 180, 2880)
+            ))),
+            Map.entry(4221023, replays(
+                    replay(4221023, points(30, 60, 90, 120, 150, 180)),
+                    replay(4221026, points(
+                            1230, 1290, 1320, 1350, 1410, 1470, 2850, 2880,
+                            2910, 2940, 2970, 3000, 3030, 3060, 3090, 3120,
+                            3150, 3180, 3210, 3240
+                    ))
+            )),
+            Map.entry(4221027, replays(replay(4221027, points(
+                    240, 300, 360, 420, 480, 540, 570,
+                    600, 630, 660, 690, 720, 750, 780
             )))),
             Map.entry(5121015, replays(
                     replay(5121015, points(1920)),
@@ -133,7 +154,7 @@ public final class ExplorerOtherSkillCompat {
             case 3121029, 3121031 -> "customSkill/bowmaster/video" + skillId;
             case 3221032, 3221034 -> "customSkill/marksman/video" + skillId;
             case 4121026, 4121028 -> "customSkill/nightLord/video" + skillId;
-            case 4221036, 4221039 -> "customSkill/shadower/video" + skillId;
+            case 4221023, 4221027 -> "customSkill/shadower/video" + skillId;
             case 5121015, 5121029, 5121035 -> "customSkill/buccaneer/video" + skillId;
             case 5221012, 5221032, 5221034 -> "customSkill/corsair/video" + skillId;
             default -> null;
