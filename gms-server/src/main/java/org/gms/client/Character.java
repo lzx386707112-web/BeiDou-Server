@@ -398,6 +398,7 @@ public class Character extends AbstractCharacterObject {
     // 记录最近一次“瞬移类位移”发生时间（单调时钟纳秒，用于短时间内的距离检测防误判）
     private volatile long lastTeleportLikeMoveTime = 0;
     private final AtomicLong nextFullScreenPetPickupTime = new AtomicLong();
+    private final AtomicLong nextMapItemVisibilityUpdateTime = new AtomicLong();
     // 传送距离误判修正上下文：用于“传送前坐标 + 当前坐标”双坐标校验
     private static final long TELEPORT_DISTANCE_CONTEXT_EXPIRE_NS = MILLISECONDS.toNanos(1200L); // 保护窗口，过长会增加可利用面
     private static final byte TELEPORT_DISTANCE_CONTEXT_MAX_ATTACK_CHECKS = 2; // 最多保护 2 次攻击包
@@ -2194,6 +2195,17 @@ public class Character extends AbstractCharacterObject {
                 return false;
             }
         } while (!nextFullScreenPetPickupTime.compareAndSet(nextPickupTime, currentTime + interval));
+        return true;
+    }
+
+    public boolean tryBeginMapItemVisibilityUpdate(long currentTime, long interval) {
+        long nextUpdateTime;
+        do {
+            nextUpdateTime = nextMapItemVisibilityUpdateTime.get();
+            if (currentTime < nextUpdateTime) {
+                return false;
+            }
+        } while (!nextMapItemVisibilityUpdateTime.compareAndSet(nextUpdateTime, currentTime + interval));
         return true;
     }
 

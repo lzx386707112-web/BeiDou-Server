@@ -112,6 +112,8 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 public class MapleMap {
     private static final Logger log = LoggerFactory.getLogger(MapleMap.class);
     private static final List<MapObjectType> rangedMapobjectTypes = Arrays.asList(MapObjectType.SHOP, MapObjectType.ITEM, MapObjectType.NPC, MapObjectType.MONSTER, MapObjectType.DOOR, MapObjectType.SUMMON, MapObjectType.REACTOR);
+    private static final double ITEM_VISIBILITY_RANGE_SQ = 722500;
+    private static final long ITEM_VISIBILITY_UPDATE_INTERVAL = 200L;
     private static final Map<Integer, Pair<Integer, Integer>> dropBoundsCache = new HashMap<>(100);
 
     private final Map<Integer, MapObject> mapobjects = new LinkedHashMap<>();
@@ -266,6 +268,10 @@ public class MapleMap {
 
     private static double getRangedDistance() {
         return GameConfig.getServerBoolean("use_max_range") ? Double.POSITIVE_INFINITY : 722500;
+    }
+
+    private static double getRangedDistance(MapObject mapObject) {
+        return mapObject.getType() == MapObjectType.ITEM ? ITEM_VISIBILITY_RANGE_SQ : getRangedDistance();
     }
 
     public List<MapObject> getMapObjectsInRect(Rectangle box, List<MapObjectType> types) {
@@ -437,7 +443,7 @@ public class MapleMap {
             this.mapobjects.put(curOID, mapobject);
             for (Character chr : characters) {
                 if (condition == null || condition.canSpawn(chr)) {
-                    if (chr.getPosition().distanceSq(mapobject.getPosition()) <= getRangedDistance()) {
+                    if (chr.getPosition().distanceSq(mapobject.getPosition()) <= getRangedDistance(mapobject)) {
                         inRangeCharacters.add(chr);
                         chr.addVisibleMapObject(mapobject);
                     }
@@ -1158,7 +1164,16 @@ public class MapleMap {
     }
 
     public void pickItemDrop(Packet pickupPacket, MapItem mdrop) { // mdrop must be already locked and not-pickedup checked at this point
-        broadcastMessage(pickupPacket, mdrop.getPosition());
+        chrRLock.lock();
+        try {
+            for (Character chr : characters) {
+                if (chr != null && chr.getClient() != null && chr.isMapObjectVisible(mdrop)) {
+                    chr.sendPacket(pickupPacket);
+                }
+            }
+        } finally {
+            chrRLock.unlock();
+        }
 
         this.removeMapObject(mdrop);
         mdrop.setPickedUp(true);
@@ -3093,7 +3108,7 @@ public class MapleMap {
     }
 
     private void broadcastItemDropMessage(MapItem mdrop, Point dropperPos, Point dropPos, byte mod, Point rangedFrom) {
-        broadcastItemDropMessage(mdrop, dropperPos, dropPos, mod, getRangedDistance(), rangedFrom);
+        broadcastItemDropMessage(mdrop, dropperPos, dropPos, mod, ITEM_VISIBILITY_RANGE_SQ, rangedFrom);
     }
 
     private void broadcastItemDropMessage(MapItem mdrop, Point dropperPos, Point dropPos, byte mod) {
@@ -3107,6 +3122,9 @@ public class MapleMap {
             while (iterator.hasNext()) {
                 Character chr = iterator.next();
                 if (chrDisconnected(iterator, chr)) {
+                    continue;
+                }
+                if (rangedFrom == null && !chr.isMapObjectVisible(mdrop)) {
                     continue;
                 }
                 Packet packet = PacketCreator.dropItemFromMapObject(chr, mdrop, dropperPos, dropPos, mod);
@@ -3241,6 +3259,9 @@ public class MapleMap {
 
         if (chr != null) {
             for (MapObject o : getMapObjectsInRange(chr.getPosition(), getRangedDistance(), rangedMapobjectTypes)) {
+                if (o.getType() == MapObjectType.ITEM && chr.getPosition().distanceSq(o.getPosition()) > ITEM_VISIBILITY_RANGE_SQ) {
+                    continue;
+                }
                 if (o.getType() == MapObjectType.REACTOR) {
                     if (((Reactor) o).isAlive()) {
                         o.sendSpawnData(chr.getClient());
@@ -3465,12 +3486,13 @@ public class MapleMap {
     }
 
     private static void updateMapObjectVisibility(Character chr, MapObject mo) {
+        double rangeSq = getRangedDistance(mo);
         if (!chr.isMapObjectVisible(mo)) { // object entered view range
-            if (mo.getType() == MapObjectType.SUMMON || mo.getPosition().distanceSq(chr.getPosition()) <= getRangedDistance()) {
+            if (mo.getType() == MapObjectType.SUMMON || mo.getPosition().distanceSq(chr.getPosition()) <= rangeSq) {
                 chr.addVisibleMapObject(mo);
                 mo.sendSpawnData(chr.getClient());
             }
-        } else if (mo.getType() != MapObjectType.SUMMON && mo.getPosition().distanceSq(chr.getPosition()) > getRangedDistance()) {
+        } else if (mo.getType() != MapObjectType.SUMMON && mo.getPosition().distanceSq(chr.getPosition()) > rangeSq) {
             chr.removeVisibleMapObject(mo);
             mo.sendDestroyData(chr.getClient());
         }
@@ -3487,6 +3509,22 @@ public class MapleMap {
         player.setPosition(newPosition);
 
         if (GameConfig.getServerBoolean("use_max_range")) {
+            if (!player.tryBeginMapItemVisibilityUpdate(System.currentTimeMillis(), ITEM_VISIBILITY_UPDATE_INTERVAL)) {
+                return;
+            }
+
+            for (MapObject mo : player.getVisibleMapObjects()) {
+                if (mo != null && mo.getType() == MapObjectType.ITEM) {
+                    updateMapObjectVisibility(player, mo);
+                }
+            }
+
+            for (MapObject mo : getMapObjectsInRange(player.getPosition(), ITEM_VISIBILITY_RANGE_SQ, Collections.singletonList(MapObjectType.ITEM))) {
+                if (!player.isMapObjectVisible(mo)) {
+                    mo.sendSpawnData(player.getClient());
+                    player.addVisibleMapObject(mo);
+                }
+            }
             return;
         }
 
