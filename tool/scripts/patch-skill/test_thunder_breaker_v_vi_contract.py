@@ -265,7 +265,7 @@ class ThunderBreakerPatchContractTest(unittest.TestCase):
             "private static void repeatTrackingCloseAttack("
         )
         replay_end = handler.index(
-            "private void scheduleTrackingCloseAttacks(", replay_start
+            "void scheduleTrackingCloseAttacks(", replay_start
         )
         replay = handler[replay_start:replay_end]
         self.assertIn(
@@ -279,7 +279,7 @@ class ThunderBreakerPatchContractTest(unittest.TestCase):
             / "gms-server/src/main/java/org/gms/net/server/channel/handlers/CloseRangeDamageHandler.java"
         ).read_text(encoding="utf-8")
         start = handler.index("private static void repeatTrackingCloseAttack(")
-        end = handler.index("private void scheduleTrackingCloseAttacks(", start)
+        end = handler.index("void scheduleTrackingCloseAttacks(", start)
         replay = handler[start:end]
 
         visual = replay.index(

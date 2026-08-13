@@ -357,6 +357,7 @@ public enum SendOpcode implements Opcode {
     VEGA_SCROLL(0x166), // VEGA卷轴
     SET_ITEM_UPDATE(0x17A), // 服务端权威套装面板与激活属性
     DAMAGE_SKIN_UPDATE(0x17B), // 本地角色伤害皮肤选择
+    NAMEPLATE_POWER_UPDATE(0x17C), // 名片戒指战力行
 
     UPDATE_HPMPAALERT(0x1000), // 更新HP/MP/EXP警报
     ;

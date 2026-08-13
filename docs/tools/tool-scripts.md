@@ -256,20 +256,25 @@ rtk tool/scripts/png2canvas/png2canvas.sh
 rtk tool/scripts/wz/wzpy.sh convert clien/Data/Skill/1112.img --region GMS -o /tmp/1112.img.json
 ```
 
-### `preview_data.sh`
+### `preview_img_wz.sh`
 
-以只读 Web UI 预览解包后的散 IMG `Data` 目录。默认加载同级
-`MapleStory-IMG/Data` 并监听 `127.0.0.1:8765`：
-
-```sh
-rtk bash tool/scripts/wz/preview_data.sh
-```
-
-自定义目录或端口：
+使用 `orange-wz` 的只读 Web 服务预览散 `.img` 目录。默认加载本机神说
+`Data/Character`，使用 CMS key 并监听 `127.0.0.1:8787`：
 
 ```sh
-rtk bash tool/scripts/wz/preview_data.sh --data /path/to/Data --port 9000
+rtk tool/scripts/package/preview_img_wz.sh
 ```
+
+交互选择常用目录，或显式指定输入、区域和端口：
+
+```sh
+rtk tool/scripts/package/preview_img_wz.sh --interactive
+rtk tool/scripts/package/preview_img_wz.sh --input clien/Data/Character --region gms --port 8787
+```
+
+该脚本需要 JDK 21 和 OrzRepacker 的 `lib` 目录；必要时通过
+`JAVA_HOME_21`、`ORZ_REPACKER_HOME` 指定位置。编译输出位于
+`tool/orange-wz/target/`，属于可删除、可重建的本机生成物。
 
 ## 打包客户端后的处理
 

@@ -2881,6 +2881,7 @@ public class Character extends AbstractCharacterObject {
         getMap().broadcastUpdateCharLookMessage(this, this);
         equipchanged = true;
         updateLocalStats();
+        getMap().broadcastMessage(PacketCreator.nameplatePowerUpdate(this));
         sendPacket(PacketCreator.setItemUpdate(this));
         if (getMessenger() != null) {
             getWorldServer().updateMessenger(getMessenger(), getName(), getWorld(), client.getChannel());
@@ -9289,6 +9290,7 @@ public class Character extends AbstractCharacterObject {
     public void sendSpawnData(Client client) {
         if (!this.isHidden() || client.getPlayer().gmLevel() > 1) {
             client.sendPacket(PacketCreator.spawnPlayerMapObject(client, this, false));
+            client.sendPacket(PacketCreator.nameplatePowerUpdate(this));
 
             if (buffEffects.containsKey(getJobMapChair(job))) { // mustn't effLock, chrLock sendSpawnData
                 client.sendPacket(PacketCreator.giveForeignChairSkillEffect(id));

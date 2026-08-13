@@ -34,6 +34,7 @@ import org.gms.constants.skills.Bishop;
 import org.gms.constants.skills.Bowmaster;
 import org.gms.constants.skills.Hero;
 import org.gms.constants.skills.Marksman;
+import org.gms.constants.skills.NightLord;
 import org.gms.constants.skills.Outlaw;
 import org.gms.net.packet.InPacket;
 import org.slf4j.Logger;
@@ -58,6 +59,7 @@ public final class SummonDamageHandler extends AbstractDealDamageHandler {
         add(Bishop.FOUNTAIN_FOR_ANGEL_VI);
         add(Bowmaster.PHOENIX_VI);
         add(Marksman.FROST_PREY_VI);
+        add(NightLord.DARK_LORDS_SECRET_SCROLL);
     }});
 
     public static final class SummonAttackEntry {

@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>林波困难模式 · 资源完整性预览</title>
+  <link rel="stylesheet" href="vendor/spine-player.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="hero">
+    <div>
+      <p class="eyebrow">TMS HARD MODE RESOURCE LAB</p>
+      <h1>林波困难模式 · 资源完整性预览</h1>
+      <p id="source-note" class="subtitle"></p>
+    </div>
+    <div id="summary" class="summary" aria-label="资源汇总"></div>
+  </header>
+
+  <main>
+    <nav id="stage-tabs" class="stage-tabs" aria-label="阶段"></nav>
+
+    <section class="scene-section" aria-labelledby="scene-heading">
+      <div class="section-heading">
+        <div>
+          <p class="kicker">SCENE RECONSTRUCTION</p>
+          <h2 id="scene-heading">场景还原</h2>
+        </div>
+        <div class="scene-actions">
+          <button id="play-toggle" type="button">暂停</button>
+          <label>速度
+            <select id="speed-select">
+              <option value="0.5">0.5×</option>
+              <option value="1" selected>1×</option>
+              <option value="1.5">1.5×</option>
+              <option value="2">2×</option>
+            </select>
+          </label>
+          <label class="check"><input id="toggle-background" type="checkbox" checked> 场景层</label>
+          <label class="check"><input id="toggle-boss" type="checkbox" checked> Boss</label>
+          <label class="check"><input id="toggle-pattern" type="checkbox" checked> 场景技能</label>
+        </div>
+      </div>
+
+      <div id="scene" class="scene" role="img" aria-label="林波阶段场景动画">
+        <div id="scene-map" class="scene-map"></div>
+        <div id="spine-layers" class="spine-layers"></div>
+        <div id="object-layers" class="object-layers"></div>
+        <img id="boss-frame" class="boss-frame" alt="Boss 当前动作帧">
+        <img id="pattern-frame" class="pattern-frame" alt="当前场景技能帧">
+        <div class="scene-vignette"></div>
+        <div id="scene-status" class="scene-status"></div>
+      </div>
+
+      <div class="selectors">
+        <label>怪物形象
+          <select id="mob-select"></select>
+        </label>
+        <label>动作 / 怪物技能
+          <select id="action-select"></select>
+        </label>
+        <label>场景技能 / 转场
+          <select id="pattern-select"></select>
+        </label>
+      </div>
+      <div id="timeline" class="timeline" aria-label="动画时间线"></div>
+    </section>
+
+    <section class="catalog-section" aria-labelledby="catalog-heading">
+      <div class="section-heading">
+        <div>
+          <p class="kicker">ASSET CATALOG</p>
+          <h2 id="catalog-heading">阶段资源清单</h2>
+        </div>
+        <div class="catalog-tabs" role="tablist">
+          <button class="catalog-tab active" data-panel="map-panel" type="button">地图 / 场景</button>
+          <button class="catalog-tab" data-panel="mob-panel" type="button">怪物 / 动作</button>
+          <button class="catalog-tab" data-panel="pattern-panel" type="button">场景技能</button>
+          <button class="catalog-tab" data-panel="video-panel" type="button">视频 / MCV</button>
+        </div>
+      </div>
+
+      <div id="map-panel" class="catalog-panel active"></div>
+      <div id="mob-panel" class="catalog-panel"></div>
+      <div id="pattern-panel" class="catalog-panel"></div>
+      <div id="video-panel" class="catalog-panel"></div>
+    </section>
+  </main>
+
+  <footer>
+    <p>此页只读取导出的 TMS 资源，不修改游戏客户端或服务端。BossPattern 阶段归类为迁移前初步验证，详见页面说明。</p>
+  </footer>
+
+  <script src="vendor/spine-player.min.js"></script>
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

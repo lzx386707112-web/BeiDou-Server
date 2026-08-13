@@ -61,7 +61,7 @@
 - 游戏内面板：`gms-server/scripts-zh-CN/BeiDouSpecial/五转技能面板.js`
 - 打开方式：技能中心的选项 7 调用 `cm.openNpc(9900001, "五转技能面板")`。
 - 最终 EXE 不包含 `BeiDouVSkill` 或 `beidou_vskill_trace` 字符串，补丁验证只识别 `.vattack` PE 节。
-- `clien/BeiDouVSkill.dll`、`tool/client-vskill/`和 `patch_vskill_client.py` 是历史诊断/实验产物，不属于最终运行依赖。
+- `clien/BeiDouVSkill.dll` 和 `patch_vskill_client.py` 是历史诊断/实验产物，不属于最终运行依赖；失效的 `tool/client-vskill/` 入口已经清理。
 
 ## 3. 文件清单与职责
 

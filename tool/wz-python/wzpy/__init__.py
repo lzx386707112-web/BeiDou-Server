@@ -31,6 +31,7 @@ from .properties import (
     WzSubProperty,
     WzCanvasProperty,
     WzSoundProperty,
+    WzRawDataProperty,
     WzUolProperty,
     WzConvexProperty,
 )
@@ -56,6 +57,7 @@ __all__ = [
     "WzSubProperty",
     "WzCanvasProperty",
     "WzSoundProperty",
+    "WzRawDataProperty",
     "WzUolProperty",
     "WzConvexProperty",
     "derive_keystream_from_property",

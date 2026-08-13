@@ -127,6 +127,7 @@ public class ItemInformationProvider {
     protected Map<Integer, Pair<Integer, String>> replaceOnExpireCache = new HashMap<>();
     protected Map<Integer, String> equipmentSlotCache = new HashMap<>();
     protected Map<Integer, Boolean> noCancelMouseCache = new HashMap<>();
+    protected Map<Integer, Boolean> nameTagRingCache = new HashMap<>();
     protected Map<Integer, Integer> mobCrystalMakerCache = new HashMap<>();
     protected Map<Integer, Pair<String, Integer>> statUpgradeMakerCache = new HashMap<>();
     protected Map<Integer, MakerItemCreateEntry> makerItemCache = new HashMap<>();
@@ -320,6 +321,13 @@ public class ItemInformationProvider {
             }
         }
         return ret;
+    }
+
+    public boolean itemDataExists(int itemId) {
+        if (itemId < 10000) {
+            return false;
+        }
+        return getItemData(itemId) != null;
     }
 
     public List<Integer> getItemIdsInRange(int minId, int maxId, boolean ignoreCashItem) {
@@ -585,6 +593,20 @@ public class ItemInformationProvider {
 
         equipStatsCache.put(itemId, ret);
         return ret;
+    }
+
+    public boolean isNameTagRing(int itemId) {
+        if (itemId < 1112000 || itemId >= 1120000) {
+            return false;
+        }
+        if (nameTagRingCache.containsKey(itemId)) {
+            return nameTagRingCache.get(itemId);
+        }
+
+        Data item = getItemData(itemId);
+        boolean result = item != null && item.getChildByPath("info/nameTag") != null;
+        nameTagRingCache.put(itemId, result);
+        return result;
     }
 
     public Integer getEquipLevelReq(int itemId) {

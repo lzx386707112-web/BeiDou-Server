@@ -616,6 +616,15 @@ public class NPCConversationManager extends AbstractPlayerInteraction {
         return ItemInformationProvider.getInstance().getName(itemid) != null;
     }
 
+    public boolean hasItemData(int itemid) {
+        return ItemInformationProvider.getInstance().itemDataExists(itemid);
+    }
+
+    public boolean canGenerateItem(int itemid) {
+        ItemInformationProvider ii = ItemInformationProvider.getInstance();
+        return ii.getName(itemid) != null && ii.itemDataExists(itemid);
+    }
+
     public int getCosmeticItem(int itemid) {
         if (itemExists(itemid)) {
             return itemid;

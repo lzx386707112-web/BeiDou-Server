@@ -3145,6 +3145,7 @@ public class MapleMap {
                     if (chr.isGM()) {
                         if (chr != source) {
                             chr.sendPacket(PacketCreator.spawnPlayerMapObject(chr.getClient(), player, enteringField));
+                            chr.sendPacket(PacketCreator.nameplatePowerUpdate(player));
                         }
                     }
                 }
@@ -3157,6 +3158,7 @@ public class MapleMap {
                     }
                     if (chr != source) {
                         chr.sendPacket(PacketCreator.spawnPlayerMapObject(chr.getClient(), player, enteringField));
+                        chr.sendPacket(PacketCreator.nameplatePowerUpdate(player));
                     }
                 }
             }

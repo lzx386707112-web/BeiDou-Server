@@ -4,6 +4,11 @@ var 初始成功率 = 0.7;
 var 每次成功率减少 = 0.05;
 var 最低成功率 = 0.4;
 var 每次强化属性增加值 = 30;
+var 每种材料概率加成 = 0.01;
+var 加成材料数量 = 100;
+var 加成材料种类数 = 20;
+var 启用材料加成等级 = 6;
+var 零达标罚款 = 50000000;
 var meso_id = 9999999;
 var cash_id = 9999998;
 var goldScale = 10000;
@@ -12,10 +17,15 @@ var needItems = [
     {id: meso_id, qty: 5000},
     {id: cash_id, qty: 6666},
 ];
+var 本次材料等级 = -1;
+var 本次等级材料 = [];
 
 const InventoryManipulator = Java.type('org.gms.client.inventory.manipulator.InventoryManipulator');
 const InventoryType = Java.type('org.gms.client.inventory.InventoryType');
 const CashShop = Java.type('org.gms.server.CashShop');
+const DatabaseConnection = Java.type('org.gms.util.DatabaseConnection');
+const MonsterInformationProvider = Java.type('org.gms.server.life.MonsterInformationProvider');
+const ItemInformationProvider = Java.type('org.gms.server.ItemInformationProvider');
 
 function start() {
     status = -1;
@@ -40,6 +50,20 @@ function action(mode, type, selection) {
     if (status === 0) {
         main();
     } else if (status === 1) {
+        if (selection === 0) {
+            var equip = cm.getInventory(1).getItem(1);
+            if (equip === null || !isInList(equip.getItemId())) {
+                cm.sendOk("装备栏第一格的装备不符合强化条件！");
+                cm.dispose();
+            } else if ((equip.getExpandAttribute1() || 0) < 启用材料加成等级) {
+                do强化();
+            } else {
+                提示等级材料(equip.getExpandAttribute1() || 0);
+            }
+        } else {
+            cm.dispose();
+        }
+    } else if (status === 2) {
         if (selection === 0) {
             do强化();
         } else {
@@ -66,7 +90,8 @@ function main() {
     text += "3. 成功率：初始70%，每次强化减少5%，最低40%\r\n";
     text += "4. 强化失败：装备炸掉消失\r\n";
     text += "5. 强化装备必须放在装备栏第一格\r\n";
-    text += "6. 强化需要消耗材料：\r\n";
+    text += "6. 6级起每级固定收集20种小怪掉落物，每达标1种增加1%成功率\r\n";
+    text += "7. 强化需要消耗材料：\r\n";
 
     for (var i = 0; i < needItems.length; i++) {
         var item = needItems[i];
@@ -176,6 +201,136 @@ function consumeMaterials() {
     }
 }
 
+function 获取小怪材料池() {
+    var materials = [];
+    var selectedItemIds = {};
+    var selectedMonsterIds = {};
+    var con = null;
+    var ps = null;
+    var rs = null;
+
+    try {
+        con = DatabaseConnection.getConnection();
+        ps = con.prepareStatement(
+            "SELECT DISTINCT itemid, dropperid FROM drop_data " +
+            "WHERE itemid BETWEEN 4000000 AND 4009999 " +
+            "AND questid = 0 AND chance > 0 " +
+            "ORDER BY dropperid, itemid"
+        );
+        rs = ps.executeQuery();
+
+        var monsterProvider = MonsterInformationProvider.getInstance();
+        var itemProvider = ItemInformationProvider.getInstance();
+        while (rs.next()) {
+            var itemId = rs.getInt("itemid");
+            var monsterId = rs.getInt("dropperid");
+            if (selectedItemIds[itemId] || selectedMonsterIds[monsterId] || monsterProvider.isBoss(monsterId)) {
+                continue;
+            }
+            var monsterName = monsterProvider.getMobNameFromId(monsterId);
+            var itemName = itemProvider.getName(itemId);
+            if (!monsterName || !itemName || itemName === "MISSINGNO" ||
+                itemProvider.isQuestItem(itemId) || itemProvider.isPartyQuestItem(itemId)) {
+                continue;
+            }
+            selectedItemIds[itemId] = true;
+            selectedMonsterIds[monsterId] = true;
+            materials.push({itemId: itemId, monsterId: monsterId});
+        }
+    } finally {
+        if (rs !== null) {
+            rs.close();
+        }
+        if (ps !== null) {
+            ps.close();
+        }
+        if (con !== null) {
+            con.close();
+        }
+    }
+
+    return 固定洗牌(materials);
+}
+
+function 固定洗牌(materials) {
+    var seed = 1122076;
+    for (var i = materials.length - 1; i > 0; i--) {
+        seed = (seed * 1664525 + 1013904223) >>> 0;
+        var j = seed % (i + 1);
+        var temp = materials[i];
+        materials[i] = materials[j];
+        materials[j] = temp;
+    }
+    return materials;
+}
+
+function 获取等级材料(currentLevel) {
+    var pool = 获取小怪材料池();
+    if (pool.length < 加成材料种类数) {
+        return [];
+    }
+
+    var materials = [];
+    var startIndex = ((currentLevel - 启用材料加成等级) * 加成材料种类数) % pool.length;
+    for (var i = 0; i < 加成材料种类数; i++) {
+        materials.push(pool[(startIndex + i) % pool.length]);
+    }
+    return materials;
+}
+
+function 提示等级材料(currentLevel) {
+    var equip = cm.getInventory(1).getItem(1);
+    if (equip === null || !isInList(equip.getItemId()) || (equip.getExpandAttribute1() || 0) !== currentLevel) {
+        cm.sendOk("装备栏第一格的装备不符合强化条件！");
+        cm.dispose();
+        return;
+    }
+
+    本次材料等级 = currentLevel;
+    本次等级材料 = 获取等级材料(currentLevel);
+    if (本次等级材料.length !== 加成材料种类数) {
+        cm.sendOk("当前可用的小怪掉落物不足 " + 加成材料种类数 + " 种，无法进行6级以上强化，请联系管理员。");
+        cm.dispose();
+        return;
+    }
+
+    var currentRate = Math.max(最低成功率, 初始成功率 - (currentLevel * 每次成功率减少));
+    var completedCount = 获取达标材料().length;
+    var bonusRate = Math.min(1, currentRate + completedCount * 每种材料概率加成);
+    var text = "#e" + currentLevel + "级项链固定收集清单#n\r\n\r\n";
+    text += "原成功率：#r" + (currentRate * 100).toFixed(0) + "%#k\r\n";
+    text += "当前达标：#b" + completedCount + "/" + 加成材料种类数 + "种#k\r\n";
+    text += "本次成功率：#b" + (bonusRate * 100).toFixed(0) + "%#k\r\n\r\n";
+    text += "每种持有 " + 加成材料数量 + " 个即增加1%成功率，强化时只消耗达标材料：\r\n";
+
+    for (var i = 0; i < 本次等级材料.length; i++) {
+        var material = 本次等级材料[i];
+        var itemId = material.itemId;
+        var have = cm.getItemQuantity(itemId);
+        var color = have >= 加成材料数量 ? "#b" : "#r";
+        text += color + "#v" + itemId + "# " + have + "/" + 加成材料数量 + "#k\r\n";
+    }
+
+    text += "\r\n#L0##b按当前达标数量开始强化#l";
+    cm.sendSimple(text);
+}
+
+function 获取达标材料() {
+    var completed = [];
+    for (var i = 0; i < 本次等级材料.length; i++) {
+        if (cm.getItemQuantity(本次等级材料[i].itemId) >= 加成材料数量) {
+            completed.push(本次等级材料[i]);
+        }
+    }
+    return completed;
+}
+
+function consumeCompletedMaterials(completedMaterials) {
+    for (var i = 0; i < completedMaterials.length; i++) {
+        cm.gainItem(completedMaterials[i].itemId, -加成材料数量);
+    }
+}
+
 function do强化() {
     var equip = cm.getInventory(1).getItem(1);
 
@@ -191,11 +346,32 @@ function do强化() {
         return;
     }
 
-    consumeMaterials();
-
     var player = cm.getPlayer();
     var currentLevel = equip.getExpandAttribute1() || 0;
+    var completedMaterials = [];
+    if (currentLevel >= 启用材料加成等级) {
+        if (本次材料等级 !== currentLevel || 本次等级材料.length !== 加成材料种类数) {
+            cm.sendOk("强化等级或材料清单已经变化，请重新打开项链升级界面。");
+            cm.dispose();
+            return;
+        }
+        completedMaterials = 获取达标材料();
+        if (completedMaterials.length === 0) {
+            var fine = Math.min(player.getMeso(), 零达标罚款);
+            if (fine > 0) {
+                cm.gainMeso(-fine);
+            }
+            cm.sendOk("你伤害了我，还一笑而过，我代表月亮罚你5千万。");
+            cm.dispose();
+            return;
+        }
+    }
+
+    consumeMaterials();
+    consumeCompletedMaterials(completedMaterials);
+
     var currentRate = Math.max(最低成功率, 初始成功率 - (currentLevel * 每次成功率减少));
+    currentRate = Math.min(1, currentRate + completedMaterials.length * 每种材料概率加成);
     var isSuccess = Math.random() < currentRate;
 
     if (isSuccess) {

@@ -315,7 +315,7 @@ public final class ItemConstants {
             case 135226 -> job.isA(Job.HUNTER);
             case 135227 -> job.isA(Job.CROSSBOWMAN);
             case 135228 -> job.isA(Job.BANDIT);
-            case 135229 -> job.isA(Job.ASSASSIN);
+            case 135229 -> false;
             case 135290 -> job.isA(Job.BRAWLER);
             case 135291 -> job.isA(Job.GUNSLINGER);
             case 135297 -> job.isA(Job.DAWNWARRIOR1)

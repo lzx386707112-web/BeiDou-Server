@@ -54,7 +54,12 @@ var JOBS = {
         retiredBindings: [3221011, 3221012, 3221014, 3221015, 3221016, 3221017, 3221018, 3221019, 3221020, 3221021, 3221022, 3221023, 3221024, 3221025, 3221026, 3221027, 3221028],
         retiredSkills: [3221011, 3221012, 3221014, 3221015, 3221016, 3221017, 3221018, 3221019, 3221020, 3221021, 3221022, 3221023, 3221024, 3221025, 3221026, 3221027, 3221028]
     },
-    412: {name: "夜使者", skills: Java.type("org.gms.constants.skills.NightLord").V_VI_ACTIVE_ATTACKS},
+    412: {
+        name: "夜使者",
+        skills: Java.type("org.gms.constants.skills.NightLord").V_VI_ACTIVE_ATTACKS,
+        retiredBindings: [4121010, 4121013, 4121014, 4121015, 4121021],
+        retiredSkills: [4121010, 4121013, 4121014, 4121015, 4121021]
+    },
     422: {
         name: "暗影双刀",
         skills: Java.type("org.gms.constants.skills.Shadower").V_VI_ACTIVE_ATTACKS,

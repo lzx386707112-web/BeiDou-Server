@@ -222,6 +222,38 @@ class WzVideoProperty(WzSubProperty):
         return self._data_length
 
 
+class WzRawDataProperty(WzSubProperty):
+    """Opaque modern ``RawData`` payload, commonly used for Spine skeletons."""
+
+    type_name = "RawData"
+
+    def __init__(self, name: str, parent: Optional[WzProperty] = None):
+        super().__init__(name, parent)
+        self.data_type = 0
+        self._data_offset = 0
+        self._data_length = 0
+        self._data: Optional[bytes] = None
+        self._wz_image: Optional["WzImage"] = None
+
+    @property
+    def value(self) -> int:
+        return self._data_length
+
+    def data(self) -> bytes:
+        if self._data is not None:
+            return self._data
+        if self._wz_image is None or self._data_length <= 0:
+            return b""
+        with self._wz_image.wz_file.reader_lock:
+            reader = self._wz_image.wz_file.reader
+            previous = reader.position
+            reader.seek(self._data_offset)
+            payload = reader.read(self._data_length)
+            reader.seek(previous)
+        self._data = payload
+        return payload
+
+
 # ── parser entry point ───────────────────────────────────────────────
 def parse_property_list(
     reader: "WzBinaryReader",
@@ -560,6 +592,21 @@ def _parse_extended(
         video._data_offset = reader.position
         reader.skip(video._data_length)
         return video
+
+    if ext_type == "RawData":
+        raw = WzRawDataProperty(name, parent)
+        raw._wz_image = wz_image
+        raw.data_type = reader.read_byte()
+        if raw.data_type == 1:
+            has_children = reader.read_byte()
+            if has_children == 1:
+                reader.skip(2)
+                for child in parse_property_list(reader, base_offset, raw, wz_image):
+                    raw.add(child)
+        raw._data_length = reader.read_compressed_int()
+        raw._data_offset = reader.position
+        reader.skip(raw._data_length)
+        return raw
 
     if ext_type == "UOL":
         reader.skip(1)  # reserved

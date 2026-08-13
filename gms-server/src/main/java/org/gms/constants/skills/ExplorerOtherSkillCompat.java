@@ -72,6 +72,13 @@ public final class ExplorerOtherSkillCompat {
                     replay(3221034, concat(range(1200, 30, 1500), points(1560))),
                     replay(3221035, range(2040, 30, 2370))
             )),
+            Map.entry(4121011, replays(replay(4121011, concat(
+                    range(420, 100, 720), range(780, 180, 2760)
+            )))),
+            Map.entry(4121024, replays(
+                    replay(4121024, points(0)),
+                    replay(4121025, points(180, 240, 300, 360, 420, 480))
+            )),
             Map.entry(4121026, replays(replay(4121026, concat(
                     range(1440, 30, 1980), range(2310, 30, 2520),
                     range(2580, 30, 2640), range(2760, 120, 3000)
@@ -143,6 +150,10 @@ public final class ExplorerOtherSkillCompat {
 
     public static Replay[] multiAttacks(int skillId) {
         return MULTI_ATTACKS.get(skillId);
+    }
+
+    public static boolean hidesNativeProjectile(int skillId) {
+        return skillId == 4121011 || skillId >= 4121023 && skillId <= 4121025;
     }
 
     public static String videoLayer(int skillId) {

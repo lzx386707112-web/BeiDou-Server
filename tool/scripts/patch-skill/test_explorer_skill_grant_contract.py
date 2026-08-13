@@ -101,6 +101,80 @@ class ExplorerSkillGrantContractTest(unittest.TestCase):
         self.assertIn("public void removeSkillById(int skillId)", self.character)
         self.assertIn("SkillsDO.builder().skillid(skillId)", self.character)
 
+    def test_fp_retired_skills_and_bindings_are_removed_on_claim(self):
+        block = re.search(r"212:\s*\{(.*?)\},\s*222:", self.script, re.S)
+        self.assertIsNotNone(block)
+        expected = [
+            2121009, 2121010, 2121011, 2121013, 2121014, 2121015,
+            2121016, 2121023, 2121024, 2121025, 2121026, 2121027,
+            2121029, 2121030, 2121031, 2121037,
+        ]
+        for field in ("retiredBindings", "retiredSkills"):
+            values = re.search(rf"{field}:\s*\[([^]]*)]", block.group(1))
+            self.assertIsNotNone(values, field)
+            self.assertEqual(expected, [int(value) for value in re.findall(r"\d+", values.group(1))])
+
+    def test_bishop_retired_skills_and_bindings_are_removed_on_claim(self):
+        block = re.search(r"232:\s*\{(.*?)\},\s*312:", self.script, re.S)
+        self.assertIsNotNone(block)
+        expected = [
+            2321022, 2321023, 2321025, 2321026, 2321027, 2321028, 2321036,
+        ]
+        for field in ("retiredBindings", "retiredSkills"):
+            values = re.search(rf"{field}:\s*\[([^]]*)]", block.group(1))
+            self.assertIsNotNone(values, field)
+            actual = [int(value) for value in re.findall(r"\d+", values.group(1))]
+            self.assertEqual(expected, actual, field)
+
+    def test_bowmaster_retired_skills_and_bindings_are_removed_on_claim(self):
+        block = re.search(r"312:\s*\{(.*?)\},\s*322:", self.script, re.S)
+        self.assertIsNotNone(block)
+        expected = [
+            3121011, 3121012, 3121013, 3121014, 3121015, 3121016,
+            3121020, 3121021, 3121024,
+        ]
+        for field in ("retiredBindings", "retiredSkills"):
+            values = re.search(rf"{field}:\s*\[([^]]*)]", block.group(1))
+            self.assertIsNotNone(values, field)
+            actual = [int(value) for value in re.findall(r"\d+", values.group(1))]
+            self.assertEqual(expected, actual, field)
+
+    def test_marksman_retired_skills_and_bindings_are_removed_on_claim(self):
+        block = re.search(r"322:\s*\{(.*?)\},\s*412:", self.script, re.S)
+        self.assertIsNotNone(block)
+        expected = [3221011, 3221012, *range(3221014, 3221029)]
+        for field in ("retiredBindings", "retiredSkills"):
+            values = re.search(rf"{field}:\s*\[([^]]*)]", block.group(1))
+            self.assertIsNotNone(values, field)
+            actual = [int(value) for value in re.findall(r"\d+", values.group(1))]
+            self.assertEqual(expected, actual, field)
+
+    def test_corsair_retired_skills_and_bindings_are_removed_on_claim(self):
+        block = re.search(r"522:\s*\{(.*?)\}\s*\n\};", self.script, re.S)
+        self.assertIsNotNone(block)
+        expected = [
+            5221016, 5221017, 5221018, 5221019,
+            5221020, 5221021, 5221028, 5221029,
+        ]
+        for field in ("retiredBindings", "retiredSkills"):
+            values = re.search(rf"{field}:\s*\[([^]]*)]", block.group(1))
+            self.assertIsNotNone(values, field)
+            actual = [int(value) for value in re.findall(r"\d+", values.group(1))]
+            self.assertEqual(expected, actual, field)
+
+    def test_night_lord_rapid_throw_and_binding_are_removed_on_claim(self):
+        block = re.search(r"412:\s*\{(.*?)\},\s*422:", self.script, re.S)
+        self.assertIsNotNone(block)
+        for field in ("retiredBindings", "retiredSkills"):
+            values = re.search(rf"{field}:\s*\[([^]]*)]", block.group(1))
+            self.assertIsNotNone(values, field)
+            self.assertEqual(
+                [4121010, 4121013, 4121014, 4121015, 4121021],
+                [int(value) for value in re.findall(r"\d+", values.group(1))],
+                field,
+            )
+        self.assertNotIn(4121013, active_ids("NightLord"))
+
     def test_explorers_are_not_auto_granted_or_mastered(self):
         for class_name in EXPLORER_CLASSES.values():
             self.assertNotIn(f"{class_name}.V_VI_ACTIVE_ATTACKS", self.masteries)

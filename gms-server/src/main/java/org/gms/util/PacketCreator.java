@@ -7578,6 +7578,33 @@ public class PacketCreator {
         return p;
     }
 
+    public static Packet nameplatePowerUpdate(Character chr) {
+        ItemInformationProvider ii = ItemInformationProvider.getInstance();
+        boolean enabled = chr.getInventory(InventoryType.EQUIPPED).list().stream()
+                .anyMatch(item -> ii.isNameTagRing(item.getItemId()));
+        return nameplatePowerUpdate(chr.getId(), enabled, calculateNameplatePower(chr));
+    }
+
+    static Packet nameplatePowerUpdate(int characterId, boolean enabled, int power) {
+        OutPacket p = OutPacket.create(SendOpcode.NAMEPLATE_POWER_UPDATE);
+        p.writeInt(characterId);
+        p.writeBool(enabled);
+        p.writeInt(enabled ? power : 0);
+        return p;
+    }
+
+    static int calculateNameplatePower(Character chr) {
+        return calculateNameplatePower(chr.getTotalStr(), chr.getTotalDex(), chr.getTotalInt(), chr.getTotalLuk(),
+                chr.getTotalWatk(), chr.getTotalMagic(), chr.getMaxHp(), chr.getMaxMp());
+    }
+
+    static int calculateNameplatePower(int str, int dex, int intStat, int luk, int watk, int magic, int maxHp, int maxMp) {
+        long stats = (long) str + dex + intStat + luk;
+        long attack = Math.max(watk, magic);
+        long power = stats * Math.max(1L, attack) + maxHp / 10L + maxMp / 20L;
+        return (int) Math.min(Integer.MAX_VALUE, Math.max(0L, power));
+    }
+
     public static Packet setItemUpdate(Character chr) {
         SetItemManager.Result result = SetItemManager.compute(chr);
         ItemInformationProvider ii = ItemInformationProvider.getInstance();

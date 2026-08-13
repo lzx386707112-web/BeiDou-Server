@@ -74,8 +74,11 @@ class ShoulderSlotContractTest {
         assertTrue(ItemConstants.canEquipSecondaryWeapon(1352256, Job.BISHOP));
         assertTrue(ItemConstants.canEquipSecondaryWeapon(1352266, Job.BOWMASTER));
         assertTrue(ItemConstants.canEquipSecondaryWeapon(1352276, Job.MARKSMAN));
+        assertTrue(ItemConstants.canEquipSecondaryWeapon(1352286, Job.BANDIT));
         assertTrue(ItemConstants.canEquipSecondaryWeapon(1352286, Job.SHADOWER));
-        assertTrue(ItemConstants.canEquipSecondaryWeapon(1352296, Job.NIGHTLORD));
+        assertFalse(ItemConstants.canEquipSecondaryWeapon(1352296, Job.ASSASSIN));
+        assertFalse(ItemConstants.canEquipSecondaryWeapon(1352296, Job.HERMIT));
+        assertFalse(ItemConstants.canEquipSecondaryWeapon(1352296, Job.NIGHTLORD));
         assertTrue(ItemConstants.canEquipSecondaryWeapon(1352906, Job.BUCCANEER));
         assertTrue(ItemConstants.canEquipSecondaryWeapon(1352916, Job.CORSAIR));
         assertTrue(ItemConstants.canEquipSecondaryWeapon(1352975, Job.DAWNWARRIOR4));
@@ -83,6 +86,7 @@ class ShoulderSlotContractTest {
         assertTrue(ItemConstants.canEquipSecondaryWeapon(1352975, Job.WINDARCHER4));
         assertTrue(ItemConstants.canEquipSecondaryWeapon(1352975, Job.NIGHTWALKER4));
         assertTrue(ItemConstants.canEquipSecondaryWeapon(1352975, Job.THUNDERBREAKER4));
+        assertFalse(ItemConstants.canEquipSecondaryWeapon(1352206, Job.SHADOWER));
         assertFalse(ItemConstants.canEquipSecondaryWeapon(1352975, Job.HERO));
         assertFalse(ItemConstants.canEquipSecondaryWeapon(1352406, Job.BISHOP));
     }

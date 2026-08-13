@@ -137,6 +137,8 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
     private static final int[] ARROW_RAIN_FIELD_TIMES_MS = intervalTimes(0, 240, 2400);
     private static final Map<Character, ArrowRainState> ARROW_RAIN_STATES =
             new WeakHashMap<>();
+    private static final Map<Character, Boolean> FOUR_SEASONS_RAIN_FRENZY =
+            new WeakHashMap<>();
     private static final class ArrowRainState {
         private final long expiresAt;
         private long nextFieldAt;
@@ -233,6 +235,8 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
 
     private static boolean usesFixedAttackOrigin(int skillId) {
         return skillId == Bowmaster.ARROW_RAIN
+                || skillId == 4121011
+                || skillId == 4121023
                 || skillId == Marksman.TRUE_SNIPING
                 || skillId == Marksman.CHARGED_ARROW
                 || skillId == Marksman.LONG_RANGE_TRUE_SHOT_VI
@@ -246,6 +250,33 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
                 || skillId == WindArcher.ANEMOI
                 || skillId == WindArcher.MISTRAL_SPRING
                 || skillId == WindArcher.ELEMENTAL_TEMPEST;
+    }
+
+    private static boolean hasFourSeasonsRainFrenzy(Character chr, AttackInfo attack) {
+        if (attack.skill != 4121023) {
+            return false;
+        }
+        synchronized (FOUR_SEASONS_RAIN_FRENZY) {
+            return FOUR_SEASONS_RAIN_FRENZY.containsKey(chr);
+        }
+    }
+
+    private static void consumeFourSeasonsRainFrenzy(Character chr, AttackInfo attack) {
+        if (attack.skill != 4121023) {
+            return;
+        }
+        synchronized (FOUR_SEASONS_RAIN_FRENZY) {
+            FOUR_SEASONS_RAIN_FRENZY.remove(chr);
+        }
+    }
+
+    private static void markFourSeasonsRainHit(Character chr, AttackInfo attack) {
+        if (attack.skill != 4121023 || attack.numAttacked <= 0) {
+            return;
+        }
+        synchronized (FOUR_SEASONS_RAIN_FRENZY) {
+            FOUR_SEASONS_RAIN_FRENZY.put(chr, Boolean.TRUE);
+        }
     }
 
     private void applyAttackCostOnly(AttackInfo attack, Character chr, int bulletCount) {
@@ -1168,6 +1199,7 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
         chr.getAutobanManager().spam(8);*/
 
         AttackInfo attack = parseDamage(p, chr, true, false);
+        boolean fourSeasonsRainFrenzy = hasFourSeasonsRainFrenzy(chr, attack);
         applyShadowBitePassive(attack, chr);
         List<Integer> shadowBiteDamageTemplate = attack.skill == NightWalker.SHADOW_BITE
                 ? copyDamageTemplate(attack)
@@ -1334,6 +1366,9 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
                         || attack.skill == 14101006 || attack.skill == 13101005) {
                     visProjectile = 0;
                 }
+                if (ExplorerOtherSkillCompat.hidesNativeProjectile(attack.skill)) {
+                    visProjectile = 0;
+                }
 
                 final Packet packet;
                 switch (attack.skill) {
@@ -1347,7 +1382,9 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
                         packet = PacketCreator.rangedAttack(chr, attack.skill, attack.skilllevel, attack.stance, attack.numAttackedAndDamage, visProjectile, attack.allDamage, attack.speed, attack.direction, attack.display);
                         break;
                 }
-                chr.getMap().broadcastMessage(chr, packet, false, true);
+                if (!fourSeasonsRainFrenzy) {
+                    chr.getMap().broadcastMessage(chr, packet, false, true);
+                }
                 String explorerVideoLayer = ExplorerOtherSkillCompat.videoLayer(attack.skill);
                 if (explorerVideoLayer != null) {
                     chr.sendPacket(PacketCreator.showEffect(explorerVideoLayer));
@@ -1374,7 +1411,10 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
                     chr.cancelBuffStats(BuffStat.WIND_WALK);
                 }
 
-                if (usesScheduledDamageOnly(attack.skill)) {
+                if (fourSeasonsRainFrenzy || usesScheduledDamageOnly(attack.skill)) {
+                    if (fourSeasonsRainFrenzy) {
+                        consumeFourSeasonsRainFrenzy(chr, attack);
+                    }
                     applyAttackCostOnly(attack, chr, bulletCount);
                 } else {
                     applyAttack(attack, chr, bulletCount);
@@ -1387,13 +1427,18 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
                 }
                 triggerArrowRainField(attack, chr);
                 ExplorerOtherSkillCompat.Replay[] explorerReplays =
-                        ExplorerOtherSkillCompat.multiAttacks(attack.skill);
+                        fourSeasonsRainFrenzy
+                                ? ExplorerOtherSkillCompat.multiAttacks(4121024)
+                                : ExplorerOtherSkillCompat.multiAttacks(attack.skill);
                 if (explorerReplays != null) {
                     for (ExplorerOtherSkillCompat.Replay replay : explorerReplays) {
                         scheduleTrackingAttacks(
                                 attack, chr, replay.timesMs(), replay.skillId()
                         );
                     }
+                }
+                if (!fourSeasonsRainFrenzy) {
+                    markFourSeasonsRainHit(chr, attack);
                 }
             }
         }
