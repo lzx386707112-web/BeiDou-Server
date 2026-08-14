@@ -3,15 +3,24 @@
 from __future__ import annotations
 
 import re
+import sys
 import unittest
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(ROOT / "tool/wz-python"))
+
+from wzpy import WzImage, WzKey  # noqa: E402
+
 CONSTANTS = ROOT / "gms-server/src/main/java/org/gms/constants/skills"
 CHARACTER = ROOT / "gms-server/src/main/java/org/gms/client/Character.java"
 SCRIPT = ROOT / "gms-server/scripts-zh-CN/BeiDouSpecial/冒险家五六转攻击技能.js"
 SKILL_CENTER = ROOT / "gms-server/scripts-zh-CN/BeiDouSpecial/技能中心.js"
+FIFTH_JOB_GODDESS = ROOT / "gms-server/scripts-zh-CN/npc/9900008.js"
+SERVER_CONSUME = ROOT / "gms-server/wz/Item.wz/Consume/0202.img.xml"
+SERVER_CONSUME_STRING = ROOT / "gms-server/wz/String.wz/Consume.img.xml"
 
 EXPLORER_CLASSES = {
     112: "Hero",
@@ -188,10 +197,52 @@ class ExplorerSkillGrantContractTest(unittest.TestCase):
         self.assertIn("Job.THUNDERBREAKER3", self.masteries)
         self.assertIn("Job.THUNDERBREAKER4", self.masteries)
 
-    def test_skill_center_opens_explorer_script(self):
+    def test_explorer_script_is_only_opened_by_fifth_job_item(self):
         center = SKILL_CENTER.read_text(encoding="utf-8")
-        self.assertIn("冒险家五、六转攻击技能", center)
-        self.assertIn('openNpc("冒险家五六转攻击技能")', center)
+        self.assertNotIn("冒险家五、六转攻击技能", center)
+        self.assertNotIn('openNpc("冒险家五六转攻击技能")', center)
+        consume = SERVER_CONSUME.read_text(encoding="utf-8")
+        self.assertIn('<imgdir name="02029006">', consume)
+        self.assertIn('<int name="npc" value="9900001"/>', consume)
+        self.assertIn('<string name="script" value="冒险家五六转攻击技能"/>', consume)
+        self.assertIn('<int name="remove" value="0"/>', consume)
+        strings = SERVER_CONSUME_STRING.read_text(encoding="utf-8")
+        self.assertIn('<imgdir name="2029006">', strings)
+        self.assertIn('<string name="name" value="5转技能"/>', strings)
+
+    def test_fifth_job_goddess_grants_item_to_supported_explorers(self):
+        goddess = FIFTH_JOB_GODDESS.read_text(encoding="utf-8")
+        self.assertNotIn("等全部做好再开放好了", goddess)
+        jobs = re.search(r"EXPLORER_FOURTH_JOBS\s*=\s*\{([^}]*)}", goddess, re.S)
+        self.assertIsNotNone(jobs)
+        actual = {int(value) for value in re.findall(r"(\d+)\s*:\s*true", jobs.group(1))}
+        self.assertEqual(set(EXPLORER_CLASSES), actual)
+        self.assertIn("cm.getPlayer().getLevel() < ADVANCEMENT_LEVEL", goddess)
+        self.assertIn("cm.haveItem(EXPLORER_FIFTH_JOB_ITEM_ID, 1)", goddess)
+        self.assertIn("cm.canHold(EXPLORER_FIFTH_JOB_ITEM_ID, 1)", goddess)
+        self.assertIn("cm.gainItem(EXPLORER_FIFTH_JOB_ITEM_ID, 1)", goddess)
+
+    def test_public_v_vi_attacks_are_hidden_only_from_legacy_skill_window(self):
+        for job_id, class_name in EXPLORER_CLASSES.items():
+            expected = active_ids(class_name)
+            client_path = ROOT / f"clien/Data/Skill/{job_id}.img"
+            client = WzImage.from_bytes(
+                client_path.read_bytes(), key=WzKey.for_region("GMS"), name=client_path.name
+            )
+            client.parse()
+            self.assertFalse(client.truncated, job_id)
+            self.assertFalse(client.parse_warnings, job_id)
+            server = ET.parse(ROOT / f"gms-server/wz/Skill.wz/{job_id}.img.xml").getroot()
+            skills = server.find("./imgdir[@name='skill']")
+            for skill_id in expected:
+                invisible = client.root.get(f"skill/{skill_id}/invisible")
+                self.assertIsNotNone(invisible, skill_id)
+                self.assertEqual(1, int(invisible.value), skill_id)
+                server_invisible = skills.find(
+                    f"./imgdir[@name='{skill_id}']/int[@name='invisible']"
+                )
+                self.assertIsNotNone(server_invisible, skill_id)
+                self.assertEqual("1", server_invisible.get("value"), skill_id)
 
 
 if __name__ == "__main__":

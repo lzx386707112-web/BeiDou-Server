@@ -19463,4 +19463,14 @@
       <int name="hasItemTime" value="30"/>
     </imgdir>
   </imgdir>
+  <imgdir name="02029006">
+    <imgdir name="info">
+      <int name="price" value="1"/><int name="slotMax" value="1"/>
+      <int name="tradeBlock" value="1"/>
+      <canvas name="icon" width="1" height="1"><string name="_outlink" value="Item/Consume/0202.img/02022614/info/icon"/></canvas>
+      <canvas name="iconRaw" width="1" height="1"><string name="_outlink" value="Item/Consume/0202.img/02022614/info/iconRaw"/></canvas>
+      <int name="notSale" value="1"/>
+    </imgdir>
+    <imgdir name="spec"><int name="npc" value="9900001"/><string name="script" value="冒险家五六转攻击技能"/><int name="remove" value="0"/><int name="isNpc" value="1"/></imgdir>
+  </imgdir>
 </imgdir>

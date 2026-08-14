@@ -9,6 +9,14 @@ var CORE_GEMSTONE_COUNT = 100;
 var SHORTCUT_CORE_GEMSTONE_COUNT = 20;
 var ADVANCEMENT_LEVEL = 180;
 var ADVANCEMENT_MESO = 500000000;
+var EXPLORER_FIFTH_JOB_ITEM_ID = 2029006;
+var EXPLORER_FOURTH_JOBS = {
+    112: true, 122: true, 132: true,
+    212: true, 222: true, 232: true,
+    312: true, 322: true,
+    412: true, 422: true,
+    512: true, 522: true
+};
 var CYGNUS_FOURTH_JOBS = {
     11: {id: 1112, name: "魂骑士"},
     12: {id: 1212, name: "炎术士"},
@@ -18,8 +26,7 @@ var CYGNUS_FOURTH_JOBS = {
 };
 
 function start() {
-    cm.sendOk("等全部做好再开放好了");
-    cm.dispose();
+    action(1, 0, 0);
 }
 
 function action(mode, type, selection) {
@@ -31,6 +38,10 @@ function action(mode, type, selection) {
     status++;
     if (status === 0) {
         var jobId = cm.getPlayer().getJob().getId();
+        if (EXPLORER_FOURTH_JOBS[jobId] === true) {
+            grantExplorerFifthJobItem();
+            return;
+        }
         if (!cm.getPlayer().isCygnus()) {
             cm.sendOk("当前职业还没开放，你就等吧！");
             cm.dispose();
@@ -93,6 +104,30 @@ function action(mode, type, selection) {
         return;
     }
 
+    cm.dispose();
+}
+
+function grantExplorerFifthJobItem() {
+    if (cm.getPlayer().getLevel() < ADVANCEMENT_LEVEL) {
+        cm.sendOk("领取 #i" + EXPLORER_FIFTH_JOB_ITEM_ID + "# #b#t" + EXPLORER_FIFTH_JOB_ITEM_ID
+            + "##k 需要达到 " + ADVANCEMENT_LEVEL + " 级。");
+        cm.dispose();
+        return;
+    }
+    if (cm.haveItem(EXPLORER_FIFTH_JOB_ITEM_ID, 1)) {
+        cm.sendOk("你已经持有 #i" + EXPLORER_FIFTH_JOB_ITEM_ID + "# #b#t"
+            + EXPLORER_FIFTH_JOB_ITEM_ID + "##k，可以把它放到快捷键上使用。");
+        cm.dispose();
+        return;
+    }
+    if (!cm.canHold(EXPLORER_FIFTH_JOB_ITEM_ID, 1)) {
+        cm.sendOk("消耗栏背包空间不足，请整理后再来。");
+        cm.dispose();
+        return;
+    }
+    cm.gainItem(EXPLORER_FIFTH_JOB_ITEM_ID, 1);
+    cm.sendOk("已获得 #i" + EXPLORER_FIFTH_JOB_ITEM_ID + "# #b#t"
+        + EXPLORER_FIFTH_JOB_ITEM_ID + "##k。把它放到快捷键上即可随时打开五转技能面板。");
     cm.dispose();
 }
 
