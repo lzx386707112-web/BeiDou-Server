@@ -2,6 +2,24 @@
 
 来源客户端：`/Users/lizixian/Documents/mxd/神说/Data`。
 
+## 2026-08-14：地图数据退役
+
+按当前兼容策略，鲁塔比斯地图数据已从客户端和服务端下线，只保留 Boss 与任务相关数据。
+
+已删除范围：
+
+- 客户端与服务端 `1052*.img` / `1052*.img.xml` 共 191 张鲁塔比斯地图。
+- 后续任务包恢复的剧情入口地图 `910700200`、`910700300`。
+- Root Abyss 地图专用资源：`Back/rootabyss*`、`Obj/rootabyss`、`Obj/gran_helisium`、`Tile/rootabyss*`、`Sound/Bgm29`。
+- 鲁塔比斯地图内部 portal/NPC 脚本；外部入口 `go_rootabyss.js` 保留为禁用提示，避免现有地图 portal 指向缺失脚本。
+- 服务端 `String.wz/Map.img.xml` / `wz-zh-CN` 中对应地图名节点。
+
+保留范围：
+
+- 普通与进阶鲁塔比斯 Boss 的 Mob、String/Mob、掉落、MobSkill 兼容和远征脚本数据。
+- 鲁塔比斯任务 WZ、任务脚本、NPC/Mob/Reactor 资源。
+- `chewchewIsland` 地图资源，因为它被非鲁塔比斯地图复用。
+
 ## 第一阶段：地图、普通小怪和进阶 Boss
 
 本阶段先迁鲁塔比斯地图、地图素材、地图 NPC、地图 reactor 兼容资源，以及地图里出现的普通小怪；随后补入四个进阶 Boss 类型的兼容闭环。Boss 逻辑以旧客户端稳定召唤为第一目标，专属高版本机制后续逐项恢复。

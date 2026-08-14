@@ -7,9 +7,8 @@ function start() {
 
 function action(mode, type, selection) {
     if (mode < 0) {
-        // 玩家跳过/关闭对话 — 仍然传送，避免卡图
+        // 玩家跳过/关闭对话时仍完成任务，避免卡住
 		cm.forceCompleteQuest(30004);
-        cm.warp(910700200, 0);
         cm.dispose();
         return;
     }
@@ -21,7 +20,6 @@ function action(mode, type, selection) {
 
     }  else {
         cm.forceCompleteQuest(30004);
-        cm.warp(910700200, 0);
         cm.dispose();
     }
 }

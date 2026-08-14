@@ -61,7 +61,6 @@ function action(mode, type, selection) {
         cm.sendNext("现在你知道你自己是多么可悲的存在了！？\r\n这次暂且饶过你这卑贱的生命，别再踏入此处半步，我的仁慈是有限度的。");
     } else if (status == 16) {
         cm.forceCompleteQuest(30006);
-        cm.warp(910700200, 0);
         cm.dispose();
     }
 }

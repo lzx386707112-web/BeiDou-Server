@@ -24,9 +24,9 @@ function start(mode, type, selection) {
         } else if (status == 8) {
             qm.sendNextPrev("#b#h0##k！！！");
         } else if (status == 9) {
-            qm.sendOk("#b#h0##k！！！");
+            qm.sendOk("#b#h0##k！！！\r\n\r\n鲁塔比斯剧情地图已下线，任务记录会保留。");
             qm.forceStartQuest();
-            qm.warp(910700300, 0);
+            qm.forceCompleteQuest();
             qm.dispose();
         }
     }

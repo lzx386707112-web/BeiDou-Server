@@ -20,8 +20,7 @@ function start(mode, type, selection) {
         if (status == 0) {
             qm.sendAcceptDecline("#b#h0##k！情况非常紧急，来不及解释了。请尽快去#b鲁塔比斯#k看看！");
         } else if (status == 1) {
-            qm.sendOk("#b#h0##k，我会用神兽的力量立即把你传送过去。");
-            qm.warp(910700200, 0);
+            qm.sendOk("鲁塔比斯地图已下线，任务记录会保留并继续推进。");
             qm.forceStartQuest();
 			qm.forceCompleteQuest();
             qm.dispose();
