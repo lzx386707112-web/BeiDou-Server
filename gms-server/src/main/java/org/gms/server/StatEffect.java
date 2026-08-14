@@ -746,7 +746,6 @@ public class StatEffect {
                 case Bishop.DRAGON_5TH_SWIFT:
                 case Bishop.ANGEL_OF_BALANCE:
                 case Bishop.FOUNTAIN_FOR_ANGEL_VI:
-                case NightLord.DARK_LORDS_SECRET_SCROLL:
                 case DarkKnight.BEHOLDER:
                 case Outlaw.GAVIOTA:
                 case DawnWarrior.SOUL:
@@ -1868,7 +1867,6 @@ public class StatEffect {
             case Bishop.DRAGON_2217_SWIFT:
             case Bishop.DRAGON_5TH_SWIFT:
             case Bishop.ANGEL_OF_BALANCE:
-            case NightLord.DARK_LORDS_SECRET_SCROLL:
             case DawnWarrior.SOUL:
             case BlazeWizard.FLAME:
             case BlazeWizard.IFRIT:

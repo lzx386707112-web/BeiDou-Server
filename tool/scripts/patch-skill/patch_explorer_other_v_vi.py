@@ -214,13 +214,13 @@ BOWMASTER_RETIRED_SKILL_IDS = (
     3121020, 3121021, 3121024,
 )
 NIGHT_LORD_RETIRED_SOURCE_IDS = frozenset({
-    400041001, 400041059, 400041060, 4140011, 4141007,
+    400041001, 400041038, 400041059, 400041060, 4140011, 4141007,
 })
 NIGHT_LORD_RETIRED_SKILL_IDS = (
-    4121010, 4121013, 4121014, 4121015, 4121021,
+    4121010, 4121012, 4121013, 4121014, 4121015, 4121021,
 )
 NIGHT_LORD_CLIENT_REPLACEMENT_IDS = (
-    4121011, 4121012, *range(4121016, 4121021), *range(4121022, 4121030),
+    4121011, *range(4121016, 4121021), *range(4121022, 4121030),
 )
 NIGHT_LORD_PROJECTILE_IDS = frozenset({
     4121011, 4121016, 4121017, 4121019, 4121020, 4121026, 4121027,
@@ -714,15 +714,26 @@ def build_runtime_jobs() -> tuple[RuntimeJob, ...]:
 def multi_attack_schedule(job: RuntimeJob, spec: engine.SkillSpec) -> dict[int, tuple[int, ...]]:
     root = ET.parse(MS_EXPORT_ROOT / f"{spec.source_id}.xml").getroot()
     timeline = named_child(root, "multiAttackInfo")
-    if timeline is None:
-        return {}
     elapsed = 0
     grouped: dict[int, list[int]] = {}
-    for phase in timeline:
-        elapsed += scalar(phase, "attackTime")
-        source_id = scalar(phase, "x", spec.source_id)
-        replay_id = job.target_by_source.get(source_id, spec.target_id)
-        grouped.setdefault(replay_id, []).append(elapsed)
+    if timeline is not None:
+        for phase in timeline:
+            elapsed += scalar(phase, "attackTime")
+            source_id = scalar(phase, "x", spec.source_id)
+            replay_id = job.target_by_source.get(source_id, spec.target_id)
+            grouped.setdefault(replay_id, []).append(elapsed)
+    if spec.source_id == 4141500:
+        controller = ET.parse(MS_EXPORT_ROOT / "4141502.xml").getroot()
+        common = named_child(controller, "common")
+        duration_ms = scalar(common, "time") * 1000
+        interval_ms = scalar(common, "subTime")
+        follow_up = controller.find(
+            "./imgdir[@name='extraSkillInfo']/imgdir/int[@name='skill']"
+        )
+        if follow_up is None:
+            raise RuntimeError("Forbidden Talisman field controller has no follow-up skill")
+        replay_id = job.target_by_source[int(follow_up.get("value"))]
+        grouped[replay_id] = list(range(interval_ms, duration_ms, interval_ms))
     return {skill_id: tuple(times) for skill_id, times in grouped.items()}
 
 
@@ -1272,19 +1283,21 @@ def replace_fuma_shuriken_ball(target, key, groups, metadata) -> None:
             raise RuntimeError(f"unexpected Fuma Shuriken phase: {path}")
         phases.append(variants[0])
 
-    # The legacy MagicBullet is destroyed as soon as it reaches its endpoint,
-    # so it can only own the travelling phase. The compatibility DLL creates
-    # fumaHold as a stationary MagicBullet at that endpoint for hold + fade.
     ball = engine.WzSubProperty("ball", target)
     engine.base.merge_tracks(phases[0], [], ball, key)
     engine.base.replace_child(target, ball)
+    target._children.pop("fumaHold", None)
 
-    hold = engine.WzSubProperty("fumaHold", target)
-    engine.base.merge_tracks(phases[1], [], hold, key)
-    for index in range(6, 50):
-        hold.add(engine.WzUolProperty(str(index), str(index % 6), hold))
-    engine.base.merge_tracks(phases[2], [], hold, key, start_index=50)
-    engine.base.replace_child(target, hold)
+    summon = engine.WzSubProperty("summon", target)
+    for state, frames in (
+        ("summoned", phases[1]),
+        ("stand", phases[1]),
+        ("die", phases[2]),
+    ):
+        action = engine.WzSubProperty(state, summon)
+        engine.base.merge_tracks(frames, [], action, key)
+        summon.add(action)
+    engine.base.replace_child(target, summon)
 
 
 def replace_night_lord_ball_variant(
@@ -1323,50 +1336,6 @@ def add_night_lord_projectile(target, key, groups, metadata, spec) -> None:
         )
     if spec.target_id in NIGHT_LORD_PROJECTILE_IDS:
         add_level_ball_references(target)
-
-
-def encoded_night_lord_summon_action(
-    summon, key, groups, metadata, source_id: int, name: str, expected: int
-):
-    variants = engine.tracks(groups, metadata, source_id, f"summon/{name}")
-    if len(variants) != 1 or len(variants[0]) != expected:
-        raise RuntimeError(
-            f"unexpected Night Lord summon action: {source_id}/{name}"
-        )
-    action = engine.WzSubProperty(name, summon)
-    engine.base.merge_tracks(variants[0], [], action, key)
-    summon.add(action)
-    return action
-
-
-def add_night_lord_summon(target, key, groups, metadata, spec) -> None:
-    if spec.target_id == 4121012:
-        summon = engine.WzSubProperty("summon", target)
-        encoded_night_lord_summon_action(
-            summon, key, groups, metadata, spec.source_id, "summoned", 17
-        )
-        encoded_night_lord_summon_action(
-            summon, key, groups, metadata, spec.source_id, "stand", 10
-        )
-        attack = engine.WzSubProperty("attack1", summon)
-        info = engine.WzSubProperty("info", attack)
-        attack_range = engine.WzSubProperty("range", info)
-        engine.set_vector(attack_range, "lt", (-400, -650))
-        engine.set_vector(attack_range, "rb", (400, 50))
-        info.add(attack_range)
-        engine.set_int(info, "type", 1)
-        engine.set_int(info, "attackAfter", 720)
-        engine.set_int(info, "mobCount", 12)
-        attack.add(info)
-        for frame_index in range(23):
-            attack.add(engine.WzUolProperty(
-                str(frame_index), f"../die/{frame_index}", attack
-            ))
-        summon.add(attack)
-        encoded_night_lord_summon_action(
-            summon, key, groups, metadata, spec.source_id, "die", 23
-        )
-        engine.base.replace_child(target, summon)
 
 
 def add_marksman_projectile(target, key, groups, metadata, spec) -> None:
@@ -1613,7 +1582,6 @@ def build_skill(spec, parent, key, groups, metadata):
                 target, key, groups, metadata
             )
         add_night_lord_projectile(target, key, groups, metadata, spec)
-        add_night_lord_summon(target, key, groups, metadata, spec)
         apply_night_lord_visual_metadata(target, metadata, spec)
         bullet_count = NIGHT_LORD_BULLET_COUNTS.get(spec.target_id)
         if bullet_count is not None:

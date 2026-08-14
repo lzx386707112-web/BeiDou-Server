@@ -34,9 +34,8 @@ public class NightLord {
     public static final int TRIPLE_THROW = 4121007;
     public static final int NINJA_STORM = 4121008;
     public static final int HEROS_WILL = 4121009;
-    public static final int DARK_LORDS_SECRET_SCROLL = 4121012;
     public static final int[] V_VI_ACTIVE_ATTACKS = {
-            4121011, 4121012, 4121016, 4121019,
+            4121011, 4121016, 4121019,
             4121022, 4121023, 4121026, 4121028
     };
 }

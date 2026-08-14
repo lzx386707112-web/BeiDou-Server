@@ -21,8 +21,8 @@ from wzpy import WzImage, WzKey  # noqa: E402
 from wzpy.writer import encode_compressed_int, re_encrypt_string  # noqa: E402
 
 
-RETIRED_SKILL_IDS = (4121010, 4121013, 4121014, 4121015, 4121021)
-PROTECTED_SKILL_IDS = (4121012, 4121016, 4121017)
+RETIRED_SKILL_IDS = (4121010, 4121012, 4121013, 4121014, 4121015, 4121021)
+PROTECTED_SKILL_IDS = (4121016, 4121017)
 CLIENT_SKILL = ROOT / "clien/Data/Skill/412.img"
 CLIENT_STRING = ROOT / "clien/Data/String/Skill.img"
 SERVER_SKILL = ROOT / "gms-server/wz/Skill.wz/412.img.xml"
@@ -103,7 +103,7 @@ def patch_client_skill(dry_run: bool) -> None:
     ).to_bytes(4, "little")
     if dry_run:
         return
-    temporary = CLIENT_SKILL.with_name(CLIENT_SKILL.name + ".retire-rapid-throw.tmp")
+    temporary = CLIENT_SKILL.with_name(CLIENT_SKILL.name + ".retire-night-lord.tmp")
     temporary.write_bytes(updated)
     os.replace(temporary, CLIENT_SKILL)
     after_order, after = record_bytes(CLIENT_SKILL)
@@ -246,7 +246,7 @@ def patch_client_equipment(dry_run: bool) -> None:
         del updated[start:end]
         if dry_run:
             continue
-        temporary = path.with_name(path.name + ".retire-rapid-throw.tmp")
+        temporary = path.with_name(path.name + ".retire-night-lord.tmp")
         temporary.write_bytes(updated)
         os.replace(temporary, path)
         verified = WzImage.from_file(str(path), key=WzKey.for_region("GMS"), name=path.name)

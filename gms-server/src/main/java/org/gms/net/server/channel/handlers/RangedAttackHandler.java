@@ -54,6 +54,8 @@ import org.gms.server.StatEffect;
 import org.gms.server.TimerManager;
 import org.gms.server.life.Monster;
 import org.gms.server.maps.MapleMap;
+import org.gms.server.maps.Summon;
+import org.gms.server.maps.SummonMovementType;
 import org.gms.util.PacketCreator;
 import org.gms.util.Randomizer;
 
@@ -86,6 +88,12 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
             "customSkill/windArcher/mistralSpringVideoLayer";
     private static final String ELEMENTAL_TEMPEST_VIDEO_LAYER =
             "customSkill/windArcher/elementalTempestVideoLayer";
+    private static final int FUMA_SHURIKEN_SUMMON_DELAY_MS = 780;
+    private static final int FUMA_SHURIKEN_HOLD_MS = 2000;
+    private static final int FUMA_SHURIKEN_TRAVEL_X = 600;
+    private static final int FUMA_SHURIKEN_TRAVEL_START_MS = 420;
+    private static final int FUMA_SHURIKEN_TRAVEL_DURATION_MS = 360;
+    private static final int FUMA_SHURIKEN_ATTACK_SIZE = 280;
     private static final int[] RAPID_THROW_UPPER_TIMES_MS = intervalTimes(240, 360, 2400);
     private static final int[] RAPID_THROW_MIDDLE_TIMES_MS = intervalTimes(360, 360, 2520);
     private static final int[] RAPID_THROW_LOWER_TIMES_MS = intervalTimes(480, 360, 2280);
@@ -299,6 +307,43 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
         return chr.isLoggedIn() && chr.isAlive() && chr.getMap() == expectedMap;
     }
 
+    private static void removeFumaShurikenVisual(
+            Character chr,
+            MapleMap expectedMap,
+            Summon summon
+    ) {
+        expectedMap.broadcastMessage(PacketCreator.removeSummon(summon, true));
+        expectedMap.removeMapObject(summon);
+        chr.removeVisibleMapObject(summon);
+    }
+
+    private static void spawnFumaShurikenVisual(AttackInfo attack, Character chr) {
+        MapleMap expectedMap = chr.getMap();
+        Point castPosition = new Point(chr.getPosition());
+        boolean facingLeft = attack.direction != 0;
+        int endpointX = castPosition.x + (facingLeft
+                ? -FUMA_SHURIKEN_TRAVEL_X
+                : FUMA_SHURIKEN_TRAVEL_X);
+        Point endpoint = new Point(endpointX, castPosition.y);
+        TimerManager.getInstance().schedule(() -> {
+            if (!canContinueTrackingAttack(chr, expectedMap)) {
+                return;
+            }
+            Summon visual = new Summon(
+                    chr,
+                    4121011,
+                    endpoint,
+                    SummonMovementType.STATIONARY
+            );
+            visual.setStance(facingLeft ? 1 : 0);
+            expectedMap.spawnSummon(visual);
+            TimerManager.getInstance().schedule(
+                    () -> removeFumaShurikenVisual(chr, expectedMap, visual),
+                    FUMA_SHURIKEN_HOLD_MS
+            );
+        }, FUMA_SHURIKEN_SUMMON_DELAY_MS);
+    }
+
     private static int decodeRepeatedDamage(int damage) {
         if (damage >= 0) {
             return damage;
@@ -383,6 +428,33 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
         return result;
     }
 
+    private static Point fumaShurikenAttackOrigin(
+            Point castOrigin,
+            boolean facingLeft,
+            int attackTimeMs
+    ) {
+        int elapsed = Math.max(0, Math.min(
+                FUMA_SHURIKEN_TRAVEL_DURATION_MS,
+                attackTimeMs - FUMA_SHURIKEN_TRAVEL_START_MS
+        ));
+        int travelled = FUMA_SHURIKEN_TRAVEL_X * elapsed
+                / FUMA_SHURIKEN_TRAVEL_DURATION_MS;
+        return new Point(
+                castOrigin.x + (facingLeft ? -travelled : travelled),
+                castOrigin.y
+        );
+    }
+
+    private static Rectangle fumaShurikenAttackBounds(Point attackOrigin) {
+        int radius = FUMA_SHURIKEN_ATTACK_SIZE / 2;
+        return new Rectangle(
+                attackOrigin.x - radius,
+                attackOrigin.y - radius,
+                FUMA_SHURIKEN_ATTACK_SIZE,
+                FUMA_SHURIKEN_ATTACK_SIZE
+        );
+    }
+
     private static void repeatTrackingAttack(
             AttackInfo attack,
             Character chr,
@@ -393,7 +465,8 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
             int mobCount,
             List<Integer> damageTemplate,
             StatEffect replayEffect,
-            Point fixedAttackOrigin
+            Point fixedAttackOrigin,
+            int attackTimeMs
     ) {
         if (!canContinueTrackingAttack(chr, expectedMap)) {
             return;
@@ -401,9 +474,19 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
         Point attackOrigin = fixedAttackOrigin != null
                 ? fixedAttackOrigin
                 : new Point(chr.getPosition());
-        Rectangle attackBounds = replayEffect.hasBoundingBox()
-                ? replayEffect.calculateBoundingBox(attackOrigin, attack.direction == 0)
-                : null;
+        Rectangle attackBounds;
+        if (replaySkillId == 4121011 && fixedAttackOrigin != null) {
+            attackOrigin = fumaShurikenAttackOrigin(
+                    fixedAttackOrigin, attack.direction != 0, attackTimeMs
+            );
+            attackBounds = fumaShurikenAttackBounds(attackOrigin);
+        } else {
+            attackBounds = replayEffect.hasBoundingBox()
+                    ? replayEffect.calculateBoundingBox(
+                            attackOrigin, attack.direction == 0
+                    )
+                    : null;
+        }
         Map<Integer, List<Integer>> damage = collectTrackingTargets(
                 expectedMap, attackOrigin, attackBounds, mobCount, damageTemplate
         );
@@ -707,7 +790,8 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
                     mobCount,
                     damageTemplate,
                     replayEffect,
-                    fixedAttackOrigin
+                    fixedAttackOrigin,
+                    attackTimeMs
             ), attackTimeMs);
         }
     }
@@ -1436,6 +1520,9 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
                                 attack, chr, replay.timesMs(), replay.skillId()
                         );
                     }
+                }
+                if (attack.skill == 4121011) {
+                    spawnFumaShurikenVisual(attack, chr);
                 }
                 if (!fourSeasonsRainFrenzy) {
                     markFourSeasonsRainHit(chr, attack);

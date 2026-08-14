@@ -162,18 +162,19 @@ class ExplorerSkillGrantContractTest(unittest.TestCase):
             actual = [int(value) for value in re.findall(r"\d+", values.group(1))]
             self.assertEqual(expected, actual, field)
 
-    def test_night_lord_rapid_throw_and_binding_are_removed_on_claim(self):
+    def test_night_lord_retired_skills_and_bindings_are_removed_on_claim(self):
         block = re.search(r"412:\s*\{(.*?)\},\s*422:", self.script, re.S)
         self.assertIsNotNone(block)
         for field in ("retiredBindings", "retiredSkills"):
             values = re.search(rf"{field}:\s*\[([^]]*)]", block.group(1))
             self.assertIsNotNone(values, field)
             self.assertEqual(
-                [4121010, 4121013, 4121014, 4121015, 4121021],
+                [4121010, 4121012, 4121013, 4121014, 4121015, 4121021],
                 [int(value) for value in re.findall(r"\d+", values.group(1))],
                 field,
             )
         self.assertNotIn(4121013, active_ids("NightLord"))
+        self.assertNotIn(4121012, active_ids("NightLord"))
 
     def test_explorers_are_not_auto_granted_or_mastered(self):
         for class_name in EXPLORER_CLASSES.values():

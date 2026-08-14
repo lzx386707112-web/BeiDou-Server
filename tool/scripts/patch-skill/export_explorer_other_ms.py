@@ -90,6 +90,12 @@ V_SKILL_IDS = {
     },
 }
 
+AUXILIARY_SKILL_IDS = {
+    # Forbidden Talisman's 60-second field controller has no common/damage,
+    # but owns the looping customEffect and the 1900ms follow-up cadence.
+    "414": {4141502},
+}
+
 
 def scalar_element(tag: str, prop) -> ET.Element:
     return ET.Element(tag, {"name": prop.name, "value": str(prop.value)})
@@ -151,7 +157,12 @@ def selected_skills(group: str, root: WzSubProperty) -> list[WzSubProperty]:
     if group in V_SKILL_IDS:
         selected = [skills.get(str(skill_id)) for skill_id in sorted(V_SKILL_IDS[group])]
         return [skill for skill in selected if isinstance(skill, WzSubProperty)]
-    return [skill for skill in skills.children() if isinstance(skill, WzSubProperty) and has_damage(skill)]
+    auxiliary = AUXILIARY_SKILL_IDS.get(group, set())
+    return [
+        skill for skill in skills.children()
+        if isinstance(skill, WzSubProperty)
+        and (has_damage(skill) or int(skill.name) in auxiliary)
+    ]
 
 
 def export_group(group: str, extracted: Path, output: Path) -> None:
