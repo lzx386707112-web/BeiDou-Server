@@ -1,4 +1,4 @@
 function start() {
-    cm.sendOk("Root Abyss map exploration is open. Boss mechanics are still disabled.");
+    cm.sendOk("Root Abyss exploration and boss rooms are open.");
     cm.dispose();
 }

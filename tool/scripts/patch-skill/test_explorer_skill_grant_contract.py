@@ -16,7 +16,6 @@ from wzpy import WzImage, WzKey  # noqa: E402
 
 CONSTANTS = ROOT / "gms-server/src/main/java/org/gms/constants/skills"
 CHARACTER = ROOT / "gms-server/src/main/java/org/gms/client/Character.java"
-GAME_CONSTANTS = ROOT / "gms-server/src/main/java/org/gms/constants/game/GameConstants.java"
 SCRIPT = ROOT / "gms-server/scripts-zh-CN/BeiDouSpecial/冒险家五六转攻击技能.js"
 SKILL_CENTER = ROOT / "gms-server/scripts-zh-CN/BeiDouSpecial/技能中心.js"
 FIFTH_JOB_GODDESS = ROOT / "gms-server/scripts-zh-CN/npc/9900008.js"
@@ -244,15 +243,6 @@ class ExplorerSkillGrantContractTest(unittest.TestCase):
                 )
                 self.assertIsNotNone(server_invisible, skill_id)
                 self.assertEqual("1", server_invisible.get("value"), skill_id)
-
-    def test_public_v_vi_attacks_are_filtered_from_skill_packets(self):
-        constants = GAME_CONSTANTS.read_text(encoding="utf-8")
-        self.assertIn("isExplorerVViActiveAttack(skill)", constants)
-        for class_name in EXPLORER_CLASSES.values():
-            self.assertIn(
-                f"containsSkill({class_name}.V_VI_ACTIVE_ATTACKS, skill)",
-                constants,
-            )
 
 
 if __name__ == "__main__":

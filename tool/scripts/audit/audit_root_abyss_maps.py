@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parents[3]
 WZPY = ROOT / "tool" / "wz-python"
 sys.path.insert(0, str(WZPY))
 
-from wzpy import WzCanvasProperty, WzImage, WzKey, WzStringProperty  # noqa: E402
+from wzpy import WzCanvasProperty, WzImage, WzKey, WzStringProperty, WzVectorProperty  # noqa: E402
 from wzpy.canvas import decode_canvas  # noqa: E402
 
 
@@ -29,15 +29,37 @@ BOSS_DROP_MIGRATION = ROOT / "gms-server/src/main/resources/db/migration/V2.1.24
 SOURCE_MAP_IDS = sorted(int(p.stem) for p in (SRC_CLIENT / "Map/Map/Map1").glob("1052*.img"))
 MAP_IDS = sorted(int(p.stem) for p in (CLIENT / "Map/Map/Map1").glob("1052*.img"))
 NORTH_GARDEN_MAP_IDS = {105200400, 105200800}
-NORMAL_MOBS = set()
-ROOT_ABYSS_BOSS_ROOM_SPAWNS = {}
-ADVANCED_BOSS_MOBS = set()
+NORMAL_MOBS = {7120110, 7120111, 7120112, 7120113, 7120114, 7120115, 9834610}
+NORMAL_BOSS_MOBS = {
+    8900100, 8900101, 8900102, 8900103,
+    8910100,
+    8920100, 8920101, 8920102, 8920103, 8920104, 8920105, 8920106,
+    8930100,
+}
+ROOT_ABYSS_BOSS_ROOM_SPAWNS = {
+    105200110: (8910100, 489, 454),
+    105200210: (8900100, -131, 550),
+    105200310: (8920100, 60, 134),
+    105200410: (8930100, -192, 442),
+    105200510: (8910000, 489, 454),
+    105200610: (8900000, -131, 550),
+    105200710: (8920000, 60, 134),
+    105200810: (8930000, -192, 442),
+}
+DIRECT_BOSS_MOBS = {mob_id for mob_id, _x, _y in ROOT_ABYSS_BOSS_ROOM_SPAWNS.values()}
+ADVANCED_BOSS_MOBS = {
+    8900000, 8900001, 8900002, 8900003,
+    8910000, 8910001, 8910100,
+    8920000, 8920001, 8920002, 8920003, 8920004, 8920005, 8920006,
+    8930000, 8930001,
+}
 BOSS_GAUGE_MOBS = {
     8900000, 8900001, 8900002,
     8910000,
     8920000, 8920001, 8920002, 8920003,
 }
-BOSS_DROP_MOBS = set()
+ADVANCED_BOSS_DROP_MOBS = {8900000, 8910000, 8920000, 8930000}
+NORMAL_BOSS_DROP_MOBS = {8900100, 8910100, 8920100, 8930100}
 OLD_SERVER_REQUIRED_BOSS_INFO_FIELDS = {"PADamage", "PDDamage", "MADamage", "MDDamage", "level"}
 ROOT_ABYSS_SECOND_PHASE_BOSS_HP = {
     8900001: 3_000_000_000,
@@ -60,9 +82,14 @@ SUPPORTED_ROOT_ABYSS_BOSS_SKILLS = {
 }
 NPCS = {
     1064002, 1064003, 1064005, 1064006, 1064007, 1064008,
+    1064009,
     1064012, 1064013, 1064014, 1064015, 1064032,
     3007007, 3007008, 9091004, 9091021, 9091023,
 }
+STRING_ONLY_NPCS = {1064031}
+ROOT_ABYSS_QUESTS = {30000, *range(30002, 30023), 30027}
+ROOT_ABYSS_ITEMS = {4001755, 4001756}
+REMOVED_LIFE_FIELDS = {"forcedZPage", "forcedZMass", "limitedname"}
 REACTORS = {
     1058016, 1058017, 1058018, 1058019, 1058020, 1058021, 1058022, 1058023,
     1058024, 1058025, 1058026, 1058027, 1058028, 1058029,
@@ -179,24 +206,26 @@ class Audit:
         img = self.client_img(rel)
         if img is None:
             return
+        self.decode_canvas_tree(rel, img.root)
 
+    def decode_canvas_tree(self, label: str | Path, root) -> None:
         def walk(node, path: str) -> None:
             if isinstance(node, WzStringProperty) and node.name in {"_outlink", "_inlink"}:
-                self.error(f"modern canvas link remains: {rel}:{path} -> {node.value}")
+                self.error(f"modern canvas link remains: {label}:{path} -> {node.value}")
             if isinstance(node, WzCanvasProperty) and node.has_pixels():
                 canvas_format = int(node.format) + int(node.format2)
                 if canvas_format != 1 or int(node.format2) != 0:
-                    self.error(f"canvas is not ARGB4444: {rel}:{path} format={canvas_format} format2={node.format2}")
+                    self.error(f"canvas is not ARGB4444: {label}:{path} format={canvas_format} format2={node.format2}")
                 try:
                     decode_canvas(node, region="GMS")
                     self.canvas_count += 1
                 except Exception as exc:  # noqa: BLE001
-                    self.error(f"canvas decode failed: {rel}:{path}: {exc}")
+                    self.error(f"canvas decode failed: {label}:{path}: {exc}")
             if hasattr(node, "children"):
                 for child in node.children():
                     walk(child, f"{path}/{child.name}" if path else child.name)
 
-        walk(img.root, "")
+        walk(root, "")
 
     def check_no_transparent_canvas_regressions(self, rel: str | Path) -> None:
         target = self.client_img(rel)
@@ -366,7 +395,15 @@ class Audit:
                         if not path.exists():
                             self.error(f"{map_id}: missing visible NPC script {path.relative_to(ROOT)}")
             elif life_type == "m":
-                self.error(f"{map_id}: mob life remains after map-only TMS migration: {life_id}")
+                if life_id not in NORMAL_MOBS:
+                    self.error(f"{map_id}: non-Root-Abyss mob life remains: {life_id}")
+                self.client_img(f"Mob/{life_id}.img")
+                self.server_xml(f"Mob.wz/{life_id}.img.xml")
+                if not self.has_server_string("Mob", life_id):
+                    self.error(f"{map_id}: missing server String/Mob {life_id}")
+                for field in REMOVED_LIFE_FIELDS:
+                    if life.child(field) is not None:
+                        self.error(f"{map_id}: high-version life field remains: life/{life.name}/{field}")
             else:
                 self.warn(f"{map_id}: unhandled life type {life_type} at life/{life.name}")
 
@@ -453,16 +490,21 @@ class Audit:
             self.server_xml(f"Mob.wz/{mob_id}.img.xml")
             if not self.has_server_string("Mob", mob_id):
                 self.error(f"missing String/Mob {mob_id}")
-        for mob_id in sorted(ADVANCED_BOSS_MOBS):
+        for mob_id in sorted(NORMAL_BOSS_MOBS | ADVANCED_BOSS_MOBS):
             self.check_root_abyss_boss_mob(mob_id)
         for npc_id in NPCS:
             self.client_img(f"Npc/{npc_id}.img")
             self.server_xml(f"Npc.wz/{npc_id}.img.xml")
             if not self.has_server_string("Npc", npc_id):
                 self.error(f"missing String/Npc {npc_id}")
+        for npc_id in STRING_ONLY_NPCS:
+            if not self.has_server_string("Npc", npc_id):
+                self.error(f"missing String/Npc {npc_id}")
         for reactor_id in REACTORS:
             self.client_img(f"Reactor/{reactor_id}.img")
             self.server_xml(f"Reactor.wz/{reactor_id}.img.xml")
+        self.check_quest_data()
+        self.check_root_abyss_items()
 
     def check_root_abyss_boss_mob(self, mob_id: int) -> None:
         img = self.client_img(f"Mob/{mob_id}.img")
@@ -521,6 +563,9 @@ class Audit:
                     if server_skill_level is None:
                         self.error(f"{mob_id}: missing server MobSkill {skill_id}/{level}")
 
+        if mob_id in DIRECT_BOSS_MOBS:
+            self.check_direct_boss_foot_alignment(mob_id, img)
+
         if root is not None:
             server_info = root.find("./imgdir[@name='info']")
             if server_info is not None:
@@ -538,11 +583,53 @@ class Audit:
                     if skill.get("name") != str(expected_idx):
                         self.error(f"{mob_id}: server boss skill entries must be compact")
 
+    def check_direct_boss_foot_alignment(self, mob_id: int, img: WzImage) -> None:
+        for action_name in ("stand", "move"):
+            action = img.get(action_name)
+            if action is None or not hasattr(action, "children"):
+                continue
+            for frame in action.children():
+                if not frame.name.isdigit() or not isinstance(frame, WzCanvasProperty) or not frame.has_pixels():
+                    continue
+                origin = frame.child("origin")
+                if not isinstance(origin, WzVectorProperty):
+                    self.error(f"{mob_id}: {action_name}/{frame.name} missing origin")
+                    continue
+                try:
+                    image = decode_canvas(frame, region="GMS")
+                except Exception as exc:  # noqa: BLE001
+                    self.error(f"{mob_id}: {action_name}/{frame.name} decode failed during foot audit: {exc}")
+                    continue
+                bbox = image.getbbox()
+                if bbox is None:
+                    continue
+                visible_bottom_delta = int(bbox[3]) - int(origin.y)
+                if visible_bottom_delta > 0:
+                    self.error(f"{mob_id}: {action_name}/{frame.name} visible foot below origin by {visible_bottom_delta}px")
+
     def check_drop_data(self) -> None:
         if NORMAL_MOBS:
             self.check_drop_migration(DROP_MIGRATION, NORMAL_MOBS, "Root Abyss normal mob")
-        if BOSS_DROP_MOBS:
-            self.check_drop_migration(BOSS_DROP_MIGRATION, BOSS_DROP_MOBS, "Root Abyss boss")
+        if ADVANCED_BOSS_DROP_MOBS:
+            self.check_drop_migration(BOSS_DROP_MIGRATION, ADVANCED_BOSS_DROP_MOBS, "Root Abyss advanced boss")
+        self.check_any_drop_rows(NORMAL_BOSS_DROP_MOBS, "Root Abyss normal boss")
+
+    def check_any_drop_rows(self, mob_ids: set[int], label: str) -> None:
+        sql_paths = sorted((ROOT / "gms-server/src/main/resources/db/migration").glob("V*.sql"))
+        pattern = re.compile(r"\((\d+),\s*(\d+),\s*(\d+),\s*(\d+),\s*(\d+),\s*(\d+)\)")
+        drops: dict[int, list[tuple[int, int, int, int, int]]] = {mob_id: [] for mob_id in mob_ids}
+        for path in sql_paths:
+            text = path.read_text(encoding="utf-8")
+            for dropper, item, minimum, maximum, quest, chance in pattern.findall(text):
+                dropper_id = int(dropper)
+                if dropper_id in drops:
+                    drops[dropper_id].append((int(item), int(minimum), int(maximum), int(quest), int(chance)))
+        for mob_id in sorted(mob_ids):
+            mob_drops = drops[mob_id]
+            if not mob_drops:
+                self.error(f"{mob_id}: missing {label} drop rows")
+            elif not any(item_id > 0 for item_id, *_ in mob_drops):
+                self.error(f"{mob_id}: missing {label} item drop rows")
 
     def check_drop_migration(self, path: Path, mob_ids: set[int], label: str) -> None:
         if not path.exists():
@@ -571,10 +658,6 @@ class Audit:
                 if item_id > 0:
                     self.check_drop_item_resource(mob_id, item_id)
 
-        for forbidden_item in (4001755, 4001756):
-            if str(forbidden_item) in text:
-                self.error(f"drop migration references Root Abyss ETC without compatible item art: {forbidden_item}")
-
     def check_drop_item_resource(self, mob_id: int, item_id: int) -> None:
         if 2000000 <= item_id < 3000000:
             folder = "Consume"
@@ -594,6 +677,52 @@ class Audit:
         if server_root is not None and not any(child.get("name") in {node_name, str(item_id)} for child in server_root):
             self.error(f"{mob_id}: drop item server XML node missing: {item_id} in Item.wz/{folder}/{img_name}.xml")
 
+    def check_quest_data(self) -> None:
+        for file_name in ("QuestInfo", "Check", "Act", "Say"):
+            client_img = self.client_img(f"Quest/{file_name}.img")
+            server_root = self.server_xml(f"Quest.wz/{file_name}.img.xml")
+            zh_path = ROOT / "gms-server/wz-zh-CN/Quest.wz" / f"{file_name}.img.xml"
+            zh_root = None
+            if zh_path.exists():
+                try:
+                    zh_root = ET.parse(zh_path).getroot()
+                except Exception as exc:  # noqa: BLE001
+                    self.error(f"server zh-CN Quest XML parse failed: {zh_path.relative_to(ROOT)}: {exc}")
+            for quest_id in ROOT_ABYSS_QUESTS:
+                if client_img is not None and client_img.get(str(quest_id)) is None:
+                    self.error(f"missing client Quest/{file_name}.img {quest_id}")
+                if server_root is not None and server_root.find(f"./imgdir[@name='{quest_id}']") is None:
+                    self.error(f"missing server Quest.wz/{file_name}.img.xml {quest_id}")
+                if zh_root is not None and zh_root.find(f"./imgdir[@name='{quest_id}']") is None:
+                    self.error(f"missing server wz-zh-CN Quest.wz/{file_name}.img.xml {quest_id}")
+        for script_root in ("scripts", "scripts-zh-CN"):
+            for quest_id in range(30014, 30023):
+                path = ROOT / "gms-server" / script_root / "quest" / f"{quest_id}.js"
+                if not path.exists():
+                    self.error(f"missing daily Root Abyss quest script: {path.relative_to(ROOT)}")
+
+    def check_root_abyss_items(self) -> None:
+        etc = self.client_img("Item/Etc/0400.img")
+        string_etc = self.client_img("String/Etc.img")
+        server_etc = self.server_xml("Item.wz/Etc/0400.img.xml")
+        server_string = self.server_xml("String.wz/Etc.img.xml")
+        for item_id in ROOT_ABYSS_ITEMS:
+            node_name = f"0{item_id}"
+            if etc is not None and etc.get(node_name) is None:
+                self.error(f"missing client Root Abyss item {node_name}")
+            if string_etc is not None and string_etc.get(f"Etc/{item_id}") is None:
+                self.error(f"missing client String/Etc {item_id}")
+            if server_etc is not None and server_etc.find(f"./imgdir[@name='{node_name}']") is None:
+                self.error(f"missing server Item.wz/Etc/0400.img.xml {node_name}")
+            if server_string is not None:
+                etc_root = server_string.find("./imgdir[@name='Etc']")
+                if etc_root is None or etc_root.find(f"./imgdir[@name='{item_id}']") is None:
+                    self.error(f"missing server String/Etc {item_id}")
+            if etc is not None:
+                item_node = etc.get(node_name)
+                if item_node is not None:
+                    self.decode_canvas_tree(f"Item/Etc/0400.img:{node_name}", item_node)
+
     def check_canvas_decode(self) -> None:
         paths: list[Path] = []
         paths.extend(Path("Map/Map/Map1") / f"{mid}.img" for mid in MAP_IDS)
@@ -610,7 +739,7 @@ class Audit:
             Path("Sound/Bgm29.img"),
         ])
         paths.extend(Path("Mob") / f"{mob_id}.img" for mob_id in sorted(NORMAL_MOBS))
-        paths.extend(Path("Mob") / f"{mob_id}.img" for mob_id in sorted(ADVANCED_BOSS_MOBS))
+        paths.extend(Path("Mob") / f"{mob_id}.img" for mob_id in sorted(NORMAL_BOSS_MOBS | ADVANCED_BOSS_MOBS))
         paths.extend(Path("Npc") / f"{npc_id}.img" for npc_id in sorted(NPCS))
         paths.extend(Path("Reactor") / f"{reactor_id}.img" for reactor_id in sorted(REACTORS))
         for rel in paths:

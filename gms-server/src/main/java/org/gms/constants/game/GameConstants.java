@@ -497,32 +497,7 @@ public class GameConstants {
 
     public static boolean isHiddenSkills(final int skill) {
         return Aran.HIDDEN_FULL_DOUBLE == skill || Aran.HIDDEN_FULL_TRIPLE == skill || Aran.HIDDEN_OVER_DOUBLE == skill || Aran.HIDDEN_OVER_TRIPLE == skill
-                || DawnWarrior.ECLIPSE_FORCE_FINISH == skill || DawnWarrior.SUN_MOON_DIVIDE == skill
-                || isExplorerVViActiveAttack(skill);
-    }
-
-    private static boolean isExplorerVViActiveAttack(final int skill) {
-        return containsSkill(Hero.V_VI_ACTIVE_ATTACKS, skill)
-                || containsSkill(Paladin.V_VI_ACTIVE_ATTACKS, skill)
-                || containsSkill(DarkKnight.V_VI_ACTIVE_ATTACKS, skill)
-                || containsSkill(FPArchMage.V_VI_ACTIVE_ATTACKS, skill)
-                || containsSkill(ILArchMage.V_VI_ACTIVE_ATTACKS, skill)
-                || containsSkill(Bishop.V_VI_ACTIVE_ATTACKS, skill)
-                || containsSkill(Bowmaster.V_VI_ACTIVE_ATTACKS, skill)
-                || containsSkill(Marksman.V_VI_ACTIVE_ATTACKS, skill)
-                || containsSkill(NightLord.V_VI_ACTIVE_ATTACKS, skill)
-                || containsSkill(Shadower.V_VI_ACTIVE_ATTACKS, skill)
-                || containsSkill(Buccaneer.V_VI_ACTIVE_ATTACKS, skill)
-                || containsSkill(Corsair.V_VI_ACTIVE_ATTACKS, skill);
-    }
-
-    private static boolean containsSkill(final int[] skills, final int skill) {
-        for (int value : skills) {
-            if (value == skill) {
-                return true;
-            }
-        }
-        return false;
+                || DawnWarrior.ECLIPSE_FORCE_FINISH == skill || DawnWarrior.SUN_MOON_DIVIDE == skill;
     }
 
     public static boolean isCygnus(final int job) {

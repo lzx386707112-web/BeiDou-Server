@@ -24,7 +24,7 @@ function start(mode, type, selection) {
         } else if (status == 8) {
             qm.sendNextPrev("#b#h0##k！！！");
         } else if (status == 9) {
-            qm.sendOk("#b#h0##k！！！\r\n\r\n鲁塔比斯剧情地图已下线，任务记录会保留。");
+            qm.sendOk("#b#h0##k！！！\r\n\r\n请继续调查鲁塔比斯深处的封印守护者。");
             qm.forceStartQuest();
             qm.forceCompleteQuest();
             qm.dispose();

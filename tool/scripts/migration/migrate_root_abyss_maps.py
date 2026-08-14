@@ -61,13 +61,33 @@ MAP_IDS = [
     if int(p.stem) not in RETIRED_MAP_IDS
 ]
 NORTH_GARDEN_MAP_IDS = {105200400, 105200800}
-NORMAL_MOB_IDS = []
-ROOT_ABYSS_BOSS_ROOM_SPAWNS = {}
+NORMAL_MOB_IDS = [7120110, 7120111, 7120112, 7120113, 7120114, 7120115, 9834610]
+ROOT_ABYSS_BOSS_ROOM_SPAWNS = {
+    105200110: (8910100, 489, 454),
+    105200210: (8900100, -131, 550),
+    105200310: (8920100, 60, 134),
+    105200410: (8930100, -192, 442),
+    105200510: (8910000, 489, 454),
+    105200610: (8900000, -131, 550),
+    105200710: (8920000, 60, 134),
+    105200810: (8930000, -192, 442),
+}
 ADVANCED_BOSS_MOB_IDS = [
     8900000, 8900001, 8900002, 8900003,
     8910000, 8910001,
+    8910100,
     8920000, 8920001, 8920002, 8920003, 8920004, 8920005, 8920006,
+    8930000, 8930001,
 ]
+MOB_CANVAS_SOURCE_IDS = [
+    7120110, 7120111, 9834610,
+    8900000, 8900001, 8900002, 8900003,
+    8910000, 8910001,
+    8910100,
+    8920000, 8920001, 8920002, 8920004, 8920005,
+    8930000, 8930001,
+]
+INCOMPLETE_CANVAS_ONLY_MOBS = {8900003, 8910100, 8930001}
 BOSS_GAUGE_MOB_IDS = {
     8900000, 8900001, 8900002,
     8910000,
@@ -124,9 +144,13 @@ OLD_SERVER_REQUIRED_BOSS_INFO_FIELDS = {
 }
 NPC_IDS = [
     1064002, 1064003, 1064005, 1064006, 1064007, 1064008,
+    1064009,
     1064012, 1064013, 1064014, 1064015, 1064032,
     3007007, 3007008, 9091004, 9091021, 9091023,
 ]
+STRING_ONLY_NPC_IDS = [1064031]
+ROOT_ABYSS_QUEST_IDS = [30000, *range(30002, 30023), 30027]
+ROOT_ABYSS_ETC_ITEM_IDS = [4001755, 4001756]
 REACTOR_IDS = [
     1058016, 1058017, 1058018, 1058019, 1058020, 1058021, 1058022, 1058023,
     1058024, 1058025, 1058026, 1058027, 1058028, 1058029,
@@ -321,8 +345,11 @@ def sanitize_root_abyss_map(root: WzSubProperty, map_id: int | None = None) -> N
     life_root = root.child("life")
     if isinstance(life_root, WzSubProperty):
         for life in list(life_root.children()):
-            if child_value(life, "type") == "m":
+            if child_value(life, "type") == "m" and int(child_value(life, "id") or 0) not in NORMAL_MOB_IDS:
                 remove_child(life_root, life.name)
+                continue
+            for key in ("forcedZPage", "forcedZMass", "limitedname"):
+                remove_child(life, key)
 
     if map_id in NORTH_GARDEN_MAP_IDS:
         move_garden_foot_objects_to_layer_zero(root)
@@ -561,17 +588,24 @@ def clone_property(prop, name: str | None = None, parent=None):
         out.format = TARGET_CANVAS_FORMAT
         out.format2 = 0
         if prop.has_pixels() or hasattr(prop, "_migration_image"):
-            image = getattr(prop, "_migration_image", None)
-            if image is None:
-                image = decode_canvas(prop, region=SOURCE_REGION)
-            out._png_data = encode_canvas_payload(
-                image,
-                TARGET_CANVAS_FORMAT,
-                int(prop.width),
-                int(prop.height),
-                key=TARGET_KEY,
-                listwz=False,
-            )
+            if (
+                getattr(prop, "_png_data", None) is not None
+                and int(prop.format) == TARGET_CANVAS_FORMAT
+                and int(prop.format2) == 0
+            ):
+                out._png_data = bytes(prop._png_data)
+            else:
+                image = getattr(prop, "_migration_image", None)
+                if image is None:
+                    image = decode_canvas(prop, region=SOURCE_REGION)
+                out._png_data = encode_canvas_payload(
+                    image,
+                    TARGET_CANVAS_FORMAT,
+                    int(prop.width),
+                    int(prop.height),
+                    key=TARGET_KEY,
+                    listwz=False,
+                )
             out._png_length = len(out._png_data)
         for child in prop.children():
             out.add(clone_property(child, parent=out))
@@ -605,6 +639,118 @@ def clone_property(prop, name: str | None = None, parent=None):
             out.add(clone_property(child, parent=out))
         return out
     raise TypeError(f"unsupported property: {type(prop).__name__}")
+
+
+def target_img(path: Path) -> WzImage:
+    img = WzImage.from_bytes(path.read_bytes(), key=TARGET_KEY, name=path.name)
+    img.parse()
+    return img
+
+
+def write_server_xml_from_client_img(client_path: Path, server_path: Path) -> None:
+    img = target_img(client_path)
+    backup(server_path)
+    atomic_write_text(server_path, img_to_xml(img))
+
+
+def patch_server_boss_xml_hp(server_path: Path, mob_id: int) -> None:
+    expected_hp = ROOT_ABYSS_SECOND_PHASE_BOSS_HP.get(mob_id)
+    if expected_hp is None:
+        return
+    root = ET.parse(server_path).getroot()
+    info = direct_xml_child(root, "info")
+    if info is None:
+        return
+    for child in list(info):
+        if child.get("name") == "maxHP":
+            info.remove(child)
+    info.append(ET.Element("string", {"name": "maxHP", "value": str(expected_hp)}))
+    atomic_write_text(
+        server_path,
+        f'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'
+        f'{ET.tostring(root, encoding="unicode", short_empty_elements=True)}\n',
+    )
+
+
+def replace_children_from_source(parent: WzSubProperty, source_root: WzSubProperty, skip: set[str] | None = None) -> int:
+    skip = skip or set()
+    changed = 0
+    for child in source_root.children():
+        if child.name in skip:
+            continue
+        remove_child(parent, child.name)
+        parent.add(clone_property(child, name=child.name, parent=parent))
+        changed += 1
+    return changed
+
+
+def compatible_normal_mob_info(template_id: int, target_id: int) -> WzSubProperty:
+    template_path = ROOT / f"clien/Data/Mob/{template_id}.img"
+    template = target_img(template_path)
+    info = template.get("info")
+    if not isinstance(info, WzSubProperty):
+        raise RuntimeError(f"template mob {template_id} missing info")
+    out = clone_property(info, name="info")
+    if target_id == 9834610:
+        for key, value in {
+            "level": 1,
+            "maxHP": 1,
+            "maxMP": 0,
+            "PADamage": 0,
+            "PDDamage": 0,
+            "MADamage": 0,
+            "MDDamage": 0,
+            "acc": 0,
+            "eva": 0,
+            "pushed": 100000000,
+            "summonType": 1,
+            "bodyAttack": 0,
+            "exp": 0,
+        }.items():
+            ensure_int_child(out, key, value)
+        ensure_string_child(out, "mobType", "10N")
+        remove_child(out, "boss")
+    return out
+
+
+def mob_template_for(mob_id: int) -> int:
+    if mob_id == 7120111:
+        return 7120113
+    return 7120112
+
+
+def migrate_mob_canvas_resource(mob_id: int) -> str:
+    src_path = SRC_CLIENT / f"Mob/_Canvas/{mob_id}.img"
+    if not src_path.exists():
+        return "skip-missing-source"
+    client_path = ROOT / f"clien/Data/Mob/{mob_id}.img"
+    source = source_img(src_path)
+    inline_canvas_outlinks(source.root)
+    reencode_canvas_tree(source.root)
+
+    if client_path.exists():
+        target = target_img(client_path)
+        if mob_id in INCOMPLETE_CANVAS_ONLY_MOBS:
+            return "skip-incomplete-source"
+        replace_children_from_source(target.root, source.root, skip={"info"})
+        if mob_id in ADVANCED_BOSS_MOB_IDS:
+            sanitize_root_abyss_boss_mob(target.root, mob_id)
+    else:
+        template_id = mob_template_for(mob_id)
+        template = target_img(ROOT / f"clien/Data/Mob/{template_id}.img")
+        target = WzImage.from_bytes(encode_image_body(template, gms_reader()), key=TARGET_KEY, name=f"{mob_id}.img")
+        target.parse()
+        target.root._children.clear()
+        info = compatible_normal_mob_info(template_id, mob_id)
+        target.root.add(clone_property(info, name="info", parent=target.root))
+        replace_children_from_source(target.root, source.root, skip={"info"})
+
+    backup(client_path)
+    atomic_write_bytes(client_path, encode_image_body(target, gms_reader()))
+    server_path = ROOT / f"gms-server/wz/Mob.wz/{mob_id}.img.xml"
+    write_server_xml_from_client_img(client_path, server_path)
+    patch_server_boss_xml_hp(server_path, mob_id)
+    return "write"
 
 
 def iter_canvas_properties(prop, prefix: str = ""):
@@ -748,21 +894,273 @@ def upsert_client_string(img_name: str, ids: list[int]) -> None:
 
 def upsert_server_string_xml(img_name: str, ids: list[int]) -> None:
     src = source_img(SRC_CLIENT / f"String/{img_name}.img")
-    dst_path = ROOT / f"gms-server/wz/String.wz/{img_name}.img.xml"
-    root = ET.parse(dst_path).getroot()
-    for item_id in ids:
-        key = str(item_id)
-        source_node = src.get(key)
-        if source_node is None:
-            raise RuntimeError(f"source String/{img_name}.img missing {key}")
-        for child in list(root):
-            if child.get("name") == key:
-                root.remove(child)
-        root.append(ET.fromstring(property_to_xml(source_node, 1).strip()))
+    for server_root in (ROOT / "gms-server/wz", ROOT / "gms-server/wz-zh-CN"):
+        dst_path = server_root / f"String.wz/{img_name}.img.xml"
+        if not dst_path.exists():
+            continue
+        root = ET.parse(dst_path).getroot()
+        for item_id in ids:
+            key = str(item_id)
+            source_node = src.get(key)
+            if source_node is None:
+                raise RuntimeError(f"source String/{img_name}.img missing {key}")
+            for child in list(root):
+                if child.get("name") == key:
+                    root.remove(child)
+            root.append(ET.fromstring(property_to_xml(source_node, 1).strip()))
 
+        backup(dst_path)
+        xml = ET.tostring(root, encoding="unicode", short_empty_elements=True)
+        atomic_write_text(dst_path, f'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n{xml}\n')
+
+
+def get_or_create_child(parent: WzSubProperty, name: str) -> WzSubProperty:
+    child = parent.child(name)
+    if isinstance(child, WzSubProperty):
+        return child
+    if child is not None:
+        remove_child(parent, name)
+    child = WzSubProperty(name, parent)
+    parent.add(child)
+    return child
+
+
+def get_or_create_xml_child(parent: ET.Element, name: str) -> ET.Element:
+    child = direct_xml_child(parent, name)
+    if child is not None and child.tag == "imgdir":
+        return child
+    if child is not None:
+        parent.remove(child)
+    return ET.SubElement(parent, "imgdir", {"name": name})
+
+
+def upsert_client_node_by_path(dst_path: Path, source_node, path_parts: list[str]) -> None:
+    dst = target_img(dst_path)
+    parent = dst.root
+    for part in path_parts[:-1]:
+        parent = get_or_create_child(parent, part)
+    remove_child(parent, path_parts[-1])
+    parent.add(clone_property(source_node, name=path_parts[-1], parent=parent))
+    backup(dst_path)
+    atomic_write_bytes(dst_path, encode_image_body(dst, gms_reader()))
+
+
+def upsert_server_xml_node_by_path(dst_path: Path, source_node, path_parts: list[str]) -> None:
+    root = ET.parse(dst_path).getroot()
+    parent = root
+    for part in path_parts[:-1]:
+        parent = get_or_create_xml_child(parent, part)
+    for child in list(parent):
+        if child.get("name") == path_parts[-1]:
+            parent.remove(child)
+    parent.append(ET.fromstring(property_to_xml(source_node, 1).strip()))
     backup(dst_path)
     xml = ET.tostring(root, encoding="unicode", short_empty_elements=True)
     atomic_write_text(dst_path, f'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n{xml}\n')
+
+
+def upsert_server_xml_node_all_roots(rel: Path, source_node, path_parts: list[str]) -> int:
+    changed = 0
+    for server_root in (ROOT / "gms-server/wz", ROOT / "gms-server/wz-zh-CN"):
+        dst_path = server_root / rel
+        if dst_path.exists():
+            upsert_server_xml_node_by_path(dst_path, source_node, path_parts)
+            changed += 1
+    return changed
+
+
+def migrate_etc_item_resources() -> dict[str, int]:
+    stats = {"client": 0, "server": 0, "strings": 0}
+    src_item = source_img(SRC_CLIENT / "Item/Etc/0400.img")
+    client_item_path = ROOT / "clien/Data/Item/Etc/0400.img"
+    client_item = target_img(client_item_path)
+    for item_id in ROOT_ABYSS_ETC_ITEM_IDS:
+        node_name = f"0{item_id}"
+        source_node = src_item.get(node_name)
+        if source_node is None:
+            raise RuntimeError(f"source Item/Etc/0400.img missing {node_name}")
+        clone = clone_property(source_node, name=node_name, parent=client_item.root)
+        inline_canvas_outlinks(clone)
+        reencode_canvas_tree(clone)
+        remove_child(client_item.root, node_name)
+        client_item.root.add(clone)
+        stats["client"] += 1
+    backup(client_item_path)
+    atomic_write_bytes(client_item_path, encode_image_body(client_item, gms_reader()))
+
+    server_item_path = ROOT / "gms-server/wz/Item.wz/Etc/0400.img.xml"
+    server_item = ET.parse(server_item_path).getroot()
+    for item_id in ROOT_ABYSS_ETC_ITEM_IDS:
+        node_name = f"0{item_id}"
+        node = target_img(client_item_path).get(node_name)
+        for child in list(server_item):
+            if child.get("name") == node_name:
+                server_item.remove(child)
+        server_item.append(ET.fromstring(property_to_xml(node, 1).strip()))
+        stats["server"] += 1
+    backup(server_item_path)
+    atomic_write_text(
+        server_item_path,
+        f'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'
+        f'{ET.tostring(server_item, encoding="unicode", short_empty_elements=True)}\n',
+    )
+
+    src_string = source_img(SRC_CLIENT / "String/Etc.img")
+    for item_id in ROOT_ABYSS_ETC_ITEM_IDS:
+        source_node = src_string.get(f"Etc/{item_id}")
+        if source_node is None:
+            raise RuntimeError(f"source String/Etc.img missing Etc/{item_id}")
+        upsert_client_node_by_path(
+            ROOT / "clien/Data/String/Etc.img",
+            source_node,
+            ["Etc", str(item_id)],
+        )
+        stats["strings"] += upsert_server_xml_node_all_roots(
+            Path("String.wz/Etc.img.xml"),
+            source_node,
+            ["Etc", str(item_id)],
+        )
+    return stats
+
+
+def migrate_quest_data() -> dict[str, int]:
+    stats = {"client": 0, "server": 0}
+    quest_files = {
+        "QuestInfo": "QuestInfo.img",
+        "Check": "Check.img",
+        "Act": "Act.img",
+        "Say": "Say.img",
+    }
+    for branch, file_name in quest_files.items():
+        client_path = ROOT / "clien/Data/Quest" / file_name
+        client = target_img(client_path)
+        server_roots = []
+        for server_root in (ROOT / "gms-server/wz", ROOT / "gms-server/wz-zh-CN"):
+            server_path = server_root / "Quest.wz" / f"{file_name}.xml"
+            if server_path.exists():
+                server_roots.append((server_path, ET.parse(server_path).getroot()))
+        for quest_id in ROOT_ABYSS_QUEST_IDS:
+            src = source_img(SRC_CLIENT / f"Quest/QuestData/{quest_id}.img")
+            source_node = src.get(branch)
+            if source_node is None:
+                raise RuntimeError(f"source QuestData/{quest_id}.img missing {branch}")
+            remove_child(client.root, str(quest_id))
+            client.root.add(clone_property(source_node, name=str(quest_id), parent=client.root))
+            for _path, server_root in server_roots:
+                for child in list(server_root):
+                    if child.get("name") == str(quest_id):
+                        server_root.remove(child)
+                server_root.append(ET.fromstring(property_to_xml(source_node, 1).replace(f'name="{branch}"', f'name="{quest_id}"', 1).strip()))
+        backup(client_path)
+        atomic_write_bytes(client_path, encode_image_body(client, gms_reader()))
+        stats["client"] += len(ROOT_ABYSS_QUEST_IDS)
+        for server_path, server_root in server_roots:
+            backup(server_path)
+            xml = ET.tostring(server_root, encoding="unicode", short_empty_elements=True)
+            atomic_write_text(server_path, f'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n{xml}\n')
+            stats["server"] += len(ROOT_ABYSS_QUEST_IDS)
+    return stats
+
+
+ROOT_ABYSS_DAILY_QUEST_SCRIPT = """var status = -1;
+var QUEST_ID = __QUEST_ID__;
+var ITEM_REQUIREMENTS = {
+    30017: [4001755, 20],
+    30020: [4001756, 20]
+};
+var INFO_PROGRESS = {
+    30014: "clear",
+    30015: "clear",
+    30016: "clear",
+    30018: "5",
+    30019: "clear",
+    30021: "clear"
+};
+
+function start(mode, type, selection) {
+    if (mode == -1) {
+        qm.dispose();
+        return;
+    }
+    if (mode == 1) status++; else status--;
+    if (status == 0) {
+        qm.sendAcceptDecline("要开始执行鲁塔比斯每日任务吗？");
+    } else if (status == 1) {
+        qm.forceStartQuest(QUEST_ID);
+        qm.dispose();
+    }
+}
+
+function end(mode, type, selection) {
+    if (mode == -1) {
+        qm.dispose();
+        return;
+    }
+    if (mode == 1) status++; else status--;
+    if (status == 0) {
+        var req = ITEM_REQUIREMENTS[QUEST_ID];
+        if (req != null && !qm.haveItem(req[0], req[1])) {
+            qm.sendOk("还需要 #b" + req[1] + " 个 #t" + req[0] + "##k。");
+            qm.dispose();
+            return;
+        }
+        qm.sendAcceptDecline("要完成这个鲁塔比斯每日任务吗？");
+    } else if (status == 1) {
+        var req = ITEM_REQUIREMENTS[QUEST_ID];
+        if (req != null) {
+            qm.gainItem(req[0], -req[1]);
+        }
+        var progress = INFO_PROGRESS[QUEST_ID];
+        if (progress != null) {
+            qm.setQuestProgress(QUEST_ID, QUEST_ID, progress);
+        }
+        qm.forceCompleteQuest(QUEST_ID);
+        qm.dispose();
+    }
+}
+"""
+
+
+ROOT_ABYSS_DAILY_GROUP_SCRIPT = """var status = -1;
+var QUEST_ID = 30022;
+
+function start(mode, type, selection) {
+    if (mode == -1) {
+        qm.dispose();
+        return;
+    }
+    if (mode == 1) status++; else status--;
+    if (status == 0) {
+        qm.sendAcceptDecline("要领取今天的鲁塔比斯每日任务吗？");
+    } else if (status == 1) {
+        qm.forceStartQuest(QUEST_ID);
+        qm.forceCompleteQuest(QUEST_ID);
+        qm.dispose();
+    }
+}
+
+function end(mode, type, selection) {
+    qm.forceCompleteQuest(QUEST_ID);
+    qm.dispose();
+}
+"""
+
+
+def migrate_daily_quest_scripts() -> dict[str, int]:
+    stats = {"scripts": 0}
+    for script_root in (ROOT / "gms-server/scripts", ROOT / "gms-server/scripts-zh-CN"):
+        quest_dir = script_root / "quest"
+        quest_dir.mkdir(parents=True, exist_ok=True)
+        for quest_id in range(30014, 30022):
+            path = quest_dir / f"{quest_id}.js"
+            backup(path)
+            atomic_write_text(path, ROOT_ABYSS_DAILY_QUEST_SCRIPT.replace("__QUEST_ID__", str(quest_id)))
+            stats["scripts"] += 1
+        path = quest_dir / "30022.js"
+        backup(path)
+        atomic_write_text(path, ROOT_ABYSS_DAILY_GROUP_SCRIPT)
+        stats["scripts"] += 1
+    return stats
 
 
 def fallback_map_string(map_id: int, parent=None) -> WzSubProperty:
@@ -1100,33 +1498,44 @@ def migrate_map_assets() -> dict[str, int]:
 def migrate_mobs_and_npcs() -> dict[str, int]:
     stats = {"client": 0, "server": 0}
     for mob_id in NORMAL_MOB_IDS:
-        src = SRC_CLIENT / f"Mob/{mob_id}.img"
-        stats["client"] += reencode_img(src, ROOT / f"clien/Data/Mob/{mob_id}.img") == "write"
-        stats["server"] += write_server_xml_from_source(src, ROOT / f"gms-server/wz/Mob.wz/{mob_id}.img.xml") == "write"
+        if (SRC_CLIENT / f"Mob/_Canvas/{mob_id}.img").exists():
+            result = migrate_mob_canvas_resource(mob_id)
+            stats["client"] += result == "write"
+            stats["server"] += result == "write"
+        elif (SRC_CLIENT / f"Mob/{mob_id}.img").exists():
+            src = SRC_CLIENT / f"Mob/{mob_id}.img"
+            stats["client"] += reencode_img(src, ROOT / f"clien/Data/Mob/{mob_id}.img") == "write"
+            stats["server"] += write_server_xml_from_source(src, ROOT / f"gms-server/wz/Mob.wz/{mob_id}.img.xml") == "write"
 
     for npc_id in NPC_IDS:
         src = SRC_CLIENT / f"Npc/{npc_id}.img"
+        if not src.exists():
+            src = SRC_CLIENT / f"Npc/_Canvas/{npc_id}.img"
         stats["client"] += reencode_img(src, ROOT / f"clien/Data/Npc/{npc_id}.img") == "write"
         stats["server"] += write_server_xml_from_source(src, ROOT / f"gms-server/wz/Npc.wz/{npc_id}.img.xml") == "write"
 
     if NORMAL_MOB_IDS:
         upsert_client_string("Mob", NORMAL_MOB_IDS)
         upsert_server_string_xml("Mob", NORMAL_MOB_IDS)
-    upsert_client_string("Npc", NPC_IDS)
-    upsert_server_string_xml("Npc", NPC_IDS)
+    npc_string_ids = [*NPC_IDS, *STRING_ONLY_NPC_IDS]
+    upsert_client_string("Npc", npc_string_ids)
+    upsert_server_string_xml("Npc", npc_string_ids)
     return stats
 
 
 def migrate_root_abyss_boss_mobs() -> dict[str, int]:
     stats = {"client": 0, "server": 0, "skipped": 0}
-    available_ids = [
-        mob_id for mob_id in ADVANCED_BOSS_MOB_IDS
-        if (SRC_CLIENT / f"Mob/{mob_id}.img").exists()
-    ]
-    if not available_ids:
-        stats["skipped"] = len(ADVANCED_BOSS_MOB_IDS)
-        return stats
+    available_ids = []
+    for mob_id in ADVANCED_BOSS_MOB_IDS:
+        if (SRC_CLIENT / f"Mob/{mob_id}.img").exists() or (SRC_CLIENT / f"Mob/_Canvas/{mob_id}.img").exists():
+            available_ids.append(mob_id)
     for mob_id in available_ids:
+        if (SRC_CLIENT / f"Mob/_Canvas/{mob_id}.img").exists():
+            result = migrate_mob_canvas_resource(mob_id)
+            stats["client"] += result == "write"
+            stats["server"] += result == "write"
+            stats["skipped"] += result.startswith("skip")
+            continue
         src = SRC_CLIENT / f"Mob/{mob_id}.img"
         sanitizer = lambda root, current_mob_id=mob_id: sanitize_root_abyss_boss_mob(root, current_mob_id)
         server_sanitizer = lambda root, current_mob_id=mob_id: (
@@ -1134,11 +1543,8 @@ def migrate_root_abyss_boss_mobs() -> dict[str, int]:
             set_root_abyss_server_boss_hp(root, current_mob_id),
         )
         stats["client"] += reencode_img(src, ROOT / f"clien/Data/Mob/{mob_id}.img", sanitizer=sanitizer) == "write"
-        stats["server"] += write_server_xml_from_source(
-            src,
-            ROOT / f"gms-server/wz/Mob.wz/{mob_id}.img.xml",
-            sanitizer=server_sanitizer,
-        ) == "write"
+        stats["server"] += write_server_xml_from_source(src, ROOT / f"gms-server/wz/Mob.wz/{mob_id}.img.xml", sanitizer=server_sanitizer) == "write"
+    stats["skipped"] += len(ADVANCED_BOSS_MOB_IDS) - len(available_ids)
 
     upsert_client_string("Mob", available_ids)
     upsert_server_string_xml("Mob", available_ids)
@@ -1172,6 +1578,9 @@ def main() -> int:
     print("mobs/npcs", migrate_mobs_and_npcs())
     print("root abyss mobskills", patch_root_abyss_mobskills())
     print("boss mobs", migrate_root_abyss_boss_mobs())
+    print("etc item resources", migrate_etc_item_resources())
+    print("quest data", migrate_quest_data())
+    print("daily quest scripts", migrate_daily_quest_scripts())
     print("reactors", migrate_reactors())
     print("done")
     return 0

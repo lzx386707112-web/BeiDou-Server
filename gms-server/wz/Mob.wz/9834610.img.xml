@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<imgdir name="9834610.img">
+  <imgdir name="info">
+    <int name="speed" value="-20"/>
+    <int name="PDRate" value="50"/>
+    <int name="MDRate" value="50"/>
+    <float name="fs" value="10.0"/>
+    <string name="elemAttr" value="F2I3"/>
+    <int name="hpRecovery" value="50"/>
+    <int name="mpRecovery" value="2"/>
+    <int name="level" value="1"/>
+    <int name="maxHP" value="1"/>
+    <int name="maxMP" value="0"/>
+    <int name="PADamage" value="0"/>
+    <int name="PDDamage" value="0"/>
+    <int name="MADamage" value="0"/>
+    <int name="MDDamage" value="0"/>
+    <int name="acc" value="0"/>
+    <int name="eva" value="0"/>
+    <int name="pushed" value="100000000"/>
+    <int name="summonType" value="1"/>
+    <int name="bodyAttack" value="0"/>
+    <int name="exp" value="0"/>
+    <string name="mobType" value="10N"/>
+  </imgdir>
+  <imgdir name="stand">
+    <canvas name="0" width="75" height="103" format="1"/>
+  </imgdir>
+  <imgdir name="hit1">
+    <canvas name="0" width="75" height="113" format="1"/>
+  </imgdir>
+  <imgdir name="die1">
+    <canvas name="1" width="75" height="108" format="1"/>
+    <canvas name="2" width="75" height="103" format="1"/>
+    <canvas name="3" width="75" height="103" format="1"/>
+    <canvas name="4" width="75" height="103" format="1"/>
+    <canvas name="5" width="96" height="115" format="1"/>
+    <canvas name="6" width="142" height="119" format="1"/>
+    <canvas name="7" width="147" height="120" format="1"/>
+    <canvas name="8" width="151" height="121" format="1"/>
+    <canvas name="9" width="153" height="122" format="1"/>
+    <canvas name="10" width="155" height="122" format="1"/>
+    <canvas name="11" width="156" height="123" format="1"/>
+    <canvas name="12" width="159" height="123" format="1"/>
+    <canvas name="13" width="159" height="123" format="1"/>
+  </imgdir>
+</imgdir>

@@ -1,4 +1,4 @@
 function start() {
-    cm.sendOk("Boss 入口暂时封印，用于兼容测试。");
+    cm.sendOk("鲁塔比斯 Boss 房间已开放。请通过庭院传送口进入普通或进阶房间。");
     cm.dispose();
 }
