@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Audit Root Abyss first-stage migration resources.
+"""Audit TMS Root Abyss map migration resources.
 
-This checks the map-only migration boundary: 1052 maps, map assets, NPCs,
-normal mobs, reactors, scripts, and intentionally absent boss families.
+This checks the map-only migration boundary: TMS 1052 maps, map assets, NPCs,
+reactors, scripts, and old-client ARGB4444 canvas compatibility.
 """
 
 from __future__ import annotations
@@ -17,34 +17,27 @@ ROOT = Path(__file__).resolve().parents[3]
 WZPY = ROOT / "tool" / "wz-python"
 sys.path.insert(0, str(WZPY))
 
-from wzpy import WzCanvasProperty, WzImage, WzKey  # noqa: E402
+from wzpy import WzCanvasProperty, WzImage, WzKey, WzStringProperty  # noqa: E402
 from wzpy.canvas import decode_canvas  # noqa: E402
 
 
 CLIENT = ROOT / "clien" / "Data"
-SRC_CLIENT = Path("/Users/lizixian/Documents/mxd/神说/Data")
+SRC_CLIENT = Path("/Users/lizixian/Documents/mxd/TMS/MapleStory-IMG/Data")
 SERVER_WZ = ROOT / "gms-server" / "wz"
 DROP_MIGRATION = ROOT / "gms-server/src/main/resources/db/migration/V2.1.23__add_root_abyss_normal_mob_drops.sql"
 BOSS_DROP_MIGRATION = ROOT / "gms-server/src/main/resources/db/migration/V2.1.24__add_root_abyss_boss_drops.sql"
+SOURCE_MAP_IDS = sorted(int(p.stem) for p in (SRC_CLIENT / "Map/Map/Map1").glob("1052*.img"))
 MAP_IDS = sorted(int(p.stem) for p in (CLIENT / "Map/Map/Map1").glob("1052*.img"))
 NORTH_GARDEN_MAP_IDS = {105200400, 105200800}
-NORMAL_MOBS = {7120112, 7120113, 7120114, 7120115}
-ROOT_ABYSS_BOSS_ROOM_SPAWNS = {
-    105200110: (8900000, 489, 454),
-    105200210: (8910000, -131, 550),
-    105200310: (8920000, 60, 134),
-}
-ADVANCED_BOSS_MOBS = {
-    8900000, 8900001, 8900002, 8900003,
-    8910000, 8910001,
-    8920000, 8920001, 8920002, 8920003, 8920004, 8920005, 8920006,
-}
+NORMAL_MOBS = set()
+ROOT_ABYSS_BOSS_ROOM_SPAWNS = {}
+ADVANCED_BOSS_MOBS = set()
 BOSS_GAUGE_MOBS = {
     8900000, 8900001, 8900002,
     8910000,
     8920000, 8920001, 8920002, 8920003,
 }
-BOSS_DROP_MOBS = {8900000, 8910000, 8920000}
+BOSS_DROP_MOBS = set()
 OLD_SERVER_REQUIRED_BOSS_INFO_FIELDS = {"PADamage", "PDDamage", "MADamage", "MDDamage", "level"}
 ROOT_ABYSS_SECOND_PHASE_BOSS_HP = {
     8900001: 3_000_000_000,
@@ -66,11 +59,12 @@ SUPPORTED_ROOT_ABYSS_BOSS_SKILLS = {
     (145, 1), (145, 2),
 }
 NPCS = {
-    1064002, 1064003, 1064004, 1064005, 1064006, 1064007,
-    1064008, 1064012, 1064013, 1064014, 1064015, 1064016,
+    1064002, 1064003, 1064005, 1064006, 1064007, 1064008,
+    1064012, 1064013, 1064014, 1064015, 1064032,
+    3007007, 3007008, 9091004, 9091021, 9091023,
 }
 REACTORS = {
-    1052006, 1052008, 1058016, 1058022, 1058023,
+    1058016, 1058017, 1058018, 1058019, 1058020, 1058021, 1058022, 1058023,
     1058024, 1058025, 1058026, 1058027, 1058028, 1058029,
 }
 ALLOWED_MAP_MARKS = {"None"}
@@ -89,6 +83,11 @@ SCRIPT_PORTAL_TARGETS = {
 REMOVED_INFO_FIELDS = {
     "standAlone", "partyStandAlone", "noMapCmd", "fieldScript",
     "onFirstUserEnter", "onUserEnter",
+    "AmbientBGM", "AmbientBGMv", "ableMapleAuction", "abilityPresetBlock",
+    "fieldLimit2", "limitUpgradeItem", "noBackOverlapped", "noChair",
+    "qrLimitState", "qrLimitState2",
+    "ReviveCurFieldOfNoTransfer", "ReviveCurFieldOfNoTransferPoint",
+    "ReviveCurFieldOfNoTransferNotDamaged",
 }
 REMOVED_OBJ_FIELDS = {"hide", "reactor", "flow"}
 REMOVED_PORTAL_FIELDS = {"delay", "hideTooltip", "onlyOnce"}
@@ -130,7 +129,7 @@ class Audit:
             return None
         if path not in self.source_cache:
             try:
-                img = WzImage.from_bytes(path.read_bytes(), key=WzKey.for_region("EMS"), name=path.name)
+                img = WzImage.from_bytes(path.read_bytes(), key=WzKey.for_region("BMS"), name=path.name)
                 img.parse()
             except Exception as exc:  # noqa: BLE001
                 self.error(f"source IMG parse failed: {path}: {exc}")
@@ -182,7 +181,12 @@ class Audit:
             return
 
         def walk(node, path: str) -> None:
+            if isinstance(node, WzStringProperty) and node.name in {"_outlink", "_inlink"}:
+                self.error(f"modern canvas link remains: {rel}:{path} -> {node.value}")
             if isinstance(node, WzCanvasProperty) and node.has_pixels():
+                canvas_format = int(node.format) + int(node.format2)
+                if canvas_format != 1 or int(node.format2) != 0:
+                    self.error(f"canvas is not ARGB4444: {rel}:{path} format={canvas_format} format2={node.format2}")
                 try:
                     decode_canvas(node, region="GMS")
                     self.canvas_count += 1
@@ -209,7 +213,7 @@ class Audit:
 
         def source_is_visible(node: WzCanvasProperty) -> bool:
             try:
-                image = decode_canvas(node, region="EMS")
+                image = decode_canvas(node, region="BMS")
             except Exception:
                 return False
             return image.size != (1, 1) and image.getbbox() is not None
@@ -227,8 +231,8 @@ class Audit:
 
     def check_map_counts(self) -> None:
         server_maps = sorted(int(p.stem.split(".")[0]) for p in (SERVER_WZ / "Map.wz/Map/Map1").glob("1052*.img.xml"))
-        if len(MAP_IDS) != 181:
-            self.error(f"expected 181 client 1052 maps, got {len(MAP_IDS)}")
+        if MAP_IDS != SOURCE_MAP_IDS:
+            self.error(f"client 1052 map list must match TMS source: source={len(SOURCE_MAP_IDS)} client={len(MAP_IDS)}")
         if server_maps != MAP_IDS:
             self.error(f"server/client 1052 map list mismatch: client={len(MAP_IDS)} server={len(server_maps)}")
 
@@ -362,10 +366,7 @@ class Audit:
                         if not path.exists():
                             self.error(f"{map_id}: missing visible NPC script {path.relative_to(ROOT)}")
             elif life_type == "m":
-                self.client_img(f"Mob/{life_id}.img")
-                self.server_xml(f"Mob.wz/{life_id}.img.xml")
-                if not self.has_server_string("Mob", life_id):
-                    self.error(f"{map_id}: missing server String/Mob {life_id}")
+                self.error(f"{map_id}: mob life remains after map-only TMS migration: {life_id}")
             else:
                 self.warn(f"{map_id}: unhandled life type {life_type} at life/{life.name}")
 
@@ -538,8 +539,10 @@ class Audit:
                         self.error(f"{mob_id}: server boss skill entries must be compact")
 
     def check_drop_data(self) -> None:
-        self.check_drop_migration(DROP_MIGRATION, NORMAL_MOBS, "Root Abyss normal mob")
-        self.check_drop_migration(BOSS_DROP_MIGRATION, BOSS_DROP_MOBS, "Root Abyss boss")
+        if NORMAL_MOBS:
+            self.check_drop_migration(DROP_MIGRATION, NORMAL_MOBS, "Root Abyss normal mob")
+        if BOSS_DROP_MOBS:
+            self.check_drop_migration(BOSS_DROP_MIGRATION, BOSS_DROP_MOBS, "Root Abyss boss")
 
     def check_drop_migration(self, path: Path, mob_ids: set[int], label: str) -> None:
         if not path.exists():

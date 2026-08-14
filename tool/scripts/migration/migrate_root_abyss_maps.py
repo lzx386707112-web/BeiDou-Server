@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Migrate Root Abyss maps and compatible boss resources from 神说 into BeiDou.
+"""Migrate Root Abyss map resources from TMS into BeiDou.
 
-This migrates the Root Abyss map chain, normal mobs, NPC/reactor shells, and
-the four advanced Root Abyss boss families with old-client skill filtering.
+This migrates the TMS Root Abyss map chain, NPC/reactor shells, and map assets
+with old-client map field filtering. Canvas resources are always projected to
+GMS-keyed ARGB4444 for the legacy client.
 """
 
 from __future__ import annotations
@@ -20,7 +21,7 @@ from PIL import Image
 
 
 ROOT = Path(__file__).resolve().parents[3]
-SRC_CLIENT = Path("/Users/lizixian/Documents/mxd/神说/Data")
+SRC_CLIENT = Path("/Users/lizixian/Documents/mxd/TMS/MapleStory-IMG/Data")
 BACKUP_ROOT = Path("/private/tmp/root-abyss-map-migration-backup")
 WZPY = ROOT / "tool" / "wz-python"
 sys.path.insert(0, str(WZPY))
@@ -47,11 +48,12 @@ from wzpy.reader import WzBinaryReader  # noqa: E402
 from wzpy.writer import encode_image_body  # noqa: E402
 
 
-SOURCE_REGION = "EMS"
+SOURCE_REGION = "BMS"
+TARGET_CANVAS_FORMAT = 1
 TARGET_KEY = WzKey.for_region("GMS")
 TRANSPARENT_PIXEL = Image.new("RGBA", (1, 1), (0, 0, 0, 0))
 
-RETIRED_MAP_IDS = set(range(105200410, 105200420))
+RETIRED_MAP_IDS = set()
 RETIRED_MAP_ID_STRINGS = {str(map_id) for map_id in RETIRED_MAP_IDS}
 MAP_IDS = [
     int(p.stem)
@@ -59,12 +61,8 @@ MAP_IDS = [
     if int(p.stem) not in RETIRED_MAP_IDS
 ]
 NORTH_GARDEN_MAP_IDS = {105200400, 105200800}
-NORMAL_MOB_IDS = [7120112, 7120113, 7120114, 7120115]
-ROOT_ABYSS_BOSS_ROOM_SPAWNS = {
-    105200110: (8900000, 489, 454),
-    105200210: (8910000, -131, 550),
-    105200310: (8920000, 60, 134),
-}
+NORMAL_MOB_IDS = []
+ROOT_ABYSS_BOSS_ROOM_SPAWNS = {}
 ADVANCED_BOSS_MOB_IDS = [
     8900000, 8900001, 8900002, 8900003,
     8910000, 8910001,
@@ -125,31 +123,21 @@ OLD_SERVER_REQUIRED_BOSS_INFO_FIELDS = {
     "level": 1,
 }
 NPC_IDS = [
-    1064002, 1064003, 1064004, 1064005, 1064006, 1064007,
-    1064008, 1064012, 1064013, 1064014, 1064015, 1064016,
+    1064002, 1064003, 1064005, 1064006, 1064007, 1064008,
+    1064012, 1064013, 1064014, 1064015, 1064032,
+    3007007, 3007008, 9091004, 9091021, 9091023,
 ]
 REACTOR_IDS = [
-    1052006, 1052008, 1058016, 1058022, 1058023,
+    1058016, 1058017, 1058018, 1058019, 1058020, 1058021, 1058022, 1058023,
     1058024, 1058025, 1058026, 1058027, 1058028, 1058029,
 ]
 
-# The source maps reference these reactor ids, but 神说/Data/Reactor does not
-# ship matching files. Use stable same-family reactor art as load-safe shells.
 REACTOR_TEMPLATE = {
-    1052006: 1052001,
-    1052008: 1052001,
-    1058016: 1058002,
-    1058022: 1058002,
-    1058023: 1058002,
-    1058024: 1058002,
-    1058025: 1058002,
-    1058026: 1058002,
-    1058027: 1058002,
-    1058028: 1058002,
-    1058029: 1058002,
+    reactor_id: reactor_id for reactor_id in REACTOR_IDS
 }
 
 IMGDIR_TAG_RE = re.compile(r"</?imgdir\b[^>]*>")
+SOURCE_LINK_IMG_CACHE: dict[Path, WzImage] = {}
 
 
 def atomic_write_bytes(path: Path, data: bytes) -> None:
@@ -189,30 +177,84 @@ def source_img(path: Path) -> WzImage:
     return img
 
 
+def source_img_by_rel(rel: Path) -> WzImage:
+    if rel not in SOURCE_LINK_IMG_CACHE:
+        SOURCE_LINK_IMG_CACHE[rel] = source_img(SRC_CLIENT / rel)
+    return SOURCE_LINK_IMG_CACHE[rel]
+
+
+def source_rel_for_link(value: str) -> tuple[Path, str] | None:
+    parts = value.split("/")
+    img_index = next((idx for idx, part in enumerate(parts) if part.endswith(".img")), None)
+    if img_index is None:
+        return None
+    return Path(*parts[: img_index + 1]), "/".join(parts[img_index + 1 :])
+
+
+def source_canvas_from_link(value: str) -> WzCanvasProperty | None:
+    resolved = source_rel_for_link(value)
+    if resolved is None:
+        return None
+    rel, path = resolved
+    src_path = SRC_CLIENT / rel
+    if not src_path.exists():
+        return None
+    node = source_img_by_rel(rel).get(path)
+    return node if isinstance(node, WzCanvasProperty) else None
+
+
+def inline_canvas_outlinks(prop) -> None:
+    if isinstance(prop, WzCanvasProperty):
+        outlink = prop.child("_outlink")
+        if isinstance(outlink, WzStringProperty):
+            source = source_canvas_from_link(str(outlink.value))
+            if source is None:
+                raise RuntimeError(f"cannot resolve canvas _outlink {outlink.value}")
+            image = decode_canvas(source, region=SOURCE_REGION)
+            prop._migration_image = image
+            prop.width = int(source.width)
+            prop.height = int(source.height)
+            remove_child(prop, "_outlink")
+            remove_child(prop, "_inlink")
+
+    if hasattr(prop, "children"):
+        for child in prop.children():
+            inline_canvas_outlinks(child)
+
+
 def reencode_canvas_tree(prop) -> None:
-    if isinstance(prop, WzCanvasProperty) and prop.has_pixels():
+    if isinstance(prop, WzCanvasProperty) and (prop.has_pixels() or hasattr(prop, "_migration_image")):
         try:
-            if int(prop.width) <= 0 or int(prop.height) <= 0:
-                raise ValueError(f"invalid canvas size {prop.width}x{prop.height}")
-            image = decode_canvas(prop, region=SOURCE_REGION)
+            image = getattr(prop, "_migration_image", None)
+            if image is None:
+                if int(prop.width) <= 0 or int(prop.height) <= 0:
+                    raise ValueError(f"invalid canvas size {prop.width}x{prop.height}")
+                image = decode_canvas(prop, region=SOURCE_REGION)
             width = int(prop.width)
             height = int(prop.height)
-            fmt = int(prop.format) + int(prop.format2)
         except Exception:
             image = TRANSPARENT_PIXEL
             width = 1
             height = 1
-            fmt = 2
-            prop.width = width
-            prop.height = height
-            prop.format = 2
-            prop.format2 = 0
-        prop._png_data = encode_canvas_payload(image, fmt, width, height, key=TARGET_KEY, listwz=False)
+        prop.width = width
+        prop.height = height
+        prop.format = TARGET_CANVAS_FORMAT
+        prop.format2 = 0
+        prop._png_data = encode_canvas_payload(image, TARGET_CANVAS_FORMAT, width, height, key=TARGET_KEY, listwz=False)
         prop._png_length = len(prop._png_data)
 
     if hasattr(prop, "children"):
         for child in prop.children():
             reencode_canvas_tree(child)
+
+
+def normalize_canvas_metadata_tree(prop) -> None:
+    if isinstance(prop, WzCanvasProperty):
+        prop.format = TARGET_CANVAS_FORMAT
+        prop.format2 = 0
+    if hasattr(prop, "children"):
+        for child in prop.children():
+            normalize_canvas_metadata_tree(child)
 
 
 def sanitize_root_abyss_map(root: WzSubProperty, map_id: int | None = None) -> None:
@@ -225,6 +267,19 @@ def sanitize_root_abyss_map(root: WzSubProperty, map_id: int | None = None) -> N
             "fieldScript",
             "onFirstUserEnter",
             "onUserEnter",
+            "AmbientBGM",
+            "AmbientBGMv",
+            "ableMapleAuction",
+            "abilityPresetBlock",
+            "fieldLimit2",
+            "limitUpgradeItem",
+            "noBackOverlapped",
+            "noChair",
+            "qrLimitState",
+            "qrLimitState2",
+            "ReviveCurFieldOfNoTransfer",
+            "ReviveCurFieldOfNoTransferPoint",
+            "ReviveCurFieldOfNoTransferNotDamaged",
         ):
             remove_child(info, key)
         mark = info.child("mapMark")
@@ -262,6 +317,12 @@ def sanitize_root_abyss_map(root: WzSubProperty, map_id: int | None = None) -> N
                 ensure_string_child(portal, "script", "rootabyssGardenOut")
             if map_id == 105200900 and child_value(portal, "tm") == 105200000 and child_value(portal, "tn") == "in00":
                 ensure_string_child(portal, "tn", "sp")
+
+    life_root = root.child("life")
+    if isinstance(life_root, WzSubProperty):
+        for life in list(life_root.children()):
+            if child_value(life, "type") == "m":
+                remove_child(life_root, life.name)
 
     if map_id in NORTH_GARDEN_MAP_IDS:
         move_garden_foot_objects_to_layer_zero(root)
@@ -408,6 +469,7 @@ def reencode_img(src: Path, dst: Path, overwrite: bool = True, sanitizer=None) -
     img = source_img(src)
     if sanitizer is not None:
         sanitizer(img.root)
+    inline_canvas_outlinks(img.root)
     reencode_canvas_tree(img.root)
     backup(dst)
     atomic_write_bytes(dst, encode_image_body(img, gms_reader()))
@@ -483,6 +545,8 @@ def write_server_xml_from_source(
     img = source_img(src)
     if sanitizer is not None:
         sanitizer(img.root)
+    inline_canvas_outlinks(img.root)
+    normalize_canvas_metadata_tree(img.root)
     backup(dst)
     atomic_write_text(dst, img_to_xml(img, root_name=root_name))
     return "write"
@@ -494,13 +558,15 @@ def clone_property(prop, name: str | None = None, parent=None):
         out = WzCanvasProperty(new_name, parent)
         out.width = prop.width
         out.height = prop.height
-        out.format = prop.format
-        out.format2 = prop.format2
-        if prop.has_pixels():
-            image = decode_canvas(prop, region=SOURCE_REGION)
+        out.format = TARGET_CANVAS_FORMAT
+        out.format2 = 0
+        if prop.has_pixels() or hasattr(prop, "_migration_image"):
+            image = getattr(prop, "_migration_image", None)
+            if image is None:
+                image = decode_canvas(prop, region=SOURCE_REGION)
             out._png_data = encode_canvas_payload(
                 image,
-                int(prop.format) + int(prop.format2),
+                TARGET_CANVAS_FORMAT,
                 int(prop.width),
                 int(prop.height),
                 key=TARGET_KEY,
@@ -651,6 +717,8 @@ def patch_server_mobskill_levels() -> int:
 
 
 def patch_root_abyss_mobskills() -> dict[str, int]:
+    if not ROOT_ABYSS_MOB_SKILL_LEVELS:
+        return {"client": 0, "server": 0}
     return {
         "client": patch_client_mobskill_levels(),
         "server": patch_server_mobskill_levels(),
@@ -799,7 +867,9 @@ def upsert_server_imgdir_child(path: Path, parent_name: str, child_name: str, ch
     if insert_at < 0:
         raise RuntimeError(f"{path} missing closing tag for {parent_name}")
     backup(path)
-    atomic_write_text(path, text[:insert_at] + "\n" + child_xml + text[insert_at:])
+    text = text[:insert_at] + "\n" + child_xml + text[insert_at:]
+    text = re.sub(r"[ \t]+(?=\n)", "", text)
+    atomic_write_text(path, text)
 
 
 def migrate_connect_compat() -> dict[str, int]:
@@ -879,6 +949,8 @@ def migrate_connect_compat() -> dict[str, int]:
 def migrate_effect_compat() -> dict[str, int]:
     stats = {"client": 0, "server": 0}
     src = source_img(SRC_CLIENT / "Map/Obj/effect.img")
+    inline_canvas_outlinks(src.root)
+    reencode_canvas_tree(src.root)
     source_gate = src.get("quest/gate/8")
     if source_gate is None:
         raise RuntimeError("source Map/Obj/effect.img missing quest/gate/8")
@@ -1020,8 +1092,8 @@ def migrate_map_assets() -> dict[str, int]:
                 raise FileNotFoundError(src)
             client_dst = ROOT / f"clien/Data/Map/{kind}/{name}.img"
             server_dst = ROOT / f"gms-server/wz/Map.wz/{kind}/{name}.img.xml"
-            stats["client"] += reencode_img(src, client_dst, overwrite=False) == "write"
-            stats["server"] += write_server_xml_from_source(src, server_dst, overwrite=False) == "write"
+            stats["client"] += reencode_img(src, client_dst) == "write"
+            stats["server"] += write_server_xml_from_source(src, server_dst) == "write"
     return stats
 
 
@@ -1037,16 +1109,24 @@ def migrate_mobs_and_npcs() -> dict[str, int]:
         stats["client"] += reencode_img(src, ROOT / f"clien/Data/Npc/{npc_id}.img") == "write"
         stats["server"] += write_server_xml_from_source(src, ROOT / f"gms-server/wz/Npc.wz/{npc_id}.img.xml") == "write"
 
-    upsert_client_string("Mob", NORMAL_MOB_IDS)
-    upsert_server_string_xml("Mob", NORMAL_MOB_IDS)
+    if NORMAL_MOB_IDS:
+        upsert_client_string("Mob", NORMAL_MOB_IDS)
+        upsert_server_string_xml("Mob", NORMAL_MOB_IDS)
     upsert_client_string("Npc", NPC_IDS)
     upsert_server_string_xml("Npc", NPC_IDS)
     return stats
 
 
 def migrate_root_abyss_boss_mobs() -> dict[str, int]:
-    stats = {"client": 0, "server": 0}
-    for mob_id in ADVANCED_BOSS_MOB_IDS:
+    stats = {"client": 0, "server": 0, "skipped": 0}
+    available_ids = [
+        mob_id for mob_id in ADVANCED_BOSS_MOB_IDS
+        if (SRC_CLIENT / f"Mob/{mob_id}.img").exists()
+    ]
+    if not available_ids:
+        stats["skipped"] = len(ADVANCED_BOSS_MOB_IDS)
+        return stats
+    for mob_id in available_ids:
         src = SRC_CLIENT / f"Mob/{mob_id}.img"
         sanitizer = lambda root, current_mob_id=mob_id: sanitize_root_abyss_boss_mob(root, current_mob_id)
         server_sanitizer = lambda root, current_mob_id=mob_id: (
@@ -1060,8 +1140,8 @@ def migrate_root_abyss_boss_mobs() -> dict[str, int]:
             sanitizer=server_sanitizer,
         ) == "write"
 
-    upsert_client_string("Mob", ADVANCED_BOSS_MOB_IDS)
-    upsert_server_string_xml("Mob", ADVANCED_BOSS_MOB_IDS)
+    upsert_client_string("Mob", available_ids)
+    upsert_server_string_xml("Mob", available_ids)
     return stats
 
 
