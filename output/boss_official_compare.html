@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>Boss 血量合理性对照(官服)</title>
+<style>
+:root{--bg:#101418;--panel:#171c23;--border:#252c36;--text:#dbe2ea;--muted:#8a94a3;--accent:#4ea1ff;
+--ok:#3ecf8e;--warn:#e8b64c;--high:#ff6b6b;--low:#5aa7ff;--gold:#e8b64c;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;padding:26px;max-width:1180px;margin:0 auto}
+h1{font-size:21px;margin-bottom:6px}
+.sub{color:var(--muted);font-size:13px;margin-bottom:20px;line-height:1.7}
+h2{font-size:16px;margin:26px 0 12px;padding-left:10px;border-left:3px solid var(--accent)}
+.tiers{display:flex;flex-direction:column;gap:8px}
+.tier{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:10px 16px}
+.tier-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:3px}
+.tier-name{font-weight:600;font-size:14px}
+.tier-hp{color:var(--gold);font-size:12px;font-variant-numeric:tabular-nums}
+.tier-body{color:var(--muted);font-size:13px}
+.wrap{max-height:66vh;overflow:auto;border:1px solid var(--border);border-radius:10px}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+thead th{position:sticky;top:0;background:var(--panel);color:var(--muted);text-align:left;padding:9px 12px;border-bottom:1px solid var(--border);white-space:nowrap}
+tbody td{padding:7px 12px;border-bottom:1px solid #1e242d;vertical-align:top}
+tbody tr:nth-child(even){background:#141a21}
+.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+.mine{color:var(--gold);font-weight:600}
+.note{color:var(--muted);font-size:12px}
+.tag{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap}
+.tag.ok{color:#06281a;background:var(--ok)}
+.tag.warn{color:#2a1f04;background:var(--warn)}
+.tag.high{color:#2a0808;background:var(--high)}
+.tag.low{color:#061c33;background:var(--low)}
+tr.high td:first-child{color:var(--high)}
+tr.low td:first-child{color:var(--low)}
+.findings{display:flex;flex-direction:column;gap:10px}
+.find{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:12px 16px;font-size:13px;line-height:1.8}
+.find b{color:var(--accent)}
+.find .bad{color:var(--high)} .find .good{color:var(--ok)}
+.src{color:var(--muted);font-size:12px;margin-top:18px;line-height:1.8}
+</style>
+</head>
+<body>
+<h1>Boss 难度排行与血量合理性对照(以官服数据为准)</h1>
+<div class="sub">本服数据: <b>gms-server/wz/Mob.wz</b>(info/maxHP)· 官服数据: 经典时代 = 台服/经典GMS 大巨变~V 时期(约2013-2020);现代 = 国服CMS-226 / GMS 当前版本。本服老 boss 整体锚定的是<b>经典时代</b>标尺,因此对照以经典值为准。</div>
+
+<h2>一、官服难度排行(由易到难,按官服血量与内容阶段)</h2>
+<div class="tiers"><div class="tier"><div class="tier-head"><span class="tier-name">T1 入门 · 副本/野外王</span><span class="tier-hp">2,300万 ~ 5,500万</span></div><div class="tier-body">帕普拉图斯(2,300万) → 皮亚奴斯(3,000万) → CRA普通四王(3,150万~5,500万)</div></div>
+<div class="tier"><div class="tier-head"><span class="tier-name">T2 经典 · 团队王</span><span class="tier-hp">6,600万 ~ 1.1亿</span></div><div class="tier-body">扎昆(本体三段:6,600万/8,800万/1.1亿)</div></div>
+<div class="tier"><div class="tier-head"><span class="tier-name">T3 中期 · 女神/封印王</span><span class="tier-hp">20.9亿 ~ 21亿</span></div><div class="tier-body">暗黑龙王(20.9亿) → 品克缤/希纳斯/阿卡伊勒/班·雷昂(21亿)</div></div>
+<div class="tier"><div class="tier-head"><span class="tier-name">T4 进阶 · 军团长王</span><span class="tier-hp">16.8亿 ~ 168亿</span></div><div class="tier-body">卡翁(16.8亿) → 麦格纳斯简单(60亿) → 希拉困难(168亿)</div></div>
+<div class="tier"><div class="tier-head"><span class="tier-name">T5 CRA 混沌四王(经典时代)</span><span class="tier-hp">800亿 ~ 2,000亿</span></div><div class="tier-body">混沌比艾樂(800亿) → 混沌班班(1,000亿) → 混沌血腥皇后(1,400亿) → 混沌贝伦(2,000亿)</div></div>
+<div class="tier"><div class="tier-head"><span class="tier-name">T6 现代 · 神都前期</span><span class="tier-hp">5万亿</span></div><div class="tier-body">守护天使绿水灵(普通5万亿)</div></div>
+<div class="tier"><div class="tier-head"><span class="tier-name">T7 现代 · 神秘河中期</span><span class="tier-hp">24万亿 ~ 25.2万亿</span></div><div class="tier-body">路西德(24万亿) → 威尔(25.2万亿)</div></div>
+<div class="tier"><div class="tier-head"><span class="tier-name">T8 现代 · 后期王</span><span class="tier-hp">88万亿 ~ 243万亿</span></div><div class="tier-body">觉醒希拉(88万亿) → 神选者塞伦(243万亿)</div></div>
+<div class="tier"><div class="tier-head"><span class="tier-name">T9 现代 · 终局王</span><span class="tier-hp">1,056万亿</span></div><div class="tier-body">监视者卡洛斯(1,056万亿)</div></div></div>
+
+<h2>二、本服 vs 官服 血量对照(共 26 个主要 Boss / 形态)</h2>
+<div class="wrap">
+<table>
+<thead><tr><th>Boss(本服)</th><th>怪物ID</th><th>本服血量</th><th>官服·经典</th><th>官服·现代</th><th>判定</th><th>说明</th></tr></thead>
+<tbody><tr class="ok">
+      <td>扎昆(本体)</td><td class="num">8800002</td><td class="num mine">1.1亿</td>
+      <td class="num">1.1亿</td><td class="num">700万</td>
+      <td><span class="tag ok">匹配</span></td>
+      <td class="note">经典时代精确匹配(经典GMS body3)</td>
+    </tr>
+<tr class="ok">
+      <td>皮亚奴斯</td><td class="num">8510000</td><td class="num mine">3,000万</td>
+      <td class="num">3,000万</td><td class="num">3,000万</td>
+      <td><span class="tag ok">匹配</span></td>
+      <td class="note">历代官服一直未变,完全一致</td>
+    </tr>
+<tr class="ok">
+      <td>帕普拉图斯</td><td class="num">8500001</td><td class="num mine">2,300万</td>
+      <td class="num">≈2,300万</td><td class="num">普通166亿/混沌504亿</td>
+      <td><span class="tag ok">匹配</span></td>
+      <td class="note">经典时代值;现代版被大幅上调</td>
+    </tr>
+<tr class="ok">
+      <td>暗黑龙王(身体)</td><td class="num">8810018</td><td class="num mine">20.9亿</td>
+      <td class="num">20.9亿</td><td class="num">—</td>
+      <td><span class="tag ok">匹配</span></td>
+      <td class="note">经典时代精确匹配(全身合计约27.5亿)</td>
+    </tr>
+<tr class="ok">
+      <td>品克缤(普通)</td><td class="num">8820001</td><td class="num mine">21亿</td>
+      <td class="num">普通21亿</td><td class="num">混沌693亿</td>
+      <td><span class="tag ok">匹配</span></td>
+      <td class="note">经典普通档精确匹配</td>
+    </tr>
+<tr class="ok">
+      <td>希纳斯(女皇)</td><td class="num">8850011</td><td class="num mine">21亿</td>
+      <td class="num">台服21亿</td><td class="num">普通630亿/easy105亿</td>
+      <td><span class="tag ok">匹配</span></td>
+      <td class="note">台服经典值精确匹配(韩服630亿)</td>
+    </tr>
+<tr class="ok">
+      <td>阿卡伊勒</td><td class="num">8860000</td><td class="num mine">21亿</td>
+      <td class="num">台服21亿</td><td class="num">韩126亿</td>
+      <td><span class="tag ok">匹配</span></td>
+      <td class="note">台服经典值精确匹配</td>
+    </tr>
+<tr class="ok">
+      <td>班·雷昂</td><td class="num">8840000</td><td class="num mine">21亿</td>
+      <td class="num">≈21亿</td><td class="num">普通63亿/困难105亿</td>
+      <td><span class="tag ok">匹配</span></td>
+      <td class="note">经典普通档匹配</td>
+    </tr>
+<tr class="warn">
+      <td>麦格纳斯</td><td class="num">8880000</td><td class="num mine">50亿</td>
+      <td class="num">简单60亿/困难1,200亿</td><td class="num">同左</td>
+      <td><span class="tag warn">存疑</span></td>
+      <td class="note">接近官服[简单]档,但等级设为190(官服[困难]档),档位模糊</td>
+    </tr>
+<tr class="ok">
+      <td>贝伦(普通)</td><td class="num">8930100</td><td class="num mine">5.5亿</td>
+      <td class="num">5.5亿</td><td class="num">5.5亿</td>
+      <td><span class="tag ok">匹配</span></td>
+      <td class="note">CRA普通四王,历代完全一致</td>
+    </tr>
+<tr class="ok">
+      <td>皮埃尔/比艾樂(普通)</td><td class="num">8900100</td><td class="num mine">3.15亿</td>
+      <td class="num">3.15亿</td><td class="num">3.15亿</td>
+      <td><span class="tag ok">匹配</span></td>
+      <td class="note">CRA普通四王,历代完全一致</td>
+    </tr>
+<tr class="ok">
+      <td>斑斑/半半(普通)</td><td class="num">8910100</td><td class="num mine">3.15亿</td>
+      <td class="num">3.15亿</td><td class="num">3.15亿</td>
+      <td><span class="tag ok">匹配</span></td>
+      <td class="note">CRA普通四王,历代完全一致</td>
+    </tr>
+<tr class="ok">
+      <td>血腥女王(普通)</td><td class="num">8920101</td><td class="num mine">3.15亿</td>
+      <td class="num">3.15亿</td><td class="num">3.15亿</td>
+      <td><span class="tag ok">匹配</span></td>
+      <td class="note">CRA普通四王,历代完全一致</td>
+    </tr>
+<tr class="ok">
+      <td>混沌比艾樂</td><td class="num">8900000</td><td class="num mine">800亿</td>
+      <td class="num">经典800亿</td><td class="num">现代20亿</td>
+      <td><span class="tag ok">匹配</span></td>
+      <td class="note">经典时代精确匹配</td>
+    </tr>
+<tr class="ok">
+      <td>混沌班班(半半)</td><td class="num">8910000</td><td class="num mine">1,000亿</td>
+      <td class="num">经典1,000亿</td><td class="num">现代20亿</td>
+      <td><span class="tag ok">匹配</span></td>
+      <td class="note">经典时代精确匹配(百度百科/巴哈V217攻略同值)</td>
+    </tr>
+<tr class="low">
+      <td>混沌血腥皇后</td><td class="num">8920001</td><td class="num mine">30亿</td>
+      <td class="num">经典1,400亿</td><td class="num">现代20亿</td>
+      <td><span class="tag low">偏低</span></td>
+      <td class="note">仅约现代官服值;按经典标尺应为1,400亿(差47倍)</td>
+    </tr>
+<tr class="low">
+      <td>混沌贝伦</td><td class="num">8930000</td><td class="num mine">20亿</td>
+      <td class="num">经典2,000亿</td><td class="num">现代≈20亿</td>
+      <td><span class="tag low">偏低</span></td>
+      <td class="note">仅约现代官服值;按经典标尺应为2,000亿(差100倍)</td>
+    </tr>
+<tr class="high">
+      <td>卡翁(卡雄)</td><td class="num">8880200</td><td class="num mine">300亿</td>
+      <td class="num">—</td><td class="num">16.8亿</td>
+      <td><span class="tag high">偏高</span></td>
+      <td class="note">现代官服仅16.8亿,本服高约18倍</td>
+    </tr>
+<tr class="high">
+      <td>希拉</td><td class="num">8870000</td><td class="num mine">300亿</td>
+      <td class="num">困难:韩168亿/台21亿</td><td class="num">困难168亿</td>
+      <td><span class="tag high">偏高</span></td>
+      <td class="note">高于官服困难档(韩版168亿的1.8倍)</td>
+    </tr>
+<tr class="high">
+      <td>希拉(白发模式)</td><td class="num">8870200</td><td class="num mine">300亿</td>
+      <td class="num">韩21亿/台2.1亿</td><td class="num">—</td>
+      <td><span class="tag high">偏高</span></td>
+      <td class="note">远超官服白发形态(韩21亿的14倍)</td>
+    </tr>
+<tr class="low">
+      <td>守护天使绿水灵</td><td class="num">8880700</td><td class="num mine">300亿</td>
+      <td class="num">—</td><td class="num">普通5万亿</td>
+      <td><span class="tag low">偏低</span></td>
+      <td class="note">官服5万亿,本服压缩约16倍,且与希拉同值</td>
+    </tr>
+<tr class="low">
+      <td>梦中的路西德</td><td class="num">8880140</td><td class="num mine">50亿</td>
+      <td class="num">—</td><td class="num">普通24万亿(easy12万亿)</td>
+      <td><span class="tag low">偏低</span></td>
+      <td class="note">压缩约480倍</td>
+    </tr>
+<tr class="low">
+      <td>威尔</td><td class="num">8880300</td><td class="num mine">50亿</td>
+      <td class="num">—</td><td class="num">普通25.2万亿(easy16.8万亿)</td>
+      <td><span class="tag low">偏低</span></td>
+      <td class="note">压缩约500倍</td>
+    </tr>
+<tr class="low">
+      <td>神选者塞伦</td><td class="num">8880340</td><td class="num mine">50亿</td>
+      <td class="num">—</td><td class="num">普通243万亿</td>
+      <td><span class="tag low">偏低</span></td>
+      <td class="note">压缩约4,860倍</td>
+    </tr>
+<tr class="low">
+      <td>觉醒希拉</td><td class="num">8880400</td><td class="num mine">300亿</td>
+      <td class="num">—</td><td class="num">普通88万亿</td>
+      <td><span class="tag low">偏低</span></td>
+      <td class="note">压缩约300倍</td>
+    </tr>
+<tr class="low">
+      <td>监视者卡洛斯</td><td class="num">8880803</td><td class="num mine">300亿</td>
+      <td class="num">—</td><td class="num">普通1,056万亿(P1 336T+P2 720T)</td>
+      <td><span class="tag low">偏低</span></td>
+      <td class="note">压缩约3,500倍</td>
+    </tr></tbody>
+</table>
+</div>
+
+<h2>三、合理性结论</h2>
+<div class="findings">
+<div class="find"><b>✓ 合理(经典时代精确匹配):</b> 扎昆(6,600万/8,800万/1.1亿)、皮亚奴斯(3,000万)、暗黑龙王(20.9亿)、品克缤/希纳斯/阿卡伊勒/班·雷昂(21亿)、CRA 普通四王(3,150万~5,500万)、混沌比艾樂(800亿)、混沌班班(1,000亿)。这些与官服经典值几乎完全一致,<span class="good">无需改动</span>。</div>
+<div class="find"><b class="bad">✗ 最大问题 — CRA 混沌四王内部失序:</b> 官服四王难度为 <b>贝伦(2,000亿) &gt; 血腥皇后(1,400亿) &gt; 班班(1,000亿) &gt; 比艾樂(800亿)</b>;本服却是 班班(1,000亿) &gt; 比艾樂(800亿) &gt;&gt; 皇后(30亿) &gt; 贝伦(20亿)。<b>官服最难、机制最恶心的混沌贝伦,在本服是四王里最脆的</b>(比官服低 100 倍);混沌血腥皇后也低了约 47 倍。这两只更像是直接套用了现代官服被砍后的 ~20亿数值,与本服其他 boss 用的经典标尺不统一。</div>
+<div class="find"><b class="bad">✗ 五转新王完全失去区分度:</b> 路西德 / 威尔 / 塞伦 在本服<b>全部是 50亿</b>,官服是 24T / 25.2T / 243T 逐级拉开;希拉 / 白发希拉 / 觉醒希拉 / 卡翁 / 守护天使绿水灵 / 卡洛斯 在本服<b>全部是 300亿</b>,官服从 16.8亿(卡翁)到 1,056万亿(卡洛斯)横跨 6 个数量级。同档同值导致<b>血条无法体现任何难度梯度</b>,且把官服里最弱的卡翁/希拉和最强的卡洛斯放在同一档,次序混乱。</div>
+<div class="find"><b class="bad">✗ 个别 boss 相对官服反向离谱:</b> 卡翁(卡雄)官服仅 16.8亿,本服 300亿(高约 18 倍);希拉白发模式官服 21亿(韩),本服 300亿(高约 14 倍)。</div>
+<div class="find"><b>△ 定位模糊:</b> 麦格纳斯本服 50亿 ≈ 官服[简单]档(60亿),但等级设为 190(官服[困难]档为 1,200亿),打起来会显得"血少但等级高"。</div>
+<div class="find"><b>△ 现代 boss 整体压缩属设计选择:</b> 路西德/威尔/塞伦/卡洛斯/觉醒希拉等官服为万亿级,本服统一压缩到 50亿/300亿 两档,若按本服输出水平这是刻意的,可以接受;<span class="bad">但建议至少把同一档内的 boss 按官服顺序拉开倍数</span>(如卡洛斯 &gt; 塞伦 &gt; 觉醒希拉 &gt; 威尔 &gt; 路西德),别全挤在同值。</div>
+</div>
+
+<div class="src">数据来源: 本服 gms-server/wz/Mob.wz + String.wz/Mob.img.xml;官服经典值: 台服「無限改版後全BOSS血量表」(medicinetw)、百度百科·半半、巴哈姆特 V217 混沌四王攻略;官服现代值: 冒险岛小册子 mxd.dvg.cn(CMS-226)、maplestory.net、StrategyWiki、namuwiki 体力顺位表、thedigitalcrowns 5% HP 表。注: 官服数值经多年多次平衡调整,各版本间有差异,表中以经典/现代两列并列呈现。</div>
+</body>
+</html>
