@@ -4,7 +4,7 @@
         <canvas name="icon" width="26" height="30">
             <vector name="origin" x="-4" y="30" />
         </canvas>
-    </imgdir>
+    <int name="eva" value="100" /><int name="maxHP" value="2147483647" /></imgdir>
     <imgdir name="skill">
         <imgdir name="1220005">
             <canvas name="icon" width="32" height="32">
@@ -3845,14 +3845,13 @@
       </imgdir>
       <imgdir name="30">
         <int name="attackCount" value="12" />
-        <int name="cooltime" value="0" />
         <string name="hs" value="h30" />
         <vector name="lt" x="-210" y="-100" />
         <int name="mobCount" value="12" />
         <int name="mpCon" value="1000" />
         <vector name="rb" x="210" y="30" />
         <int name="time" value="4" />
-      <int name="damage" value="105" /><int name="mad" value="105" /></imgdir>
+      <int name="damage" value="105" /><int name="mad" value="105" /><int name="cooltime" value="20" /></imgdir>
     </imgdir>
     <int name="masterLevel" value="30" />
     <int name="invisible" value="1" />

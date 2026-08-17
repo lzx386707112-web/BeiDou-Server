@@ -62,6 +62,8 @@ COMPAT_ORIGIN_TEMPLATES = {}
 VELLUM_COMPAT_MOBS = {8930000, 8930100}
 VELLUM_MAX_ATTACK_FRAME_WIDTH = 960
 VELLUM_MAX_ATTACK_FRAME_HEIGHT = 720
+VELLUM_FIRE_BREATH_FRAMES = {str(frame) for frame in range(52, 66)}
+VELLUM_FIRE_BREATH_ORIGIN_X = 1004
 
 
 def target_img(path: Path) -> WzImage:
@@ -198,6 +200,20 @@ def scale_vellum_attack_frames(root: WzSubProperty) -> int:
     return changed
 
 
+def restore_vellum_fire_breath_origin(root: WzSubProperty) -> int:
+    action = root.child("attack5")
+    if not isinstance(action, WzSubProperty):
+        return 0
+    changed = 0
+    for frame_name in VELLUM_FIRE_BREATH_FRAMES:
+        frame = action.child(frame_name)
+        origin = frame.child("origin") if isinstance(frame, WzCanvasProperty) else None
+        if isinstance(origin, WzVectorProperty) and int(origin.x) != VELLUM_FIRE_BREATH_ORIGIN_X:
+            origin.x = VELLUM_FIRE_BREATH_ORIGIN_X
+            changed += 1
+    return changed
+
+
 def patch_specific_boss_contract(root: WzSubProperty, mob_id: int) -> None:
     if mob_id in ADVANCED_BASIC_COMBAT_MOBS:
         info = root.child("info")
@@ -210,6 +226,7 @@ def patch_specific_boss_contract(root: WzSubProperty, mob_id: int) -> None:
             ensure_int_child(info, "firstAttack", 1)
     if mob_id in VELLUM_COMPAT_MOBS:
         scale_vellum_attack_frames(root)
+        restore_vellum_fire_breath_origin(root)
 
 
 def patch_mob(mob_id: int) -> str:

@@ -115,6 +115,10 @@ class WzVectorProperty(_Scalar):
         super().__init__(name, (x, y), parent)
         self.x = x
         self.y = y
+        self._x_offset: Optional[int] = None
+        self._x_length: Optional[int] = None
+        self._y_offset: Optional[int] = None
+        self._y_length: Optional[int] = None
 
 
 class WzUolProperty(_Scalar):
@@ -556,9 +560,16 @@ def _parse_extended(
         return canvas
 
     if ext_type == "Shape2D#Vector2D":
+        x_off = reader.position
         x = reader.read_compressed_int()
+        x_len = reader.position - x_off
+        y_off = reader.position
         y = reader.read_compressed_int()
-        return WzVectorProperty(name, x, y, parent)
+        y_len = reader.position - y_off
+        prop = WzVectorProperty(name, x, y, parent)
+        prop._x_offset, prop._x_length = x_off, x_len
+        prop._y_offset, prop._y_length = y_off, y_len
+        return prop
 
     if ext_type in ("Sound_DX8", "Sound"):
         sound = WzSoundProperty(name, parent)
