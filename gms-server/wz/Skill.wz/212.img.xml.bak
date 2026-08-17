@@ -629,15 +629,13 @@
       </imgdir>
       <imgdir name="30">
         <int name="attackCount" value="6" />
-        <int name="cooltime" value="60" />
-        <int name="mad" value="440" />
         <string name="hs" value="h30" />
         <vector name="lt" x="-700" y="-500" />
         <int name="mobCount" value="12" />
         <int name="mpCon" value="1000" />
         <vector name="rb" x="700" y="300" />
         <int name="time" value="3" />
-      <int name="damage" value="140" /></imgdir>
+      <int name="cooltime" value="0" /><int name="damage" value="167" /><int name="mad" value="167" /></imgdir>
     </imgdir>
     <int name="masterLevel" value="30" />
     <string name="elemAttr" value="f" />
@@ -1005,7 +1003,7 @@
         <int name="mpCon" value="52" />
         <vector name="rb" x="10" y="35" />
         <int name="time" value="5" />
-      <int name="damage" value="107" /><int name="mad" value="107" /></imgdir>
+      <int name="damage" value="142" /><int name="mad" value="142" /></imgdir>
     </imgdir>
     <int name="masterLevel" value="30" />
     <string name="elemAttr" value="f" />
@@ -2072,14 +2070,13 @@
       </imgdir>
       <imgdir name="30">
         <int name="attackCount" value="15" />
-        <int name="cooltime" value="10" />
         <string name="hs" value="h30" />
         <vector name="lt" x="-540" y="-235" />
         <int name="mobCount" value="1" />
         <int name="mpCon" value="83" />
         <vector name="rb" x="0" y="235" />
         <int name="time" value="30" />
-      <int name="damage" value="135" /><int name="mad" value="135" /></imgdir>
+      <int name="damage" value="135" /><int name="mad" value="135" /><int name="cooltime" value="25" /></imgdir>
     </imgdir>
     <int name="masterLevel" value="30" />
     <string name="elemAttr" value="f" />
@@ -2779,13 +2776,12 @@
       </imgdir>
       <imgdir name="30">
         <int name="attackCount" value="10" />
-        <int name="cooltime" value="10" />
         <string name="hs" value="h30" />
         <vector name="lt" x="-540" y="-450" />
         <int name="mobCount" value="12" />
         <int name="mpCon" value="115" />
         <vector name="rb" x="540" y="450" />
-      <int name="damage" value="115" /><int name="mad" value="115" /></imgdir>
+      <int name="mad" value="115" /><int name="cooltime" value="15" /><int name="damage" value="140" /></imgdir>
     </imgdir>
     <int name="masterLevel" value="30" />
     <string name="elemAttr" value="s" />
@@ -3117,13 +3113,12 @@
       </imgdir>
       <imgdir name="30">
         <int name="attackCount" value="12" />
-        <int name="cooltime" value="50" />
         <string name="hs" value="h30" />
         <vector name="lt" x="-460" y="-450" />
         <int name="mobCount" value="15" />
         <int name="mpCon" value="330" />
         <vector name="rb" x="460" y="250" />
-      <int name="damage" value="158" /><int name="mad" value="158" /></imgdir>
+      <int name="cooltime" value="25" /><int name="damage" value="167" /><int name="mad" value="167" /></imgdir>
     </imgdir>
     <int name="masterLevel" value="30" />
     <string name="elemAttr" value="f" />
@@ -3484,14 +3479,13 @@
       </imgdir>
       <imgdir name="30">
         <int name="attackCount" value="12" />
-        <int name="cooltime" value="360" />
         <string name="hs" value="h30" />
         <vector name="lt" x="-1200" y="-800" />
         <int name="mobCount" value="15" />
         <int name="mpCon" value="1500" />
         <vector name="rb" x="1200" y="800" />
         <int name="time" value="20" />
-      <int name="damage" value="140" /><int name="mad" value="140" /></imgdir>
+      <int name="cooltime" value="25" /><int name="damage" value="160" /><int name="mad" value="160" /></imgdir>
     </imgdir>
     <int name="masterLevel" value="30" />
     <string name="elemAttr" value="f" />
@@ -4499,13 +4493,12 @@
       </imgdir>
       <imgdir name="30">
         <int name="attackCount" value="9" />
-        <int name="cooltime" value="240" />
         <string name="hs" value="h30" />
         <vector name="lt" x="-1200" y="-800" />
         <int name="mobCount" value="15" />
         <int name="mpCon" value="1000" />
         <vector name="rb" x="1200" y="800" />
-      <int name="damage" value="120" /><int name="mad" value="120" /></imgdir>
+      <int name="damage" value="120" /><int name="mad" value="120" /><int name="cooltime" value="0" /></imgdir>
     </imgdir>
     <int name="masterLevel" value="30" />
     <string name="elemAttr" value="f" />

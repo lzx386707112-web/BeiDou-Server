@@ -3,7 +3,12 @@
  * 只授予各职业公开的攻击入口，隐藏攻击阶段由服务器回放。
  */
 var status = -1;
+var selectedOption = -1;
+var selectedSkillIndex = -1;
 var SKILL_LEVEL = 30;
+var ADVANCEMENT_LEVEL = 180;
+var EXPLORER_FIFTH_JOB_ITEM_ID = 2029006;
+var EXPLORER_FIFTH_JOB_COMPLETED_KEY = "explorer_fifth_job_completed";
 var KEY_CODES = [
     30, 48, 46, 32, 18, 33, 34, 35, 23, 36, 37, 38, 50,
     49, 24, 25, 16, 19, 31, 20, 22, 47, 17, 45, 21, 44
@@ -92,23 +97,114 @@ function action(mode, type, selection) {
     status++;
     var job = JOBS[cm.getPlayer().getJob().getId()];
     if (job == null) {
+        cm.removeAll(EXPLORER_FIFTH_JOB_ITEM_ID);
         cm.sendOk("当前职业不是支持的冒险家四转职业。");
         cm.dispose();
         return;
     }
+    if (!canUseExplorerFifthJobPanel()) {
+        cleanupLockedExplorerSkills(job);
+        cm.removeAll(EXPLORER_FIFTH_JOB_ITEM_ID);
+        cm.sendOk("需要先达到 " + ADVANCEMENT_LEVEL + " 级，并完成五转女神解锁后，才能使用冒险家五、六转技能。");
+        cm.dispose();
+        return;
+    }
     if (status == 0) {
-        var lastKey = KEY_NAMES.charAt(job.skills.length - 1);
-        cm.sendYesNo("#e#b" + job.name + "五、六转攻击技能#k#n\r\n\r\n" +
-            "将一次学习 " + job.skills.length + " 个可施放攻击技能，并按顺序绑定到 #rA-" +
-            lastKey + "#k。\r\n这些字母键上的原有设置会被覆盖，是否继续？");
+        showMainMenu(job);
     } else if (status == 1) {
-        learnAndBind(job);
+        handleMainMenu(job, selection);
+    } else if (status == 2) {
+        handleSecondStep(job, selection);
+    } else if (status == 3) {
+        bindSelectedSkill(job, selection);
+    } else {
+        cm.dispose();
     }
 }
 
-function learnAndBind(job) {
+function showMainMenu(job) {
+    var lastKey = KEY_NAMES.charAt(job.skills.length - 1);
+    var text = "#e#b" + job.name + "五、六转攻击技能#k#n\r\n\r\n";
+    text += "#L0##b一键学习并按 A-" + lastKey + " 绑定#k#l\r\n";
+    text += "#L1##b查看当前职业技能#k#l\r\n";
+    text += "#L2##b选择单个技能绑定键位#k#l";
+    cm.sendSimple(text);
+}
+
+function handleMainMenu(job, selection) {
+    selectedOption = selection;
+    if (selectedOption == 0) {
+        var lastKey = KEY_NAMES.charAt(job.skills.length - 1);
+        cm.sendYesNo("将一次学习 " + job.skills.length + " 个可施放攻击技能，并按顺序绑定到 #rA-" +
+            lastKey + "#k。\r\n这些字母键上的原有设置会被覆盖，是否继续？");
+        return;
+    }
+    if (selectedOption == 1) {
+        showSkillList(job);
+        return;
+    }
+    if (selectedOption == 2) {
+        showSkillSelection(job);
+        return;
+    }
+    cm.dispose();
+}
+
+function handleSecondStep(job, selection) {
+    if (selectedOption == 0) {
+        learnAndBindAll(job);
+        return;
+    }
+    if (selectedOption == 2) {
+        selectedSkillIndex = selection;
+        showKeySelection(job);
+        return;
+    }
+    cm.dispose();
+}
+
+function showSkillList(job) {
     var player = cm.getPlayer();
-    var mappings = [];
+    var text = "#e#b" + job.name + "五、六转攻击技能#k#n\r\n\r\n";
+    for (var index = 0; index < job.skills.length; index++) {
+        var skillId = Number(job.skills[index]);
+        var learned = player.getSkillLevel(skillId) > 0 ? "#g已学习#k" : "#r未学习#k";
+        text += "#s" + skillId + "# #b#q" + skillId + "##k #d(" + skillId + ")#k " + learned + "\r\n";
+    }
+    cm.sendOk(text);
+    cm.dispose();
+}
+
+function showSkillSelection(job) {
+    var text = "#e#b选择要绑定的五、六转技能#k#n\r\n\r\n";
+    for (var index = 0; index < job.skills.length; index++) {
+        var skillId = Number(job.skills[index]);
+        text += "#L" + index + "##s" + skillId + "# #b#q" + skillId + "##k #d(" + skillId + ")#k#l\r\n";
+    }
+    cm.sendSimple(text);
+}
+
+function showKeySelection(job) {
+    if (selectedSkillIndex < 0 || selectedSkillIndex >= job.skills.length) {
+        cm.dispose();
+        return;
+    }
+    var skillId = Number(job.skills[selectedSkillIndex]);
+    var text = "#e#b选择绑定键位#k#n\r\n\r\n";
+    text += "#s" + skillId + "# #b#q" + skillId + "##k\r\n\r\n";
+    for (var index = 0; index < KEY_CODES.length; index++) {
+        text += "#L" + index + "#" + KEY_NAMES.charAt(index) + "#l";
+        if ((index + 1) % 6 == 0) {
+            text += "\r\n";
+        } else {
+            text += "  ";
+        }
+    }
+    cm.sendSimple(text);
+}
+
+function cleanupRetired(job) {
+    var player = cm.getPlayer();
     var retiredBindings = job.retiredBindings || [];
     var retiredSkills = job.retiredSkills || [];
     for (var retiredIndex = 0; retiredIndex < retiredBindings.length; retiredIndex++) {
@@ -117,6 +213,27 @@ function learnAndBind(job) {
     for (var skillIndex = 0; skillIndex < retiredSkills.length; skillIndex++) {
         player.removeSkillById(retiredSkills[skillIndex]);
     }
+}
+
+function canUseExplorerFifthJobPanel() {
+    return cm.getPlayer().getLevel() >= ADVANCEMENT_LEVEL &&
+        cm.getCharacterExtendValue(EXPLORER_FIFTH_JOB_COMPLETED_KEY) == "1";
+}
+
+function cleanupLockedExplorerSkills(job) {
+    var player = cm.getPlayer();
+    for (var index = 0; index < job.skills.length; index++) {
+        var skillId = Number(job.skills[index]);
+        player.removeBySkillId(skillId);
+        player.removeSkillById(skillId);
+    }
+    player.sendKeymap();
+}
+
+function learnAndBindAll(job) {
+    var player = cm.getPlayer();
+    var mappings = [];
+    cleanupRetired(job);
     for (var index = 0; index < job.skills.length; index++) {
         var skillId = Number(job.skills[index]);
         cm.teachSkill(skillId, SKILL_LEVEL, SKILL_LEVEL, -1, true);
@@ -126,5 +243,23 @@ function learnAndBind(job) {
     }
     player.sendKeymap();
     cm.sendOk("#e#b" + job.name + "技能学习完成#k#n\r\n\r\n" + mappings.join("\r\n"));
+    cm.dispose();
+}
+
+function bindSelectedSkill(job, keyIndex) {
+    if (selectedSkillIndex < 0 || selectedSkillIndex >= job.skills.length ||
+        keyIndex < 0 || keyIndex >= KEY_CODES.length) {
+        cm.dispose();
+        return;
+    }
+    var player = cm.getPlayer();
+    var skillId = Number(job.skills[selectedSkillIndex]);
+    cleanupRetired(job);
+    cm.teachSkill(skillId, SKILL_LEVEL, SKILL_LEVEL, -1, true);
+    player.removeBySkillId(skillId);
+    player.changeKeybinding(KEY_CODES[keyIndex], new KeyBinding(1, skillId));
+    player.sendKeymap();
+    cm.sendOk("#s" + skillId + "# #b#q" + skillId + "##k 已学习并绑定到 #r" +
+        KEY_NAMES.charAt(keyIndex) + "#k 键。");
     cm.dispose();
 }

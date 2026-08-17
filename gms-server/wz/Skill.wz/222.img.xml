@@ -356,15 +356,13 @@
       <imgdir name="30">
         <int name="attackCount" value="4" />
         <int name="cooltime" value="0" />
-        <int name="damage" value="80" />
-        <int name="mad" value="80" />
         <string name="hs" value="h30" />
         <vector name="lt" x="-530" y="-190" />
         <int name="mobCount" value="8" />
         <int name="mpCon" value="22" />
         <vector name="rb" x="20" y="40" />
         <int name="time" value="13" />
-      </imgdir>
+      <int name="damage" value="245" /><int name="mad" value="245" /></imgdir>
     </imgdir>
     <int name="masterLevel" value="30" />
     <string name="elemAttr" value="i" />
@@ -696,13 +694,12 @@
       </imgdir>
       <imgdir name="30">
         <int name="attackCount" value="15" />
-        <int name="cooltime" value="40" />
         <string name="hs" value="h30" />
         <vector name="lt" x="-150" y="-600" />
         <int name="mobCount" value="12" />
         <int name="mpCon" value="1000" />
         <vector name="rb" x="150" y="10" />
-      <int name="damage" value="160" /><int name="mad" value="160" /></imgdir>
+      <int name="cooltime" value="25" /><int name="damage" value="135" /><int name="mad" value="135" /></imgdir>
     </imgdir>
     <int name="masterLevel" value="30" />
     <string name="elemAttr" value="i" />
@@ -1710,13 +1707,12 @@
       </imgdir>
       <imgdir name="30">
         <int name="attackCount" value="12" />
-        <int name="cooltime" value="120" />
         <string name="hs" value="h30" />
         <vector name="lt" x="-900" y="-700" />
         <int name="mobCount" value="10" />
         <int name="mpCon" value="1000" />
         <vector name="rb" x="900" y="250" />
-      <int name="damage" value="171" /><int name="mad" value="171" /></imgdir>
+      <int name="cooltime" value="25" /><int name="damage" value="125" /><int name="mad" value="125" /></imgdir>
     </imgdir>
     <int name="masterLevel" value="30" />
     <string name="elemAttr" value="i" />
@@ -3522,7 +3518,6 @@
       </imgdir>
       <imgdir name="30">
         <int name="attackCount" value="12" />
-        <int name="cooltime" value="45" />
         <string name="hs" value="h30" />
         <vector name="lt" x="-460" y="-450" />
         <int name="mobCount" value="15" />
@@ -3530,7 +3525,7 @@
         <int name="mpCon" value="328" />
         <vector name="rb" x="460" y="250" />
         <int name="time" value="8" />
-      <int name="damage" value="130" /><int name="mad" value="130" /></imgdir>
+      <int name="cooltime" value="25" /><int name="mad" value="120" /><int name="damage" value="120" /></imgdir>
     </imgdir>
     <int name="masterLevel" value="30" />
     <string name="elemAttr" value="i" />
@@ -4232,13 +4227,12 @@
       </imgdir>
       <imgdir name="30">
         <int name="attackCount" value="7" />
-        <int name="cooltime" value="360" />
         <string name="hs" value="h30" />
         <vector name="lt" x="-1200" y="-800" />
         <int name="mobCount" value="15" />
         <int name="mpCon" value="1500" />
         <vector name="rb" x="1200" y="800" />
-      <int name="damage" value="120" /><int name="mad" value="120" /></imgdir>
+      <int name="cooltime" value="0" /><int name="damage" value="143" /><int name="mad" value="143" /></imgdir>
     </imgdir>
     <int name="masterLevel" value="30" />
     <string name="elemAttr" value="i" />
@@ -5246,13 +5240,12 @@
       </imgdir>
       <imgdir name="30">
         <int name="attackCount" value="15" />
-        <int name="cooltime" value="240" />
         <string name="hs" value="h30" />
         <vector name="lt" x="-1200" y="-800" />
         <int name="mobCount" value="15" />
         <int name="mpCon" value="1000" />
         <vector name="rb" x="1200" y="800" />
-      <int name="damage" value="212" /><int name="mad" value="212" /></imgdir>
+      <int name="cooltime" value="25" /><int name="damage" value="140" /><int name="mad" value="140" /></imgdir>
     </imgdir>
     <int name="masterLevel" value="30" />
     <string name="elemAttr" value="i" />
