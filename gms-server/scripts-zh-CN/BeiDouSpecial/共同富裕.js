@@ -103,7 +103,7 @@ function handleSelection(sel) {
     if (selection === 0) {
         // 共同富裕
         exchangeType = 0;
-        var maxExchange = Math.min(playerItemCount, 100); // 最多兑换100次
+        var maxExchange = Math.min(playerItemCount, 1000000); // 最多兑换100次
         var text = "\t\t\t\t\t\t\t\t\t#e#d[共同富裕 - 兑换]#k#n\t\t\t\t\r\n";
         text += "#k═══════════════════════════════════\r\n";
         text += "#b您选择了【共同富裕】模式#k\r\n\r\n";
@@ -119,7 +119,7 @@ function handleSelection(sel) {
     } else if (selection === 1) {
         // 邪恶资本家 - 支持选择数量
         exchangeType = 1;
-        var maxExchange = Math.min(playerItemCount, 100); // 最多兑换100次
+        var maxExchange = Math.min(playerItemCount, 1000000); // 最多兑换100次
         var text = "\t\t\t\t\t\t\t\t\t#e#d[邪恶资本家 - 兑换]#k#n\t\t\t\t\r\n";
         text += "#k═══════════════════════════════════\r\n";
         text += "#b您选择了【邪恶资本家】模式#k\r\n\r\n";

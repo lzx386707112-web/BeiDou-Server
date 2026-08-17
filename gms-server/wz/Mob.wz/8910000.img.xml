@@ -1,6 +1,38 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <imgdir name="8910000.img">
   <imgdir name="info">
+    <imgdir name="skill">
+      <imgdir name="0">
+        <int name="skill" value="203" />
+        <int name="level" value="1" />
+        <int name="action" value="1" />
+      </imgdir>
+      <imgdir name="1">
+        <int name="skill" value="184" />
+        <int name="level" value="1" />
+        <int name="action" value="2" />
+      </imgdir>
+      <imgdir name="2">
+        <int name="skill" value="170" />
+        <int name="level" value="11" />
+        <int name="action" value="3" />
+      </imgdir>
+      <imgdir name="3">
+        <int name="skill" value="191" />
+        <int name="level" value="1" />
+        <int name="action" value="4" />
+      </imgdir>
+      <imgdir name="4">
+        <int name="skill" value="191" />
+        <int name="level" value="2" />
+        <int name="action" value="5" />
+      </imgdir>
+      <imgdir name="5">
+        <int name="skill" value="170" />
+        <int name="level" value="14" />
+        <int name="action" value="6" />
+      </imgdir>
+    </imgdir>
     <int name="bodyAttack" value="1"/>
     <int name="level" value="240"/>
     <string name="maxHP" value="100000000000"/>
@@ -1674,6 +1706,34 @@
       <vector name="rb" x="144" y="16"/>
       <int name="delay" value="90"/>
       <string name="_hash" value="e9c227f7f11c73223a2637136e2679408b724d353622ff7543d8a9e179fc67f7"/>
+    </canvas>
+  </imgdir>
+  <imgdir name="skill6">
+    <canvas name="0" width="64" height="165" format="1">
+      <vector name="origin" x="29" y="148"/>
+      <int name="delay" value="120"/>
+      <int name="hide" value="1"/>
+    </canvas>
+    <canvas name="1" width="47" height="140" format="1">
+      <vector name="origin" x="20" y="134"/>
+      <int name="delay" value="120"/>
+      <int name="hide" value="1"/>
+    </canvas>
+    <canvas name="2" width="38" height="113" format="1">
+      <vector name="origin" x="15" y="121"/>
+      <int name="delay" value="120"/>
+      <int name="hide" value="1"/>
+    </canvas>
+    <canvas name="3" width="35" height="57" format="1">
+      <vector name="origin" x="13" y="92"/>
+      <int name="delay" value="120"/>
+      <int name="hide" value="1"/>
+    </canvas>
+    <canvas name="4" width="1" height="1" format="1">
+      <vector name="origin" x="0" y="17"/>
+      <int name="z" value="0"/>
+      <int name="delay" value="120"/>
+      <int name="hide" value="1"/>
     </canvas>
   </imgdir>
 </imgdir>

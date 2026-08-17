@@ -1,6 +1,13 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <imgdir name="8900000.img">
   <imgdir name="info">
+    <imgdir name="skill">
+      <imgdir name="0">
+        <int name="skill" value="201" />
+        <int name="level" value="40" />
+        <int name="action" value="1" />
+      </imgdir>
+    </imgdir>
     <int name="level" value="30"/>
     <string name="maxHP" value="80000000000"/>
     <int name="maxMP" value="108000"/>

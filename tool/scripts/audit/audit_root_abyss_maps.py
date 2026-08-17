@@ -81,6 +81,20 @@ SUPPORTED_ROOT_ABYSS_BOSS_SKILLS = {
     (141, 4),
     (142, 1),
     (145, 1), (145, 2),
+    (170, 11), (170, 13), (170, 14),
+    (184, 1),
+    (186, 1),
+    (191, 1), (191, 2),
+    (201, 40), (201, 47), (201, 48), (201, 49), (201, 51), (201, 52), (201, 53),
+    (203, 1),
+}
+SERVER_DRIVEN_ROOT_ABYSS_BOSS_SKILLS = {
+    (170, 11), (170, 13), (170, 14),
+    (184, 1),
+    (186, 1),
+    (191, 1), (191, 2),
+    (201, 40), (201, 47), (201, 48), (201, 49), (201, 51), (201, 52), (201, 53),
+    (203, 1),
 }
 NPCS = {
     1064002, 1064003, 1064005, 1064006, 1064007, 1064008,
@@ -603,7 +617,7 @@ class Audit:
                 mob_skill = self.client_img("Skill/MobSkill.img")
                 if mob_skill is not None:
                     client_skill_level = mob_skill.get(f"{skill_id}/level/{level}")
-                    if client_skill_level is None:
+                    if client_skill_level is None and (skill_id, level) not in SERVER_DRIVEN_ROOT_ABYSS_BOSS_SKILLS:
                         self.error(f"{mob_id}: missing client MobSkill {skill_id}/{level}")
                 server_skill = self.server_xml("Skill.wz/MobSkill.img.xml")
                 if server_skill is not None:

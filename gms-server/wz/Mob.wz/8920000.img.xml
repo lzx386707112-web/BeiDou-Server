@@ -1,6 +1,28 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <imgdir name="8920000.img">
   <imgdir name="info">
+    <imgdir name="skill">
+      <imgdir name="0">
+        <int name="skill" value="201" />
+        <int name="level" value="47" />
+        <int name="action" value="1" />
+      </imgdir>
+      <imgdir name="1">
+        <int name="skill" value="201" />
+        <int name="level" value="48" />
+        <int name="action" value="2" />
+      </imgdir>
+      <imgdir name="2">
+        <int name="skill" value="201" />
+        <int name="level" value="52" />
+        <int name="action" value="3" />
+      </imgdir>
+      <imgdir name="3">
+        <int name="skill" value="201" />
+        <int name="level" value="53" />
+        <int name="action" value="4" />
+      </imgdir>
+    </imgdir>
     <int name="level" value="190"/>
     <int name="maxHP" value="500000000"/>
     <int name="maxMP" value="15000000"/>

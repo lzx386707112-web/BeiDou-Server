@@ -28,14 +28,13 @@ if (GameConfig.getServerBoolean("use_enable_party_level_limit_lift")) {
     minLevel = 125, maxLevel = 200;
 }
 
-var bossId = 8920100;         // 血腥女王 BOSS
+var bossId = 8920101;         // 血腥女王 BOSS
 var treasureMobId = 8920106;  // 宝箱怪物
 
 // === 变身配置 ===
-var phase1MobId = 8920101;    // 第一阶段变身目标
-var phase2MobId = 8920102;    // 第二阶段变身目标
-var phase3MobId = 8920103;	  // 第三阶段变身目标
-// 第三阶段变回 bossId (8900100)
+var phase1MobId = bossId;
+var phase2MobId = bossId;
+var phase3MobId = bossId;
 
 // HP 阈值（占当前 maxHP 的比例）
 var PHASE1_THRESHOLD = 0.80;  // 80% → 触发第一次变身
@@ -110,7 +109,7 @@ function setup(channel) {
     eim.setProperty("treasureSpawned", 0);
 	
 	    // === 变身状态初始化 ===
-    eim.setProperty("bossPhase", "0");       // 0=初始8920100, 1=8920101, 2=8920102, 3=8920103,4=8920100
+    eim.setProperty("bossPhase", "4");       // 当前仓库只包含 8920101，禁用缺失形态轮询
     eim.setProperty("isTransforming", "0");   // 变身标记，防止 killMonster 触发通关
 
     var level = 1;
@@ -122,9 +121,6 @@ function setup(channel) {
     var mob = LifeFactory.getMonster(bossId);
     battleMap.spawnMonsterOnGroundBelow(mob, new java.awt.Point(60, 134));
 	
-	// 启动 HP 轮询监控
-    eim.schedule("checkBossHp", HP_CHECK_INTERVAL);
-
     eim.startEventTimer(eventTime * 60000);
     setEventRewards(eim);
     setEventExclusives(eim);
@@ -141,54 +137,18 @@ function setup(channel) {
  * 检查当前BOSS血量，达到阈值时触发变身
  */
 function checkBossHp(eim) {
-    // 事件已结束或已通关，停止监控
-    if (eim.isEventDisposed()) return;
-
-    var phase = eim.getIntProperty("bossPhase");
-    // 最终阶段不再变身
-    if (phase >= 4) return;
-
-    // 获取当前阶段的怪物ID
-    var currentMobId = getBossIdByPhase(phase);
-    var map = eim.getMapInstance(entryMap);
-    var boss = map.getMonsterById(currentMobId);
-
-    // BOSS不存在或已死亡，停止监控
-    if (boss == null || !boss.isAlive()) return;
-
-    var hp = boss.getHp();
-    var maxHp = boss.getMobMaxHp();
-    if (maxHp <= 0) return;
-
-    var hpPercent = hp / maxHp;
-
-    // 检查变身阈值
-    if (phase == 0 && hpPercent <= PHASE1_THRESHOLD) {
-        transformBoss(eim, boss, phase1MobId, 1);
-    } else if (phase == 1 && hpPercent <= PHASE2_THRESHOLD) {
-        transformBoss(eim, boss, phase2MobId, 2);
-    } else if (phase == 2 && hpPercent <= PHASE3_THRESHOLD) {
-        transformBoss(eim, boss, phase3MobId, 3);
-    } else if (phase == 3 && hpPercent <= PHASE4_THRESHOLD) {
-        transformBoss(eim, boss, bossId, 4);
-    }
-
-    // 继续监控（除非已进入最终阶段）
-    phase = eim.getIntProperty("bossPhase");
-    if (phase < 4 && !eim.isEventDisposed()) {
-        eim.schedule("checkBossHp", HP_CHECK_INTERVAL);
-    }
+    return;
 }
 
 /**
  * 根据阶段获取对应怪物ID
  */
 function getBossIdByPhase(phase) {
-    if (phase == 0) return bossId;       // 8920100
+    if (phase == 0) return bossId;       // 8920101
     if (phase == 1) return phase1MobId;  // 8920101
-    if (phase == 2) return phase2MobId;  // 8920102
-	if (phase == 3) return phase3MobId;  // 8920103
-    if (phase == 4) return bossId;       // 8920100 (最终)
+    if (phase == 2) return phase2MobId;  // 8920101
+	if (phase == 3) return phase3MobId;  // 8920101
+    if (phase == 4) return bossId;       // 8920101
     return bossId;
 }
 
