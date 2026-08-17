@@ -20,14 +20,14 @@ QUEST_IDS = {str(value) for value in (30000, *range(30002, 30014), 30027, *range
 MAP_IDS = (*range(105200410, 105200420), 910700200, 910700300)
 MOB_IDS = (
     8860001,
-    8900100, 8900101, 8900102, 8900103,
+    8900100,
     8910100,
-    8920100, 8920101, 8920102, 8920103, 8920104, 8920105, 8920106,
+    8920101,
     8930000, 8930100,
     9300487,
 )
 NPC_IDS = (1064001, 1064017, 1064029, 2144001, 3005427)
-EXISTING_MOB_DEPENDENCIES = (8930001,)
+EXISTING_MOB_DEPENDENCIES = ()
 STRING_NODES = {
     "Mob.img": tuple(str(value) for value in MOB_IDS),
     "Npc.img": tuple(str(value) for value in NPC_IDS),
@@ -270,12 +270,6 @@ def audit_scripts_and_java(failures: list[str]) -> None:
     require("id > 203" in mob_skill_type, "MobSkillType upper bound is not 203", failures)
     mob_skill = (ROOT / "gms-server/src/main/java/org/gms/server/life/MobSkill.java").read_text()
     require("monster.getId() == 8910100" in mob_skill, "MobSkill lacks Von Bon/Magnus skill isolation", failures)
-    require("monster.getId() == 8920102" in mob_skill, "MobSkill lacks Crimson Queen/Will skill isolation", failures)
-    require(
-        "monster.getId() == 8900101 || monster.getId() == 8900102" in mob_skill,
-        "MobSkill lacks Pierre/Seren skill isolation",
-        failures,
-    )
 
     database_migration = ROOT / "gms-server/src/main/resources/db/migration/V2.1.47__add_akayrum_root_abyss_expeditions.sql"
     require(database_migration.exists(), f"missing database migration {database_migration}", failures)

@@ -6,13 +6,15 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+from PIL import Image
+
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / "tool/wz-python"))
 sys.path.insert(0, str(ROOT / "tool/scripts/migration"))
 
 from wzpy import WzCanvasProperty, WzImage, WzSubProperty, WzVectorProperty  # noqa: E402
-from wzpy.canvas import decode_canvas  # noqa: E402
+from wzpy.canvas import decode_canvas, encode_canvas_payload  # noqa: E402
 from wzpy.writer import encode_image_body  # noqa: E402
 
 from migrate_root_abyss_maps import (  # noqa: E402
@@ -20,6 +22,7 @@ from migrate_root_abyss_maps import (  # noqa: E402
     atomic_write_bytes,
     clone_property,
     gms_reader,
+    ensure_int_child,
     patch_server_boss_xml_hp,
     remove_child,
     sanitize_root_abyss_boss_mob,
@@ -28,32 +31,37 @@ from migrate_root_abyss_maps import (  # noqa: E402
 
 
 NORMAL_BOSS_MOBS = (
-    8900100, 8900101, 8900102, 8900103,
+    8900100,
     8910100,
-    8920100, 8920101, 8920102, 8920103, 8920104, 8920105, 8920106,
+    8920101,
     8930100,
 )
 ADVANCED_BOSS_MOBS = (
-    8900000, 8900001, 8900002, 8900003,
-    8910000, 8910001,
-    8920000, 8920001, 8920002, 8920003, 8920004, 8920005, 8920006,
-    8930000, 8930001,
+    8900000,
+    8910000,
+    8920000, 8920001,
+    8930000,
 )
 
 CRIMSON_QUEEN_VISUAL_TEMPLATES = {
-    8920100: 8920000,
     8920101: 8920001,
-    8920102: 8920002,
-    8920103: 8920003,
 }
-FOOT_ALIGNMENT_MOBS = {8900100, 8910100, 8920100, 8930100}
-FOOT_ALIGNMENT_ACTIONS = {"stand", "move"}
-FOOT_ALIGNMENT_TEMPLATES = {
+ADVANCED_STABLE_VISUAL_TEMPLATES = {
     8900000: 8900100,
     8910000: 8910100,
-    8920000: 8920100,
-    8930000: 8930100,
+    8920000: 8920101,
 }
+ADVANCED_BASIC_COMBAT_MOBS = set(ADVANCED_STABLE_VISUAL_TEMPLATES)
+# Only adjust existing stand/move origins on the normal Queen resource. Do not
+# add missing origins to advanced Pierre/Von Bon/Queen; that path made them
+# crash on room entry in the legacy client.
+FOOT_ALIGNMENT_MOBS = {8920101}
+FOOT_ALIGNMENT_ACTIONS = {"stand", "move"}
+FOOT_ALIGNMENT_TEMPLATES = {}
+COMPAT_ORIGIN_TEMPLATES = {}
+VELLUM_COMPAT_MOBS = {8930000, 8930100}
+VELLUM_MAX_ATTACK_FRAME_WIDTH = 960
+VELLUM_MAX_ATTACK_FRAME_HEIGHT = 720
 
 
 def target_img(path: Path) -> WzImage:
@@ -112,6 +120,98 @@ def align_visible_feet_to_origin(root: WzSubProperty, template: WzSubProperty | 
     return changed
 
 
+def canvas_origins_by_path(root: WzSubProperty) -> dict[str, tuple[int, int]]:
+    origins: dict[str, tuple[int, int]] = {}
+
+    def walk(node, path: str) -> None:
+        if isinstance(node, WzCanvasProperty):
+            origin = node.child("origin")
+            if isinstance(origin, WzVectorProperty):
+                origins[path] = (int(origin.x), int(origin.y))
+        if hasattr(node, "children"):
+            for child in node.children():
+                walk(child, f"{path}/{child.name}" if path else child.name)
+
+    walk(root, "")
+    return origins
+
+
+def add_missing_origins_from_template(root: WzSubProperty, template: WzSubProperty) -> int:
+    template_origins = canvas_origins_by_path(template)
+    changed = 0
+
+    def walk(node, path: str) -> None:
+        nonlocal changed
+        if isinstance(node, WzCanvasProperty) and node.child("origin") is None:
+            copied = template_origins.get(path)
+            if copied is None:
+                copied = (int(node.width) // 2, int(node.height))
+            node.add(WzVectorProperty("origin", copied[0], copied[1], node))
+            changed += 1
+        if hasattr(node, "children"):
+            for child in node.children():
+                walk(child, f"{path}/{child.name}" if path else child.name)
+
+    walk(root, "")
+    return changed
+
+
+def scale_vellum_attack_frames(root: WzSubProperty) -> int:
+    changed = 0
+    for action in root.children():
+        if not isinstance(action, WzSubProperty) or not action.name.startswith("attack"):
+            continue
+        for frame in action.children():
+            if not isinstance(frame, WzCanvasProperty) or not frame.has_pixels():
+                continue
+            width = int(frame.width)
+            height = int(frame.height)
+            scale = min(
+                VELLUM_MAX_ATTACK_FRAME_WIDTH / width,
+                VELLUM_MAX_ATTACK_FRAME_HEIGHT / height,
+                1.0,
+            )
+            if scale >= 1.0:
+                continue
+            image = decode_canvas(frame, region="GMS").convert("RGBA")
+            new_width = max(1, round(width * scale))
+            new_height = max(1, round(height * scale))
+            image = image.resize((new_width, new_height), Image.Resampling.LANCZOS)
+            frame.width = new_width
+            frame.height = new_height
+            frame.format = 1
+            frame.format2 = 0
+            frame._png_data = encode_canvas_payload(
+                image,
+                1,
+                new_width,
+                new_height,
+                key=TARGET_KEY,
+                listwz=False,
+            )
+            frame._png_length = len(frame._png_data)
+            for child in frame.children():
+                if isinstance(child, WzVectorProperty):
+                    child.x = round(int(child.x) * scale)
+                    child.y = round(int(child.y) * scale)
+            changed += 1
+    return changed
+
+
+def patch_specific_boss_contract(root: WzSubProperty, mob_id: int) -> None:
+    if mob_id in ADVANCED_BASIC_COMBAT_MOBS:
+        info = root.child("info")
+        if isinstance(info, WzSubProperty):
+            remove_child(info, "skill")
+            ensure_int_child(info, "firstAttack", 1)
+    if mob_id in {8900000, 8920000}:
+        info = root.child("info")
+        if isinstance(info, WzSubProperty):
+            ensure_int_child(info, "firstAttack", 1)
+    if mob_id in VELLUM_COMPAT_MOBS:
+        scale_vellum_attack_frames(root)
+
+
 def patch_mob(mob_id: int) -> str:
     path = ROOT / f"clien/Data/Mob/{mob_id}.img"
     if not path.exists():
@@ -122,8 +222,17 @@ def patch_mob(mob_id: int) -> str:
     if template_id is not None:
         template = target_img(ROOT / f"clien/Data/Mob/{template_id}.img")
         copy_non_info_children(image.root, template.root)
+    stable_template_id = ADVANCED_STABLE_VISUAL_TEMPLATES.get(mob_id)
+    if stable_template_id is not None:
+        template = target_img(ROOT / f"clien/Data/Mob/{stable_template_id}.img")
+        copy_non_info_children(image.root, template.root)
 
     sanitize_root_abyss_boss_mob(image.root, mob_id)
+    origin_template_id = COMPAT_ORIGIN_TEMPLATES.get(mob_id)
+    if origin_template_id is not None:
+        template = target_img(ROOT / f"clien/Data/Mob/{origin_template_id}.img")
+        add_missing_origins_from_template(image.root, template.root)
+    patch_specific_boss_contract(image.root, mob_id)
     if mob_id in FOOT_ALIGNMENT_MOBS:
         align_visible_feet_to_origin(image.root)
     elif mob_id in FOOT_ALIGNMENT_TEMPLATES:

@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>五六转技能 · 单怪单次总伤害估算</title>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#171a21; --panel2:#1f232c; --border:#2a2f3a;
+    --txt:#e6e8ec; --muted:#9aa3b2; --accent:#5aa9ff; --red:#ff6b6b;
+    --red2:#ff4d4f; --green:#3fd68a; --amber:#ffcc66;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);font-family:"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;padding:24px;line-height:1.5}
+  h1{font-size:22px;margin:0 0 4px}
+  .sub{color:var(--muted);font-size:13px;margin-bottom:18px}
+  .controls{display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:18px}
+  .field{display:flex;flex-direction:column;gap:6px}
+  label{font-size:12px;color:var(--muted)}
+  input[type=number]{background:var(--panel2);border:1px solid var(--border);color:var(--txt);border-radius:8px;padding:8px 10px;font-size:15px;width:160px}
+  .stats{display:flex;gap:12px;flex-wrap:wrap;margin-left:auto}
+  .stat{background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:8px 14px;text-align:center;min-width:120px}
+  .stat .v{font-size:18px;font-weight:700;color:var(--accent)}
+  .stat .k{font-size:11px;color:var(--muted)}
+  table{width:100%;border-collapse:collapse;background:var(--panel);border:1px solid var(--border);border-radius:10px;overflow:hidden;font-size:14px}
+  th,td{padding:9px 12px;text-align:right;border-bottom:1px solid var(--border)}
+  th{background:var(--panel2);color:var(--muted);cursor:pointer;user-select:none;position:sticky;top:0;font-weight:600}
+  th:hover{color:var(--txt)}
+  td.l,th.l{text-align:left}
+  tr:hover td{background:rgba(90,169,255,.06)}
+  .vis{color:var(--muted);font-style:italic}
+  .tag{display:inline-block;font-size:11px;padding:1px 6px;border-radius:4px;background:#2a2f3a;color:var(--muted);margin-left:6px}
+  .tag.real{background:rgba(63,214,138,.15);color:var(--green)}
+  .total{color:var(--red2);font-weight:700}
+  .perhit{color:var(--amber);font-weight:600}
+  .note{font-size:12px;color:var(--muted);margin-top:14px;line-height:1.7}
+  .note b{color:var(--txt)}
+  .formula{background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;font-size:13px;color:var(--muted);margin-bottom:18px}
+  .formula code{color:var(--amber)}
+  .highlight td{background:rgba(255,107,107,.08)!important}
+</style>
+</head>
+<body>
+<h1>五六转技能 · 单怪单次总伤害估算</h1>
+<div class="sub">数据来源：<code>gms-server/wz/Skill.wz/1112.img.xml</code> 与 <code>1512.img.xml</code>（终极魂骑士 / 终极奇袭者 神之技能）。打 1 只怪、单次施放、名义期望伤害（未计暴击与 ±20% 浮动）。</div>
+
+<div class="formula">
+  计算模型（MXD 通用面板法）：<br>
+  <code>每段伤害 = 面板基数 × (该技能 damage% ÷ 100)</code><br>
+  <code>单次总伤 = 每段伤害 × 段数(attackCount)</code><br>
+  说明：面板已含武器攻/主属性，技能 <code>damage</code> 字段是叠加在该面板上的百分比倍率。各技能 30 级 <code>damage</code> 与 <code>attackCount</code> 完全一致，故等级不影响结果。
+</div>
+
+<div class="controls">
+  <div class="field">
+    <label>面板基数（单段基准伤害）</label>
+    <input id="panel" type="number" value="100000" step="1000" oninput="recompute()">
+  </div>
+  <div class="field">
+    <label>显示范围</label>
+    <select id="filter" onchange="recompute()" style="background:var(--panel2);border:1px solid var(--border);color:var(--txt);border-radius:8px;padding:8px 10px;font-size:14px">
+      <option value="all">全部 37 个</option>
+      <option value="real" selected>仅实际攻击技能</option>
+      <option value="visual">仅视觉/特效节点</option>
+    </select>
+  </div>
+  <div class="stats">
+    <div class="stat"><div class="v" id="s_count">–</div><div class="k">技能数</div></div>
+    <div class="stat"><div class="v" id="s_max">–</div><div class="k">最高单次总伤</div></div>
+    <div class="stat"><div class="v" id="s_sum">–</div><div class="k">全部单次总伤合计</div></div>
+  </div>
+</div>
+
+<table id="tbl">
+  <thead><tr>
+    <th class="l" data-k="id">技能ID</th>
+    <th class="l" data-k="name">名称</th>
+    <th data-k="book">书</th>
+    <th data-k="dmg">每伤%</th>
+    <th data-k="ac">段数</th>
+    <th data-k="perhit">每段伤害</th>
+    <th data-k="total">单次总伤</th>
+    <th class="l" data-k="type">类型</th>
+  </tr></thead>
+  <tbody></tbody>
+</table>
+
+<div class="note">
+  <b>读数提示：</b><br>
+  · <b>每段伤害</b> = 面板 × damage%/100；<b>单次总伤</b> = 每段伤害 × 段数。这是名义期望值，实战有 ±20% 随机浮动（即 ×0.8 ~ ×1.2），暴击另算。<br>
+  · <b>视觉/特效节点</b>（名称含「视觉 / 持续攻击」，表中灰色）多是 <code>枪雷连击</code> 连段的表现层占位，通常不直接作为独立技能释放，已用「仅实际攻击技能」默认过滤，避免重复计入。<br>
+  · <code>15121019 疾浪歼灭</code> / <code>15121020 疾浪歼灭：激流</code> 的 damage% 高达 6160/6510，是单次总伤最高的两个技能。<br>
+  · 若面板基数不是 10 万，直接改上方输入框，表格与统计会即时重算。
+</div>
+
+<script>
+const SKILLS = [{"id": "11121005", "name": "银河星爆", "dmg": 900, "ac": 15, "book": "1112", "visual": false}, {"id": "11121006", "name": "全蚀之力", "dmg": 850, "ac": 15, "book": "1112", "visual": false}, {"id": "11121007", "name": "全蚀之力：魂斩", "dmg": 900, "ac": 15, "book": "1112", "visual": false}, {"id": "11121008", "name": "灵魂蚀日", "dmg": 635, "ac": 7, "book": "1112", "visual": false}, {"id": "11121009", "name": "日月分裂", "dmg": 900, "ac": 15, "book": "1112", "visual": false}, {"id": "11121011", "name": "冥河破", "dmg": 750, "ac": 5, "book": "1112", "visual": false}, {"id": "11121012", "name": "宇宙之花", "dmg": 700, "ac": 15, "book": "1112", "visual": false}, {"id": "15121000", "name": "海龙螺旋", "dmg": 780, "ac": 3, "book": "1512", "visual": false}, {"id": "15121002", "name": "枪雷连击", "dmg": 1430, "ac": 5, "book": "1512", "visual": false}, {"id": "15121003", "name": "枪雷连击：一式", "dmg": 1430, "ac": 5, "book": "1512", "visual": false}, {"id": "15121004", "name": "枪雷连击：二式", "dmg": 1430, "ac": 5, "book": "1512", "visual": false}, {"id": "15121005", "name": "枪雷连击：三式", "dmg": 1430, "ac": 5, "book": "1512", "visual": false}, {"id": "15121006", "name": "枪雷连击：四式", "dmg": 1430, "ac": 5, "book": "1512", "visual": false}, {"id": "15121007", "name": "枪雷连击：五式", "dmg": 1430, "ac": 5, "book": "1512", "visual": false}, {"id": "15121008", "name": "枪雷连击：六式", "dmg": 1430, "ac": 5, "book": "1512", "visual": false}, {"id": "15121009", "name": "枪雷连击：落雷", "dmg": 1555, "ac": 4, "book": "1512", "visual": false}, {"id": "15121010", "name": "枪雷连击：终式", "dmg": 1990, "ac": 7, "book": "1512", "visual": false}, {"id": "15121011", "name": "枪雷连击：巨大落雷", "dmg": 2145, "ac": 6, "book": "1512", "visual": false}, {"id": "15121015", "name": "台风VI", "dmg": 859, "ac": 5, "book": "1512", "visual": false}, {"id": "15121016", "name": "海神降临VI", "dmg": 1380, "ac": 7, "book": "1512", "visual": false}, {"id": "15121017", "name": "浪驰雷掣", "dmg": 1390, "ac": 5, "book": "1512", "visual": false}, {"id": "15121018", "name": "浪驰雷掣：雷海冲击", "dmg": 1370, "ac": 7, "book": "1512", "visual": false}, {"id": "15121019", "name": "疾浪歼灭", "dmg": 6160, "ac": 12, "book": "1512", "visual": false}, {"id": "15121020", "name": "疾浪歼灭：激流", "dmg": 6510, "ac": 15, "book": "1512", "visual": false}, {"id": "15121021", "name": "海龙螺旋：持续攻击", "dmg": 780, "ac": 3, "book": "1512", "visual": true}, {"id": "15121022", "name": "枪雷连击：第1击视觉", "dmg": 1430, "ac": 5, "book": "1512", "visual": true}, {"id": "15121023", "name": "枪雷连击：第2击视觉", "dmg": 1430, "ac": 5, "book": "1512", "visual": true}, {"id": "15121024", "name": "枪雷连击：第3击视觉", "dmg": 1430, "ac": 5, "book": "1512", "visual": true}, {"id": "15121025", "name": "枪雷连击：第4击视觉", "dmg": 1430, "ac": 5, "book": "1512", "visual": true}, {"id": "15121026", "name": "枪雷连击：第5击视觉", "dmg": 1430, "ac": 5, "book": "1512", "visual": true}, {"id": "15121027", "name": "枪雷连击：第6击视觉", "dmg": 1430, "ac": 5, "book": "1512", "visual": true}, {"id": "15121028", "name": "枪雷连击：第7击视觉", "dmg": 1430, "ac": 5, "book": "1512", "visual": true}, {"id": "15121029", "name": "枪雷连击：第8击视觉", "dmg": 1430, "ac": 5, "book": "1512", "visual": true}, {"id": "15121030", "name": "枪雷连击：第9击视觉", "dmg": 1430, "ac": 5, "book": "1512", "visual": true}, {"id": "15121031", "name": "枪雷连击：第10击视觉", "dmg": 1430, "ac": 5, "book": "1512", "visual": true}, {"id": "15121032", "name": "枪雷连击：第11击视觉", "dmg": 1430, "ac": 5, "book": "1512", "visual": true}, {"id": "15121033", "name": "枪雷连击：第12击视觉", "dmg": 1430, "ac": 5, "book": "1512", "visual": true}];
+
+let sortKey="total", sortDir=-1;
+
+function fmt(n){return Math.round(n).toLocaleString("en-US");}
+
+function recompute(){
+  const panel = parseFloat(document.getElementById("panel").value)||0;
+  const filter = document.getElementById("filter").value;
+  const rows = SKILLS.map(s=>{
+    const perhit = panel * s.dmg/100;
+    const total = perhit * s.ac;
+    return {...s, perhit, total};
+  }).filter(s=>{
+    if(filter==="real") return !s.visual;
+    if(filter==="visual") return s.visual;
+    return true;
+  });
+
+  rows.sort((a,b)=>{
+    let va=a[sortKey], vb=b[sortKey];
+    if(typeof va==="string"){return sortDir*va.localeCompare(vb);}
+    return sortDir*(va-vb);
+  });
+
+  const tb = document.querySelector("#tbl tbody");
+  tb.innerHTML = rows.map(r=>`
+    <tr class="${r.total===Math.max(...rows.map(x=>x.total))?'highlight':''}">
+      <td class="l">${r.id}</td>
+      <td class="l ${r.visual?'vis':''}">${r.name}</td>
+      <td>${r.book}</td>
+      <td>${r.dmg}%</td>
+      <td>${r.ac}</td>
+      <td class="perhit">${fmt(r.perhit)}</td>
+      <td class="total">${fmt(r.total)}</td>
+      <td class="l">${r.visual?'<span class="tag">视觉/特效</span>':'<span class="tag real">实际攻击</span>'}</td>
+    </tr>`).join("");
+
+  document.getElementById("s_count").textContent = rows.length;
+  document.getElementById("s_max").textContent = rows.length? fmt(Math.max(...rows.map(x=>x.total))) : "–";
+  document.getElementById("s_sum").textContent = fmt(rows.reduce((a,x)=>a+x.total,0));
+}
+
+document.querySelectorAll("#tbl th").forEach(th=>{
+  th.addEventListener("click",()=>{
+    const k=th.dataset.k;
+    if(sortKey===k){sortDir*=-1;}else{sortKey=k;sortDir=(k==="id"||k==="name"||k==="book"||k==="type")?1:-1;}
+    recompute();
+  });
+});
+
+recompute();
+</script>
+</body>
+</html>

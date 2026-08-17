@@ -31,15 +31,15 @@ MAP_IDS = sorted(int(p.stem) for p in (CLIENT / "Map/Map/Map1").glob("1052*.img"
 NORTH_GARDEN_MAP_IDS = {105200400, 105200800}
 NORMAL_MOBS = {7120110, 7120111, 7120112, 7120113, 7120114, 7120115, 9834610}
 NORMAL_BOSS_MOBS = {
-    8900100, 8900101, 8900102, 8900103,
+    8900100,
     8910100,
-    8920100, 8920101, 8920102, 8920103, 8920104, 8920105, 8920106,
+    8920101,
     8930100,
 }
 ROOT_ABYSS_BOSS_ROOM_SPAWNS = {
     105200110: (8910100, 489, 454),
     105200210: (8900100, -131, 550),
-    105200310: (8920100, 60, 134),
+    105200310: (8920101, 60, 134),
     105200410: (8930100, -192, 442),
     105200510: (8910000, 489, 454),
     105200610: (8900000, -131, 550),
@@ -48,22 +48,24 @@ ROOT_ABYSS_BOSS_ROOM_SPAWNS = {
 }
 DIRECT_BOSS_MOBS = {mob_id for mob_id, _x, _y in ROOT_ABYSS_BOSS_ROOM_SPAWNS.values()}
 ADVANCED_BOSS_MOBS = {
-    8900000, 8900001, 8900002, 8900003,
-    8910000, 8910001, 8910100,
-    8920000, 8920001, 8920002, 8920003, 8920004, 8920005, 8920006,
-    8930000, 8930001,
+    8900000,
+    8910000,
+    8920000, 8920001,
+    8930000,
 }
 BOSS_GAUGE_MOBS = {
-    8900000, 8900001, 8900002,
-    8910000,
-    8920000, 8920001, 8920002, 8920003,
+    8900000, 8900100,
+    8910000, 8910100,
+    8920000, 8920001, 8920101,
+    8930000, 8930100,
 }
+VELLUM_COMPAT_MOBS = {8930000, 8930100}
+VELLUM_MAX_ATTACK_FRAME_WIDTH = 960
+VELLUM_MAX_ATTACK_FRAME_HEIGHT = 720
 ADVANCED_BOSS_DROP_MOBS = {8900000, 8910000, 8920000, 8930000}
-NORMAL_BOSS_DROP_MOBS = {8900100, 8910100, 8920100, 8930100}
+NORMAL_BOSS_DROP_MOBS = {8900100, 8910100, 8920101, 8930100}
 OLD_SERVER_REQUIRED_BOSS_INFO_FIELDS = {"PADamage", "PDDamage", "MADamage", "MDDamage", "level"}
 ROOT_ABYSS_SECOND_PHASE_BOSS_HP = {
-    8900001: 3_000_000_000,
-    8910001: 3_000_000_000,
     8920001: 3_000_000_000,
 }
 SUPPORTED_ROOT_ABYSS_BOSS_SKILLS = {
@@ -96,16 +98,18 @@ REACTORS = {
 }
 ALLOWED_MAP_MARKS = {"None"}
 SCRIPT_PORTAL_TARGETS = {
-    "rootafirstDoor": (105200500, "sp"),
-    "rootasecondDoor": (105200600, "sp"),
-    "rootathirdDoor": (105200700, "sp"),
-    "rootaforthDoor": (105200800, "sp"),
     "rootabyssGardenOut": (105200000, "sp"),
     "rootabyssOUT": (105040300, "sp"),
     "rootaNext1": (105200210, "sp"),
     "rootaNext2": (105200310, "sp"),
     "outrootaBoss": (105200000, "sp"),
     "rootaNext": (105200110, "sp"),
+}
+DOOR_SELECT_SCRIPTS = {
+    "rootafirstDoor": ("rootaFirstDoorSelect", 105200100, 105200500),
+    "rootasecondDoor": ("rootaSecondDoorSelect", 105200200, 105200600),
+    "rootathirdDoor": ("rootaThirdDoorSelect", 105200300, 105200700),
+    "rootaforthDoor": ("rootaFourthDoorSelect", 105200400, 105200800),
 }
 REMOVED_INFO_FIELDS = {
     "standAlone", "partyStandAlone", "noMapCmd", "fieldScript",
@@ -293,8 +297,8 @@ class Audit:
                 if info.child(field) is not None:
                     self.error(f"{map_id}: high-version info field remains: {field}")
             on_user_enter = self.child_value(info, "onUserEnter")
-            if map_id in ROOT_ABYSS_BOSS_ROOM_SPAWNS and on_user_enter != "rootaBossEnter":
-                self.error(f"{map_id}: boss room must auto-spawn through onUserEnter/rootaBossEnter")
+            if map_id in ROOT_ABYSS_BOSS_ROOM_SPAWNS and on_user_enter not in (None, "rootaBossEnter"):
+                self.error(f"{map_id}: boss room has unexpected onUserEnter script {on_user_enter}")
             forced_return = self.child_value(info, "forcedReturn")
             if forced_return == 910000000:
                 self.error(f"{map_id}: forcedReturn still points to Free Market")
@@ -303,8 +307,8 @@ class Audit:
         if map_id in ROOT_ABYSS_BOSS_ROOM_SPAWNS and root is not None:
             info_xml = root.find("./imgdir[@name='info']")
             on_enter_xml = info_xml.find("./string[@name='onUserEnter']") if info_xml is not None else None
-            if on_enter_xml is None or on_enter_xml.get("value") != "rootaBossEnter":
-                self.error(f"{map_id}: server XML boss room must use onUserEnter/rootaBossEnter")
+            if on_enter_xml is not None and on_enter_xml.get("value") != "rootaBossEnter":
+                self.error(f"{map_id}: server XML boss room has unexpected onUserEnter {on_enter_xml.get('value')}")
             mob_id, x, y = ROOT_ABYSS_BOSS_ROOM_SPAWNS[map_id]
             if not self.has_foothold_below(root, x, y):
                 self.error(f"{map_id}: boss spawn {mob_id} at ({x}, {y}) has no foothold below")
@@ -315,7 +319,7 @@ class Audit:
                     continue
                 script = path.read_text()
                 if "spawnMonsterOnGroundBelow" not in script:
-                    self.error(f"{map_id}: {path.relative_to(ROOT)} must spawn boss on ground below")
+                    self.error(f"{map_id}: {path.relative_to(ROOT)} must auto-spawn boss on map enter")
                 if "ms.spawnMonster(" in script:
                     self.error(f"{map_id}: {path.relative_to(ROOT)} must not use raw ms.spawnMonster for boss rooms")
 
@@ -444,12 +448,31 @@ class Audit:
                 if script == "rootaNext":
                     next_targets = {
                         105200100: 105200110,
-                        105200500: 105200110,
-                        105200600: 105200210,
-                        105200700: 105200310,
+                        105200200: 105200210,
+                        105200300: 105200310,
+                        105200400: 105200410,
+                        105200500: 105200510,
+                        105200600: 105200610,
+                        105200700: 105200710,
+                        105200800: 105200810,
                     }
                     target_map = next_targets.get(map_id)
                     script_target = (target_map, "sp") if target_map is not None else None
+                door_select = DOOR_SELECT_SCRIPTS.get(script)
+                if door_select is not None:
+                    npc_script, normal_map, advanced_map = door_select
+                    for script_dir in ("scripts/npc", "scripts-zh-CN/npc"):
+                        npc_path = ROOT / "gms-server" / script_dir / f"{npc_script}.js"
+                        if not npc_path.exists():
+                            self.error(f"{map_id}: missing door select script {npc_path.relative_to(ROOT)}")
+                            continue
+                        text = npc_path.read_text(encoding="utf-8-sig")
+                        if str(normal_map) not in text or str(advanced_map) not in text:
+                            self.error(
+                                f"{map_id}: {npc_path.relative_to(ROOT)} does not expose both {normal_map} and {advanced_map}"
+                            )
+                    self.check_target_portal(map_id, f"portal/{portal.name} script {script} normal", normal_map, "sp")
+                    self.check_target_portal(map_id, f"portal/{portal.name} script {script} advanced", advanced_map, "sp")
                 if script_target is not None:
                     self.check_target_portal(map_id, f"portal/{portal.name} script {script}", *script_target)
             target = self.child_value(portal, "tm")
@@ -536,8 +559,34 @@ class Audit:
             self.error(f"{mob_id}: helper mob must not request missing boss gauge")
         if mob_id in BOSS_GAUGE_MOBS:
             ui = self.client_img("UI/UIWindow.img")
-            if ui is None or ui.get(f"MobGage/Mob/{mob_id}") is None:
+            gauge = ui.get(f"MobGage/Mob/{mob_id}") if ui is not None else None
+            if gauge is None:
                 self.error(f"{mob_id}: missing boss HP gauge UI")
+            elif not isinstance(gauge, WzCanvasProperty):
+                self.error(f"{mob_id}: boss HP gauge UI must be a Canvas")
+            else:
+                if gauge.child("_inlink") is not None or gauge.child("_outlink") is not None:
+                    self.error(f"{mob_id}: boss HP gauge UI must be materialized, not a Canvas link")
+                if (gauge.format, gauge.format2) != (1, 0):
+                    self.error(f"{mob_id}: boss HP gauge UI must be ARGB4444")
+                elif decode_canvas(gauge, region="GMS").getbbox() is None:
+                    self.error(f"{mob_id}: boss HP gauge UI is transparent")
+
+        if mob_id in VELLUM_COMPAT_MOBS:
+            for action in img.children():
+                if not action.name.startswith("attack"):
+                    continue
+                for frame in action.children():
+                    if (
+                        isinstance(frame, WzCanvasProperty)
+                        and (frame.width > VELLUM_MAX_ATTACK_FRAME_WIDTH
+                             or frame.height > VELLUM_MAX_ATTACK_FRAME_HEIGHT)
+                    ):
+                        self.error(
+                            f"{mob_id}: {action.name}/{frame.name} exceeds old-client Vellum attack frame limit "
+                            f"{VELLUM_MAX_ATTACK_FRAME_WIDTH}x{VELLUM_MAX_ATTACK_FRAME_HEIGHT}: "
+                            f"{frame.width}x{frame.height}"
+                        )
 
         skill_root = img.get("info/skill")
         if skill_root is not None:

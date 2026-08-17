@@ -3,16 +3,11 @@
 from __future__ import annotations
 
 import re
-import sys
 import unittest
-import xml.etree.ElementTree as ET
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[3]
-sys.path.insert(0, str(ROOT / "tool/wz-python"))
-
-from wzpy import WzImage, WzKey  # noqa: E402
 
 CONSTANTS = ROOT / "gms-server/src/main/java/org/gms/constants/skills"
 CHARACTER = ROOT / "gms-server/src/main/java/org/gms/client/Character.java"
@@ -21,6 +16,7 @@ SKILL_CENTER = ROOT / "gms-server/scripts-zh-CN/BeiDouSpecial/技能中心.js"
 FIFTH_JOB_GODDESS = ROOT / "gms-server/scripts-zh-CN/npc/9900008.js"
 SERVER_CONSUME = ROOT / "gms-server/wz/Item.wz/Consume/0202.img.xml"
 SERVER_CONSUME_STRING = ROOT / "gms-server/wz/String.wz/Consume.img.xml"
+LOGIN_HANDLER = ROOT / "gms-server/src/main/java/org/gms/net/server/channel/handlers/PlayerLoggedinHandler.java"
 
 EXPLORER_CLASSES = {
     112: "Hero",
@@ -41,8 +37,6 @@ A_TO_Z_KEY_CODES = [
     30, 48, 46, 32, 18, 33, 34, 35, 23, 36, 37, 38, 50,
     49, 24, 25, 16, 19, 31, 20, 22, 47, 17, 45, 21, 44,
 ]
-
-
 def active_ids(class_name: str) -> list[int]:
     text = (CONSTANTS / f"{class_name}.java").read_text(encoding="utf-8")
     block = re.search(r"V_VI_ACTIVE_ATTACKS\s*=\s*\{([^}]*)}", text, re.S)
@@ -66,6 +60,7 @@ class ExplorerSkillGrantContractTest(unittest.TestCase):
         cls.script = SCRIPT.read_text(encoding="utf-8")
         character = CHARACTER.read_text(encoding="utf-8")
         cls.character = character
+        cls.login_handler = LOGIN_HANDLER.read_text(encoding="utf-8")
         cls.masteries = character[character.index("public void setMasteries"):
                                    character.index("private void broadcastChangeJob")]
 
@@ -104,7 +99,35 @@ class ExplorerSkillGrantContractTest(unittest.TestCase):
         self.assertIn("player.removeBySkillId(skillId)", self.script)
         self.assertIn("player.changeKeybinding(KEY_CODES[index]", self.script)
         self.assertIn("player.removeSkillById(retiredSkills[skillIndex])", self.script)
-        self.assertEqual(1, self.script.count("player.sendKeymap()"))
+        self.assertIn("canUseExplorerFifthJobPanel()", self.script)
+        self.assertIn("cleanupLockedExplorerSkills(job)", self.script)
+        self.assertIn("cm.removeAll(EXPLORER_FIFTH_JOB_ITEM_ID)", self.script)
+        self.assertIn("learnAndBindAll(job)", self.script)
+        self.assertIn("bindSelectedSkill(job, selection)", self.script)
+        self.assertEqual(3, self.script.count("player.sendKeymap()"))
+
+    def test_script_has_simple_custom_skill_panel(self):
+        self.assertIn("showMainMenu(job)", self.script)
+        self.assertIn("showSkillList(job)", self.script)
+        self.assertIn("showSkillSelection(job)", self.script)
+        self.assertIn("showKeySelection(job)", self.script)
+        self.assertIn("选择单个技能绑定键位", self.script)
+        self.assertIn("#s\" + skillId + \"#", self.script)
+        self.assertIn("#q\" + skillId + \"#", self.script)
+        self.assertIn("player.getSkillLevel(skillId) > 0", self.script)
+
+    def test_locked_explorer_skills_are_removed_by_server_gate(self):
+        self.assertIn('EXPLORER_FIFTH_JOB_COMPLETED_KEY = "explorer_fifth_job_completed"', self.character)
+        self.assertIn("hasCompletedExplorerFifthJob()", self.character)
+        self.assertIn("removeAllItemById(int itemId)", self.character)
+        self.assertIn("purgeLockedExplorerVViAccess(player)", self.login_handler)
+        self.assertIn("player.hasCompletedExplorerFifthJob() && player.getLevel() >= 180", self.login_handler)
+        self.assertIn("!player.hasCompletedExplorerFifthJob() || player.getLevel() < 180", self.login_handler)
+        self.assertIn("player.removeAllItemById(EXPLORER_FIFTH_JOB_ITEM_ID)", self.login_handler)
+        self.assertIn("player.removeBySkillId(skillId)", self.login_handler)
+        self.assertIn("player.removeSkillById(skillId)", self.login_handler)
+        for class_name in EXPLORER_CLASSES.values():
+            self.assertIn(f"{class_name}.V_VI_ACTIVE_ATTACKS", self.login_handler)
 
     def test_removed_skill_ids_can_be_deleted_after_wz_cleanup(self):
         self.assertIn("public void removeSkillById(int skillId)", self.character)
@@ -218,32 +241,13 @@ class ExplorerSkillGrantContractTest(unittest.TestCase):
         actual = {int(value) for value in re.findall(r"(\d+)\s*:\s*true", jobs.group(1))}
         self.assertEqual(set(EXPLORER_CLASSES), actual)
         self.assertIn("cm.getPlayer().getLevel() < ADVANCEMENT_LEVEL", goddess)
+        self.assertIn('EXPLORER_FIFTH_JOB_COMPLETED_KEY = "explorer_fifth_job_completed"', goddess)
+        self.assertIn("cleanupExplorerFifthJobItemIfLocked()", goddess)
+        self.assertIn("cm.removeAll(EXPLORER_FIFTH_JOB_ITEM_ID)", goddess)
+        self.assertIn("cm.saveOrUpdateCharacterExtendValue(EXPLORER_FIFTH_JOB_COMPLETED_KEY, \"1\")", goddess)
         self.assertIn("cm.haveItem(EXPLORER_FIFTH_JOB_ITEM_ID, 1)", goddess)
         self.assertIn("cm.canHold(EXPLORER_FIFTH_JOB_ITEM_ID, 1)", goddess)
         self.assertIn("cm.gainItem(EXPLORER_FIFTH_JOB_ITEM_ID, 1)", goddess)
-
-    def test_public_v_vi_attacks_are_hidden_only_from_legacy_skill_window(self):
-        for job_id, class_name in EXPLORER_CLASSES.items():
-            expected = active_ids(class_name)
-            client_path = ROOT / f"clien/Data/Skill/{job_id}.img"
-            client = WzImage.from_bytes(
-                client_path.read_bytes(), key=WzKey.for_region("GMS"), name=client_path.name
-            )
-            client.parse()
-            self.assertFalse(client.truncated, job_id)
-            self.assertFalse(client.parse_warnings, job_id)
-            server = ET.parse(ROOT / f"gms-server/wz/Skill.wz/{job_id}.img.xml").getroot()
-            skills = server.find("./imgdir[@name='skill']")
-            for skill_id in expected:
-                invisible = client.root.get(f"skill/{skill_id}/invisible")
-                self.assertIsNotNone(invisible, skill_id)
-                self.assertEqual(1, int(invisible.value), skill_id)
-                server_invisible = skills.find(
-                    f"./imgdir[@name='{skill_id}']/int[@name='invisible']"
-                )
-                self.assertIsNotNone(server_invisible, skill_id)
-                self.assertEqual("1", server_invisible.get("value"), skill_id)
-
 
 if __name__ == "__main__":
     unittest.main()

@@ -260,7 +260,7 @@ assert.deepStrictEqual(Array.from(context.STEP_RULES[10].bosses || []), [],
     "the hybrid stage must not force the 2.1B HP Drill boss");
 assert.deepStrictEqual(Array.from(context.STEP_RULES[13].bosses), [8220002, 8220009, 8860000],
     "Akayrum must remain in the late high-tier weapon transition");
-assert.deepStrictEqual(Array.from(context.STEP_RULES[14].bosses), [8220003, 8910100, 8900100, 8920100, 8930100],
+assert.deepStrictEqual(Array.from(context.STEP_RULES[14].bosses), [8220003, 8910100, 8900100, 8920101, 8930100],
     "Root Abyss must remain in the late Absolab armor transition");
 assert.deepStrictEqual(Array.from(context.STEP_RULES[15].bosses || []), [],
     "Arcane River progression must use quests instead of an unrelated boss gate");
@@ -336,8 +336,10 @@ for (const [relativePath, itemId] of [
     const pqRewardSource = fs.readFileSync(path.join(root, relativePath), "utf8");
     assert(pqRewardSource.includes(`gainItem(${itemId}, 1)`), `party quest reward ${itemId} has no repeatable grant`);
 }
-const bossMaterialDrops = fs.readFileSync(path.join(root,
-    "gms-server/src/main/resources/db/migration/V2.1.49__add_equipment_evolution_boss_material_drops.sql"), "utf8");
+const bossMaterialDrops = [
+    "gms-server/src/main/resources/db/migration/V2.1.49__add_equipment_evolution_boss_material_drops.sql",
+    "gms-server/src/main/resources/db/migration/V2.1.55__alias_bloody_queen_normal_drops.sql",
+].map((relativePath) => fs.readFileSync(path.join(root, relativePath), "utf8")).join("\n");
 for (const itemId of [4260009]) {
     assert(bossMaterialDrops.includes(`, ${itemId},`), `missing boss production for material ${itemId}`);
 }
@@ -372,7 +374,7 @@ const progressionBosses = [
     3220000, 3220001, 4220001, 5220002, 5220004, 5220001, 5220003,
     6220000, 6220001, 6090002, 7220001, 7220000, 7220002,
     8220000, 8220002, 8220009, 8220003,
-    8860000, 8850011, 8910100, 8900100, 8920100, 8930100,
+    8860000, 8850011, 8910100, 8900100, 8920101, 8930100,
     8870000, 8870200, 8880400, 8880200, 8645009, 8880700, 8880803,
 ];
 const stagedBosses = Array.from(context.STEP_RULES)

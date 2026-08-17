@@ -65,7 +65,7 @@ NORMAL_MOB_IDS = [7120110, 7120111, 7120112, 7120113, 7120114, 7120115, 9834610]
 ROOT_ABYSS_BOSS_ROOM_SPAWNS = {
     105200110: (8910100, 489, 454),
     105200210: (8900100, -131, 550),
-    105200310: (8920100, 60, 134),
+    105200310: (8920101, 60, 134),
     105200410: (8930100, -192, 442),
     105200510: (8910000, 489, 454),
     105200610: (8900000, -131, 550),
@@ -73,25 +73,25 @@ ROOT_ABYSS_BOSS_ROOM_SPAWNS = {
     105200810: (8930000, -192, 442),
 }
 ADVANCED_BOSS_MOB_IDS = [
-    8900000, 8900001, 8900002, 8900003,
-    8910000, 8910001,
-    8910100,
-    8920000, 8920001, 8920002, 8920003, 8920004, 8920005, 8920006,
-    8930000, 8930001,
+    8900000,
+    8910000,
+    8920000, 8920001,
+    8930000,
 ]
 MOB_CANVAS_SOURCE_IDS = [
     7120110, 7120111, 9834610,
-    8900000, 8900001, 8900002, 8900003,
-    8910000, 8910001,
-    8910100,
-    8920000, 8920001, 8920002, 8920004, 8920005,
-    8930000, 8930001,
-]
-INCOMPLETE_CANVAS_ONLY_MOBS = {8900003, 8910100, 8930001}
-BOSS_GAUGE_MOB_IDS = {
-    8900000, 8900001, 8900002,
+    8900000,
     8910000,
-    8920000, 8920001, 8920002, 8920003,
+    8910100,
+    8920000, 8920001,
+    8930000,
+]
+INCOMPLETE_CANVAS_ONLY_MOBS = {8910100}
+BOSS_GAUGE_MOB_IDS = {
+    8900000, 8900100,
+    8910000, 8910100,
+    8920000, 8920001, 8920101,
+    8930000, 8930100,
 }
 SUPPORTED_ROOT_ABYSS_BOSS_SKILLS = {
     (110, 5),
@@ -109,8 +109,6 @@ SUPPORTED_ROOT_ABYSS_BOSS_SKILLS = {
 }
 ROOT_ABYSS_MOB_SKILL_LEVELS = []
 ROOT_ABYSS_SECOND_PHASE_BOSS_HP = {
-    8900001: 3_000_000_000,
-    8910001: 3_000_000_000,
     8920001: 3_000_000_000,
 }
 HIGH_VERSION_MOB_INFO_FIELDS = {
@@ -353,8 +351,6 @@ def sanitize_root_abyss_map(root: WzSubProperty, map_id: int | None = None) -> N
 
     if map_id in NORTH_GARDEN_MAP_IDS:
         move_garden_foot_objects_to_layer_zero(root)
-    if map_id in ROOT_ABYSS_BOSS_ROOM_SPAWNS and isinstance(info, WzSubProperty):
-        ensure_string_child(info, "onUserEnter", "rootaBossEnter")
 
 
 def child_value(node, name: str):
@@ -428,12 +424,18 @@ def sanitize_root_abyss_boss_mob(root: WzSubProperty, mob_id: int) -> None:
     if isinstance(info, WzSubProperty):
         for key in HIGH_VERSION_MOB_INFO_FIELDS:
             remove_child(info, key)
+        if mob_id == 8900000:
+            remove_child(info, "fixedDamage")
         ensure_int_child(info, "mobType", 1)
         ensure_old_server_boss_info_fields(info, mob_id)
         if mob_id not in BOSS_GAUGE_MOB_IDS:
             ensure_int_child(info, "boss", 0)
             remove_child(info, "hpTagColor")
             remove_child(info, "hpTagBgcolor")
+        else:
+            ensure_int_child(info, "boss", 1)
+            ensure_int_child(info, "hpTagColor", 1)
+            ensure_int_child(info, "hpTagBgcolor", 5)
         sanitize_boss_skill_entries(root, info)
 
     for child in list(root.children()):
@@ -719,6 +721,49 @@ def mob_template_for(mob_id: int) -> int:
     return 7120112
 
 
+def legacy_origin_template_for(mob_id: int) -> int | None:
+    if mob_id == 7120110:
+        return 7120112
+    if mob_id == 7120111:
+        return 7120113
+    return None
+
+
+def canvas_origin_from_template(template_root: WzSubProperty | None, action_name: str, frame_name: str) -> tuple[int, int] | None:
+    if template_root is None:
+        return None
+    action = template_root.child(action_name)
+    frame = action.child(frame_name) if isinstance(action, WzSubProperty) else None
+    origin = frame.child("origin") if isinstance(frame, WzCanvasProperty) else None
+    if isinstance(origin, WzVectorProperty):
+        return int(origin.x), int(origin.y)
+    return None
+
+
+def add_legacy_canvas_origins(root: WzSubProperty, mob_id: int) -> int:
+    template_root = None
+    template_id = legacy_origin_template_for(mob_id)
+    if template_id is not None:
+        template_path = ROOT / f"clien/Data/Mob/{template_id}.img"
+        if template_path.exists():
+            template_root = target_img(template_path).root
+
+    changed = 0
+    for action_name in ("stand", "move", "attack1", "hit1", "die1"):
+        action = root.child(action_name)
+        if not isinstance(action, WzSubProperty):
+            continue
+        for frame in action.children():
+            if not isinstance(frame, WzCanvasProperty) or frame.child("origin") is not None:
+                continue
+            copied = canvas_origin_from_template(template_root, action_name, frame.name)
+            if copied is None:
+                copied = (int(frame.width) // 2, int(frame.height))
+            frame.add(WzVectorProperty("origin", copied[0], copied[1], frame))
+            changed += 1
+    return changed
+
+
 def migrate_mob_canvas_resource(mob_id: int) -> str:
     src_path = SRC_CLIENT / f"Mob/_Canvas/{mob_id}.img"
     if not src_path.exists():
@@ -744,6 +789,9 @@ def migrate_mob_canvas_resource(mob_id: int) -> str:
         info = compatible_normal_mob_info(template_id, mob_id)
         target.root.add(clone_property(info, name="info", parent=target.root))
         replace_children_from_source(target.root, source.root, skip={"info"})
+
+    if mob_id in {7120110, 7120111, 9834610}:
+        add_legacy_canvas_origins(target.root, mob_id)
 
     backup(client_path)
     atomic_write_bytes(client_path, encode_image_body(target, gms_reader()))
