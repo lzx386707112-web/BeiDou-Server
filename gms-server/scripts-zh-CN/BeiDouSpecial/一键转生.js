@@ -6,7 +6,7 @@ var needItemCount = 30;
 var needItemId2 = 2049115;
 var needItemCount2 = 10;
 var meso = 5;
-var needLevel = 250;
+var needLevel = 255;
 var text
 //重生后的等级，由服务器字段控制 rebirth_level
 var rebirthLevel = 1;

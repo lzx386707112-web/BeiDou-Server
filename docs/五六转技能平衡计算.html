@@ -1,0 +1,2450 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>五/六转技能平衡计算 - 目标伤害%</title>
+<style>
+:root {
+  --bg: #1a1a2e;
+  --card: #16213e;
+  --card2: #0f3460;
+  --border: #30475e;
+  --text: #e0e0e0;
+  --text2: #8e9aaf;
+  --accent: #e94560;
+  --green: #4ecca3;
+  --yellow: #f0a500;
+  --red: #ff4757;
+  --blue: #54a0ff;
+  --target: #00d2ff;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Microsoft YaHei', 'PingFang SC', sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  padding: 20px;
+}
+h1 { font-size: 22px; margin-bottom: 8px; color: var(--accent); }
+h2 { font-size: 18px; margin: 20px 0 10px; color: var(--blue); border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+.subtitle { color: var(--text2); margin-bottom: 16px; font-size: 13px; }
+
+.stats-bar {
+  display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 20px;
+}
+.stat-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 8px; padding: 12px 16px; min-width: 140px;
+}
+.stat-card .label { font-size: 12px; color: var(--text2); }
+.stat-card .value { font-size: 20px; font-weight: bold; }
+.stat-card .value.green { color: var(--green); }
+.stat-card .value.yellow { color: var(--yellow); }
+.stat-card .value.red { color: var(--red); }
+
+.section { margin-bottom: 24px; }
+
+.warning-box {
+  background: rgba(240, 165, 0, 0.1); border: 1px solid var(--yellow);
+  border-radius: 8px; padding: 12px 16px; margin-bottom: 16px;
+}
+.warning-box h3 { color: var(--yellow); font-size: 14px; margin-bottom: 6px; }
+.warning-box ul { list-style: none; padding-left: 0; }
+.warning-box li { font-size: 13px; color: var(--text); margin-bottom: 4px; padding-left: 16px; position: relative; }
+.warning-box li::before { content: '⚠'; position: absolute; left: 0; }
+
+table {
+  width: 100%; border-collapse: collapse; font-size: 13px;
+  background: var(--card); border-radius: 8px; overflow: hidden;
+}
+th {
+  background: var(--card2); color: var(--text); padding: 8px 10px;
+  text-align: left; border-bottom: 2px solid var(--border);
+  white-space: nowrap; cursor: pointer; user-select: none;
+}
+th:hover { background: #1a4a6e; }
+td {
+  padding: 6px 10px; border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+tr:hover { background: rgba(84, 160, 255, 0.05); }
+.num { text-align: right; font-family: 'Consolas', monospace; }
+.center { text-align: center; }
+.target { color: var(--target); font-weight: bold; font-size: 14px; }
+
+.sid { display: block; font-size: 10px; color: var(--text2); }
+.tag-inv { display: inline-block; background: var(--card2); color: var(--text2); font-size: 10px; padding: 0 4px; border-radius: 3px; margin-left: 4px; }
+.cd-yes { display: inline-block; background: rgba(233,69,96,0.2); color: var(--accent); font-size: 11px; padding: 1px 6px; border-radius: 3px; }
+.cd-no { display: inline-block; background: rgba(78,204,163,0.15); color: var(--green); font-size: 11px; padding: 1px 6px; border-radius: 3px; }
+
+.dev-ok { color: var(--green); }
+.dev-mid { color: var(--yellow); }
+.dev-bad { color: var(--red); }
+
+.filter-bar {
+  display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; align-items: center;
+}
+.filter-bar select, .filter-bar input {
+  background: var(--card); color: var(--text); border: 1px solid var(--border);
+  border-radius: 6px; padding: 6px 10px; font-size: 13px;
+}
+.filter-bar label { font-size: 13px; color: var(--text2); }
+.btn {
+  background: var(--card2); color: var(--text); border: 1px solid var(--border);
+  border-radius: 6px; padding: 6px 14px; font-size: 13px; cursor: pointer;
+}
+.btn:hover { background: #1a4a6e; }
+.btn.active { background: var(--accent); border-color: var(--accent); }
+
+.formula {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; font-size: 13px;
+}
+.formula code {
+  background: var(--card2); padding: 2px 8px; border-radius: 4px;
+  color: var(--target); font-family: 'Consolas', monospace;
+}
+
+.hidden { display: none !important; }
+
+.scroll-wrap { overflow-x: auto; }
+
+.note { font-size: 12px; color: var(--text2); margin-top: 8px; }
+</style>
+</head>
+<body>
+
+<h1>五/六转技能平衡计算报告</h1>
+<p class="subtitle">
+  面板=100,000 | 无CD技能 → 4转最高攻击技能总伤×1.2 | 有CD技能 → ×1.3 |
+  共179个技能（122个无CD，57个有CD） |
+  数据来源：gms-server/wz/Skill.wz 重新读取
+</p>
+
+<div class="formula">
+  <b>计算公式：</b><br>
+  <code>perhit = panel × (max(damage, mad) ÷ 100)</code> |
+  <code>total = perhit × attackCount</code><br>
+  <code>target_total = baseline_total × (1.2 if 无CD else 1.3)</code> |
+  <code>target_dmg% = round(target_total / (attackCount × panel / 100))</code> |
+  <code>deviation% = (target_dmg% - current_dmg%) / current_dmg% × 100</code>
+</div>
+
+<div class="stats-bar">
+  <div class="stat-card">
+    <div class="label">总技能数</div>
+    <div class="value">179</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">无CD / 有CD</div>
+    <div class="value">122 / 57</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">接近目标 (≤±10%)</div>
+    <div class="value green">4</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">偏差中等 (10~30%)</div>
+    <div class="value yellow">49</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">偏差较大 (>30%)</div>
+    <div class="value red">126</div>
+  </div>
+</div>
+
+<div class="warning-box">
+  <h3>Baseline 可疑/需关注</h3>
+  <ul>
+    <li><b>夜使者</b>：baseline="武器用毒液"(4120005) 总伤=60,000 — 武器用毒液是辅助被动技能，非主攻，baseline过低导致全部技能偏差-91%以上</li><li><b>魂骑士</b>：baseline="恐慌"(11111002) 总伤=320,000 — 骑士团4转技能伤害偏低，导致5/6转技能目标值远低于当前值</li><li><b>炎术士</b>：baseline="火风暴"(12111006) 总伤=420,000 — 骑士团4转技能伤害偏低，导致5/6转技能目标值远低于当前值</li><li><b>风灵使者</b>：baseline="风灵穿越"(13111006) 总伤=550,000 — 骑士团4转技能伤害偏低，导致5/6转技能目标值远低于当前值</li><li><b>夜行者</b>：baseline="多重飞镖"(14111002) 总伤=240,000 — 骑士团4转技能伤害偏低，导致5/6转技能目标值远低于当前值</li>
+    <li><b>黑骑士/箭神/神射手</b>：baseline 为 invisible 隐藏触发技能（1321026/3121032/3221033），可能并非玩家直接使用的攻击技能</li>
+    <li>偏负值越大 = 当前伤害%高于目标值（需要降低）；偏正值越大 = 当前伤害%低于目标值（需要提高）</li>
+  </ul>
+</div>
+
+<div class="section">
+  <h2>4转 Baseline 一览（18职业）</h2>
+  <div class="scroll-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>职业</th>
+        <th>4转技能名 / ID</th>
+        <th class="num">damage</th>
+        <th class="num">mad</th>
+        <th class="num">ac</th>
+        <th class="num">baseline总伤</th>
+        <th class="num">×1.2 目标(无CD)</th>
+        <th class="num">×1.3 目标(有CD)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>魂骑士</td>
+        <td>恐慌<span class="sid">11111002</span></td>
+        <td class="num">320</td>
+        <td class="num">0</td>
+        <td class="num">1</td>
+        <td class="num">320,000</td>
+        <td class="num">384,000</td>
+        <td class="num">416,000</td>
+    </tr><tr>
+        <td>炎术士</td>
+        <td>火风暴<span class="sid">12111006</span></td>
+        <td class="num">0</td>
+        <td class="num">210</td>
+        <td class="num">2</td>
+        <td class="num">420,000</td>
+        <td class="num">504,000</td>
+        <td class="num">546,000</td>
+    </tr><tr>
+        <td>风灵使者</td>
+        <td>风灵穿越<span class="sid">13111006</span></td>
+        <td class="num">550</td>
+        <td class="num">0</td>
+        <td class="num">1</td>
+        <td class="num">550,000</td>
+        <td class="num">660,000</td>
+        <td class="num">715,000</td>
+    </tr><tr>
+        <td>夜行者</td>
+        <td>多重飞镖<span class="sid">14111002</span></td>
+        <td class="num">240</td>
+        <td class="num">0</td>
+        <td class="num">1</td>
+        <td class="num">240,000</td>
+        <td class="num">288,000</td>
+        <td class="num">312,000</td>
+    </tr><tr>
+        <td>奇袭者</td>
+        <td>碎石乱击<span class="sid">15111003</span></td>
+        <td class="num">650</td>
+        <td class="num">0</td>
+        <td class="num">1</td>
+        <td class="num">650,000</td>
+        <td class="num">780,000</td>
+        <td class="num">845,000</td>
+    </tr><tr>
+        <td>阿兰</td>
+        <td>幻影狼牙<span class="sid">21110004</span></td>
+        <td class="num">800</td>
+        <td class="num">0</td>
+        <td class="num">2</td>
+        <td class="num">1,600,000</td>
+        <td class="num">1,920,000</td>
+        <td class="num">2,080,000</td>
+    </tr><tr>
+        <td>英雄</td>
+        <td>轻舞飞扬<span class="sid">1121008</span></td>
+        <td class="num">280</td>
+        <td class="num">0</td>
+        <td class="num">4</td>
+        <td class="num">1,120,000</td>
+        <td class="num">1,344,000</td>
+        <td class="num">1,456,000</td>
+    </tr><tr>
+        <td>圣骑士</td>
+        <td>连环环破<span class="sid">1221009</span></td>
+        <td class="num">300</td>
+        <td class="num">0</td>
+        <td class="num">4</td>
+        <td class="num">1,200,000</td>
+        <td class="num">1,440,000</td>
+        <td class="num">1,560,000</td>
+    </tr><tr>
+        <td>黑骑士</td>
+        <td>skill_1321026<span class="sid">1321026</span> <span class="tag-inv">隐</span></td>
+        <td class="num">134</td>
+        <td class="num">134</td>
+        <td class="num">15</td>
+        <td class="num">2,010,000</td>
+        <td class="num">2,412,000</td>
+        <td class="num">2,613,000</td>
+    </tr><tr>
+        <td>火毒大魔导士</td>
+        <td>连环爆破<span class="sid">2121006</span></td>
+        <td class="num">0</td>
+        <td class="num">300</td>
+        <td class="num">4</td>
+        <td class="num">1,200,000</td>
+        <td class="num">1,440,000</td>
+        <td class="num">1,560,000</td>
+    </tr><tr>
+        <td>冰雷大魔导士</td>
+        <td>链环闪电<span class="sid">2221006</span></td>
+        <td class="num">0</td>
+        <td class="num">270</td>
+        <td class="num">2</td>
+        <td class="num">540,000</td>
+        <td class="num">648,000</td>
+        <td class="num">702,000</td>
+    </tr><tr>
+        <td>主教</td>
+        <td>创世之破<span class="sid">2321001</span></td>
+        <td class="num">0</td>
+        <td class="num">450</td>
+        <td class="num">1</td>
+        <td class="num">450,000</td>
+        <td class="num">540,000</td>
+        <td class="num">585,000</td>
+    </tr><tr>
+        <td>箭神</td>
+        <td>skill_3121032<span class="sid">3121032</span> <span class="tag-inv">隐</span></td>
+        <td class="num">105</td>
+        <td class="num">105</td>
+        <td class="num">13</td>
+        <td class="num">1,365,000</td>
+        <td class="num">1,638,000</td>
+        <td class="num">1,774,500</td>
+    </tr><tr>
+        <td>神射手</td>
+        <td>skill_3221033<span class="sid">3221033</span> <span class="tag-inv">隐</span></td>
+        <td class="num">171</td>
+        <td class="num">171</td>
+        <td class="num">13</td>
+        <td class="num">2,223,000</td>
+        <td class="num">2,667,600</td>
+        <td class="num">2,889,900</td>
+    </tr><tr>
+        <td>夜使者</td>
+        <td>武器用毒液<span class="sid">4120005</span></td>
+        <td class="num">0</td>
+        <td class="num">60</td>
+        <td class="num">1</td>
+        <td class="num">60,000</td>
+        <td class="num">72,000</td>
+        <td class="num">78,000</td>
+    </tr><tr>
+        <td>暗影双刀</td>
+        <td>一出双击<span class="sid">4221007</span></td>
+        <td class="num">600</td>
+        <td class="num">0</td>
+        <td class="num">2</td>
+        <td class="num">1,200,000</td>
+        <td class="num">1,440,000</td>
+        <td class="num">1,560,000</td>
+    </tr><tr>
+        <td>拳霸</td>
+        <td>光速拳<span class="sid">5121007</span></td>
+        <td class="num">330</td>
+        <td class="num">0</td>
+        <td class="num">6</td>
+        <td class="num">1,980,000</td>
+        <td class="num">2,376,000</td>
+        <td class="num">2,574,000</td>
+    </tr><tr>
+        <td>枪神</td>
+        <td>导航辅助<span class="sid">5220011</span></td>
+        <td class="num">580</td>
+        <td class="num">0</td>
+        <td class="num">1</td>
+        <td class="num">580,000</td>
+        <td class="num">696,000</td>
+        <td class="num">754,000</td>
+    </tr>
+    </tbody>
+  </table>
+  </div>
+</div>
+
+<div class="section">
+  <h2>五/六转技能目标伤害%明细</h2>
+
+  <div class="filter-bar">
+    <label>职业：</label>
+    <select id="clsFilter">
+      <option value="">全部</option>
+      <option value="魂骑士">魂骑士</option><option value="炎术士">炎术士</option><option value="风灵使者">风灵使者</option><option value="夜行者">夜行者</option><option value="奇袭者">奇袭者</option><option value="阿兰">阿兰</option><option value="英雄">英雄</option><option value="圣骑士">圣骑士</option><option value="黑骑士">黑骑士</option><option value="火毒大魔导士">火毒大魔导士</option><option value="冰雷大魔导士">冰雷大魔导士</option><option value="主教">主教</option><option value="箭神">箭神</option><option value="神射手">神射手</option><option value="夜使者">夜使者</option><option value="暗影双刀">暗影双刀</option><option value="拳霸">拳霸</option><option value="枪神">枪神</option>
+    </select>
+    <label>CD：</label>
+    <select id="cdFilter">
+      <option value="">全部</option>
+      <option value="1">有CD</option>
+      <option value="0">无CD</option>
+    </select>
+    <label>偏差：</label>
+    <select id="devFilter">
+      <option value="">全部</option>
+      <option value="ok">接近(≤±10%)</option>
+      <option value="mid">中等(10~30%)</option>
+      <option value="bad">较大(>30%)</option>
+    </select>
+    <input type="text" id="searchInput" placeholder="搜索技能名/ID..." style="width:200px">
+    <button class="btn" onclick="resetFilters()">重置</button>
+  </div>
+
+  <div class="scroll-wrap">
+  <table id="skillTable">
+    <thead>
+      <tr>
+        <th data-sort="cls">职业</th>
+        <th data-sort="name">技能名 / ID</th>
+        <th data-sort="cd">CD</th>
+        <th class="num" data-sort="dmg">当前dmg%</th>
+        <th class="num" data-sort="mad">当前mad%</th>
+        <th class="num" data-sort="ac">attackCount</th>
+        <th class="num" data-sort="total">当前总伤</th>
+        <th class="num" data-sort="target_total">目标总伤</th>
+        <th class="num" data-sort="target_dmg">目标dmg%</th>
+        <th class="num" data-sort="dev">偏差</th>
+      </tr>
+    </thead>
+    <tbody id="skillBody">
+      <tr data-cls="魂骑士" data-cd="1" data-dev="-80.2">
+        <td>魂骑士</td>
+        <td>银河星爆<span class="sid">11121005</span></td>
+        <td class="center"><span class="cd-yes">CD</span></td>
+        <td class="num">140</td>
+        <td class="num">0</td>
+        <td class="num">15</td>
+        <td class="num">2,100,000</td>
+        <td class="num">416,000</td>
+        <td class="num target">28</td>
+        <td class="num dev-bad">-80.2%</td>
+    </tr><tr data-cls="魂骑士" data-cd="1" data-dev="-80.9">
+        <td>魂骑士</td>
+        <td>全蚀之力<span class="sid">11121006</span></td>
+        <td class="center"><span class="cd-yes">CD</span></td>
+        <td class="num">145</td>
+        <td class="num">0</td>
+        <td class="num">15</td>
+        <td class="num">2,175,000</td>
+        <td class="num">416,000</td>
+        <td class="num target">28</td>
+        <td class="num dev-bad">-80.9%</td>
+    </tr><tr data-cls="魂骑士" data-cd="0" data-dev="-81.7">
+        <td>魂骑士</td>
+        <td>全蚀之力：魂斩 <span class="tag-inv">隐</span><span class="sid">11121007</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">140</td>
+        <td class="num">0</td>
+        <td class="num">15</td>
+        <td class="num">2,100,000</td>
+        <td class="num">384,000</td>
+        <td class="num target">26</td>
+        <td class="num dev-bad">-81.7%</td>
+    </tr><tr data-cls="魂骑士" data-cd="0" data-dev="-59.7">
+        <td>魂骑士</td>
+        <td>灵魂蚀日<span class="sid">11121008</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">136</td>
+        <td class="num">0</td>
+        <td class="num">7</td>
+        <td class="num">952,000</td>
+        <td class="num">384,000</td>
+        <td class="num target">55</td>
+        <td class="num dev-bad">-59.7%</td>
+    </tr><tr data-cls="魂骑士" data-cd="0" data-dev="-81.7">
+        <td>魂骑士</td>
+        <td>日月分裂 <span class="tag-inv">隐</span><span class="sid">11121009</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">140</td>
+        <td class="num">0</td>
+        <td class="num">15</td>
+        <td class="num">2,100,000</td>
+        <td class="num">384,000</td>
+        <td class="num target">26</td>
+        <td class="num dev-bad">-81.7%</td>
+    </tr><tr data-cls="魂骑士" data-cd="0" data-dev="-59.6">
+        <td>魂骑士</td>
+        <td>冥河破<span class="sid">11121011</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">190</td>
+        <td class="num">0</td>
+        <td class="num">5</td>
+        <td class="num">950,000</td>
+        <td class="num">384,000</td>
+        <td class="num target">77</td>
+        <td class="num dev-bad">-59.6%</td>
+    </tr><tr data-cls="魂骑士" data-cd="1" data-dev="-80.9">
+        <td>魂骑士</td>
+        <td>宇宙之花<span class="sid">11121012</span></td>
+        <td class="center"><span class="cd-yes">CD</span></td>
+        <td class="num">145</td>
+        <td class="num">0</td>
+        <td class="num">15</td>
+        <td class="num">2,175,000</td>
+        <td class="num">416,000</td>
+        <td class="num target">28</td>
+        <td class="num dev-bad">-80.9%</td>
+    </tr><tr data-cls="炎术士" data-cd="1" data-dev="-52.1">
+        <td>炎术士</td>
+        <td>烈炎爆发（火狮）<span class="sid">12121001</span></td>
+        <td class="center"><span class="cd-yes">CD</span></td>
+        <td class="num">95</td>
+        <td class="num">95</td>
+        <td class="num">12</td>
+        <td class="num">1,140,000</td>
+        <td class="num">546,000</td>
+        <td class="num target">46</td>
+        <td class="num dev-bad">-52.1%</td>
+    </tr><tr data-cls="炎术士" data-cd="0" data-dev="-55.8">
+        <td>炎术士</td>
+        <td>烈炎爆发：火狮爆裂 <span class="tag-inv">隐</span><span class="sid">12121002</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">95</td>
+        <td class="num">95</td>
+        <td class="num">12</td>
+        <td class="num">1,140,000</td>
+        <td class="num">504,000</td>
+        <td class="num target">42</td>
+        <td class="num dev-bad">-55.8%</td>
+    </tr><tr data-cls="炎术士" data-cd="0" data-dev="-46.9">
+        <td>炎术士</td>
+        <td>烈炎爆发：火狮余焰 <span class="tag-inv">隐</span><span class="sid">12121003</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">950</td>
+        <td class="num">950</td>
+        <td class="num">1</td>
+        <td class="num">950,000</td>
+        <td class="num">504,000</td>
+        <td class="num target">504</td>
+        <td class="num dev-bad">-46.9%</td>
+    </tr><tr data-cls="炎术士" data-cd="0" data-dev="-54.2">
+        <td>炎术士</td>
+        <td>烈炎爆发：火狮终焰 <span class="tag-inv">隐</span><span class="sid">12121004</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">1100</td>
+        <td class="num">1100</td>
+        <td class="num">1</td>
+        <td class="num">1,100,000</td>
+        <td class="num">504,000</td>
+        <td class="num target">504</td>
+        <td class="num dev-bad">-54.2%</td>
+    </tr><tr data-cls="炎术士" data-cd="1" data-dev="-50.5">
+        <td>炎术士</td>
+        <td>无尽之炎燄<span class="sid">12121007</span></td>
+        <td class="center"><span class="cd-yes">CD</span></td>
+        <td class="num">138</td>
+        <td class="num">138</td>
+        <td class="num">8</td>
+        <td class="num">1,104,000</td>
+        <td class="num">546,000</td>
+        <td class="num target">68</td>
+        <td class="num dev-bad">-50.5%</td>
+    </tr><tr data-cls="炎术士" data-cd="0" data-dev="-49.1">
+        <td>炎术士</td>
+        <td>魔法爆发 VI <span class="tag-inv">隐</span><span class="sid">12121020</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">330</td>
+        <td class="num">330</td>
+        <td class="num">3</td>
+        <td class="num">990,000</td>
+        <td class="num">504,000</td>
+        <td class="num target">168</td>
+        <td class="num dev-bad">-49.1%</td>
+    </tr><tr data-cls="炎术士" data-cd="0" data-dev="-49.1">
+        <td>炎术士</td>
+        <td>魔法爆发 VI：火息 <span class="tag-inv">隐</span><span class="sid">12121021</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">330</td>
+        <td class="num">330</td>
+        <td class="num">3</td>
+        <td class="num">990,000</td>
+        <td class="num">504,000</td>
+        <td class="num target">168</td>
+        <td class="num dev-bad">-49.1%</td>
+    </tr><tr data-cls="炎术士" data-cd="0" data-dev="-46.8">
+        <td>炎术士</td>
+        <td>凤凰爆裂 VI<span class="sid">12121022</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">158</td>
+        <td class="num">158</td>
+        <td class="num">6</td>
+        <td class="num">948,000</td>
+        <td class="num">504,000</td>
+        <td class="num target">84</td>
+        <td class="num dev-bad">-46.8%</td>
+    </tr><tr data-cls="炎术士" data-cd="1" data-dev="-74.0">
+        <td>炎术士</td>
+        <td>永恒凤炎<span class="sid">12121025</span></td>
+        <td class="center"><span class="cd-yes">CD</span></td>
+        <td class="num">210</td>
+        <td class="num">210</td>
+        <td class="num">10</td>
+        <td class="num">2,100,000</td>
+        <td class="num">546,000</td>
+        <td class="num target">55</td>
+        <td class="num dev-bad">-74.0%</td>
+    </tr><tr data-cls="炎术士" data-cd="0" data-dev="-75.8">
+        <td>炎术士</td>
+        <td>永恒凤炎：循环之焰 <span class="tag-inv">隐</span><span class="sid">12121026</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">160</td>
+        <td class="num">160</td>
+        <td class="num">13</td>
+        <td class="num">2,080,000</td>
+        <td class="num">504,000</td>
+        <td class="num target">39</td>
+        <td class="num dev-bad">-75.8%</td>
+    </tr><tr data-cls="炎术士" data-cd="1" data-dev="-74.0">
+        <td>炎术士</td>
+        <td>炎焰协奏曲<span class="sid">12121028</span></td>
+        <td class="center"><span class="cd-yes">CD</span></td>
+        <td class="num">175</td>
+        <td class="num">175</td>
+        <td class="num">12</td>
+        <td class="num">2,100,000</td>
+        <td class="num">546,000</td>
+        <td class="num target">46</td>
+        <td class="num dev-bad">-74.0%</td>
+    </tr><tr data-cls="炎术士" data-cd="0" data-dev="-76.0">
+        <td>炎术士</td>
+        <td>炎焰协奏曲：最终乐章 <span class="tag-inv">隐</span><span class="sid">12121029</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">140</td>
+        <td class="num">140</td>
+        <td class="num">15</td>
+        <td class="num">2,100,000</td>
+        <td class="num">504,000</td>
+        <td class="num target">34</td>
+        <td class="num dev-bad">-76.0%</td>
+    </tr><tr data-cls="炎术士" data-cd="0" data-dev="-51.5">
+        <td>炎术士</td>
+        <td>无尽之炎燄：持续攻击 <span class="tag-inv">隐</span><span class="sid">12121030</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">130</td>
+        <td class="num">130</td>
+        <td class="num">8</td>
+        <td class="num">1,040,000</td>
+        <td class="num">504,000</td>
+        <td class="num target">63</td>
+        <td class="num dev-bad">-51.5%</td>
+    </tr><tr data-cls="炎术士" data-cd="0" data-dev="-46.8">
+        <td>炎术士</td>
+        <td>凤凰爆裂 VI：持续攻击 <span class="tag-inv">隐</span><span class="sid">12121033</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">158</td>
+        <td class="num">158</td>
+        <td class="num">6</td>
+        <td class="num">948,000</td>
+        <td class="num">504,000</td>
+        <td class="num target">84</td>
+        <td class="num dev-bad">-46.8%</td>
+    </tr><tr data-cls="炎术士" data-cd="0" data-dev="-73.5">
+        <td>炎术士</td>
+        <td>永恒凤炎：初始焰击 <span class="tag-inv">隐</span><span class="sid">12121035</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">190</td>
+        <td class="num">190</td>
+        <td class="num">10</td>
+        <td class="num">1,900,000</td>
+        <td class="num">504,000</td>
+        <td class="num target">50</td>
+        <td class="num dev-bad">-73.5%</td>
+    </tr><tr data-cls="炎术士" data-cd="0" data-dev="-74.5">
+        <td>炎术士</td>
+        <td>炎焰协奏曲：火焰演奏 <span class="tag-inv">隐</span><span class="sid">12121036</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">165</td>
+        <td class="num">165</td>
+        <td class="num">12</td>
+        <td class="num">1,980,000</td>
+        <td class="num">504,000</td>
+        <td class="num target">42</td>
+        <td class="num dev-bad">-74.5%</td>
+    </tr><tr data-cls="风灵使者" data-cd="0" data-dev="-32.3">
+        <td>风灵使者</td>
+        <td>风转奇想<span class="sid">13121003</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">195</td>
+        <td class="num">195</td>
+        <td class="num">5</td>
+        <td class="num">975,000</td>
+        <td class="num">660,000</td>
+        <td class="num target">132</td>
+        <td class="num dev-bad">-32.3%</td>
+    </tr><tr data-cls="风灵使者" data-cd="0" data-dev="-34.0">
+        <td>风灵使者</td>
+        <td>西尔芙之壁<span class="sid">13121004</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">200</td>
+        <td class="num">200</td>
+        <td class="num">5</td>
+        <td class="num">1,000,000</td>
+        <td class="num">660,000</td>
+        <td class="num target">132</td>
+        <td class="num dev-bad">-34.0%</td>
+    </tr><tr data-cls="风灵使者" data-cd="0" data-dev="-34.0">
+        <td>风灵使者</td>
+        <td>西尔芙之壁：旋风 <span class="tag-inv">隐</span><span class="sid">13121005</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">200</td>
+        <td class="num">200</td>
+        <td class="num">5</td>
+        <td class="num">1,000,000</td>
+        <td class="num">660,000</td>
+        <td class="num target">132</td>
+        <td class="num dev-bad">-34.0%</td>
+    </tr><tr data-cls="风灵使者" data-cd="0" data-dev="-34.0">
+        <td>风灵使者</td>
+        <td>妖精护盾VI<span class="sid">13121009</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">200</td>
+        <td class="num">200</td>
+        <td class="num">5</td>
+        <td class="num">1,000,000</td>
+        <td class="num">660,000</td>
+        <td class="num target">132</td>
+        <td class="num dev-bad">-34.0%</td>
+    </tr><tr data-cls="风灵使者" data-cd="1" data-dev="-66.0">
+        <td>风灵使者</td>
+        <td>季风VI<span class="sid">13121010</span></td>
+        <td class="center"><span class="cd-yes">CD</span></td>
+        <td class="num">175</td>
+        <td class="num">175</td>
+        <td class="num">12</td>
+        <td class="num">2,100,000</td>
+        <td class="num">715,000</td>
+        <td class="num target">60</td>
+        <td class="num dev-bad">-66.0%</td>
+    </tr><tr data-cls="风灵使者" data-cd="1" data-dev="-66.0">
+        <td>风灵使者</td>
+        <td>阿涅摩伊<span class="sid">13121011</span></td>
+        <td class="center"><span class="cd-yes">CD</span></td>
+        <td class="num">140</td>
+        <td class="num">140</td>
+        <td class="num">15</td>
+        <td class="num">2,100,000</td>
+        <td class="num">715,000</td>
+        <td class="num target">48</td>
+        <td class="num dev-bad">-66.0%</td>
+    </tr><tr data-cls="风灵使者" data-cd="0" data-dev="-52.9">
+        <td>风灵使者</td>
+        <td>阿涅摩伊：强风 <span class="tag-inv">隐</span><span class="sid">13121012</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">140</td>
+        <td class="num">140</td>
+        <td class="num">10</td>
+        <td class="num">1,400,000</td>
+        <td class="num">660,000</td>
+        <td class="num target">66</td>
+        <td class="num dev-bad">-52.9%</td>
+    </tr><tr data-cls="风灵使者" data-cd="1" data-dev="-66.0">
+        <td>风灵使者</td>
+        <td>风之圣谕<span class="sid">13121013</span></td>
+        <td class="center"><span class="cd-yes">CD</span></td>
+        <td class="num">210</td>
+        <td class="num">210</td>
+        <td class="num">10</td>
+        <td class="num">2,100,000</td>
+        <td class="num">715,000</td>
+        <td class="num target">72</td>
+        <td class="num dev-bad">-66.0%</td>
+    </tr><tr data-cls="风灵使者" data-cd="0" data-dev="-56.0">
+        <td>风灵使者</td>
+        <td>风之圣谕：风之刃 <span class="tag-inv">隐</span><span class="sid">13121014</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">150</td>
+        <td class="num">150</td>
+        <td class="num">10</td>
+        <td class="num">1,500,000</td>
+        <td class="num">660,000</td>
+        <td class="num target">66</td>
+        <td class="num dev-bad">-56.0%</td>
+    </tr><tr data-cls="风灵使者" data-cd="0" data-dev="0.0">
+        <td>风灵使者</td>
+        <td>风之圣谕：精灵气息 <span class="tag-inv">隐</span><span class="sid">13121015</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">132</td>
+        <td class="num">132</td>
+        <td class="num">5</td>
+        <td class="num">660,000</td>
+        <td class="num">660,000</td>
+        <td class="num target">132</td>
+        <td class="num dev-ok">+0.0%</td>
+    </tr><tr data-cls="风灵使者" data-cd="0" data-dev="-21.4">
+        <td>风灵使者</td>
+        <td>风之圣谕：欢快精灵气息 <span class="tag-inv">隐</span><span class="sid">13121016</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">140</td>
+        <td class="num">140</td>
+        <td class="num">6</td>
+        <td class="num">840,000</td>
+        <td class="num">660,000</td>
+        <td class="num target">110</td>
+        <td class="num dev-mid">-21.4%</td>
+    </tr><tr data-cls="风灵使者" data-cd="0" data-dev="-25.8">
+        <td>风灵使者</td>
+        <td>风之圣谕：猛烈精灵气息 <span class="tag-inv">隐</span><span class="sid">13121017</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">127</td>
+        <td class="num">127</td>
+        <td class="num">7</td>
+        <td class="num">889,000</td>
+        <td class="num">660,000</td>
+        <td class="num target">94</td>
+        <td class="num dev-mid">-25.8%</td>
+    </tr><tr data-cls="风灵使者" data-cd="0" data-dev="-32.3">
+        <td>风灵使者</td>
+        <td>风转奇想：精灵气息 <span class="tag-inv">隐</span><span class="sid">13121018</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">195</td>
+        <td class="num">195</td>
+        <td class="num">5</td>
+        <td class="num">975,000</td>
+        <td class="num">660,000</td>
+        <td class="num target">132</td>
+        <td class="num dev-bad">-32.3%</td>
+    </tr><tr data-cls="风灵使者" data-cd="1" data-dev="-66.0">
+        <td>风灵使者</td>
+        <td>元素风暴<span class="sid">13121019</span></td>
+        <td class="center"><span class="cd-yes">CD</span></td>
+        <td class="num">175</td>
+        <td class="num">175</td>
+        <td class="num">12</td>
+        <td class="num">2,100,000</td>
+        <td class="num">715,000</td>
+        <td class="num target">60</td>
+        <td class="num dev-bad">-66.0%</td>
+    </tr><tr data-cls="风灵使者" data-cd="0" data-dev="-68.6">
+        <td>风灵使者</td>
+        <td>元素风暴：箭雨 <span class="tag-inv">隐</span><span class="sid">13121020</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">140</td>
+        <td class="num">140</td>
+        <td class="num">15</td>
+        <td class="num">2,100,000</td>
+        <td class="num">660,000</td>
+        <td class="num target">44</td>
+        <td class="num dev-bad">-68.6%</td>
+    </tr><tr data-cls="风灵使者" data-cd="0" data-dev="-60.7">
+        <td>风灵使者</td>
+        <td>元素风暴：风之波动 <span class="tag-inv">隐</span><span class="sid">13121023</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">140</td>
+        <td class="num">140</td>
+        <td class="num">12</td>
+        <td class="num">1,680,000</td>
+        <td class="num">660,000</td>
+        <td class="num target">55</td>
+        <td class="num dev-bad">-60.7%</td>
+    </tr><tr data-cls="夜行者" data-cd="0" data-dev="-71.2">
+        <td>夜行者</td>
+        <td>暗影吞噬<span class="sid">14121003</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">125</td>
+        <td class="num">125</td>
+        <td class="num">8</td>
+        <td class="num">1,000,000</td>
+        <td class="num">288,000</td>
+        <td class="num target">36</td>
+        <td class="num dev-bad">-71.2%</td>
+    </tr><tr data-cls="夜行者" data-cd="0" data-dev="-70.5">
+        <td>夜行者</td>
+        <td>暗影投掷<span class="sid">14121004</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">195</td>
+        <td class="num">195</td>
+        <td class="num">5</td>
+        <td class="num">975,000</td>
+        <td class="num">288,000</td>
+        <td class="num target">58</td>
+        <td class="num dev-bad">-70.5%</td>
+    </tr><tr data-cls="夜行者" data-cd="0" data-dev="-86.2">
+        <td>夜行者</td>
+        <td>暗影投掷：终结 <span class="tag-inv">隐</span><span class="sid">14121005</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">160</td>
+        <td class="num">160</td>
+        <td class="num">13</td>
+        <td class="num">2,080,000</td>
+        <td class="num">288,000</td>
+        <td class="num target">22</td>
+        <td class="num dev-bad">-86.2%</td>
+    </tr><tr data-cls="夜行者" data-cd="0" data-dev="-70.5">
+        <td>夜行者</td>
+        <td>暗影投掷：上段飞镖 <span class="tag-inv">隐</span><span class="sid">14121006</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">195</td>
+        <td class="num">195</td>
+        <td class="num">5</td>
+        <td class="num">975,000</td>
+        <td class="num">288,000</td>
+        <td class="num target">58</td>
+        <td class="num dev-bad">-70.5%</td>
+    </tr><tr data-cls="夜行者" data-cd="0" data-dev="-70.5">
+        <td>夜行者</td>
+        <td>暗影投掷：中段飞镖 <span class="tag-inv">隐</span><span class="sid">14121007</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">195</td>
+        <td class="num">195</td>
+        <td class="num">5</td>
+        <td class="num">975,000</td>
+        <td class="num">288,000</td>
+        <td class="num target">58</td>
+        <td class="num dev-bad">-70.5%</td>
+    </tr><tr data-cls="夜行者" data-cd="0" data-dev="-70.5">
+        <td>夜行者</td>
+        <td>暗影投掷：下段飞镖 <span class="tag-inv">隐</span><span class="sid">14121008</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">195</td>
+        <td class="num">195</td>
+        <td class="num">5</td>
+        <td class="num">975,000</td>
+        <td class="num">288,000</td>
+        <td class="num target">58</td>
+        <td class="num dev-bad">-70.5%</td>
+    </tr><tr data-cls="夜行者" data-cd="0" data-dev="-70.0">
+        <td>夜行者</td>
+        <td>暗影吞噬：普通命中 <span class="tag-inv">隐</span><span class="sid">14121014</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">120</td>
+        <td class="num">120</td>
+        <td class="num">8</td>
+        <td class="num">960,000</td>
+        <td class="num">288,000</td>
+        <td class="num target">36</td>
+        <td class="num dev-bad">-70.0%</td>
+    </tr><tr data-cls="夜行者" data-cd="0" data-dev="-71.2">
+        <td>夜行者</td>
+        <td>暗影吞噬：Boss命中 <span class="tag-inv">隐</span><span class="sid">14121015</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">125</td>
+        <td class="num">125</td>
+        <td class="num">8</td>
+        <td class="num">1,000,000</td>
+        <td class="num">288,000</td>
+        <td class="num target">36</td>
+        <td class="num dev-bad">-71.2%</td>
+    </tr><tr data-cls="夜行者" data-cd="0" data-dev="92.0">
+        <td>夜行者</td>
+        <td>暗影吞噬：暗影蝙蝠 <span class="tag-inv">隐</span><span class="sid">14121016</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">150</td>
+        <td class="num">0</td>
+        <td class="num">1</td>
+        <td class="num">150,000</td>
+        <td class="num">288,000</td>
+        <td class="num target">288</td>
+        <td class="num dev-bad">+92.0%</td>
+    </tr><tr data-cls="夜行者" data-cd="0" data-dev="-70.0">
+        <td>夜行者</td>
+        <td>暗影吞噬：饥饿蝙蝠 <span class="tag-inv">隐</span><span class="sid">14121017</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">480</td>
+        <td class="num">0</td>
+        <td class="num">2</td>
+        <td class="num">960,000</td>
+        <td class="num">288,000</td>
+        <td class="num target">144</td>
+        <td class="num dev-bad">-70.0%</td>
+    </tr><tr data-cls="夜行者" data-cd="0" data-dev="-84.8">
+        <td>夜行者</td>
+        <td>支配 VI：连续攻击 <span class="tag-inv">隐</span><span class="sid">14121018</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">190</td>
+        <td class="num">190</td>
+        <td class="num">10</td>
+        <td class="num">1,900,000</td>
+        <td class="num">288,000</td>
+        <td class="num target">29</td>
+        <td class="num dev-bad">-84.8%</td>
+    </tr><tr data-cls="夜行者" data-cd="0" data-dev="-69.0">
+        <td>夜行者</td>
+        <td>闇黑天魔 VI<span class="sid">14121027</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">155</td>
+        <td class="num">155</td>
+        <td class="num">6</td>
+        <td class="num">930,000</td>
+        <td class="num">288,000</td>
+        <td class="num target">48</td>
+        <td class="num dev-bad">-69.0%</td>
+    </tr><tr data-cls="夜行者" data-cd="0" data-dev="-69.0">
+        <td>夜行者</td>
+        <td>闇黑天魔 VI：持续攻击 <span class="tag-inv">隐</span><span class="sid">14121028</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">155</td>
+        <td class="num">155</td>
+        <td class="num">6</td>
+        <td class="num">930,000</td>
+        <td class="num">288,000</td>
+        <td class="num target">48</td>
+        <td class="num dev-bad">-69.0%</td>
+    </tr><tr data-cls="夜行者" data-cd="1" data-dev="-84.4">
+        <td>夜行者</td>
+        <td>支配 VI<span class="sid">14121030</span></td>
+        <td class="center"><span class="cd-yes">CD</span></td>
+        <td class="num">200</td>
+        <td class="num">200</td>
+        <td class="num">10</td>
+        <td class="num">2,000,000</td>
+        <td class="num">312,000</td>
+        <td class="num target">31</td>
+        <td class="num dev-bad">-84.4%</td>
+    </tr><tr data-cls="夜行者" data-cd="0" data-dev="-85.3">
+        <td>夜行者</td>
+        <td>冥河指令：连续攻击 <span class="tag-inv">隐</span><span class="sid">14121031</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">140</td>
+        <td class="num">140</td>
+        <td class="num">14</td>
+        <td class="num">1,960,000</td>
+        <td class="num">288,000</td>
+        <td class="num target">21</td>
+        <td class="num dev-bad">-85.3%</td>
+    </tr><tr data-cls="夜行者" data-cd="1" data-dev="-85.1">
+        <td>夜行者</td>
+        <td>静谧之夜<span class="sid">14121032</span></td>
+        <td class="center"><span class="cd-yes">CD</span></td>
+        <td class="num">175</td>
+        <td class="num">175</td>
+        <td class="num">12</td>
+        <td class="num">2,100,000</td>
+        <td class="num">312,000</td>
+        <td class="num target">26</td>
+        <td class="num dev-bad">-85.1%</td>
+    </tr><tr data-cls="夜行者" data-cd="0" data-dev="-86.3">
+        <td>夜行者</td>
+        <td>静谧之夜：开幕攻击 <span class="tag-inv">隐</span><span class="sid">14121033</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">175</td>
+        <td class="num">175</td>
+        <td class="num">12</td>
+        <td class="num">2,100,000</td>
+        <td class="num">288,000</td>
+        <td class="num target">24</td>
+        <td class="num dev-bad">-86.3%</td>
+    </tr><tr data-cls="夜行者" data-cd="0" data-dev="-86.3">
+        <td>夜行者</td>
+        <td>静谧之夜：追踪飞镖 <span class="tag-inv">隐</span><span class="sid">14121034</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">175</td>
+        <td class="num">175</td>
+        <td class="num">12</td>
+        <td class="num">2,100,000</td>
+        <td class="num">288,000</td>
+        <td class="num target">24</td>
+        <td class="num dev-bad">-86.3%</td>
+    </tr><tr data-cls="夜行者" data-cd="1" data-dev="-85.1">
+        <td>夜行者</td>
+        <td>冥河指令<span class="sid">14121035</span></td>
+        <td class="center"><span class="cd-yes">CD</span></td>
+        <td class="num">150</td>
+        <td class="num">150</td>
+        <td class="num">14</td>
+        <td class="num">2,100,000</td>
+        <td class="num">312,000</td>
+        <td class="num target">22</td>
+        <td class="num dev-bad">-85.1%</td>
+    </tr><tr data-cls="夜行者" data-cd="0" data-dev="-85.2">
+        <td>夜行者</td>
+        <td>冥河指令：终结 <span class="tag-inv">隐</span><span class="sid">14121036</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">130</td>
+        <td class="num">130</td>
+        <td class="num">15</td>
+        <td class="num">1,950,000</td>
+        <td class="num">288,000</td>
+        <td class="num target">19</td>
+        <td class="num dev-bad">-85.2%</td>
+    </tr><tr data-cls="奇袭者" data-cd="0" data-dev="-21.9">
+        <td>奇袭者</td>
+        <td>海龙螺旋<span class="sid">15121000</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">333</td>
+        <td class="num">333</td>
+        <td class="num">3</td>
+        <td class="num">999,000</td>
+        <td class="num">780,000</td>
+        <td class="num target">260</td>
+        <td class="num dev-mid">-21.9%</td>
+    </tr><tr data-cls="奇袭者" data-cd="0" data-dev="-22.0">
+        <td>奇袭者</td>
+        <td>枪雷连击<span class="sid">15121002</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">200</td>
+        <td class="num">200</td>
+        <td class="num">5</td>
+        <td class="num">1,000,000</td>
+        <td class="num">780,000</td>
+        <td class="num target">156</td>
+        <td class="num dev-mid">-22.0%</td>
+    </tr><tr data-cls="奇袭者" data-cd="0" data-dev="-22.0">
+        <td>奇袭者</td>
+        <td>枪雷连击：一式 <span class="tag-inv">隐</span><span class="sid">15121003</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">200</td>
+        <td class="num">200</td>
+        <td class="num">5</td>
+        <td class="num">1,000,000</td>
+        <td class="num">780,000</td>
+        <td class="num target">156</td>
+        <td class="num dev-mid">-22.0%</td>
+    </tr><tr data-cls="奇袭者" data-cd="0" data-dev="-22.0">
+        <td>奇袭者</td>
+        <td>枪雷连击：二式 <span class="tag-inv">隐</span><span class="sid">15121004</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">200</td>
+        <td class="num">200</td>
+        <td class="num">5</td>
+        <td class="num">1,000,000</td>
+        <td class="num">780,000</td>
+        <td class="num target">156</td>
+        <td class="num dev-mid">-22.0%</td>
+    </tr><tr data-cls="奇袭者" data-cd="0" data-dev="-22.0">
+        <td>奇袭者</td>
+        <td>枪雷连击：三式 <span class="tag-inv">隐</span><span class="sid">15121005</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">200</td>
+        <td class="num">200</td>
+        <td class="num">5</td>
+        <td class="num">1,000,000</td>
+        <td class="num">780,000</td>
+        <td class="num target">156</td>
+        <td class="num dev-mid">-22.0%</td>
+    </tr><tr data-cls="奇袭者" data-cd="0" data-dev="-22.0">
+        <td>奇袭者</td>
+        <td>枪雷连击：四式 <span class="tag-inv">隐</span><span class="sid">15121006</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">200</td>
+        <td class="num">200</td>
+        <td class="num">5</td>
+        <td class="num">1,000,000</td>
+        <td class="num">780,000</td>
+        <td class="num target">156</td>
+        <td class="num dev-mid">-22.0%</td>
+    </tr><tr data-cls="奇袭者" data-cd="0" data-dev="-22.0">
+        <td>奇袭者</td>
+        <td>枪雷连击：五式 <span class="tag-inv">隐</span><span class="sid">15121007</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">200</td>
+        <td class="num">200</td>
+        <td class="num">5</td>
+        <td class="num">1,000,000</td>
+        <td class="num">780,000</td>
+        <td class="num target">156</td>
+        <td class="num dev-mid">-22.0%</td>
+    </tr><tr data-cls="奇袭者" data-cd="0" data-dev="-22.0">
+        <td>奇袭者</td>
+        <td>枪雷连击：六式 <span class="tag-inv">隐</span><span class="sid">15121008</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">200</td>
+        <td class="num">200</td>
+        <td class="num">5</td>
+        <td class="num">1,000,000</td>
+        <td class="num">780,000</td>
+        <td class="num target">156</td>
+        <td class="num dev-mid">-22.0%</td>
+    </tr><tr data-cls="奇袭者" data-cd="0" data-dev="-18.8">
+        <td>奇袭者</td>
+        <td>枪雷连击：落雷 <span class="tag-inv">隐</span><span class="sid">15121009</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">240</td>
+        <td class="num">240</td>
+        <td class="num">4</td>
+        <td class="num">960,000</td>
+        <td class="num">780,000</td>
+        <td class="num target">195</td>
+        <td class="num dev-mid">-18.8%</td>
+    </tr><tr data-cls="奇袭者" data-cd="0" data-dev="-22.1">
+        <td>奇袭者</td>
+        <td>枪雷连击：终式 <span class="tag-inv">隐</span><span class="sid">15121010</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">143</td>
+        <td class="num">143</td>
+        <td class="num">7</td>
+        <td class="num">1,001,000</td>
+        <td class="num">780,000</td>
+        <td class="num target">111</td>
+        <td class="num dev-mid">-22.1%</td>
+    </tr><tr data-cls="奇袭者" data-cd="0" data-dev="-22.2">
+        <td>奇袭者</td>
+        <td>枪雷连击：巨大落雷 <span class="tag-inv">隐</span><span class="sid">15121011</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">167</td>
+        <td class="num">167</td>
+        <td class="num">6</td>
+        <td class="num">1,002,000</td>
+        <td class="num">780,000</td>
+        <td class="num target">130</td>
+        <td class="num dev-mid">-22.2%</td>
+    </tr><tr data-cls="奇袭者" data-cd="0" data-dev="-22.0">
+        <td>奇袭者</td>
+        <td>台风VI<span class="sid">15121015</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">200</td>
+        <td class="num">200</td>
+        <td class="num">5</td>
+        <td class="num">1,000,000</td>
+        <td class="num">780,000</td>
+        <td class="num target">156</td>
+        <td class="num dev-mid">-22.0%</td>
+    </tr><tr data-cls="奇袭者" data-cd="0" data-dev="-22.1">
+        <td>奇袭者</td>
+        <td>海神降临VI<span class="sid">15121016</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">143</td>
+        <td class="num">143</td>
+        <td class="num">7</td>
+        <td class="num">1,001,000</td>
+        <td class="num">780,000</td>
+        <td class="num target">111</td>
+        <td class="num dev-mid">-22.1%</td>
+    </tr><tr data-cls="奇袭者" data-cd="1" data-dev="-15.5">
+        <td>奇袭者</td>
+        <td>浪驰雷掣<span class="sid">15121017</span></td>
+        <td class="center"><span class="cd-yes">CD</span></td>
+        <td class="num">200</td>
+        <td class="num">200</td>
+        <td class="num">5</td>
+        <td class="num">1,000,000</td>
+        <td class="num">845,000</td>
+        <td class="num target">169</td>
+        <td class="num dev-mid">-15.5%</td>
+    </tr><tr data-cls="奇袭者" data-cd="0" data-dev="-22.1">
+        <td>奇袭者</td>
+        <td>浪驰雷掣：雷海冲击 <span class="tag-inv">隐</span><span class="sid">15121018</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">143</td>
+        <td class="num">143</td>
+        <td class="num">7</td>
+        <td class="num">1,001,000</td>
+        <td class="num">780,000</td>
+        <td class="num target">111</td>
+        <td class="num dev-mid">-22.1%</td>
+    </tr><tr data-cls="奇袭者" data-cd="1" data-dev="-59.8">
+        <td>奇袭者</td>
+        <td>疾浪歼灭<span class="sid">15121019</span></td>
+        <td class="center"><span class="cd-yes">CD</span></td>
+        <td class="num">175</td>
+        <td class="num">175</td>
+        <td class="num">12</td>
+        <td class="num">2,100,000</td>
+        <td class="num">845,000</td>
+        <td class="num target">70</td>
+        <td class="num dev-bad">-59.8%</td>
+    </tr><tr data-cls="奇袭者" data-cd="0" data-dev="-62.9">
+        <td>奇袭者</td>
+        <td>疾浪歼灭：激流 <span class="tag-inv">隐</span><span class="sid">15121020</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">140</td>
+        <td class="num">140</td>
+        <td class="num">15</td>
+        <td class="num">2,100,000</td>
+        <td class="num">780,000</td>
+        <td class="num target">52</td>
+        <td class="num dev-bad">-62.9%</td>
+    </tr><tr data-cls="奇袭者" data-cd="0" data-dev="-21.9">
+        <td>奇袭者</td>
+        <td>海龙螺旋：持续攻击 <span class="tag-inv">隐</span><span class="sid">15121021</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">333</td>
+        <td class="num">333</td>
+        <td class="num">3</td>
+        <td class="num">999,000</td>
+        <td class="num">780,000</td>
+        <td class="num target">260</td>
+        <td class="num dev-mid">-21.9%</td>
+    </tr><tr data-cls="奇袭者" data-cd="0" data-dev="-17.9">
+        <td>奇袭者</td>
+        <td>枪雷连击：第1击视觉 <span class="tag-inv">隐</span><span class="sid">15121022</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">190</td>
+        <td class="num">190</td>
+        <td class="num">5</td>
+        <td class="num">950,000</td>
+        <td class="num">780,000</td>
+        <td class="num target">156</td>
+        <td class="num dev-mid">-17.9%</td>
+    </tr><tr data-cls="奇袭者" data-cd="0" data-dev="-17.9">
+        <td>奇袭者</td>
+        <td>枪雷连击：第2击视觉 <span class="tag-inv">隐</span><span class="sid">15121023</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">190</td>
+        <td class="num">190</td>
+        <td class="num">5</td>
+        <td class="num">950,000</td>
+        <td class="num">780,000</td>
+        <td class="num target">156</td>
+        <td class="num dev-mid">-17.9%</td>
+    </tr><tr data-cls="奇袭者" data-cd="0" data-dev="-17.9">
+        <td>奇袭者</td>
+        <td>枪雷连击：第3击视觉 <span class="tag-inv">隐</span><span class="sid">15121024</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">190</td>
+        <td class="num">190</td>
+        <td class="num">5</td>
+        <td class="num">950,000</td>
+        <td class="num">780,000</td>
+        <td class="num target">156</td>
+        <td class="num dev-mid">-17.9%</td>
+    </tr><tr data-cls="奇袭者" data-cd="0" data-dev="-17.9">
+        <td>奇袭者</td>
+        <td>枪雷连击：第4击视觉 <span class="tag-inv">隐</span><span class="sid">15121025</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">190</td>
+        <td class="num">190</td>
+        <td class="num">5</td>
+        <td class="num">950,000</td>
+        <td class="num">780,000</td>
+        <td class="num target">156</td>
+        <td class="num dev-mid">-17.9%</td>
+    </tr><tr data-cls="奇袭者" data-cd="0" data-dev="-17.9">
+        <td>奇袭者</td>
+        <td>枪雷连击：第5击视觉 <span class="tag-inv">隐</span><span class="sid">15121026</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">190</td>
+        <td class="num">190</td>
+        <td class="num">5</td>
+        <td class="num">950,000</td>
+        <td class="num">780,000</td>
+        <td class="num target">156</td>
+        <td class="num dev-mid">-17.9%</td>
+    </tr><tr data-cls="奇袭者" data-cd="0" data-dev="-17.9">
+        <td>奇袭者</td>
+        <td>枪雷连击：第6击视觉 <span class="tag-inv">隐</span><span class="sid">15121027</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">190</td>
+        <td class="num">190</td>
+        <td class="num">5</td>
+        <td class="num">950,000</td>
+        <td class="num">780,000</td>
+        <td class="num target">156</td>
+        <td class="num dev-mid">-17.9%</td>
+    </tr><tr data-cls="奇袭者" data-cd="0" data-dev="-17.9">
+        <td>奇袭者</td>
+        <td>枪雷连击：第7击视觉 <span class="tag-inv">隐</span><span class="sid">15121028</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">190</td>
+        <td class="num">190</td>
+        <td class="num">5</td>
+        <td class="num">950,000</td>
+        <td class="num">780,000</td>
+        <td class="num target">156</td>
+        <td class="num dev-mid">-17.9%</td>
+    </tr><tr data-cls="奇袭者" data-cd="0" data-dev="-17.9">
+        <td>奇袭者</td>
+        <td>枪雷连击：第8击视觉 <span class="tag-inv">隐</span><span class="sid">15121029</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">190</td>
+        <td class="num">190</td>
+        <td class="num">5</td>
+        <td class="num">950,000</td>
+        <td class="num">780,000</td>
+        <td class="num target">156</td>
+        <td class="num dev-mid">-17.9%</td>
+    </tr><tr data-cls="奇袭者" data-cd="0" data-dev="-17.9">
+        <td>奇袭者</td>
+        <td>枪雷连击：第9击视觉 <span class="tag-inv">隐</span><span class="sid">15121030</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">190</td>
+        <td class="num">190</td>
+        <td class="num">5</td>
+        <td class="num">950,000</td>
+        <td class="num">780,000</td>
+        <td class="num target">156</td>
+        <td class="num dev-mid">-17.9%</td>
+    </tr><tr data-cls="奇袭者" data-cd="0" data-dev="-17.9">
+        <td>奇袭者</td>
+        <td>枪雷连击：第10击视觉 <span class="tag-inv">隐</span><span class="sid">15121031</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">190</td>
+        <td class="num">190</td>
+        <td class="num">5</td>
+        <td class="num">950,000</td>
+        <td class="num">780,000</td>
+        <td class="num target">156</td>
+        <td class="num dev-mid">-17.9%</td>
+    </tr><tr data-cls="奇袭者" data-cd="0" data-dev="-17.9">
+        <td>奇袭者</td>
+        <td>枪雷连击：第11击视觉 <span class="tag-inv">隐</span><span class="sid">15121032</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">190</td>
+        <td class="num">190</td>
+        <td class="num">5</td>
+        <td class="num">950,000</td>
+        <td class="num">780,000</td>
+        <td class="num target">156</td>
+        <td class="num dev-mid">-17.9%</td>
+    </tr><tr data-cls="奇袭者" data-cd="0" data-dev="-17.9">
+        <td>奇袭者</td>
+        <td>枪雷连击：第12击视觉 <span class="tag-inv">隐</span><span class="sid">15121033</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">190</td>
+        <td class="num">190</td>
+        <td class="num">5</td>
+        <td class="num">950,000</td>
+        <td class="num">780,000</td>
+        <td class="num target">156</td>
+        <td class="num dev-mid">-17.9%</td>
+    </tr><tr data-cls="阿兰" data-cd="0" data-dev="174.3">
+        <td>阿兰</td>
+        <td>巨熊咆哮 <span class="tag-inv">隐</span><span class="sid">21120005</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">700</td>
+        <td class="num">0</td>
+        <td class="num">1</td>
+        <td class="num">700,000</td>
+        <td class="num">1,920,000</td>
+        <td class="num target">1920</td>
+        <td class="num dev-bad">+174.3%</td>
+    </tr><tr data-cls="阿兰" data-cd="0" data-dev="-68.0">
+        <td>阿兰</td>
+        <td>钻石星辰 <span class="tag-inv">隐</span><span class="sid">21120006</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">1500</td>
+        <td class="num">0</td>
+        <td class="num">4</td>
+        <td class="num">6,000,000</td>
+        <td class="num">1,920,000</td>
+        <td class="num target">480</td>
+        <td class="num dev-bad">-68.0%</td>
+    </tr><tr data-cls="阿兰" data-cd="0" data-dev="464.7">
+        <td>阿兰</td>
+        <td>(隐藏) 战神之舞- 双重重击 <span class="tag-inv">隐</span><span class="sid">21120009</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">170</td>
+        <td class="num">0</td>
+        <td class="num">2</td>
+        <td class="num">340,000</td>
+        <td class="num">1,920,000</td>
+        <td class="num target">960</td>
+        <td class="num dev-bad">+464.7%</td>
+    </tr><tr data-cls="阿兰" data-cd="0" data-dev="300.0">
+        <td>阿兰</td>
+        <td>(隐藏) 战神之舞 - 三重重击 <span class="tag-inv">隐</span><span class="sid">21120010</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">240</td>
+        <td class="num">0</td>
+        <td class="num">2</td>
+        <td class="num">480,000</td>
+        <td class="num">1,920,000</td>
+        <td class="num target">960</td>
+        <td class="num dev-bad">+300.0%</td>
+    </tr><tr data-cls="英雄" data-cd="1" data-dev="-37.0">
+        <td>英雄</td>
+        <td>斗气死亡断层 <span class="tag-inv">隐</span><span class="sid">1121012</span></td>
+        <td class="center"><span class="cd-yes">CD</span></td>
+        <td class="num">165</td>
+        <td class="num">165</td>
+        <td class="num">14</td>
+        <td class="num">2,310,000</td>
+        <td class="num">1,456,000</td>
+        <td class="num target">104</td>
+        <td class="num dev-bad">-37.0%</td>
+    </tr><tr data-cls="英雄" data-cd="0" data-dev="34.4">
+        <td>英雄</td>
+        <td>狂暴攻击VI <span class="tag-inv">隐</span><span class="sid">1121013</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">250</td>
+        <td class="num">250</td>
+        <td class="num">4</td>
+        <td class="num">1,000,000</td>
+        <td class="num">1,344,000</td>
+        <td class="num target">336</td>
+        <td class="num dev-bad">+34.4%</td>
+    </tr><tr data-cls="英雄" data-cd="1" data-dev="-20.2">
+        <td>英雄</td>
+        <td>燃烧灵魂之剑 <span class="tag-inv">隐</span><span class="sid">1121014</span></td>
+        <td class="center"><span class="cd-yes">CD</span></td>
+        <td class="num">152</td>
+        <td class="num">152</td>
+        <td class="num">12</td>
+        <td class="num">1,824,000</td>
+        <td class="num">1,456,000</td>
+        <td class="num target">121</td>
+        <td class="num dev-mid">-20.2%</td>
+    </tr><tr data-cls="英雄" data-cd="0" data-dev="43.0">
+        <td>英雄</td>
+        <td>剑影分身 <span class="tag-inv">隐</span><span class="sid">1121020</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">235</td>
+        <td class="num">235</td>
+        <td class="num">4</td>
+        <td class="num">940,000</td>
+        <td class="num">1,344,000</td>
+        <td class="num target">336</td>
+        <td class="num dev-bad">+43.0%</td>
+    </tr><tr data-cls="英雄" data-cd="1" data-dev="-42.2">
+        <td>英雄</td>
+        <td>圣剑降临 <span class="tag-inv">隐</span><span class="sid">1121023</span></td>
+        <td class="center"><span class="cd-yes">CD</span></td>
+        <td class="num">180</td>
+        <td class="num">180</td>
+        <td class="num">14</td>
+        <td class="num">2,520,000</td>
+        <td class="num">1,456,000</td>
+        <td class="num target">104</td>
+        <td class="num dev-bad">-42.2%</td>
+    </tr><tr data-cls="英雄" data-cd="1" data-dev="1.1">
+        <td>英雄</td>
+        <td>愤怒爆发VI <span class="tag-inv">隐</span><span class="sid">1121025</span></td>
+        <td class="center"><span class="cd-yes">CD</span></td>
+        <td class="num">180</td>
+        <td class="num">180</td>
+        <td class="num">8</td>
+        <td class="num">1,440,000</td>
+        <td class="num">1,456,000</td>
+        <td class="num target">182</td>
+        <td class="num dev-ok">+1.1%</td>
+    </tr><tr data-cls="英雄" data-cd="0" data-dev="5.0">
+        <td>英雄</td>
+        <td>烈焰翔斩VI <span class="tag-inv">隐</span><span class="sid">1121030</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">320</td>
+        <td class="num">320</td>
+        <td class="num">4</td>
+        <td class="num">1,280,000</td>
+        <td class="num">1,344,000</td>
+        <td class="num target">336</td>
+        <td class="num dev-ok">+5.0%</td>
+    </tr><tr data-cls="圣骑士" data-cd="1" data-dev="23.8">
+        <td>圣骑士</td>
+        <td>圣十字架 <span class="tag-inv">隐</span><span class="sid">1221015</span></td>
+        <td class="center"><span class="cd-yes">CD</span></td>
+        <td class="num">105</td>
+        <td class="num">105</td>
+        <td class="num">12</td>
+        <td class="num">1,260,000</td>
+        <td class="num">1,560,000</td>
+        <td class="num target">130</td>
+        <td class="num dev-mid">+23.8%</td>
+    </tr><tr data-cls="圣骑士" data-cd="0" data-dev="17.1">
+        <td>圣骑士</td>
+        <td>雷神战锤 <span class="tag-inv">隐</span><span class="sid">1221016</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">205</td>
+        <td class="num">205</td>
+        <td class="num">6</td>
+        <td class="num">1,230,000</td>
+        <td class="num">1,440,000</td>
+        <td class="num target">240</td>
+        <td class="num dev-mid">+17.1%</td>
+    </tr><tr data-cls="圣骑士" data-cd="1" data-dev="-30.7">
+        <td>圣骑士</td>
+        <td>圣域展开 <span class="tag-inv">隐</span><span class="sid">1221020</span></td>
+        <td class="center"><span class="cd-yes">CD</span></td>
+        <td class="num">250</td>
+        <td class="num">250</td>
+        <td class="num">9</td>
+        <td class="num">2,250,000</td>
+        <td class="num">1,560,000</td>
+        <td class="num target">173</td>
+        <td class="num dev-bad">-30.7%</td>
+    </tr><tr data-cls="圣骑士" data-cd="0" data-dev="9.1">
+        <td>圣骑士</td>
+        <td>鬼神之击VI <span class="tag-inv">隐</span><span class="sid">1221027</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">165</td>
+        <td class="num">165</td>
+        <td class="num">8</td>
+        <td class="num">1,320,000</td>
+        <td class="num">1,440,000</td>
+        <td class="num target">180</td>
+        <td class="num dev-ok">+9.1%</td>
+    </tr><tr data-cls="圣骑士" data-cd="1" data-dev="-36.3">
+        <td>圣骑士</td>
+        <td>圣狮之主 <span class="tag-inv">隐</span><span class="sid">1221030</span></td>
+        <td class="center"><span class="cd-yes">CD</span></td>
+        <td class="num">245</td>
+        <td class="num">245</td>
+        <td class="num">10</td>
+        <td class="num">2,450,000</td>
+        <td class="num">1,560,000</td>
+        <td class="num target">156</td>
+        <td class="num dev-bad">-36.3%</td>
+    </tr><tr data-cls="黑骑士" data-cd="0" data-dev="108.8">
+        <td>黑骑士</td>
+        <td>断罪之枪 <span class="tag-inv">隐</span><span class="sid">1321011</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">165</td>
+        <td class="num">165</td>
+        <td class="num">7</td>
+        <td class="num">1,155,000</td>
+        <td class="num">2,412,000</td>
+        <td class="num target">345</td>
+        <td class="num dev-bad">+108.8%</td>
+    </tr><tr data-cls="黑骑士" data-cd="0" data-dev="97.1">
+        <td>黑骑士</td>
+        <td>枪刺旋风 <span class="tag-inv">隐</span><span class="sid">1321015</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">153</td>
+        <td class="num">153</td>
+        <td class="num">8</td>
+        <td class="num">1,224,000</td>
+        <td class="num">2,412,000</td>
+        <td class="num target">302</td>
+        <td class="num dev-bad">+97.1%</td>
+    </tr><tr data-cls="黑骑士" data-cd="0" data-dev="119.7">
+        <td>黑骑士</td>
+        <td>灭世永恒之枪 <span class="tag-inv">隐</span><span class="sid">1321018</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">183</td>
+        <td class="num">183</td>
+        <td class="num">6</td>
+        <td class="num">1,098,000</td>
+        <td class="num">2,412,000</td>
+        <td class="num target">402</td>
+        <td class="num dev-bad">+119.7%</td>
+    </tr><tr data-cls="黑骑士" data-cd="0" data-dev="139.3">
+        <td>黑骑士</td>
+        <td>暗炎斩连杀VI <span class="tag-inv">隐</span><span class="sid">1321020</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">168</td>
+        <td class="num">168</td>
+        <td class="num">6</td>
+        <td class="num">1,008,000</td>
+        <td class="num">2,412,000</td>
+        <td class="num target">402</td>
+        <td class="num dev-bad">+139.3%</td>
+    </tr><tr data-cls="黑骑士" data-cd="1" data-dev="24.4">
+        <td>黑骑士</td>
+        <td>黑暗统合VI <span class="tag-inv">隐</span><span class="sid">1321022</span></td>
+        <td class="center"><span class="cd-yes">CD</span></td>
+        <td class="num">175</td>
+        <td class="num">175</td>
+        <td class="num">12</td>
+        <td class="num">2,100,000</td>
+        <td class="num">2,613,000</td>
+        <td class="num target">218</td>
+        <td class="num dev-mid">+24.4%</td>
+    </tr><tr data-cls="黑骑士" data-cd="1" data-dev="25.9">
+        <td>黑骑士</td>
+        <td>黑暗契约 <span class="tag-inv">隐</span><span class="sid">1321025</span></td>
+        <td class="center"><span class="cd-yes">CD</span></td>
+        <td class="num">173</td>
+        <td class="num">173</td>
+        <td class="num">12</td>
+        <td class="num">2,076,000</td>
+        <td class="num">2,613,000</td>
+        <td class="num target">218</td>
+        <td class="num dev-mid">+25.9%</td>
+    </tr><tr data-cls="火毒大魔导士" data-cd="0" data-dev="43.7">
+        <td>火毒大魔导士</td>
+        <td>火炎神之怒號 <span class="tag-inv">隐</span><span class="sid">2121012</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">167</td>
+        <td class="num">167</td>
+        <td class="num">6</td>
+        <td class="num">1,002,000</td>
+        <td class="num">1,440,000</td>
+        <td class="num target">240</td>
+        <td class="num dev-bad">+43.7%</td>
+    </tr><tr data-cls="火毒大魔导士" data-cd="0" data-dev="44.9">
+        <td>火毒大魔导士</td>
+        <td>火焰之襲VI <span class="tag-inv">隐</span><span class="sid">2121017</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">142</td>
+        <td class="num">142</td>
+        <td class="num">7</td>
+        <td class="num">994,000</td>
+        <td class="num">1,440,000</td>
+        <td class="num target">206</td>
+        <td class="num dev-bad">+44.9%</td>
+    </tr><tr data-cls="火毒大魔导士" data-cd="1" data-dev="-23.0">
+        <td>火毒大魔导士</td>
+        <td>炙焰毒火VI <span class="tag-inv">隐</span><span class="sid">2121020</span></td>
+        <td class="center"><span class="cd-yes">CD</span></td>
+        <td class="num">135</td>
+        <td class="num">135</td>
+        <td class="num">15</td>
+        <td class="num">2,025,000</td>
+        <td class="num">1,560,000</td>
+        <td class="num target">104</td>
+        <td class="num dev-mid">-23.0%</td>
+    </tr><tr data-cls="火毒大魔导士" data-cd="1" data-dev="11.4">
+        <td>火毒大魔导士</td>
+        <td>地獄爆發VI <span class="tag-inv">隐</span><span class="sid">2121022</span></td>
+        <td class="center"><span class="cd-yes">CD</span></td>
+        <td class="num">140</td>
+        <td class="num">140</td>
+        <td class="num">10</td>
+        <td class="num">1,400,000</td>
+        <td class="num">1,560,000</td>
+        <td class="num target">156</td>
+        <td class="num dev-mid">+11.4%</td>
+    </tr><tr data-cls="火毒大魔导士" data-cd="1" data-dev="-22.2">
+        <td>火毒大魔导士</td>
+        <td>火流星VI <span class="tag-inv">隐</span><span class="sid">2121028</span></td>
+        <td class="center"><span class="cd-yes">CD</span></td>
+        <td class="num">167</td>
+        <td class="num">167</td>
+        <td class="num">12</td>
+        <td class="num">2,004,000</td>
+        <td class="num">1,560,000</td>
+        <td class="num target">130</td>
+        <td class="num dev-mid">-22.2%</td>
+    </tr><tr data-cls="火毒大魔导士" data-cd="1" data-dev="-18.8">
+        <td>火毒大魔导士</td>
+        <td>劇毒煉獄 <span class="tag-inv">隐</span><span class="sid">2121032</span></td>
+        <td class="center"><span class="cd-yes">CD</span></td>
+        <td class="num">160</td>
+        <td class="num">160</td>
+        <td class="num">12</td>
+        <td class="num">1,920,000</td>
+        <td class="num">1,560,000</td>
+        <td class="num target">130</td>
+        <td class="num dev-mid">-18.8%</td>
+    </tr><tr data-cls="火毒大魔导士" data-cd="0" data-dev="33.3">
+        <td>火毒大魔导士</td>
+        <td>豪火烈焰 <span class="tag-inv">隐</span><span class="sid">2121035</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">120</td>
+        <td class="num">120</td>
+        <td class="num">9</td>
+        <td class="num">1,080,000</td>
+        <td class="num">1,440,000</td>
+        <td class="num target">160</td>
+        <td class="num dev-bad">+33.3%</td>
+    </tr><tr data-cls="冰雷大魔导士" data-cd="0" data-dev="-33.9">
+        <td>冰雷大魔导士</td>
+        <td>极冻吐息 <span class="tag-inv">隐</span><span class="sid">2221009</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">245</td>
+        <td class="num">245</td>
+        <td class="num">4</td>
+        <td class="num">980,000</td>
+        <td class="num">648,000</td>
+        <td class="num target">162</td>
+        <td class="num dev-bad">-33.9%</td>
+    </tr><tr data-cls="冰雷大魔导士" data-cd="1" data-dev="-65.3">
+        <td>冰雷大魔导士</td>
+        <td>落雷凝聚 <span class="tag-inv">隐</span><span class="sid">2221010</span></td>
+        <td class="center"><span class="cd-yes">CD</span></td>
+        <td class="num">135</td>
+        <td class="num">135</td>
+        <td class="num">15</td>
+        <td class="num">2,025,000</td>
+        <td class="num">702,000</td>
+        <td class="num target">47</td>
+        <td class="num dev-bad">-65.3%</td>
+    </tr><tr data-cls="冰雷大魔导士" data-cd="1" data-dev="-53.2">
+        <td>冰雷大魔导士</td>
+        <td>冰雪之精神 <span class="tag-inv">隐</span><span class="sid">2221014</span></td>
+        <td class="center"><span class="cd-yes">CD</span></td>
+        <td class="num">125</td>
+        <td class="num">125</td>
+        <td class="num">12</td>
+        <td class="num">1,500,000</td>
+        <td class="num">702,000</td>
+        <td class="num target">58</td>
+        <td class="num dev-bad">-53.2%</td>
+    </tr><tr data-cls="冰雷大魔导士" data-cd="0" data-dev="-36.5">
+        <td>冰雷大魔导士</td>
+        <td>闪电连击VI <span class="tag-inv">隐</span><span class="sid">2221017</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">102</td>
+        <td class="num">102</td>
+        <td class="num">10</td>
+        <td class="num">1,020,000</td>
+        <td class="num">648,000</td>
+        <td class="num target">65</td>
+        <td class="num dev-bad">-36.5%</td>
+    </tr><tr data-cls="冰雷大魔导士" data-cd="1" data-dev="-51.2">
+        <td>冰雷大魔导士</td>
+        <td>暴风雪VI <span class="tag-inv">隐</span><span class="sid">2221020</span></td>
+        <td class="center"><span class="cd-yes">CD</span></td>
+        <td class="num">120</td>
+        <td class="num">120</td>
+        <td class="num">12</td>
+        <td class="num">1,440,000</td>
+        <td class="num">702,000</td>
+        <td class="num target">58</td>
+        <td class="num dev-bad">-51.2%</td>
+    </tr><tr data-cls="冰雷大魔导士" data-cd="0" data-dev="-35.3">
+        <td>冰雷大魔导士</td>
+        <td>殛冻领域 <span class="tag-inv">隐</span><span class="sid">2221027</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">143</td>
+        <td class="num">143</td>
+        <td class="num">7</td>
+        <td class="num">1,001,000</td>
+        <td class="num">648,000</td>
+        <td class="num target">93</td>
+        <td class="num dev-bad">-35.3%</td>
+    </tr><tr data-cls="冰雷大魔导士" data-cd="1" data-dev="-66.6">
+        <td>冰雷大魔导士</td>
+        <td>圆弧雷鸣 <span class="tag-inv">隐</span><span class="sid">2221030</span></td>
+        <td class="center"><span class="cd-yes">CD</span></td>
+        <td class="num">140</td>
+        <td class="num">140</td>
+        <td class="num">15</td>
+        <td class="num">2,100,000</td>
+        <td class="num">702,000</td>
+        <td class="num target">47</td>
+        <td class="num dev-bad">-66.6%</td>
+    </tr><tr data-cls="主教" data-cd="1" data-dev="-46.8">
+        <td>主教</td>
+        <td>天秤之使 <span class="tag-inv">隐</span><span class="sid">2321020</span></td>
+        <td class="center"><span class="cd-yes">CD</span></td>
+        <td class="num">110</td>
+        <td class="num">110</td>
+        <td class="num">10</td>
+        <td class="num">1,100,000</td>
+        <td class="num">585,000</td>
+        <td class="num target">58</td>
+        <td class="num dev-bad">-46.8%</td>
+    </tr><tr data-cls="主教" data-cd="1" data-dev="-49.1">
+        <td>主教</td>
+        <td>神之懲罰 <span class="tag-inv">隐</span><span class="sid">2321024</span></td>
+        <td class="center"><span class="cd-yes">CD</span></td>
+        <td class="num">115</td>
+        <td class="num">115</td>
+        <td class="num">10</td>
+        <td class="num">1,150,000</td>
+        <td class="num">585,000</td>
+        <td class="num target">58</td>
+        <td class="num dev-bad">-49.1%</td>
+    </tr><tr data-cls="主教" data-cd="0" data-dev="-44.6">
+        <td>主教</td>
+        <td>天使之泉VI <span class="tag-inv">隐</span><span class="sid">2321031</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">195</td>
+        <td class="num">195</td>
+        <td class="num">5</td>
+        <td class="num">975,000</td>
+        <td class="num">540,000</td>
+        <td class="num target">108</td>
+        <td class="num dev-bad">-44.6%</td>
+    </tr><tr data-cls="主教" data-cd="0" data-dev="-48.6">
+        <td>主教</td>
+        <td>天使之觸VI <span class="tag-inv">隐</span><span class="sid">2321032</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">150</td>
+        <td class="num">150</td>
+        <td class="num">7</td>
+        <td class="num">1,050,000</td>
+        <td class="num">540,000</td>
+        <td class="num target">77</td>
+        <td class="num dev-bad">-48.6%</td>
+    </tr><tr data-cls="主教" data-cd="1" data-dev="-69.2">
+        <td>主教</td>
+        <td>天怒VI <span class="tag-inv">隐</span><span class="sid">2321033</span></td>
+        <td class="center"><span class="cd-yes">CD</span></td>
+        <td class="num">190</td>
+        <td class="num">190</td>
+        <td class="num">10</td>
+        <td class="num">1,900,000</td>
+        <td class="num">585,000</td>
+        <td class="num target">58</td>
+        <td class="num dev-bad">-69.2%</td>
+    </tr><tr data-cls="主教" data-cd="0" data-dev="-48.6">
+        <td>主教</td>
+        <td>天堂之門VI <span class="tag-inv">隐</span><span class="sid">2321035</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">105</td>
+        <td class="num">105</td>
+        <td class="num">10</td>
+        <td class="num">1,050,000</td>
+        <td class="num">540,000</td>
+        <td class="num target">54</td>
+        <td class="num dev-bad">-48.6%</td>
+    </tr><tr data-cls="主教" data-cd="1" data-dev="-55.7">
+        <td>主教</td>
+        <td>天堂神罰 <span class="tag-inv">隐</span><span class="sid">2321037</span></td>
+        <td class="center"><span class="cd-yes">CD</span></td>
+        <td class="num">165</td>
+        <td class="num">165</td>
+        <td class="num">8</td>
+        <td class="num">1,320,000</td>
+        <td class="num">585,000</td>
+        <td class="num target">73</td>
+        <td class="num dev-bad">-55.7%</td>
+    </tr><tr data-cls="主教" data-cd="1" data-dev="-72.5">
+        <td>主教</td>
+        <td>天堂聖令 <span class="tag-inv">隐</span><span class="sid">2321042</span></td>
+        <td class="center"><span class="cd-yes">CD</span></td>
+        <td class="num">177</td>
+        <td class="num">177</td>
+        <td class="num">12</td>
+        <td class="num">2,124,000</td>
+        <td class="num">585,000</td>
+        <td class="num target">49</td>
+        <td class="num dev-bad">-72.5%</td>
+    </tr><tr data-cls="箭神" data-cd="0" data-dev="56.0">
+        <td>箭神</td>
+        <td>箭雨 <span class="tag-inv">隐</span><span class="sid">3121010</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">150</td>
+        <td class="num">150</td>
+        <td class="num">7</td>
+        <td class="num">1,050,000</td>
+        <td class="num">1,638,000</td>
+        <td class="num target">234</td>
+        <td class="num dev-bad">+56.0%</td>
+    </tr><tr data-cls="箭神" data-cd="0" data-dev="197.8">
+        <td>箭神</td>
+        <td>驟雨狂矢VI <span class="tag-inv">隐</span><span class="sid">3121022</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">110</td>
+        <td class="num">110</td>
+        <td class="num">5</td>
+        <td class="num">550,000</td>
+        <td class="num">1,638,000</td>
+        <td class="num target">328</td>
+        <td class="num dev-bad">+197.8%</td>
+    </tr><tr data-cls="箭神" data-cd="1" data-dev="108.8">
+        <td>箭神</td>
+        <td>召喚鳳凰VI <span class="tag-inv">隐</span><span class="sid">3121025</span></td>
+        <td class="center"><span class="cd-yes">CD</span></td>
+        <td class="num">850</td>
+        <td class="num">850</td>
+        <td class="num">1</td>
+        <td class="num">850,000</td>
+        <td class="num">1,774,500</td>
+        <td class="num target">1774</td>
+        <td class="num dev-bad">+108.8%</td>
+    </tr><tr data-cls="箭神" data-cd="0" data-dev="67.1">
+        <td>箭神</td>
+        <td>閃光幻象VI <span class="tag-inv">隐</span><span class="sid">3121026</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">245</td>
+        <td class="num">245</td>
+        <td class="num">4</td>
+        <td class="num">980,000</td>
+        <td class="num">1,638,000</td>
+        <td class="num target">410</td>
+        <td class="num dev-bad">+67.1%</td>
+    </tr><tr data-cls="箭神" data-cd="1" data-dev="-13.0">
+        <td>箭神</td>
+        <td>波紋衝擊VI <span class="tag-inv">隐</span><span class="sid">3121028</span></td>
+        <td class="center"><span class="cd-yes">CD</span></td>
+        <td class="num">170</td>
+        <td class="num">170</td>
+        <td class="num">12</td>
+        <td class="num">2,040,000</td>
+        <td class="num">1,774,500</td>
+        <td class="num target">148</td>
+        <td class="num dev-mid">-13.0%</td>
+    </tr><tr data-cls="箭神" data-cd="1" data-dev="-12.6">
+        <td>箭神</td>
+        <td>箭影紛飛 <span class="tag-inv">隐</span><span class="sid">3121029</span></td>
+        <td class="center"><span class="cd-yes">CD</span></td>
+        <td class="num">145</td>
+        <td class="num">145</td>
+        <td class="num">14</td>
+        <td class="num">2,030,000</td>
+        <td class="num">1,774,500</td>
+        <td class="num target">127</td>
+        <td class="num dev-mid">-12.6%</td>
+    </tr><tr data-cls="箭神" data-cd="0" data-dev="56.0">
+        <td>箭神</td>
+        <td>零點射擊 <span class="tag-inv">隐</span><span class="sid">3121031</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">105</td>
+        <td class="num">105</td>
+        <td class="num">10</td>
+        <td class="num">1,050,000</td>
+        <td class="num">1,638,000</td>
+        <td class="num target">164</td>
+        <td class="num dev-bad">+56.0%</td>
+    </tr><tr data-cls="神射手" data-cd="1" data-dev="44.4">
+        <td>神射手</td>
+        <td>真必殺狙擊 <span class="tag-inv">隐</span><span class="sid">3221009</span></td>
+        <td class="center"><span class="cd-yes">CD</span></td>
+        <td class="num">143</td>
+        <td class="num">143</td>
+        <td class="num">14</td>
+        <td class="num">2,002,000</td>
+        <td class="num">2,889,900</td>
+        <td class="num target">206</td>
+        <td class="num dev-bad">+44.4%</td>
+    </tr><tr data-cls="神射手" data-cd="1" data-dev="44.2">
+        <td>神射手</td>
+        <td>能量弩矢 <span class="tag-inv">隐</span><span class="sid">3221013</span></td>
+        <td class="center"><span class="cd-yes">CD</span></td>
+        <td class="num">167</td>
+        <td class="num">167</td>
+        <td class="num">12</td>
+        <td class="num">2,004,000</td>
+        <td class="num">2,889,900</td>
+        <td class="num target">241</td>
+        <td class="num dev-bad">+44.2%</td>
+    </tr><tr data-cls="神射手" data-cd="1" data-dev="240.4">
+        <td>神射手</td>
+        <td>召喚銀隼VI <span class="tag-inv">隐</span><span class="sid">3221029</span></td>
+        <td class="center"><span class="cd-yes">CD</span></td>
+        <td class="num">283</td>
+        <td class="num">283</td>
+        <td class="num">3</td>
+        <td class="num">849,000</td>
+        <td class="num">2,889,900</td>
+        <td class="num target">963</td>
+        <td class="num dev-bad">+240.4%</td>
+    </tr><tr data-cls="神射手" data-cd="0" data-dev="142.7">
+        <td>神射手</td>
+        <td>迅捷射擊VI <span class="tag-inv">隐</span><span class="sid">3221030</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">157</td>
+        <td class="num">157</td>
+        <td class="num">7</td>
+        <td class="num">1,099,000</td>
+        <td class="num">2,667,600</td>
+        <td class="num target">381</td>
+        <td class="num dev-bad">+142.7%</td>
+    </tr><tr data-cls="神射手" data-cd="0" data-dev="151.2">
+        <td>神射手</td>
+        <td>狙殺之擊VI <span class="tag-inv">隐</span><span class="sid">3221031</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">118</td>
+        <td class="num">118</td>
+        <td class="num">9</td>
+        <td class="num">1,062,000</td>
+        <td class="num">2,667,600</td>
+        <td class="num target">296</td>
+        <td class="num dev-bad">+151.2%</td>
+    </tr><tr data-cls="神射手" data-cd="0" data-dev="144.3">
+        <td>神射手</td>
+        <td>裂空狙擊 <span class="tag-inv">隐</span><span class="sid">3221032</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">156</td>
+        <td class="num">156</td>
+        <td class="num">7</td>
+        <td class="num">1,092,000</td>
+        <td class="num">2,667,600</td>
+        <td class="num target">381</td>
+        <td class="num dev-bad">+144.3%</td>
+    </tr><tr data-cls="神射手" data-cd="1" data-dev="43.6">
+        <td>神射手</td>
+        <td>絕命板機 <span class="tag-inv">隐</span><span class="sid">3221034</span></td>
+        <td class="center"><span class="cd-yes">CD</span></td>
+        <td class="num">183</td>
+        <td class="num">183</td>
+        <td class="num">11</td>
+        <td class="num">2,013,000</td>
+        <td class="num">2,889,900</td>
+        <td class="num target">263</td>
+        <td class="num dev-bad">+43.6%</td>
+    </tr><tr data-cls="夜使者" data-cd="0" data-dev="-91.1">
+        <td>夜使者</td>
+        <td>風魔手裏劍 <span class="tag-inv">隐</span><span class="sid">4121011</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">115</td>
+        <td class="num">115</td>
+        <td class="num">7</td>
+        <td class="num">805,000</td>
+        <td class="num">72,000</td>
+        <td class="num target">10</td>
+        <td class="num dev-bad">-91.1%</td>
+    </tr><tr data-cls="夜使者" data-cd="0" data-dev="-91.0">
+        <td>夜使者</td>
+        <td>四飛閃VI <span class="tag-inv">隐</span><span class="sid">4121016</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">200</td>
+        <td class="num">200</td>
+        <td class="num">4</td>
+        <td class="num">800,000</td>
+        <td class="num">72,000</td>
+        <td class="num target">18</td>
+        <td class="num dev-bad">-91.0%</td>
+    </tr><tr data-cls="夜使者" data-cd="0" data-dev="-91.5">
+        <td>夜使者</td>
+        <td>挑釁契約VI <span class="tag-inv">隐</span><span class="sid">4121019</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">425</td>
+        <td class="num">425</td>
+        <td class="num">2</td>
+        <td class="num">850,000</td>
+        <td class="num">72,000</td>
+        <td class="num target">36</td>
+        <td class="num dev-bad">-91.5%</td>
+    </tr><tr data-cls="夜使者" data-cd="0" data-dev="-91.4">
+        <td>夜使者</td>
+        <td>穢土轉生VI <span class="tag-inv">隐</span><span class="sid">4121022</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">120</td>
+        <td class="num">120</td>
+        <td class="num">7</td>
+        <td class="num">840,000</td>
+        <td class="num">72,000</td>
+        <td class="num target">10</td>
+        <td class="num dev-bad">-91.4%</td>
+    </tr><tr data-cls="夜使者" data-cd="0" data-dev="-92.7">
+        <td>夜使者</td>
+        <td>四星鏢雨VI <span class="tag-inv">隐</span><span class="sid">4121023</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">140</td>
+        <td class="num">140</td>
+        <td class="num">7</td>
+        <td class="num">980,000</td>
+        <td class="num">72,000</td>
+        <td class="num target">10</td>
+        <td class="num dev-bad">-92.7%</td>
+    </tr><tr data-cls="夜使者" data-cd="0" data-dev="-91.3">
+        <td>夜使者</td>
+        <td>禁咒之符 <span class="tag-inv">隐</span><span class="sid">4121026</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">118</td>
+        <td class="num">118</td>
+        <td class="num">7</td>
+        <td class="num">826,000</td>
+        <td class="num">72,000</td>
+        <td class="num target">10</td>
+        <td class="num dev-bad">-91.3%</td>
+    </tr><tr data-cls="夜使者" data-cd="1" data-dev="-96.4">
+        <td>夜使者</td>
+        <td>致命突襲 <span class="tag-inv">隐</span><span class="sid">4121028</span></td>
+        <td class="center"><span class="cd-yes">CD</span></td>
+        <td class="num">168</td>
+        <td class="num">168</td>
+        <td class="num">13</td>
+        <td class="num">2,184,000</td>
+        <td class="num">78,000</td>
+        <td class="num target">6</td>
+        <td class="num dev-bad">-96.4%</td>
+    </tr><tr data-cls="暗影双刀" data-cd="0" data-dev="21.0">
+        <td>暗影双刀</td>
+        <td>暴風刃 <span class="tag-inv">隐</span><span class="sid">4221009</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">170</td>
+        <td class="num">0</td>
+        <td class="num">7</td>
+        <td class="num">1,190,000</td>
+        <td class="num">1,440,000</td>
+        <td class="num target">206</td>
+        <td class="num dev-mid">+21.0%</td>
+    </tr><tr data-cls="暗影双刀" data-cd="0" data-dev="31.0">
+        <td>暗影双刀</td>
+        <td>炎獄修羅斬 <span class="tag-inv">隐</span><span class="sid">4221010</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">157</td>
+        <td class="num">0</td>
+        <td class="num">7</td>
+        <td class="num">1,099,000</td>
+        <td class="num">1,440,000</td>
+        <td class="num target">206</td>
+        <td class="num dev-bad">+31.0%</td>
+    </tr><tr data-cls="暗影双刀" data-cd="0" data-dev="55.8">
+        <td>暗影双刀</td>
+        <td>疾刃颶風 <span class="tag-inv">隐</span><span class="sid">4221011</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">132</td>
+        <td class="num">0</td>
+        <td class="num">7</td>
+        <td class="num">924,000</td>
+        <td class="num">1,440,000</td>
+        <td class="num target">206</td>
+        <td class="num dev-bad">+55.8%</td>
+    </tr><tr data-cls="暗影双刀" data-cd="0" data-dev="29.7">
+        <td>暗影双刀</td>
+        <td>幻影劍VI <span class="tag-inv">隐</span><span class="sid">4221018</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">185</td>
+        <td class="num">0</td>
+        <td class="num">6</td>
+        <td class="num">1,110,000</td>
+        <td class="num">1,440,000</td>
+        <td class="num target">240</td>
+        <td class="num dev-mid">+29.7%</td>
+    </tr><tr data-cls="暗影双刀" data-cd="0" data-dev="51.9">
+        <td>暗影双刀</td>
+        <td>修羅VI <span class="tag-inv">隐</span><span class="sid">4221019</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">158</td>
+        <td class="num">0</td>
+        <td class="num">6</td>
+        <td class="num">948,000</td>
+        <td class="num">1,440,000</td>
+        <td class="num target">240</td>
+        <td class="num dev-bad">+51.9%</td>
+    </tr><tr data-cls="暗影双刀" data-cd="0" data-dev="60.0">
+        <td>暗影双刀</td>
+        <td>短刀護佑VI <span class="tag-inv">隐</span><span class="sid">4221020</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">180</td>
+        <td class="num">0</td>
+        <td class="num">5</td>
+        <td class="num">900,000</td>
+        <td class="num">1,440,000</td>
+        <td class="num target">288</td>
+        <td class="num dev-bad">+60.0%</td>
+    </tr><tr data-cls="暗影双刀" data-cd="0" data-dev="51.3">
+        <td>暗影双刀</td>
+        <td>穢土轉生VI <span class="tag-inv">隐</span><span class="sid">4221022</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">136</td>
+        <td class="num">0</td>
+        <td class="num">7</td>
+        <td class="num">952,000</td>
+        <td class="num">1,440,000</td>
+        <td class="num target">206</td>
+        <td class="num dev-bad">+51.3%</td>
+    </tr><tr data-cls="暗影双刀" data-cd="0" data-dev="64.6">
+        <td>暗影双刀</td>
+        <td>無盡阿修羅 <span class="tag-inv">隐</span><span class="sid">4221023</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">175</td>
+        <td class="num">0</td>
+        <td class="num">5</td>
+        <td class="num">875,000</td>
+        <td class="num">1,440,000</td>
+        <td class="num target">288</td>
+        <td class="num dev-bad">+64.6%</td>
+    </tr><tr data-cls="暗影双刀" data-cd="1" data-dev="-25.4">
+        <td>暗影双刀</td>
+        <td>閻王敕令 <span class="tag-inv">隐</span><span class="sid">4221027</span></td>
+        <td class="center"><span class="cd-yes">CD</span></td>
+        <td class="num">190</td>
+        <td class="num">0</td>
+        <td class="num">11</td>
+        <td class="num">2,090,000</td>
+        <td class="num">1,560,000</td>
+        <td class="num target">142</td>
+        <td class="num dev-mid">-25.4%</td>
+    </tr><tr data-cls="拳霸" data-cd="1" data-dev="157.4">
+        <td>拳霸</td>
+        <td>海龍衝鋒 <span class="tag-inv">隐</span><span class="sid">5121014</span></td>
+        <td class="center"><span class="cd-yes">CD</span></td>
+        <td class="num">100</td>
+        <td class="num">100</td>
+        <td class="num">10</td>
+        <td class="num">1,000,000</td>
+        <td class="num">2,574,000</td>
+        <td class="num target">257</td>
+        <td class="num dev-bad">+157.4%</td>
+    </tr><tr data-cls="拳霸" data-cd="0" data-dev="147.5">
+        <td>拳霸</td>
+        <td>海龍正拳 <span class="tag-inv">隐</span><span class="sid">5121015</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">160</td>
+        <td class="num">160</td>
+        <td class="num">6</td>
+        <td class="num">960,000</td>
+        <td class="num">2,376,000</td>
+        <td class="num target">396</td>
+        <td class="num dev-bad">+147.5%</td>
+    </tr><tr data-cls="拳霸" data-cd="0" data-dev="149.6">
+        <td>拳霸</td>
+        <td>海龍VI <span class="tag-inv">隐</span><span class="sid">5121017</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">119</td>
+        <td class="num">119</td>
+        <td class="num">8</td>
+        <td class="num">952,000</td>
+        <td class="num">2,376,000</td>
+        <td class="num target">297</td>
+        <td class="num dev-bad">+149.6%</td>
+    </tr><tr data-cls="拳霸" data-cd="1" data-dev="162.7">
+        <td>拳霸</td>
+        <td>戰艦鯨魚號VI <span class="tag-inv">隐</span><span class="sid">5121024</span></td>
+        <td class="center"><span class="cd-yes">CD</span></td>
+        <td class="num">140</td>
+        <td class="num">140</td>
+        <td class="num">7</td>
+        <td class="num">980,000</td>
+        <td class="num">2,574,000</td>
+        <td class="num target">368</td>
+        <td class="num dev-bad">+162.7%</td>
+    </tr><tr data-cls="拳霸" data-cd="0" data-dev="150.6">
+        <td>拳霸</td>
+        <td>海龍石VI <span class="tag-inv">隐</span><span class="sid">5121025</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">158</td>
+        <td class="num">158</td>
+        <td class="num">6</td>
+        <td class="num">948,000</td>
+        <td class="num">2,376,000</td>
+        <td class="num target">396</td>
+        <td class="num dev-bad">+150.6%</td>
+    </tr><tr data-cls="拳霸" data-cd="0" data-dev="149.6">
+        <td>拳霸</td>
+        <td>勾拳爆破VI <span class="tag-inv">隐</span><span class="sid">5121028</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">238</td>
+        <td class="num">238</td>
+        <td class="num">4</td>
+        <td class="num">952,000</td>
+        <td class="num">2,376,000</td>
+        <td class="num target">594</td>
+        <td class="num dev-bad">+149.6%</td>
+    </tr><tr data-cls="拳霸" data-cd="1" data-dev="35.6">
+        <td>拳霸</td>
+        <td>海龍霸拳 <span class="tag-inv">隐</span><span class="sid">5121029</span></td>
+        <td class="center"><span class="cd-yes">CD</span></td>
+        <td class="num">146</td>
+        <td class="num">146</td>
+        <td class="num">13</td>
+        <td class="num">1,898,000</td>
+        <td class="num">2,574,000</td>
+        <td class="num target">198</td>
+        <td class="num dev-bad">+35.6%</td>
+    </tr><tr data-cls="拳霸" data-cd="1" data-dev="21.9">
+        <td>拳霸</td>
+        <td>強力打擊 <span class="tag-inv">隐</span><span class="sid">5121035</span></td>
+        <td class="center"><span class="cd-yes">CD</span></td>
+        <td class="num">176</td>
+        <td class="num">176</td>
+        <td class="num">12</td>
+        <td class="num">2,112,000</td>
+        <td class="num">2,574,000</td>
+        <td class="num target">214</td>
+        <td class="num dev-mid">+21.9%</td>
+    </tr><tr data-cls="枪神" data-cd="0" data-dev="-26.9">
+        <td>枪神</td>
+        <td>槍彈盛宴 <span class="tag-inv">隐</span><span class="sid">5221011</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">136</td>
+        <td class="num">136</td>
+        <td class="num">7</td>
+        <td class="num">952,000</td>
+        <td class="num">696,000</td>
+        <td class="num target">99</td>
+        <td class="num dev-mid">-26.9%</td>
+    </tr><tr data-cls="枪神" data-cd="1" data-dev="-64.3">
+        <td>枪神</td>
+        <td>死亡之眼 <span class="tag-inv">隐</span><span class="sid">5221012</span></td>
+        <td class="center"><span class="cd-yes">CD</span></td>
+        <td class="num">141</td>
+        <td class="num">141</td>
+        <td class="num">15</td>
+        <td class="num">2,115,000</td>
+        <td class="num">754,000</td>
+        <td class="num target">50</td>
+        <td class="num dev-bad">-64.3%</td>
+    </tr><tr data-cls="枪神" data-cd="1" data-dev="-20.5">
+        <td>枪神</td>
+        <td>鯨魚號突擊 <span class="tag-inv">隐</span><span class="sid">5221013</span></td>
+        <td class="center"><span class="cd-yes">CD</span></td>
+        <td class="num">158</td>
+        <td class="num">158</td>
+        <td class="num">6</td>
+        <td class="num">948,000</td>
+        <td class="num">754,000</td>
+        <td class="num target">126</td>
+        <td class="num dev-mid">-20.5%</td>
+    </tr><tr data-cls="枪神" data-cd="1" data-dev="-64.2">
+        <td>枪神</td>
+        <td>爆頭射擊VI <span class="tag-inv">隐</span><span class="sid">5221022</span></td>
+        <td class="center"><span class="cd-yes">CD</span></td>
+        <td class="num">162</td>
+        <td class="num">0</td>
+        <td class="num">13</td>
+        <td class="num">2,106,000</td>
+        <td class="num">754,000</td>
+        <td class="num target">58</td>
+        <td class="num dev-bad">-64.2%</td>
+    </tr><tr data-cls="枪神" data-cd="0" data-dev="-26.9">
+        <td>枪神</td>
+        <td>霸王射VI <span class="tag-inv">隐</span><span class="sid">5221024</span></td>
+        <td class="center"><span class="cd-no">无CD</span></td>
+        <td class="num">238</td>
+        <td class="num">238</td>
+        <td class="num">4</td>
+        <td class="num">952,000</td>
+        <td class="num">696,000</td>
+        <td class="num target">174</td>
+        <td class="num dev-mid">-26.9%</td>
+    </tr><tr data-cls="枪神" data-cd="1" data-dev="-20.8">
+        <td>枪神</td>
+        <td>戰艦鯨魚號VI <span class="tag-inv">隐</span><span class="sid">5221030</span></td>
+        <td class="center"><span class="cd-yes">CD</span></td>
+        <td class="num">136</td>
+        <td class="num">136</td>
+        <td class="num">7</td>
+        <td class="num">952,000</td>
+        <td class="num">754,000</td>
+        <td class="num target">108</td>
+        <td class="num dev-mid">-20.8%</td>
+    </tr><tr data-cls="枪神" data-cd="1" data-dev="-64.3">
+        <td>枪神</td>
+        <td>非常召集 <span class="tag-inv">隐</span><span class="sid">5221032</span></td>
+        <td class="center"><span class="cd-yes">CD</span></td>
+        <td class="num">176</td>
+        <td class="num">176</td>
+        <td class="num">12</td>
+        <td class="num">2,112,000</td>
+        <td class="num">754,000</td>
+        <td class="num target">63</td>
+        <td class="num dev-bad">-64.3%</td>
+    </tr><tr data-cls="枪神" data-cd="1" data-dev="-64.3">
+        <td>枪神</td>
+        <td>爆裂散射 <span class="tag-inv">隐</span><span class="sid">5221034</span></td>
+        <td class="center"><span class="cd-yes">CD</span></td>
+        <td class="num">176</td>
+        <td class="num">176</td>
+        <td class="num">12</td>
+        <td class="num">2,112,000</td>
+        <td class="num">754,000</td>
+        <td class="num target">63</td>
+        <td class="num dev-bad">-64.3%</td>
+    </tr>
+    </tbody>
+  </table>
+  </div>
+  <p class="note">
+    <span style="color:var(--green)">绿色</span>=接近目标 |
+    <span style="color:var(--yellow)">黄色</span>=中等偏差 |
+    <span style="color:var(--red)">红色</span>=偏差较大 |
+    <span class="tag-inv">隐</span> = invisible隐藏触发技能
+  </p>
+</div>
+
+<script>
+const tbody = document.getElementById('skillBody');
+const allRows = Array.from(tbody.querySelectorAll('tr'));
+let sortState = { col: null, asc: true };
+
+function applyFilters() {
+  const cls = document.getElementById('clsFilter').value;
+  const cd = document.getElementById('cdFilter').value;
+  const dev = document.getElementById('devFilter').value;
+  const search = document.getElementById('searchInput').value.toLowerCase().trim();
+
+  allRows.forEach(row => {
+    let show = true;
+    if (cls && row.dataset.cls !== cls) show = false;
+    if (cd && row.dataset.cd !== cd) show = false;
+    if (dev) {
+      const d = Math.abs(parseFloat(row.dataset.dev));
+      if (dev === 'ok' && d > 10) show = false;
+      if (dev === 'mid' && (d <= 10 || d > 30)) show = false;
+      if (dev === 'bad' && d <= 30) show = false;
+    }
+    if (search) {
+      const text = row.textContent.toLowerCase();
+      if (!text.includes(search)) show = false;
+    }
+    row.classList.toggle('hidden', !show);
+  });
+}
+
+document.getElementById('clsFilter').addEventListener('change', applyFilters);
+document.getElementById('cdFilter').addEventListener('change', applyFilters);
+document.getElementById('devFilter').addEventListener('change', applyFilters);
+document.getElementById('searchInput').addEventListener('input', applyFilters);
+
+function resetFilters() {
+  document.getElementById('clsFilter').value = '';
+  document.getElementById('cdFilter').value = '';
+  document.getElementById('devFilter').value = '';
+  document.getElementById('searchInput').value = '';
+  applyFilters();
+}
+
+// Sorting
+document.querySelectorAll('th[data-sort]').forEach(th => {
+  th.addEventListener('click', () => {
+    const col = th.dataset.sort;
+    if (sortState.col === col) {
+      sortState.asc = !sortState.asc;
+    } else {
+      sortState.col = col;
+      sortState.asc = true;
+    }
+    const visible = allRows.filter(r => !r.classList.contains('hidden'));
+    visible.sort((a, b) => {
+      let va, vb;
+      if (col === 'cls') { va = a.dataset.cls; vb = b.dataset.cls; }
+      else if (col === 'cd') { va = a.dataset.cd; vb = b.dataset.cd; }
+      else if (col === 'dev') { va = parseFloat(a.dataset.dev); vb = parseFloat(b.dataset.dev); }
+      else if (col === 'name') { va = a.cells[1].textContent; vb = b.cells[1].textContent; }
+      else {
+        const idx = {'dmg':3,'mad':4,'ac':5,'total':6,'target_total':7,'target_dmg':8}[col];
+        va = parseFloat(a.cells[idx].textContent.replace(/,/g,'')) || 0;
+        vb = parseFloat(b.cells[idx].textContent.replace(/,/g,'')) || 0;
+      }
+      if (typeof va === 'string') return sortState.asc ? va.localeCompare(vb, 'zh') : vb.localeCompare(va, 'zh');
+      return sortState.asc ? va - vb : vb - va;
+    });
+    visible.forEach(r => tbody.appendChild(r));
+  });
+});
+</script>
+
+</body>
+</html>
