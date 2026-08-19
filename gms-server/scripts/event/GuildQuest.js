@@ -308,6 +308,7 @@ function giveRandomEventReward(eim, player) {
 function clearPQ(eim) {
     eim.stopEventTimer();
     eim.setEventCleared();
+    eim.recordMentorshipGpqClear();
 
     eim.warpEventTeam(clearMap);
     eim.startEventTimer(bonusTime * 60000);

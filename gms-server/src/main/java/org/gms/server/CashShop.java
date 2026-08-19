@@ -23,6 +23,7 @@ package org.gms.server;
 
 import lombok.Getter;
 import net.jcip.annotations.GuardedBy;
+import org.gms.client.Character;
 import org.gms.client.inventory.Equip;
 import org.gms.client.inventory.InventoryType;
 import org.gms.client.inventory.Item;
@@ -44,6 +45,7 @@ import org.gms.provider.wz.WZFiles;
 import org.gms.service.AccountService;
 import org.gms.service.CashShopService;
 import org.gms.service.CharacterService;
+import org.gms.service.MentorshipService;
 import org.gms.util.DatabaseConnection;
 import org.gms.util.Pair;
 
@@ -56,6 +58,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.locks.Lock;
@@ -84,6 +87,7 @@ public class CashShop {
     private final Lock lock = new ReentrantLock();
     private static final AccountService accountService = ServerManager.getApplicationContext().getBean(AccountService.class);
     private static final CharacterService characterService = ServerManager.getApplicationContext().getBean(CharacterService.class);
+    private static final MentorshipService mentorshipService = ServerManager.getApplicationContext().getBean(MentorshipService.class);
 
     public CashShop(int accountId, int characterId, int jobType) {
         this.accountId = accountId;
@@ -291,6 +295,14 @@ public class CashShop {
             case NX_CREDIT -> nxCredit += cash;
             case MAPLE_POINT -> maplePoint += cash;
             case NX_PREPAID -> nxPrepaid += cash;
+        }
+        Character chr = Server.getInstance().getWorlds().stream()
+                .map(world -> world.getPlayerStorage().getCharacterById(characterId))
+                .filter(Objects::nonNull)
+                .findFirst()
+                .orElse(null);
+        if (chr != null) {
+            mentorshipService.checkAutoGraduation(chr);
         }
     }
 

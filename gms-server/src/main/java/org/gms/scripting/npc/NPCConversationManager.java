@@ -66,6 +66,7 @@ import org.gms.server.partyquest.AriantColiseum;
 import org.gms.server.partyquest.MonsterCarnival;
 import org.gms.server.partyquest.Pyramid;
 import org.gms.server.partyquest.Pyramid.PyramidMode;
+import org.gms.service.MentorshipService;
 import org.gms.util.PacketCreator;
 
 import java.awt.*;
@@ -92,6 +93,7 @@ public class NPCConversationManager extends AbstractPlayerInteraction {
     private List<PartyCharacter> otherParty;
     private static final GachaponService gachaponService = ServerManager.getApplicationContext().getBean(GachaponService.class);
     private static final PlayerGachaponStatsService playerGachaponStatsService = ServerManager.getApplicationContext().getBean(PlayerGachaponStatsService.class);
+    private static final MentorshipService mentorshipService = ServerManager.getApplicationContext().getBean(MentorshipService.class);
 
     private final Map<Integer, String> npcDefaultTalks = new HashMap<>();
     @Getter
@@ -479,6 +481,70 @@ public class NPCConversationManager extends AbstractPlayerInteraction {
 
     public int getRemoteGachaponCount() {
         return playerGachaponStatsService.getRemoteGachaponCount(getPlayer().getId());
+    }
+
+    public String mentorshipOverview() {
+        return mentorshipService.getOverview(getPlayer());
+    }
+
+    public String mentorshipCreate(String targetName) {
+        return mentorshipService.createRelation(getPlayer(), targetName);
+    }
+
+    public String mentorshipPartyMasterMenu() {
+        return mentorshipService.getPartyMasterMenu(getPlayer());
+    }
+
+    public boolean mentorshipHasPartyMasterCandidate() {
+        return mentorshipService.hasPartyMasterCandidate(getPlayer());
+    }
+
+    public String mentorshipCreateFromParty(int masterCid) {
+        return mentorshipService.createRelationsFromParty(getPlayer(), masterCid);
+    }
+
+    public String mentorshipCancel() {
+        return mentorshipService.cancelActiveRelation(getPlayer());
+    }
+
+    public String mentorshipClaimStages() {
+        return mentorshipService.claimStageRewards(getPlayer());
+    }
+
+    public String mentorshipClaimWeekly() {
+        return mentorshipService.claimWeeklyPool(getPlayer());
+    }
+
+    public String mentorshipStartDuel(int stake) {
+        return mentorshipService.startDuel(getPlayer(), stake);
+    }
+
+    public String mentorshipJoinDuel(int stakeLimit) {
+        return mentorshipService.joinDuel(getPlayer(), stakeLimit);
+    }
+
+    public String mentorshipDuelStatus() {
+        return mentorshipService.getDuelStatus(getPlayer());
+    }
+
+    public String mentorshipRanking(String type) {
+        return mentorshipService.getRankingText(type);
+    }
+
+    public int mentorshipVirtueCoins() {
+        return mentorshipService.getVirtueCoins(getPlayer());
+    }
+
+    public int mentorshipApprenticeCoins() {
+        return mentorshipService.getApprenticeCoins(getPlayer());
+    }
+
+    public boolean mentorshipSpendVirtue(int cost) {
+        return mentorshipService.spendVirtueCoins(getPlayer(), cost);
+    }
+
+    public boolean mentorshipSpendApprentice(int cost) {
+        return mentorshipService.spendApprenticeCoins(getPlayer(), cost);
     }
 
     public void doGuaranteedGachapon(int poolId, int guaranteedCount) {

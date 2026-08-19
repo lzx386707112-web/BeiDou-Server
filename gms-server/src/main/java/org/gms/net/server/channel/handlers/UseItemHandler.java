@@ -110,6 +110,11 @@ public final class UseItemHandler extends AbstractPacketHandler {
             handleBirthdayItem(chr, c, slot, itemId);
             return;
         }
+        //处理师徒经验秘药
+        if (itemId == ItemId.MENTORSHIP_EXP_POTION) {
+            handleExpPotion(chr, c, slot, itemId);
+            return;
+        }
         //处理消耗品呼出NPC
         if (ii.isNpc(itemId)) {
             handleShortcutMenu(chr, c, slot, itemId);
@@ -195,6 +200,16 @@ public final class UseItemHandler extends AbstractPacketHandler {
         removeItem(c, slot);
         StatEffect effect = ii.getItemEffect(itemId);
         chr.getMap().getCharacters().forEach(player -> effect.applyTo(player));
+    }
+
+    private void handleExpPotion(Character chr, Client c, short slot, int itemId) {
+        int exp = ii.getExpById(itemId);
+        if (exp <= 0) {
+            c.sendPacket(PacketCreator.enableActions());
+            return;
+        }
+        removeItem(c, slot);
+        chr.gainExp(exp, true, true);
     }
 
     /**

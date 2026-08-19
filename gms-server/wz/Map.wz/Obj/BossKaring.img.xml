@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<imgdir name="BossKaring.img">
+  <imgdir name="1phaseDool">
+    <imgdir name="foothold">
+      <imgdir name="0">
+        <canvas name="0" width="733" height="199" format="1">
+          <vector name="origin" x="366" y="104"/>
+          <int name="z" value="0"/>
+          <extended name="foothold">
+            <vector name="0" x="-366" y="-14"/>
+            <vector name="1" x="382" y="-14"/>
+          </extended>
+        </canvas>
+      </imgdir>
+      <imgdir name="1">
+        <canvas name="0" width="786" height="209" format="1">
+          <vector name="origin" x="392" y="104"/>
+          <int name="z" value="0"/>
+          <extended name="foothold">
+            <vector name="0" x="-392" y="-14"/>
+            <vector name="1" x="397" y="-14"/>
+          </extended>
+        </canvas>
+      </imgdir>
+      <imgdir name="2">
+        <canvas name="0" width="722" height="157" format="1">
+          <vector name="origin" x="355" y="85"/>
+          <int name="z" value="0"/>
+          <extended name="foothold">
+            <vector name="0" x="-355" y="-14"/>
+            <vector name="1" x="369" y="-14"/>
+          </extended>
+        </canvas>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="3phase">
+    <imgdir name="foothold">
+      <imgdir name="5">
+        <canvas name="0" width="1" height="1" format="1">
+          <vector name="origin" x="0" y="0"/>
+          <int name="z" value="0"/>
+          <extended name="foothold">
+            <vector name="0" x="0" y="0"/>
+            <vector name="1" x="1" y="0"/>
+          </extended>
+        </canvas>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+</imgdir>

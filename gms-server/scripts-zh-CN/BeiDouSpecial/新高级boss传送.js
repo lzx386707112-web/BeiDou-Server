@@ -4,13 +4,17 @@ var bossMaps = Array(
     Array(450010100, 500000, "觉醒希拉                       #r（消耗50万金币）#b", 8880400, -1, 855, 266),
     Array(450009400, 500000, "亲卫队长敦凯尔            #r（消耗50万金币）#b", 8645009, -1, -1, -157),
     Array(900000207, 500000, "守护天使绿水灵            #r（消耗50万金币）#b", 8880700, -1, 703, -1394),
-    Array(410002060, 500000, "监视者卡洛斯                #r（消耗50万金币）#b", 8880803, -1, 900, 325)
+    Array(410002060, 500000, "监视者卡洛斯                #r（消耗50万金币）#b", 8880803, -1, 900, 325),
+    Array(410007140, 500000, "咖凌·窮奇战                  #r（消耗50万金币）#b", 8880830, -1, 568, 106),
+    Array(410007180, 500000, "咖凌·檮杌战                  #r（消耗50万金币）#b", 8880831, -1, 556, 405),
+    Array(410007220, 500000, "咖凌·混沌战                  #r（消耗50万金币）#b", 8880832, -1, 634, 106)
 );
 
 var entryItems = Array(
     Array(4000019, 500),
     Array(2210006, 1)
 );
+var KARING_BOSS_SPAWN_DELAY = 2000;
 
 function start() {
     if (!cm.getPlayer().isGM() && cm.getPlayer().getLevel() < 100) {
@@ -20,7 +24,11 @@ function start() {
     }
 
     var text = "#e#b高级 Boss 传送#k#n\r\n\r\n";
+    var isGM = cm.getPlayer().isGM();
     for (var i = 0; i < bossMaps.length; i++) {
+        if (!isGM && i >= bossMaps.length - 3) {
+            continue;
+        }
         text += "#L" + i + "#" + bossMaps[i][2] + "#l\r\n";
     }
     cm.sendNextSelectLevel("Boss", text);
@@ -65,11 +73,20 @@ function levelBoss(selection) {
         return;
     }
 
-    if (targetMap.getMonsterById(bossId) == null) {
-        const LifeFactory = Java.type("org.gms.server.life.LifeFactory");
-        const Point = Java.type("java.awt.Point");
-        var boss = LifeFactory.getMonster(bossId);
-        if (boss == null) {
+    // Diagnostic A/B: enter Karing's fields without creating a boss.
+    var skipBossSpawn = isKaringBoss(bossId);
+    var needsKaringDelayedSpawn = !skipBossSpawn && targetMap.getMonsterById(bossId) == null && isKaringBoss(bossId);
+    if (!skipBossSpawn && targetMap.getMonsterById(bossId) == null) {
+        if (needsKaringDelayedSpawn) {
+            if (!cm.canLoadMonster(bossId)) {
+                cm.sendOk("Boss 数据 " + bossId + " 未被当前服务端加载。"
+                    + "\r\n普通WZ：" + getServerResourceStatus("wz/Mob.wz/" + bossId + ".img.xml")
+                    + "\r\n语言WZ：" + getServerResourceStatus("wz-zh-CN/Mob.wz/" + bossId + ".img.xml")
+                    + "\r\n请按上面的绝对路径检查补丁覆盖层级，并完全重启服务端。");
+                cm.dispose();
+                return;
+            }
+        } else if (!cm.spawnMonsterOnGroundBelowIfMissing(targetMap, bossId, bossX, bossY)) {
             cm.sendOk("Boss 数据 " + bossId + " 未被当前服务端加载。"
                 + "\r\n普通WZ：" + getServerResourceStatus("wz/Mob.wz/" + bossId + ".img.xml")
                 + "\r\n语言WZ：" + getServerResourceStatus("wz-zh-CN/Mob.wz/" + bossId + ".img.xml")
@@ -77,7 +94,6 @@ function levelBoss(selection) {
             cm.dispose();
             return;
         }
-        targetMap.spawnMonsterOnGroundBelow(boss, new Point(bossX, bossY));
     }
 
     if (!isGM) {
@@ -92,7 +108,14 @@ function levelBoss(selection) {
     } else {
         cm.warp(mapId, 0);
     }
+    if (needsKaringDelayedSpawn) {
+        cm.scheduleMonsterOnGroundBelowIfMissing(targetMap, bossId, bossX, bossY, KARING_BOSS_SPAWN_DELAY);
+    }
     cm.dispose();
+}
+
+function isKaringBoss(bossId) {
+    return bossId == 8880830 || bossId == 8880831 || bossId == 8880832;
 }
 
 function hasEntryItems() {

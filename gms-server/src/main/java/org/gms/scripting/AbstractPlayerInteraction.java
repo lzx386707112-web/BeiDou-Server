@@ -44,6 +44,7 @@ import org.gms.scripting.event.EventManager;
 import org.gms.scripting.npc.NPCScriptManager;
 import org.gms.server.ItemInformationProvider;
 import org.gms.server.Marriage;
+import org.gms.server.TimerManager;
 import org.gms.server.expeditions.Expedition;
 import org.gms.server.expeditions.ExpeditionBossLog;
 import org.gms.server.expeditions.ExpeditionType;
@@ -1013,6 +1014,26 @@ public class AbstractPlayerInteraction {
         Monster monster = LifeFactory.getMonster(id);
         monster.setPosition(new Point(x, y));
         getPlayer().getMap().spawnMonster(monster);
+    }
+
+    public boolean canLoadMonster(int id) {
+        return LifeFactory.getMonster(id) != null;
+    }
+
+    public boolean spawnMonsterOnGroundBelowIfMissing(MapleMap map, int id, int x, int y) {
+        if (map.getMonsterById(id) != null) {
+            return true;
+        }
+        Monster monster = LifeFactory.getMonster(id);
+        if (monster == null) {
+            return false;
+        }
+        map.spawnMonsterOnGroundBelow(monster, new Point(x, y));
+        return true;
+    }
+
+    public void scheduleMonsterOnGroundBelowIfMissing(MapleMap map, int id, int x, int y, long delay) {
+        TimerManager.getInstance().schedule(() -> spawnMonsterOnGroundBelowIfMissing(map, id, x, y), delay);
     }
 
     public Monster getMonsterLifeFactory(int mid) {

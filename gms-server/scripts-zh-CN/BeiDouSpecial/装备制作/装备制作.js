@@ -660,7 +660,9 @@ function action(mode, type, selection) {
     if (status === 0) {
         let text = OldTitle;
         text += " \r\n";
-        text += "#r#L0#整套装备进化#l#k\t\r\n\r\n";
+        if (cm.getPlayer().isGM()) {
+            text += "#r#L0#整套装备进化#l#k\t\r\n\r\n";
+        }
         text += "#b#L1#耳环#l\t\r\n\r\n";
         text += "#L2#眼睛#l\t\r\n\r\n";
         text += "#L3#鞋子#l\t\r\n\r\n";

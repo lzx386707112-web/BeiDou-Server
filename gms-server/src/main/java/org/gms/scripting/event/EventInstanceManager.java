@@ -26,9 +26,11 @@ import org.gms.client.Skill;
 import org.gms.client.SkillFactory;
 import org.gms.config.GameConfig;
 import org.gms.constants.inventory.ItemConstants;
+import org.gms.manager.ServerManager;
 import org.gms.net.server.coordinator.world.EventRecallCoordinator;
 import org.gms.net.server.world.Party;
 import org.gms.net.server.world.PartyCharacter;
+import org.gms.service.MentorshipService;
 import org.gms.util.NumberTool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -68,6 +70,7 @@ import static java.util.concurrent.TimeUnit.MINUTES;
  */
 public class EventInstanceManager {
     private static final Logger log = LoggerFactory.getLogger(EventInstanceManager.class);
+    private static final MentorshipService mentorshipService = ServerManager.getApplicationContext().getBean(MentorshipService.class);
     private final Map<Integer, Character> chars = new HashMap<>();// 存储参与事件的玩家，key为玩家ID
     private int leaderId = -1; // 事件队伍领袖ID
     private final List<Monster> mobs = new LinkedList<>();// 事件中生成的怪物列表
@@ -454,6 +457,10 @@ public class EventInstanceManager {
         } finally {
             readLock.unlock();
         }
+    }
+
+    public void recordMentorshipGpqClear() {
+        mentorshipService.recordGpqClear(getPlayers());
     }
 
     private List<Character> getPlayerList() {

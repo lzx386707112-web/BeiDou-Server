@@ -500,6 +500,7 @@ public class Character extends AbstractCharacterObject {
     private static final AccountService accountService = ServerManager.getApplicationContext().getBean(AccountService.class);
     private static final HpMpAlertService hpMpAlertService = ServerManager.getApplicationContext().getBean(HpMpAlertService.class);
     private static final InventoryService inventoryService = ServerManager.getApplicationContext().getBean(InventoryService.class);
+    private static final MentorshipService mentorshipService = ServerManager.getApplicationContext().getBean(MentorshipService.class);
     @Getter
     private int mxjMaxLevel;//冒险家最高等级
     @Getter
@@ -2898,6 +2899,7 @@ public class Character extends AbstractCharacterObject {
         if (getMessenger() != null) {
             getWorldServer().updateMessenger(getMessenger(), getName(), getWorld(), client.getChannel());
         }
+        mentorshipService.checkAutoGraduation(this);
     }
 
     public void cancelDiseaseExpireTask() {
@@ -6282,6 +6284,7 @@ public class Character extends AbstractCharacterObject {
         }
 
         updateMobExpRate();
+        mentorshipService.checkAutoGraduation(this);
     }
 
     public boolean leaveParty() {
