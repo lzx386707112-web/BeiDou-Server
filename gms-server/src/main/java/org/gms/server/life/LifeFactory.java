@@ -112,6 +112,7 @@ public class LifeFactory {
         for (Data bossData : uiDataWZ.getData("UIWindow.img").getChildByPath("MobGage/Mob").getChildren()) {
             ret.add(Integer.valueOf(bossData.getName()));
         }
+        ret.addAll(Set.of(8880830, 8880831, 8880832));
 
         return ret;
     }

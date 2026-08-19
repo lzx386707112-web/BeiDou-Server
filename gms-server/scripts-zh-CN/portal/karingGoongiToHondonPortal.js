@@ -10,6 +10,7 @@ function warpKaringBoss(pi, mapId, bossId, x, y) {
     }
     pi.playPortalSound();
     pi.warp(mapId, 0);
+    pi.scheduleMonsterOnGroundBelowIfMissing(map, bossId, x, y, 2000);
     return true;
 }
 

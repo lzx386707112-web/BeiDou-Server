@@ -1049,7 +1049,7 @@ public class Monster extends AbstractLoadedLife {
 
     public Packet makeBossHPBarPacket() {
         int templateId = switch (getId()) {
-            case 8880700, 8880803 -> 8870000;
+            case 8880700, 8880803, 8880830, 8880831, 8880832 -> 8870000;
             default -> getId();
         };
         return PacketCreator.showBossHP(templateId, getHp(), getMaxHp(), getTagColor(), getTagBgColor());

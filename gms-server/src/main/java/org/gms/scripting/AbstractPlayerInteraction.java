@@ -1033,7 +1033,16 @@ public class AbstractPlayerInteraction {
     }
 
     public void scheduleMonsterOnGroundBelowIfMissing(MapleMap map, int id, int x, int y, long delay) {
-        TimerManager.getInstance().schedule(() -> spawnMonsterOnGroundBelowIfMissing(map, id, x, y), delay);
+        Character player = getPlayer();
+        TimerManager.getInstance().schedule(() -> {
+            if (!spawnMonsterOnGroundBelowIfMissing(map, id, x, y)) {
+                return;
+            }
+            Monster monster = map.getMonsterById(id);
+            if (monster != null && player.getMap() == map && !player.isHidden()) {
+                monster.aggroAutoAggroUpdate(player);
+            }
+        }, delay);
     }
 
     public Monster getMonsterLifeFactory(int mid) {

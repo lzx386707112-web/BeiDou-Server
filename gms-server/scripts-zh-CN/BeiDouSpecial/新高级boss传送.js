@@ -6,7 +6,7 @@ var bossMaps = Array(
     Array(900000207, 500000, "守护天使绿水灵            #r（消耗50万金币）#b", 8880700, -1, 703, -1394),
     Array(410002060, 500000, "监视者卡洛斯                #r（消耗50万金币）#b", 8880803, -1, 900, 325),
     Array(410007140, 500000, "咖凌·窮奇战                  #r（消耗50万金币）#b", 8880830, -1, 568, 106),
-    Array(410007180, 500000, "咖凌·檮杌战                  #r（消耗50万金币）#b", 8880831, -1, 556, 405),
+    Array(410007180, 500000, "咖凌·檮杌战                  #r（消耗50万金币）#b", 8880831, -1, 568, 106),
     Array(410007220, 500000, "咖凌·混沌战                  #r（消耗50万金币）#b", 8880832, -1, 634, 106)
 );
 
@@ -73,10 +73,8 @@ function levelBoss(selection) {
         return;
     }
 
-    // Diagnostic A/B: enter Karing's fields without creating a boss.
-    var skipBossSpawn = isKaringBoss(bossId);
-    var needsKaringDelayedSpawn = !skipBossSpawn && targetMap.getMonsterById(bossId) == null && isKaringBoss(bossId);
-    if (!skipBossSpawn && targetMap.getMonsterById(bossId) == null) {
+    var needsKaringDelayedSpawn = targetMap.getMonsterById(bossId) == null && isKaringBoss(bossId);
+    if (targetMap.getMonsterById(bossId) == null) {
         if (needsKaringDelayedSpawn) {
             if (!cm.canLoadMonster(bossId)) {
                 cm.sendOk("Boss 数据 " + bossId + " 未被当前服务端加载。"
@@ -108,7 +106,7 @@ function levelBoss(selection) {
     } else {
         cm.warp(mapId, 0);
     }
-    if (needsKaringDelayedSpawn) {
+    if (isKaringBoss(bossId)) {
         cm.scheduleMonsterOnGroundBelowIfMissing(targetMap, bossId, bossX, bossY, KARING_BOSS_SPAWN_DELAY);
     }
     cm.dispose();
