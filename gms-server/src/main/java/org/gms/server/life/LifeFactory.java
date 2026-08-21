@@ -112,7 +112,7 @@ public class LifeFactory {
         for (Data bossData : uiDataWZ.getData("UIWindow.img").getChildByPath("MobGage/Mob").getChildren()) {
             ret.add(Integer.valueOf(bossData.getName()));
         }
-        ret.addAll(Set.of(8880830, 8880831, 8880832));
+        ret.addAll(Set.of(8880830, 8880831, 8880832, 8880837, 8880842));
 
         return ret;
     }
@@ -619,7 +619,8 @@ public class LifeFactory {
             }
 
             int mpCon = DataTool.getIntConvert("info/conMP", monsterAttackData, 0);
-            int coolTime = DataTool.getIntConvert("info/attackAfter", monsterAttackData, 0);
+            int impactDelay = DataTool.getIntConvert("info/attackAfter", monsterAttackData, 0);
+            int coolTime = KaringBossCompat.attackCooldownMillis(mid, i, impactDelay);
             attackInfos.add(new MobAttackInfoHolder(i, mpCon, coolTime, animationTime));
             i++;
         }

@@ -7,6 +7,7 @@ import argparse
 import io
 import re
 import shutil
+import struct
 import sys
 import tempfile
 import xml.etree.ElementTree as ET
@@ -20,6 +21,7 @@ from xml.sax.saxutils import quoteattr
 ROOT = Path(__file__).resolve().parents[3]
 WZPY = ROOT / "tool" / "wz-python"
 sys.path.insert(0, str(WZPY))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from wzpy import WzImage, WzKey  # noqa: E402
 from wzpy.canvas import _decompress, decode_canvas, encode_canvas_payload  # noqa: E402
@@ -38,7 +40,7 @@ from wzpy.properties import (  # noqa: E402
     WzVectorProperty,
 )
 from wzpy.reader import WzBinaryReader  # noqa: E402
-from wzpy.writer import encode_image_body  # noqa: E402
+from wzpy.writer import encode_compressed_int, encode_image_body  # noqa: E402
 
 
 TMS_DATA = Path("/Users/lizixian/Documents/mxd/TMS/MapleStory-IMG/Data")
@@ -55,9 +57,11 @@ BMS_KEY = WzKey.for_region("BMS")
 GMS_KEY = WzKey.for_region("GMS")
 TARGET_LEVEL = 200
 LIMIT_BREAK = 2_147_483_647
-EXPECTED_ITEMS = 46
-EXPECTED_CANVASES = 3550
-EXPECTED_OUTLINKS = 3534
+EXPECTED_ITEMS = 51
+EXPECTED_CANVASES = 3560
+EXPECTED_OUTLINKS = 3544
+DESTINY_WEAPON_DESCRIPTION = "天命武器，可参与对应职业的永恒套装效果。"
+ETERNAL_ARMOR_DESCRIPTION = "永恒套装装备，穿戴对应职业装备可激活套装属性。"
 
 
 @dataclass(frozen=True)
@@ -67,6 +71,7 @@ class ItemSpec:
     req_job: int
     tuc: int
     weapon: bool = False
+    target_level: int = TARGET_LEVEL
 
     @property
     def file_name(self) -> str:
@@ -117,11 +122,12 @@ ARMOR_SPECS = tuple(
         ("Glove", 1082760, 8),
         ("Pants", 1062285, 8),
         ("Shoes", 1073629, 8),
+        ("Accessory", 1152212, 2),
     )
     for offset, req_job in enumerate(JOB_ORDER)
 )
 ITEM_SPECS = WEAPON_SPECS + ARMOR_SPECS
-SHOULDER_IDS = frozenset(range(1152212, 1152217))
+SHOULDER_SPECS = tuple(spec for spec in ARMOR_SPECS if spec.category == "Accessory")
 
 REMOVE_INFO_FIELDS = frozenset(
     {
@@ -312,7 +318,7 @@ def patch_info(root: WzSubProperty, spec: ItemSpec) -> None:
 
     for name in REMOVE_INFO_FIELDS:
         info._children.pop(name, None)
-    info._children["reqLevel"] = WzIntProperty("reqLevel", TARGET_LEVEL, info)
+    info._children["reqLevel"] = WzIntProperty("reqLevel", spec.target_level, info)
     if spec.weapon:
         info._children["limitBreak"] = WzIntProperty("limitBreak", LIMIT_BREAK, info)
 
@@ -366,10 +372,12 @@ def image_xml(name: str, root: WzSubProperty) -> bytes:
     return text.encode("utf-8")
 
 
-def build_items() -> tuple[dict[ItemSpec, tuple[bytes, bytes]], CanvasMaterializer]:
+def build_selected_items(
+    specs: tuple[ItemSpec, ...],
+) -> tuple[dict[ItemSpec, tuple[bytes, bytes]], CanvasMaterializer]:
     materializer = CanvasMaterializer()
     outputs = {}
-    for spec in ITEM_SPECS:
+    for spec in specs:
         image = load_image(spec.source_path, BMS_KEY)
         root = WzSubProperty(image.root.name)
         for child in image.root.children():
@@ -381,6 +389,11 @@ def build_items() -> tuple[dict[ItemSpec, tuple[bytes, bytes]], CanvasMaterializ
             encode_image_body(image, gms_reader()),
             image_xml(spec.file_name, root),
         )
+    return outputs, materializer
+
+
+def build_items() -> tuple[dict[ItemSpec, tuple[bytes, bytes]], CanvasMaterializer]:
+    outputs, materializer = build_selected_items(ITEM_SPECS)
     if materializer.canvases != EXPECTED_CANVASES:
         raise RuntimeError(f"expected {EXPECTED_CANVASES} canvases, got {materializer.canvases}")
     if materializer.outlinks != EXPECTED_OUTLINKS:
@@ -388,10 +401,12 @@ def build_items() -> tuple[dict[ItemSpec, tuple[bytes, bytes]], CanvasMaterializ
     return outputs, materializer
 
 
-def source_strings() -> dict[ItemSpec, tuple[tuple[str, str], ...]]:
+def source_strings(
+    specs: tuple[ItemSpec, ...] = ITEM_SPECS,
+) -> dict[ItemSpec, tuple[tuple[str, str], ...]]:
     image = load_image(SOURCE_STRING, BMS_KEY)
     result = {}
-    for spec in ITEM_SPECS:
+    for spec in specs:
         node = image.root.get(f"Eqp/{spec.category}/{spec.item_id}")
         if not isinstance(node, WzSubProperty):
             raise RuntimeError(f"missing source string for {spec.item_id}")
@@ -404,8 +419,27 @@ def source_strings() -> dict[ItemSpec, tuple[tuple[str, str], ...]]:
         expected_prefix = "命運" if spec.weapon else "永恆"
         if len(names) != 1 or not names[0].startswith(expected_prefix):
             raise RuntimeError(f"unexpected source name for {spec.item_id}: {names}")
-        result[spec] = values
+        description = (
+            DESTINY_WEAPON_DESCRIPTION if spec.weapon else ETERNAL_ARMOR_DESCRIPTION
+        )
+        result[spec] = complete_string_values(values, description)
     return result
+
+
+def complete_string_values(
+    values: tuple[tuple[str, str], ...], description: str
+) -> tuple[tuple[str, str], ...]:
+    completed = []
+    replaced = False
+    for name, value in values:
+        if name == "desc":
+            completed.append((name, description))
+            replaced = True
+        else:
+            completed.append((name, value))
+    if not replaced:
+        completed.append(("desc", description))
+    return tuple(completed)
 
 
 def patch_client_strings(names: dict[ItemSpec, tuple[tuple[str, str], ...]]) -> bytes:
@@ -508,7 +542,7 @@ def verify_item(spec: ItemSpec) -> tuple[int, int]:
     info = image.root.child("info")
     if not isinstance(info, WzSubProperty):
         raise RuntimeError(f"{spec.client_path}: missing info")
-    if int_value(info, "reqLevel") != TARGET_LEVEL:
+    if int_value(info, "reqLevel") != spec.target_level:
         raise RuntimeError(f"{spec.client_path}: reqLevel mismatch")
     if int_value(info, "reqJob") != spec.req_job:
         raise RuntimeError(f"{spec.client_path}: reqJob mismatch")
@@ -527,7 +561,7 @@ def verify_item(spec: ItemSpec) -> tuple[int, int]:
         for name, value in scalar_values(source_info).items()
         if name not in REMOVE_INFO_FIELDS
     }
-    expected_scalars["reqLevel"] = str(TARGET_LEVEL)
+    expected_scalars["reqLevel"] = str(spec.target_level)
     if spec.weapon:
         expected_scalars["limitBreak"] = str(LIMIT_BREAK)
     actual_scalars = scalar_values(info)
@@ -580,10 +614,6 @@ def verify_strings(names: dict[ItemSpec, tuple[tuple[str, str], ...]]) -> None:
         )
         if actual != values:
             raise RuntimeError(f"client String/Eqp mismatch for {spec.item_id}")
-    for item_id in SHOULDER_IDS:
-        if client.root.get(f"Eqp/Accessory/{item_id}") is not None:
-            raise RuntimeError(f"client String/Eqp contains excluded shoulder {item_id}")
-
     for path in SERVER_STRINGS:
         root = ET.parse(path).getroot()
         eqp = direct_child(root, "Eqp")
@@ -596,20 +626,6 @@ def verify_strings(names: dict[ItemSpec, tuple[tuple[str, str], ...]]) -> None:
             ) if node is not None else ()
             if actual != values:
                 raise RuntimeError(f"{path}: mismatch for {spec.item_id}")
-        accessory = categories.get("Accessory")
-        for item_id in SHOULDER_IDS:
-            if accessory is not None and direct_child(accessory, str(item_id)) is not None:
-                raise RuntimeError(f"{path}: contains excluded shoulder {item_id}")
-
-
-def verify_shoulders_absent() -> None:
-    for item_id in SHOULDER_IDS:
-        name = f"{item_id:08d}.img"
-        if (CLIENT_CHARACTER / "Accessory" / name).exists():
-            raise RuntimeError(f"excluded shoulder client file exists: {item_id}")
-        if (SERVER_CHARACTER / "Accessory" / f"{name}.xml").exists():
-            raise RuntimeError(f"excluded shoulder server file exists: {item_id}")
-
 
 def verify_outputs(names: dict[ItemSpec, tuple[tuple[str, str], ...]]) -> None:
     total_canvases = 0
@@ -621,18 +637,278 @@ def verify_outputs(names: dict[ItemSpec, tuple[tuple[str, str], ...]]) -> None:
     if total_canvases != EXPECTED_CANVASES:
         raise RuntimeError(f"written Canvas count mismatch: {total_canvases}")
     verify_strings(names)
-    verify_shoulders_absent()
+
+
+def string_node(
+    spec: ItemSpec, values: tuple[tuple[str, str], ...]
+) -> WzSubProperty:
+    node = WzSubProperty(str(spec.item_id))
+    for name, value in values:
+        node.add(WzStringProperty(name, value, node))
+    return node
+
+
+def upsert_client_string_records(
+    names: dict[ItemSpec, tuple[tuple[str, str], ...]]
+) -> int:
+    from migrate_karing_later_stages import encode_record, locate_records
+
+    grouped: dict[str, list[tuple[ItemSpec, tuple[tuple[str, str], ...]]]] = {}
+    for spec, values in names.items():
+        grouped.setdefault(spec.category, []).append((spec, values))
+
+    changed = 0
+    for category_name, entries in grouped.items():
+        original = CLIENT_STRING.read_bytes()
+        image = WzImage.from_bytes(original, key=GMS_KEY, name=CLIENT_STRING.name)
+        image.parse()
+        if image.truncated or image.parse_warnings:
+            raise RuntimeError(
+                f"{CLIENT_STRING}: malformed baseline {image.parse_warnings}"
+            )
+        size_offsets, count_offset, count_end, record_names, spans, records_end = (
+            locate_records(image, original, ("Eqp", category_name))
+        )
+        raw_before = {
+            name: original[start:end]
+            for name, (start, end) in zip(record_names, spans)
+        }
+        replacements = {
+            str(spec.item_id): encode_record(string_node(spec, values), image)
+            for spec, values in entries
+        }
+        missing = tuple(name for name in replacements if name not in raw_before)
+        expected_names = (*record_names, *missing)
+        rebuilt = b"".join(
+            replacements.get(name, raw_before[name]) for name in expected_names
+        )
+        records_start = spans[0][0] if spans else records_end
+        updated = bytearray(
+            original[:records_start] + rebuilt + original[records_end:]
+        )
+        if missing:
+            new_count = encode_compressed_int(len(expected_names))
+            if len(new_count) != count_end - count_offset:
+                raise RuntimeError(
+                    f"{CLIENT_STRING}: child-count encoding size changed"
+                )
+            updated[count_offset:count_end] = new_count
+        delta = len(updated) - len(original)
+        for size_offset in size_offsets:
+            old_size = struct.unpack_from("<I", original, size_offset)[0]
+            struct.pack_into("<I", updated, size_offset, old_size + delta)
+
+        verified_data = bytes(updated)
+        if verified_data == original:
+            continue
+        verified = WzImage.from_bytes(
+            verified_data, key=GMS_KEY, name=CLIENT_STRING.name
+        )
+        verified.parse()
+        if verified.truncated or verified.parse_warnings:
+            raise RuntimeError(
+                f"{CLIENT_STRING}: incremental result malformed "
+                f"{verified.parse_warnings}"
+            )
+        _, _, _, after_names, after_spans, _ = locate_records(
+            verified, verified_data, ("Eqp", category_name)
+        )
+        if after_names != expected_names:
+            raise RuntimeError(
+                f"{CLIENT_STRING}: {category_name} child order changed"
+            )
+        raw_after = {
+            name: verified_data[start:end]
+            for name, (start, end) in zip(after_names, after_spans)
+        }
+        for name, record in raw_before.items():
+            expected = replacements.get(name, record)
+            if raw_after.get(name) != expected:
+                raise RuntimeError(
+                    f"{CLIENT_STRING}: unexpected record change {category_name}/{name}"
+                )
+        for name in missing:
+            if raw_after.get(name) != replacements[name]:
+                raise RuntimeError(
+                    f"{CLIENT_STRING}: inserted record mismatch {category_name}/{name}"
+                )
+        atomic_write(CLIENT_STRING, verified_data)
+        changed += sum(
+            raw_before.get(name) != replacement
+            for name, replacement in replacements.items()
+        )
+    return changed
+
+
+def upsert_server_string_records(
+    path: Path,
+    names: dict[ItemSpec, tuple[tuple[str, str], ...]],
+) -> int:
+    from migrate_karing_later_stages import find_xml_parent_close, property_to_xml
+
+    text = path.read_text(encoding="utf-8")
+    changed = 0
+    for spec, values in names.items():
+        node = string_node(spec, values)
+        parent_path = ("Eqp", spec.category)
+        parent_marker = f'<imgdir name="{spec.category}">'
+        parent_start = text.find(parent_marker)
+        if parent_start < 0:
+            raise RuntimeError(f"{path}: missing category {spec.category}")
+        parent_end = find_xml_parent_close(text, parent_path)
+        record = find_xml_record_span(text, parent_path, str(spec.item_id))
+        if record is not None:
+            start, end, indent = record
+            rendered = property_to_xml(node).splitlines()
+            replacement = "\n".join(
+                indent + (line[2:] if line.startswith("  ") else line)
+                for line in rendered
+            ) + "\n"
+            if text[start:end] == replacement:
+                continue
+            text = text[:start] + replacement + text[end:]
+        else:
+            parent_line_start = text.rfind("\n", 0, parent_start) + 1
+            parent_indent = text[parent_line_start:parent_start]
+            rendered = "\n".join(
+                parent_indent + "  " + line[2:]
+                for line in property_to_xml(node).splitlines()
+            ) + "\n"
+            text = text[:parent_end] + rendered + text[parent_end:]
+        changed += 1
+
+    root = ET.fromstring(text)
+    eqp = direct_child(root, "Eqp")
+    categories = {child.get("name"): child for child in eqp} if eqp is not None else {}
+    for spec, values in names.items():
+        category = categories.get(spec.category)
+        node = direct_child(category, str(spec.item_id)) if category is not None else None
+        actual = tuple(
+            (child.get("name", ""), child.get("value", "")) for child in node
+        ) if node is not None else ()
+        if actual != values:
+            raise RuntimeError(f"{path}: incremental string mismatch {spec.item_id}")
+    if changed:
+        atomic_write(path, text.encode("utf-8"))
+    return changed
+
+
+def find_xml_record_span(
+    text: str, parent_path: tuple[str, ...], child_name: str
+) -> tuple[int, int, str] | None:
+    token_pattern = re.compile(r'<imgdir\b[^>]*\bname="([^"]+)"[^>]*>|</imgdir>')
+    stack: list[str] = []
+    active_start: int | None = None
+    active_indent = ""
+    matches: list[tuple[int, int, str]] = []
+    for match in token_pattern.finditer(text):
+        if match.group(1) is not None:
+            name = match.group(1)
+            if match.group(0).rstrip().endswith("/>"):
+                continue
+            if tuple(stack[1:]) == parent_path and name == child_name:
+                line_start = text.rfind("\n", 0, match.start()) + 1
+                prefix = text[line_start:match.start()]
+                active_start = line_start if prefix.isspace() else match.start()
+                active_indent = prefix if prefix.isspace() else ""
+            stack.append(name)
+            continue
+        if not stack:
+            raise RuntimeError("unbalanced XML imgdir close")
+        closing_name = stack.pop()
+        if closing_name == child_name and tuple(stack[1:]) == parent_path:
+            if active_start is None:
+                raise RuntimeError(f"missing XML record start: {child_name}")
+            end = match.end()
+            if end < len(text) and text[end] == "\n":
+                end += 1
+            matches.append((active_start, end, active_indent))
+            active_start = None
+    if stack:
+        raise RuntimeError("unbalanced XML imgdir open")
+    if len(matches) > 1:
+        raise RuntimeError(f"duplicate XML record {child_name}")
+    return matches[0] if matches else None
+
+
+def apply_string_records_incrementally(
+    names: dict[ItemSpec, tuple[tuple[str, str], ...]]
+) -> tuple[int, int, Path]:
+    backup = backup_paths([CLIENT_STRING, *SERVER_STRINGS])
+    client_records = upsert_client_string_records(names)
+    server_records = sum(
+        upsert_server_string_records(path, names) for path in SERVER_STRINGS
+    )
+    verify_strings(names)
+    return client_records, server_records, backup
+
+
+def apply_shoulders_incrementally() -> None:
+    from migrate_karing_later_stages import insert_raw_record, insert_xml_record
+
+    names = source_strings(SHOULDER_SPECS)
+    outputs, materializer = build_selected_items(SHOULDER_SPECS)
+    if materializer.canvases != 10 or materializer.outlinks != 10:
+        raise RuntimeError(
+            "unexpected shoulder Canvas contract: "
+            f"canvases={materializer.canvases} outlinks={materializer.outlinks}"
+        )
+
+    touched = [CLIENT_STRING, *SERVER_STRINGS]
+    touched += [spec.client_path for spec in SHOULDER_SPECS]
+    touched += [spec.server_path for spec in SHOULDER_SPECS]
+    backup = backup_paths(touched)
+    for spec, (client_data, server_data) in outputs.items():
+        atomic_write(spec.client_path, client_data)
+        atomic_write(spec.server_path, server_data)
+
+    client_records = 0
+    server_records = 0
+    for spec, values in names.items():
+        node = string_node(spec, values)
+        client_records += int(insert_raw_record(CLIENT_STRING, ("Eqp", "Accessory"), node))
+        for path in SERVER_STRINGS:
+            server_records += int(insert_xml_record(path, ("Eqp", "Accessory"), node))
+
+    for spec in SHOULDER_SPECS:
+        verify_item(spec)
+    verify_strings(names)
+    print(
+        f"shoulders={len(outputs)} canvases={materializer.canvases} "
+        f"outlinks={materializer.outlinks} clientStrings={client_records} "
+        f"serverStrings={server_records} backup={backup}"
+    )
 
 
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--apply", action="store_true", help="write validated migration outputs")
+    parser.add_argument(
+        "--apply-shoulders",
+        action="store_true",
+        help="incrementally add only the five Eternal shoulder items",
+    )
+    parser.add_argument(
+        "--apply-strings",
+        action="store_true",
+        help="incrementally complete only the selected equipment strings",
+    )
     parser.add_argument("--verify", action="store_true", help="verify existing migration outputs")
     args = parser.parse_args()
 
     if len(ITEM_SPECS) != EXPECTED_ITEMS or len({spec.item_id for spec in ITEM_SPECS}) != EXPECTED_ITEMS:
-        raise RuntimeError("selected item set is not exactly 46 unique IDs")
+        raise RuntimeError("selected item set is not exactly 51 unique IDs")
+    if args.apply_shoulders:
+        apply_shoulders_incrementally()
+        return 0
     names = source_strings()
+    if args.apply_strings:
+        client_records, server_records, backup = apply_string_records_incrementally(names)
+        print(
+            f"strings={len(names)} clientRecords={client_records} "
+            f"serverRecords={server_records} backup={backup}"
+        )
+        return 0
     if args.verify:
         verify_outputs(names)
         print(f"verification passed: items={EXPECTED_ITEMS} canvases={EXPECTED_CANVASES}")

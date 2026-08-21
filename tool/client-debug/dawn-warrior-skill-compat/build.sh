@@ -5,6 +5,11 @@ root_dir="$(cd "$(dirname "$0")/../../.." && pwd)"
 source_file="$root_dir/tool/client-debug/dawn-warrior-skill-compat/DawnWarriorSkillCompat.cpp"
 output_file="$root_dir/clien/DawnWarriorSkillCompat.dll"
 
+if ! grep -qF "extended equipment body-part validation" "$source_file"; then
+  echo "refusing to overwrite DawnWarriorSkillCompat.dll: source is missing the verified extended-equipment compatibility hooks" >&2
+  exit 1
+fi
+
 i686-w64-mingw32-g++ \
   -std=c++17 -Os -s -shared -nostdlib -fno-exceptions -fno-rtti \
   -fno-threadsafe-statics -Wl,--entry,_DllMain@12 -Wl,--subsystem,windows \

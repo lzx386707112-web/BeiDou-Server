@@ -11,6 +11,7 @@ import org.gms.dao.entity.GameConfigDO;
 import org.gms.dao.entity.LangResourcesDO;
 import org.gms.dao.mapper.GameConfigMapper;
 import org.gms.exception.BizException;
+import org.gms.manager.ServerManager;
 import org.gms.model.dto.ConfigTypeDTO;
 import org.gms.model.dto.GameConfigReqDTO;
 import org.gms.net.server.Server;
@@ -132,6 +133,7 @@ public class ConfigService {
                 .build());
         gameConfigDO.setConfigValue(condition.getConfigValue());
         GameConfig.update(gameConfigDO);
+        refreshSpecialConfig(gameConfigDO.getConfigCode());
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -160,6 +162,11 @@ public class ConfigService {
             case "tianmo_zombie_spawn_enabled":
             case "tianmo_zombie_spawn_interval_minutes":
                 TianmoZombieSpawnTask.getInstance().reload();
+                break;
+            case SetItemConfigService.CONFIG_CODE:
+            case SetItemConfigService.CATALOG_CONFIG_CODE:
+                ServerManager.getApplicationContext().getBean(SetItemConfigService.class)
+                        .reloadAndRefresh();
                 break;
             default:
                 break;

@@ -57,18 +57,15 @@ import org.gms.server.partyquest.PartyQuest;
 import org.gms.server.partyquest.Pyramid;
 import org.gms.server.quest.Quest;
 import org.gms.util.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.awt.*;
 import java.util.List;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static java.util.concurrent.TimeUnit.DAYS;
 
 public class AbstractPlayerInteraction {
-
-    private static final Logger log = LoggerFactory.getLogger(AbstractPlayerInteraction.class);
 
     public Client c;
 
@@ -1028,6 +1025,9 @@ public class AbstractPlayerInteraction {
         if (monster == null) {
             return false;
         }
+        if (KaringBossCompat.isKaringBoss(id)) {
+            KaringBossCompat.protectDuringRegen(monster);
+        }
         map.spawnMonsterOnGroundBelow(monster, new Point(x, y));
         return true;
     }
@@ -1040,8 +1040,106 @@ public class AbstractPlayerInteraction {
             }
             Monster monster = map.getMonsterById(id);
             if (monster != null && player.getMap() == map && !player.isHidden()) {
-                monster.aggroAutoAggroUpdate(player);
+                int activationDelay = KaringBossCompat.regenDurationMillis(id);
+                if (activationDelay > 0) {
+                    TimerManager.getInstance().schedule(() -> {
+                        if (monster.isAlive() && monster.getMap() == map
+                                && player.getMap() == map && !player.isHidden()) {
+                            monster.aggroAutoAggroUpdate(player);
+                        }
+                    }, activationDelay);
+                } else {
+                    monster.aggroAutoAggroUpdate(player);
+                }
             }
+        }, delay);
+    }
+
+    public void scheduleMapWarp(int expectedMapId, int targetMapId, long delay) {
+        Character player = getPlayer();
+        TimerManager.getInstance().schedule(() -> {
+            if (player.getMapId() == expectedMapId) {
+                player.changeMap(targetMapId, 0);
+            }
+        }, delay);
+    }
+
+    public void scheduleMapEffect(int expectedMapId, String effect, long delay) {
+        Character player = getPlayer();
+        TimerManager.getInstance().schedule(() -> {
+            if (player.getMapId() == expectedMapId) {
+                player.getClient().sendPacket(PacketCreator.showEffect(effect));
+            }
+        }, delay);
+    }
+
+    public void scheduleKaringBossOnGroundBelowIfMissing(
+            MapleMap map, int id, int x, int y, long delay, int nextMapId) {
+        Character player = getPlayer();
+        TimerManager.getInstance().schedule(() -> {
+            if (map.getMonsterById(id) != null) {
+                return;
+            }
+            Monster monster = LifeFactory.getMonster(id);
+            if (monster == null) {
+                return;
+            }
+            AtomicBoolean killedByDamage = new AtomicBoolean(false);
+            monster.addListener(new MonsterListener() {
+                @Override
+                public void monsterKilled(int aniTime) {
+                    if (!killedByDamage.get()) {
+                        return;
+                    }
+                    String[] clearEffects = switch (id) {
+                        case 8880830 -> new String[]{
+                                "customSkill/karing/clearGoongiVideoLayer",
+                                "customSkill/karing/clearGoongi2VideoLayer"};
+                        case 8880831 -> new String[]{
+                                "customSkill/karing/clearDoolVideoLayer",
+                                "customSkill/karing/clearDool2VideoLayer"};
+                        case 8880832 -> new String[]{
+                                "customSkill/karing/clearHondonVideoLayer",
+                                "customSkill/karing/clearHondon2VideoLayer"};
+                        default -> null;
+                    };
+                    if (clearEffects != null) {
+                        map.broadcastMessage(PacketCreator.showEffect(clearEffects[0]));
+                        TimerManager.getInstance().schedule(
+                                () -> map.broadcastMessage(PacketCreator.showEffect(clearEffects[1])),
+                                960);
+                    }
+                    TimerManager.getInstance().schedule(() -> {
+                        if (nextMapId <= 0) {
+                            return;
+                        }
+                        for (Character member : new ArrayList<>(map.getAllPlayers())) {
+                            if (member.getMap() == map) {
+                                member.changeMap(nextMapId, 0);
+                            }
+                        }
+                    }, Math.max(500, aniTime));
+                }
+
+                @Override
+                public void monsterDamaged(Character from, int trueDmg) {
+                    if (!monster.isAlive()) {
+                        killedByDamage.set(true);
+                    }
+                }
+
+                @Override
+                public void monsterHealed(int trueHeal) {
+                }
+            });
+            KaringBossCompat.protectDuringRegen(monster);
+            map.spawnMonsterOnGroundBelow(monster, new Point(x, y));
+            TimerManager.getInstance().schedule(() -> {
+                if (monster.isAlive() && monster.getMap() == map
+                        && player.getMap() == map && !player.isHidden()) {
+                    monster.aggroAutoAggroUpdate(player);
+                }
+            }, KaringBossCompat.regenDurationMillis(id));
         }, delay);
     }
 

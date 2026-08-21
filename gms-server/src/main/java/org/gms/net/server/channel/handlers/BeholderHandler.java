@@ -43,17 +43,19 @@ public final class BeholderHandler extends AbstractPacketHandler {//Summon Skill
         for (Summon sum : summons) {
             if (sum.getObjectId() == oid) {
                 summon = sum;
+                break;
             }
         }
-        if (summon != null) {
-            int skillId = p.readInt();
-            if (skillId == DarkKnight.AURA_OF_BEHOLDER) {
-                p.readShort(); //Not sure.
-            } else if (skillId == DarkKnight.HEX_OF_BEHOLDER) {
-                p.readByte(); //Not sure.
-            }            //show to others here
-        } else {
-            c.getPlayer().clearSummons();
+        if (summon == null) {
+            // A packet queued before a map change can carry the summon's previous map OID.
+            return;
         }
+
+        int skillId = p.readInt();
+        if (skillId == DarkKnight.AURA_OF_BEHOLDER) {
+            p.readShort(); //Not sure.
+        } else if (skillId == DarkKnight.HEX_OF_BEHOLDER) {
+            p.readByte(); //Not sure.
+        }            //show to others here
     }
 }

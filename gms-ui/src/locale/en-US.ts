@@ -10,6 +10,8 @@ import account from '@/views/account/locale/en-US';
 import login from '@/views/login/locale/en-US';
 import inventory from '@/views/game/inventory/locale/en-US';
 import autoban from '@/views/game/autoban/locale/en-US';
+import setItem from '@/views/game/setItem/locale/en-US';
+import equipmentCatalog from '@/views/game/equipmentCatalog/locale/en-US';
 import base from './en-US/base';
 
 export default {
@@ -19,6 +21,8 @@ export default {
   'menu.dashboard.informationSearch': 'Information Search',
   'menu.game': 'Game',
   'menu.game.config': 'Config',
+  'menu.game.setItem': 'Set Bonuses',
+  'menu.game.equipmentCatalog': 'Equipment Preview',
   'menu.game.npcShop': 'NPC Shop',
   'menu.game.cashShop': 'Cash Shop',
   'menu.game.drop': 'Mob Drop',
@@ -60,4 +64,6 @@ export default {
   ...inventory,
   ...config,
   ...autoban,
+  ...setItem,
+  ...equipmentCatalog,
 };

@@ -15,6 +15,26 @@ export function getIconUrl(
   return `https://maplestory.io/api/${location}/${version}/${category}/${id}/icon`;
 }
 
+export function getEquipmentPreviewUrl(id: string | number): string {
+  const apiBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+  return `${apiBase}/assets/equipment-icons/${id}.png`;
+}
+
+export function handleEquipmentPreviewError(event: Event, id: number) {
+  const image = event.target as HTMLImageElement;
+  if (!image.dataset.previewFallback) {
+    image.dataset.previewFallback = 'modern';
+    image.src = getIconUrl('item', id, 'GMS', '255');
+    return;
+  }
+  if (image.dataset.previewFallback === 'modern') {
+    image.dataset.previewFallback = 'legacy';
+    image.src = getIconUrl('item', id, 'GMS', '83');
+    return;
+  }
+  image.style.visibility = 'hidden';
+}
+
 export function nothing() {
   return '占位用';
 }

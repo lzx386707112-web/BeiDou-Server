@@ -1,3 +1,3 @@
 function start(ms) {
-    ms.showEffect("customSkill/karing/darkPulseVideoLayer");
+    ms.scheduleMapWarp(410007160, 410007180, 500);
 }

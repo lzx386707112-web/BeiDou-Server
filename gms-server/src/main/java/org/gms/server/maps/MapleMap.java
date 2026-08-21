@@ -2767,13 +2767,11 @@ public class MapleMap {
             }
         }
 
-        StatEffect summonStat = chr.getStatForBuff(BuffStat.SUMMON);
-        if (summonStat != null) {
-            Summon summon = chr.getSummonByKey(summonStat.getSourceId());
+        chr.withSummonForBuff(BuffStat.SUMMON, summon -> {
             summon.setPosition(chr.getPosition());
             chr.getMap().spawnSummon(summon);
             updateMapObjectVisibility(chr, summon);
-        }
+        });
         if (mapEffect != null) {
             mapEffect.sendStartData(chr.getClient());
         }

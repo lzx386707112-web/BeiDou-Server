@@ -7,7 +7,9 @@ var bossMaps = Array(
     Array(410002060, 500000, "监视者卡洛斯                #r（消耗50万金币）#b", 8880803, -1, 900, 325),
     Array(410007140, 500000, "咖凌·窮奇战                  #r（消耗50万金币）#b", 8880830, -1, 568, 106),
     Array(410007180, 500000, "咖凌·檮杌战                  #r（消耗50万金币）#b", 8880831, -1, 568, 106),
-    Array(410007220, 500000, "咖凌·混沌战                  #r（消耗50万金币）#b", 8880832, -1, 634, 106)
+    Array(410007220, 500000, "咖凌·混沌战                  #r（消耗50万金币）#b", 8880832, -1, 634, 106),
+    Array(410007260, 500000, "咖凌·P2 咖凌                 #r（消耗50万金币）#b", 8880837, -1, 568, 106),
+    Array(410007300, 500000, "咖凌·P3 暴走咖凌             #r（消耗50万金币）#b", 8880842, -1, -545, 399)
 );
 
 var entryItems = Array(
@@ -15,6 +17,7 @@ var entryItems = Array(
     Array(2210006, 1)
 );
 var KARING_BOSS_SPAWN_DELAY = 2000;
+var KARING_FINAL_BATTLE_SELECTION = 999;
 
 function start() {
     if (!cm.getPlayer().isGM() && cm.getPlayer().getLevel() < 100) {
@@ -26,15 +29,22 @@ function start() {
     var text = "#e#b高级 Boss 传送#k#n\r\n\r\n";
     var isGM = cm.getPlayer().isGM();
     for (var i = 0; i < bossMaps.length; i++) {
-        if (!isGM && i >= bossMaps.length - 3) {
+        if (!isGM && isKaringBoss(bossMaps[i][3])) {
             continue;
         }
         text += "#L" + i + "#" + bossMaps[i][2] + "#l\r\n";
     }
+    text += "\r\n#L" + KARING_FINAL_BATTLE_SELECTION
+        + "##r咖凌·终局之战                 （远征队正式流程）#b#l\r\n";
     cm.sendNextSelectLevel("Boss", text);
 }
 
 function levelBoss(selection) {
+    if (selection == KARING_FINAL_BATTLE_SELECTION) {
+        cm.dispose();
+        cm.openNpc(9900001, "咖凌终局之战");
+        return;
+    }
     if (selection < 0 || selection >= bossMaps.length) {
         cm.dispose();
         return;
@@ -113,7 +123,8 @@ function levelBoss(selection) {
 }
 
 function isKaringBoss(bossId) {
-    return bossId == 8880830 || bossId == 8880831 || bossId == 8880832;
+    return bossId == 8880830 || bossId == 8880831 || bossId == 8880832
+        || bossId == 8880837 || bossId == 8880842;
 }
 
 function hasEntryItems() {

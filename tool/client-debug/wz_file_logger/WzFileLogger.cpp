@@ -25,6 +25,8 @@ typedef LPVOID(WINAPI *MapViewOfFileFn)(HANDLE, DWORD, DWORD, DWORD, SIZE_T);
 typedef BOOL(WINAPI *ReadFileFn)(HANDLE, LPVOID, DWORD, LPDWORD, LPOVERLAPPED);
 typedef BOOL(WINAPI *CloseHandleFn)(HANDLE);
 typedef LPTOP_LEVEL_EXCEPTION_FILTER(WINAPI *SetUnhandledExceptionFilterFn)(LPTOP_LEVEL_EXCEPTION_FILTER);
+typedef VOID(WINAPI *ExitProcessFn)(UINT);
+typedef BOOL(WINAPI *TerminateProcessFn)(HANDLE, UINT);
 typedef BOOL(WINAPI *GetProcessMemoryInfoFn)(HANDLE, PPROCESS_MEMORY_COUNTERS, DWORD);
 typedef BOOL(WINAPI *MiniDumpWriteDumpFn)(HANDLE, DWORD, HANDLE, MINIDUMP_TYPE, PMINIDUMP_EXCEPTION_INFORMATION, PMINIDUMP_USER_STREAM_INFORMATION, PMINIDUMP_CALLBACK_INFORMATION);
 typedef DWORD(WINAPI *GetFinalPathNameByHandleWFn)(HANDLE, LPWSTR, DWORD, DWORD);
@@ -57,6 +59,8 @@ static MapViewOfFileFn RealMapViewOfFile = NULL;
 static ReadFileFn RealReadFile = NULL;
 static CloseHandleFn RealCloseHandle = NULL;
 static SetUnhandledExceptionFilterFn RealSetUnhandledExceptionFilter = NULL;
+static ExitProcessFn RealExitProcess = NULL;
+static TerminateProcessFn RealTerminateProcess = NULL;
 static GetFinalPathNameByHandleWFn RealGetFinalPathNameByHandleW = NULL;
 static FopenFn RealFopen = NULL;
 static FreadFn RealFread = NULL;
@@ -73,6 +77,9 @@ static volatile LONG g_verboseFileLogs = 300;
 static volatile LONG g_patchSummaryLogs = 30;
 static volatile LONG g_eventSequence = 0;
 static volatile LONG g_shutdownRequested = 0;
+static volatile LONG g_exitDumpStarted = 0;
+static volatile LONG g_errorDialogDumpStarted = 0;
+static volatile LONG g_karingCompatLoadStarted = 0;
 static BOOL g_inLog = FALSE;
 static WCHAR g_wideLogLine[4096];
 static CHAR g_utf8LogLine[16384];
@@ -113,7 +120,10 @@ static LPVOID WINAPI HookMapViewOfFile(HANDLE mapping, DWORD desiredAccess, DWOR
 static BOOL WINAPI HookReadFile(HANDLE file, LPVOID buffer, DWORD bytesToRead, LPDWORD bytesRead, LPOVERLAPPED overlapped);
 static BOOL WINAPI HookCloseHandle(HANDLE object);
 static LPTOP_LEVEL_EXCEPTION_FILTER WINAPI HookSetUnhandledExceptionFilter(LPTOP_LEVEL_EXCEPTION_FILTER filter);
+static VOID WINAPI HookExitProcess(UINT exitCode);
+static BOOL WINAPI HookTerminateProcess(HANDLE process, UINT exitCode);
 static LONG WINAPI DiagnosticExceptionFilter(EXCEPTION_POINTERS *exceptionPointers);
+static BOOL WriteDiagnosticDump(const WCHAR *reason, EXCEPTION_POINTERS *exceptionPointers);
 static BOOL ShouldLogPath(const WCHAR *path);
 static void *__cdecl HookFopen(const char *fileName, const char *mode);
 static size_t __cdecl HookFread(void *buffer, size_t size, size_t count, void *stream);
@@ -137,6 +147,8 @@ static void RefreshOriginalFunctions() {
         RealReadFile = (ReadFileFn)GetProcAddress(kernel32, "ReadFile");
         RealCloseHandle = (CloseHandleFn)GetProcAddress(kernel32, "CloseHandle");
         RealSetUnhandledExceptionFilter = (SetUnhandledExceptionFilterFn)GetProcAddress(kernel32, "SetUnhandledExceptionFilter");
+        RealExitProcess = (ExitProcessFn)GetProcAddress(kernel32, "ExitProcess");
+        RealTerminateProcess = (TerminateProcessFn)GetProcAddress(kernel32, "TerminateProcess");
         RealGetFinalPathNameByHandleW = (GetFinalPathNameByHandleWFn)GetProcAddress(kernel32, "GetFinalPathNameByHandleW");
     }
     if (user32 != NULL) {
@@ -707,6 +719,29 @@ static LPTOP_LEVEL_EXCEPTION_FILTER WINAPI HookSetUnhandledExceptionFilter(LPTOP
     return previous;
 }
 
+static void CaptureProcessExit(const WCHAR *api, UINT exitCode) {
+    if (InterlockedExchange(&g_exitDumpStarted, 1) != 0) {
+        return;
+    }
+    WCHAR line[256];
+    wsprintfW(line, L"event=process_exit api=%s code=%u tid=%lu", api, exitCode, GetCurrentThreadId());
+    AppendLine(line);
+    WriteDiagnosticDump(L"exit-process", NULL);
+}
+
+static VOID WINAPI HookExitProcess(UINT exitCode) {
+    CaptureProcessExit(L"ExitProcess", exitCode);
+    RealExitProcess(exitCode);
+}
+
+static BOOL WINAPI HookTerminateProcess(HANDLE process, UINT exitCode) {
+    DWORD targetPid = GetProcessId(process);
+    if (targetPid != 0 && targetPid == GetCurrentProcessId()) {
+        CaptureProcessExit(L"TerminateProcess", exitCode);
+    }
+    return RealTerminateProcess(process, exitCode);
+}
+
 static void *__cdecl HookFopen(const char *fileName, const char *mode) {
     void *result = RealFopen(fileName, mode);
 
@@ -759,6 +794,10 @@ static FARPROC WINAPI HookGetProcAddress(HMODULE module, LPCSTR procName) {
         replacement = (FARPROC)HookCloseHandle;
     } else if (EqualsNoCaseA(procName, "SetUnhandledExceptionFilter")) {
         replacement = (FARPROC)HookSetUnhandledExceptionFilter;
+    } else if (EqualsNoCaseA(procName, "ExitProcess")) {
+        replacement = (FARPROC)HookExitProcess;
+    } else if (EqualsNoCaseA(procName, "TerminateProcess")) {
+        replacement = (FARPROC)HookTerminateProcess;
     } else if (EqualsNoCaseA(procName, "LoadLibraryW")) {
         replacement = (FARPROC)HookLoadLibraryW;
     } else if (EqualsNoCaseA(procName, "LoadLibraryA")) {
@@ -800,6 +839,12 @@ static int WINAPI HookMessageBoxW(HWND hwnd, LPCWSTR text, LPCWSTR caption, UINT
         caption ? caption : L"(null)",
         text ? text : L"(null)");
     AppendLine(line);
+    if (text != NULL
+            && ContainsNoCase(text, L"error code")
+            && InterlockedExchange(&g_errorDialogDumpStarted, 1) == 0) {
+        AppendLine(L"event=error_dialog action=dump_before_message_box");
+        WriteDiagnosticDump(L"error-dialog", NULL);
+    }
     if (RealMessageBoxW != NULL) {
         return RealMessageBoxW(hwnd, text, caption, type);
     }
@@ -814,6 +859,11 @@ static int WINAPI HookMessageBoxA(HWND hwnd, LPCSTR text, LPCSTR caption, UINT t
     AnsiToWide(caption, wideCaption, 512);
     wsprintfW(line, L"event=message_box api=MessageBoxA caption=\"%s\" text=\"%s\"", wideCaption, wideText);
     AppendLine(line);
+    if (ContainsNoCase(wideText, L"error code")
+            && InterlockedExchange(&g_errorDialogDumpStarted, 1) == 0) {
+        AppendLine(L"event=error_dialog action=dump_before_message_box");
+        WriteDiagnosticDump(L"error-dialog", NULL);
+    }
     if (RealMessageBoxA != NULL) {
         return RealMessageBoxA(hwnd, text, caption, type);
     }
@@ -947,6 +997,8 @@ static int PatchModule(HMODULE module, BOOL logResult) {
     int readFile = PatchImport(module, "KERNEL32.dll", "ReadFile", (void *)RealReadFile, (void *)HookReadFile);
     int closeHandle = PatchImport(module, "KERNEL32.dll", "CloseHandle", (void *)RealCloseHandle, (void *)HookCloseHandle);
     int exceptionFilter = PatchImport(module, "KERNEL32.dll", "SetUnhandledExceptionFilter", (void *)RealSetUnhandledExceptionFilter, (void *)HookSetUnhandledExceptionFilter);
+    int exitProcess = PatchImport(module, "KERNEL32.dll", "ExitProcess", (void *)RealExitProcess, (void *)HookExitProcess);
+    int terminateProcess = PatchImport(module, "KERNEL32.dll", "TerminateProcess", (void *)RealTerminateProcess, (void *)HookTerminateProcess);
     int loadLibraryW = PatchImport(module, "KERNEL32.dll", "LoadLibraryW", (void *)RealLoadLibraryW, (void *)HookLoadLibraryW);
     int loadLibraryA = PatchImport(module, "KERNEL32.dll", "LoadLibraryA", (void *)RealLoadLibraryA, (void *)HookLoadLibraryA);
     int loadLibraryExA = PatchImport(module, "KERNEL32.dll", "LoadLibraryExA", (void *)RealLoadLibraryExA, (void *)HookLoadLibraryExA);
@@ -967,6 +1019,7 @@ static int PatchModule(HMODULE module, BOOL logResult) {
 
     int total = createFileW + createFileA + lopen + findFirstFileA + getProcAddress
         + createFileMappingA + openFileMappingA + mapViewOfFile + readFile + closeHandle + exceptionFilter
+        + exitProcess + terminateProcess
         + loadLibraryW + loadLibraryA + loadLibraryExA + messageBoxW + messageBoxA
         + fopen + fread;
     if (total > 0 && logResult && g_patchSummaryLogs > 0) {
@@ -974,7 +1027,7 @@ static int PatchModule(HMODULE module, BOOL logResult) {
         WCHAR line[4096];
         wsprintfW(
             line,
-            L"event=hook_summary total=%d CreateFileW=%d CreateFileA=%d _lopen=%d FindFirstFileA=%d GetProcAddress=%d Mapping=%d/%d/%d ReadFile=%d CloseHandle=%d ExceptionFilter=%d LoadLibrary=%d/%d/%d MessageBox=%d/%d fopen=%d fread=%d module=\"%s\"",
+            L"event=hook_summary total=%d CreateFileW=%d CreateFileA=%d _lopen=%d FindFirstFileA=%d GetProcAddress=%d Mapping=%d/%d/%d ReadFile=%d CloseHandle=%d ExceptionFilter=%d Exit=%d/%d LoadLibrary=%d/%d/%d MessageBox=%d/%d fopen=%d fread=%d module=\"%s\"",
             total,
             createFileW,
             createFileA,
@@ -987,6 +1040,8 @@ static int PatchModule(HMODULE module, BOOL logResult) {
             readFile,
             closeHandle,
             exceptionFilter,
+            exitProcess,
+            terminateProcess,
             loadLibraryW,
             loadLibraryA,
             loadLibraryExA,
@@ -1244,6 +1299,8 @@ static DWORD WINAPI WatchdogThreadProc(LPVOID) {
     BOOL hangDumpWritten = FALSE;
     BOOL highCpuDumpWritten = FALSE;
     BOOL manualDumpWritten = FALSE;
+    BOOL sawClientWindow = FALSE;
+    BOOL windowLossDumpWritten = FALSE;
 
     while (InterlockedCompareExchange(&g_shutdownRequested, 0, 0) == 0) {
         Sleep(g_healthIntervalMs);
@@ -1272,6 +1329,19 @@ static DWORD WINAPI WatchdogThreadProc(LPVOID) {
         DWORD userObjects = GetGuiResources(process, GR_USEROBJECTS);
         HWND window = FindClientWindow();
         BOOL windowHung = window != NULL && IsHungAppWindow(window);
+        if (window != NULL) {
+            sawClientWindow = TRUE;
+        }
+        if (sawClientWindow
+                && GetModuleHandleA("BeiDouVideo.dll") != NULL
+                && InterlockedCompareExchange(&g_karingCompatLoadStarted, 1, 0) == 0) {
+            HMODULE karingCompat = RealLoadLibraryA != NULL
+                ? RealLoadLibraryA("KaringSceneCompat.dll")
+                : NULL;
+            AppendLine(karingCompat != NULL
+                ? L"event=karing_scene_compat status=loaded"
+                : L"event=karing_scene_compat status=not_found");
+        }
 
         WCHAR resourcePath[MAX_PATH];
         ULONGLONG resourceOffset = 0;
@@ -1296,6 +1366,12 @@ static DWORD WINAPI WatchdogThreadProc(LPVOID) {
             resourceBytes,
             resourceAgeMs);
         AppendLine(line);
+
+        if (sawClientWindow && window == NULL && !windowLossDumpWritten) {
+            AppendLine(L"event=window_lost reason=visible_client_window_disappeared");
+            WriteDiagnosticDump(L"window-lost", NULL);
+            windowLossDumpWritten = TRUE;
+        }
 
         if (g_manualDumpHotkey && !manualDumpWritten
                 && (GetAsyncKeyState(VK_CONTROL) & 0x8000)

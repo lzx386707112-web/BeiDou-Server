@@ -27,6 +27,9 @@ public final class SetItemManager {
             "BossDamage", "ExpRate", "AllStatPct", "HPpct", "MPpct",
             "DropRate", "MesoRate", "StatusRes", "BuffDuration"
     };
+    public static final Set<String> SUPPORTED_STAT_KEYS = Set.of(
+            "STR", "DEX", "INT", "LUK", "PAD", "MAD", "HP", "MP",
+            "FinalDamage", "BossDamage", "ExpRate", "DropRate", "MesoRate");
 
     public record Tier(int requiredCount, Map<String, Integer> stats) {
     }
@@ -88,14 +91,15 @@ public final class SetItemManager {
         int jobIndex = getJobIndex(chr);
         Bonus total = new Bonus();
         List<Panel> panels = new ArrayList<>();
-        List<Definition> orderedDefinitions = new ArrayList<>(DEFINITIONS.size());
-        for (Definition definition : DEFINITIONS) {
-            if (definition.jobIndex() == jobIndex) {
+        List<Definition> definitions = definitions();
+        List<Definition> orderedDefinitions = new ArrayList<>(definitions.size());
+        for (Definition definition : definitions) {
+            if (definition.jobIndex() < 0 || definition.jobIndex() == jobIndex) {
                 orderedDefinitions.add(definition);
             }
         }
-        for (Definition definition : DEFINITIONS) {
-            if (definition.jobIndex() != jobIndex) {
+        for (Definition definition : definitions) {
+            if (definition.jobIndex() >= 0 && definition.jobIndex() != jobIndex) {
                 orderedDefinitions.add(definition);
             }
         }
@@ -111,9 +115,10 @@ public final class SetItemManager {
                     }
                 }
             }
-            Panel panel = new Panel(definition, matched, count, definition.jobIndex() == jobIndex);
+            boolean jobEligible = definition.jobIndex() < 0 || definition.jobIndex() == jobIndex;
+            Panel panel = new Panel(definition, matched, count, jobEligible);
             panels.add(panel);
-            if (definition.jobIndex() == jobIndex) {
+            if (jobEligible) {
                 for (Tier tier : definition.tiers()) {
                     if (count >= tier.requiredCount()) {
                         total.add(tier.stats());
@@ -122,6 +127,77 @@ public final class SetItemManager {
             }
         }
         return new Result(total, Collections.unmodifiableList(panels));
+    }
+
+    public static List<Definition> definitions() {
+        Map<String, Map<String, Integer>> overrides = SetItemBonusOverrides.snapshot();
+        Set<Integer> disabled = SetItemBonusOverrides.disabledBuiltInIds();
+        return defaultDefinitions().stream()
+                .filter(definition -> !disabled.contains(definition.id()))
+                .map(definition -> withOverrides(definition, overrides))
+                .toList();
+    }
+
+    public static List<Definition> defaultDefinitions() {
+        List<Definition> customDefinitions = SetItemBonusOverrides.customDefinitions();
+        if (customDefinitions.isEmpty()) {
+            return DEFINITIONS;
+        }
+        List<Definition> result = new ArrayList<>(DEFINITIONS.size() + customDefinitions.size());
+        result.addAll(DEFINITIONS);
+        result.addAll(customDefinitions);
+        return Collections.unmodifiableList(result);
+    }
+
+    public static List<Definition> builtInDefinitions() {
+        return DEFINITIONS;
+    }
+
+    public static List<Definition> catalogDefinitions() {
+        Map<String, Map<String, Integer>> overrides = SetItemBonusOverrides.snapshot();
+        return defaultDefinitions().stream()
+                .map(definition -> withOverrides(definition, overrides))
+                .toList();
+    }
+
+    public static boolean isBuiltIn(int definitionId) {
+        return DEFINITIONS.stream().anyMatch(definition -> definition.id() == definitionId);
+    }
+
+    public static boolean isEnabled(int definitionId) {
+        return !SetItemBonusOverrides.disabledBuiltInIds().contains(definitionId);
+    }
+
+    private static Definition withOverrides(Definition definition,
+                                            Map<String, Map<String, Integer>> overrides) {
+        List<Tier> tiers = new ArrayList<>(definition.tiers().size());
+        boolean changed = false;
+        for (Tier tier : definition.tiers()) {
+            Map<String, Integer> replacement = overrides.get(
+                    SetItemBonusOverrides.key(definition.id(), tier.requiredCount()));
+            if (replacement == null) {
+                tiers.add(tier);
+                continue;
+            }
+            Map<String, Integer> effective = new LinkedHashMap<>(tier.stats());
+            for (Map.Entry<String, Integer> entry : replacement.entrySet()) {
+                if (!SUPPORTED_STAT_KEYS.contains(entry.getKey())) {
+                    continue;
+                }
+                if (entry.getValue() == SetItemBonusOverrides.REMOVED_VALUE) {
+                    effective.remove(entry.getKey());
+                } else {
+                    effective.put(entry.getKey(), entry.getValue());
+                }
+                changed = true;
+            }
+            tiers.add(new Tier(tier.requiredCount(), Collections.unmodifiableMap(effective)));
+        }
+        if (!changed) {
+            return definition;
+        }
+        return new Definition(definition.id(), definition.jobIndex(), definition.name(),
+                definition.slots(), Collections.unmodifiableList(tiers), definition.story());
     }
 
     public static int applyDamage(Character chr, Monster monster, int damage) {
@@ -204,11 +280,25 @@ public final class SetItemManager {
             result.add(definition(id++, job, "至尊不速之客·外星人", visitorWeapons[job], visitorArmor, 10));
         }
 
-        int[][] destinyArmor = {{1005980,1042433,1062285,1082760,1073629,1103433},{1005981,1042434,1062286,1082761,1073630,1103434},{1005982,1042435,1062287,1082762,1073631,1103435},{1005983,1042436,1062288,1082763,1073632,1103436},{1005984,1042437,1062289,1082764,1073633,1103437}};
+        int[][] destinyArmor = {{1005980,1042433,1062285,1082760,1073629,1103433,1152212},{1005981,1042434,1062286,1082761,1073630,1103434,1152213},{1005982,1042435,1062287,1082762,1073631,1103435,1152214},{1005983,1042436,1062288,1082763,1073632,1103436,1152215},{1005984,1042437,1062289,1082764,1073633,1103437,1152216}};
+        int[][] genesisWeapons = {{1302355,1312213,1322264,1402268,1412189,1422197,1432227,1442285},{1372237,1382274},{1452266,1462252},{1332289,1472275},{1482232,1492245}};
         for (int job = 0; job < 5; job++) {
             int[] finalWeapons = stageWeapons(advancedWeapons[job], 4);
-            result.add(definition(id++, job, "天命/永恒", finalWeapons, destinyArmor[job], 16));
+            result.add(definition(id++, job, "天命/创世/永恒", mergeWeapons(finalWeapons, genesisWeapons[job]), destinyArmor[job], 16));
         }
+
+        List<List<Integer>> radianceSlots = Arrays.stream(
+                new int[]{1113341,1122447,1143471,1113360,1012911})
+                .mapToObj(itemId -> List.of(itemId))
+                .toList();
+        List<Tier> radianceTiers = List.of(
+                new Tier(2, stats("STR", 20, "DEX", 20, "INT", 20, "LUK", 20, "PAD", 20, "MAD", 20, "HP", 500, "BossDamage", 15)),
+                new Tier(3, stats("STR", 20, "DEX", 20, "INT", 20, "LUK", 20, "PAD", 20, "MAD", 20, "HP", 500)),
+                new Tier(4, stats("STR", 20, "DEX", 20, "INT", 20, "LUK", 20, "PAD", 20, "MAD", 20, "HP", 500)),
+                new Tier(5, stats("STR", 20, "DEX", 20, "INT", 20, "LUK", 20, "PAD", 20, "MAD", 20, "HP", 500, "BossDamage", 15))
+        );
+        result.add(new Definition(id, -1, "无尽辉耀", radianceSlots, radianceTiers,
+                "TMS光辉Boss套装的旧端兼容投影。"));
         return Collections.unmodifiableList(result);
     }
 
@@ -223,6 +313,12 @@ public final class SetItemManager {
 
     private static int[] singleton(int value) {
         return new int[]{value};
+    }
+
+    private static int[] mergeWeapons(int[] first, int[] second) {
+        int[] result = Arrays.copyOf(first, first.length + second.length);
+        System.arraycopy(second, 0, result, first.length, second.length);
+        return result;
     }
 
     private static int[] stageWeapons(int[] paths, int stage) {

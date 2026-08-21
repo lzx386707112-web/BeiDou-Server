@@ -31,6 +31,7 @@ import org.gms.server.life.MobSkill;
 import org.gms.server.life.MobSkillFactory;
 import org.gms.server.life.MobSkillId;
 import org.gms.server.life.MobSkillType;
+import org.gms.server.life.KaringBossCompat;
 import org.gms.server.life.Monster;
 import org.gms.server.life.MonsterInformationProvider;
 import org.gms.server.maps.MapObject;
@@ -42,6 +43,7 @@ import org.gms.exception.EmptyMovementException;
 import java.awt.*;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Set;
 
 /**
  * @author Danny (Leifde)
@@ -50,6 +52,8 @@ import java.util.List;
  */
 public final class MoveLifeHandler extends AbstractMovementPacketHandler {
     private static final Logger log = LoggerFactory.getLogger(MoveLifeHandler.class);
+    private static final Set<Integer> KARING_BOSS_IDS = Set.of(
+            8880830, 8880831, 8880832, 8880837, 8880842);
 
     @Override
     public void handlePacket(InPacket p, Client c) {
@@ -68,6 +72,7 @@ public final class MoveLifeHandler extends AbstractMovementPacketHandler {
         }
 
         Monster monster = (Monster) mmo;
+        boolean traceKaringBoss = KARING_BOSS_IDS.contains(monster.getId());
         boolean traceArcanaMob = monster.getId() == 8644001
                 && (map.getId() == 450005120 || map.getId() == 450005131);
         List<Character> banishPlayers = null;
@@ -101,6 +106,9 @@ public final class MoveLifeHandler extends AbstractMovementPacketHandler {
 
         int useSkillId = 0;
         int useSkillLevel = 0;
+        int requestedCastPos = isAttack ? (rawActivity - 24) / 2 : -1;
+        int attackStatus = 0;
+        boolean skillAccepted = false;
 
         if (isSkill) {
             useSkillId = skillId;
@@ -111,22 +119,38 @@ public final class MoveLifeHandler extends AbstractMovementPacketHandler {
                 MobSkill toUse = MobSkillFactory.getMobSkillOrThrow(mobSkillType, useSkillLevel);
 
                 if (monster.canUseSkill(toUse, true)) {
-                    int animationTime = MonsterInformationProvider.getInstance().getMobSkillAnimationTime(toUse);
-                    if (animationTime > 0 && toUse.getType() != MobSkillType.BANISH) {
-                        toUse.applyDelayedEffect(player, monster, true, animationTime);
-                    } else {
-                        banishPlayers = new LinkedList<>();
-                        toUse.applyEffect(player, monster, true, banishPlayers);
+                    skillAccepted = true;
+                    boolean handled = KaringBossCompat.handleProjectedSkillCast(
+                            monster, useSkillId, useSkillLevel);
+                    if (!handled) {
+                        int animationTime = MonsterInformationProvider.getInstance().getMobSkillAnimationTime(toUse);
+                        if (animationTime > 0 && toUse.getType() != MobSkillType.BANISH) {
+                            toUse.applyDelayedEffect(player, monster, true, animationTime);
+                        } else {
+                            banishPlayers = new LinkedList<>();
+                            toUse.applyEffect(player, monster, true, banishPlayers);
+                        }
                     }
                 }
             }
+            if (traceKaringBoss && !skillAccepted) {
+                rawActivity = -1;
+                pOption = 0;
+                useSkillId = 0;
+                useSkillLevel = 0;
+            }
         } else {
-            int castPos = (rawActivity - 24) / 2;
-            int atkStatus = monster.canUseAttack(castPos, isSkill);
-            if (atkStatus < 1) {
+            attackStatus = monster.canUseAttack(requestedCastPos, isSkill);
+            if (attackStatus < 1) {
                 rawActivity = -1;
                 pOption = 0;
             }
+        }
+
+        if (traceKaringBoss && (isAttack || isSkill)) {
+            log.info("[KaringMoveTrace] map={} mob={} oid={} moveId={} packetActivity={} decodedActivity={} attack={} skill={} castPos={} attackStatus={} skillId={} skillLv={} option={}",
+                    map.getId(), monster.getId(), objectid, moveid, packetActivity, rawActivity,
+                    isAttack, isSkill, requestedCastPos, attackStatus, skillId, skillLv, pOption);
         }
 
         boolean nextMovementCouldBeSkill = !(isSkill || (pNibbles != 0));
@@ -208,6 +232,6 @@ public final class MoveLifeHandler extends AbstractMovementPacketHandler {
     }
 
     private static boolean inRangeInclusive(Byte pVal, Integer pMin, Integer pMax) {
-        return !(pVal < pMin) || (pVal > pMax);
+        return pVal >= pMin && pVal <= pMax;
     }
 }

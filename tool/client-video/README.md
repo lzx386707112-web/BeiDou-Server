@@ -68,9 +68,41 @@ MCV 文件
 框架分成四层：
 
 1. `MCV` 容器保存压缩后的颜色、Alpha 和时间轴。
-2. `BeiDouVideo.dll` 负责读取、解码、排队、上传和绘制。
+2. `BeiDouVideo.dll` 负责读取、解码、排队、上传和绘制；播放器包含固定的 `boss-scene` 与 `player-skill` 两个通道。
 3. `DawnWarriorSkillCompat.dll` 负责从旧客户端取得真实 D3D8 设备并触发播放。
 4. 服务端和 WZ 继续负责技能等级、攻击包、周期伤害和轻量帧效果。
+
+### 固定双通道
+
+播放器只提供两个有界通道，不开放任意数量的视频实例：
+
+| 通道 | API 编号 | 用途 |
+| --- | ---: | --- |
+| `player-skill` | `0` | 现有玩家五/六转全屏技能；旧 API 默认操作此通道 |
+| `boss-scene` | `1` | Boss 转场和全屏场景；由后续 Boss 兼容路由触发 |
+
+`BDV_Render()` 与 `BDV_RenderAll()` 都先绘制 `boss-scene`，再绘制
+`player-skill`。同一通道的新播放仍会替换该通道内的旧播放，但不会停止另一个
+通道。`BDV_PlayFile()`、`BDV_Stop()`、`BDV_GetStatus()` 和
+`BDV_GetLastError()` 保持原有 ABI，并继续映射到 `player-skill`；新调用方使用
+`BDV_PlayFileEx()`、`BDV_StopChannel()`、`BDV_GetStatusEx()` 和
+`BDV_GetLastErrorEx()`。
+
+Harness 默认保持单视频播放。要验证两个通道并发，使用竖线分隔玩家和 Boss
+视频路径：
+
+```text
+BeiDouVideoHarness.exe "Data\Video\soul-eclipse.mcv|Data\Video\galaxy-star-burst.mcv"
+```
+
+咖凌 Boss 迁移使用 `boss-scene` 通道承载转场和全屏/近全屏大特效。当前导出
+`karing-dark-pulse.mcv`、`karing-goongi-screen.mcv`、三兽
+`karing-perils-*.mcv`、`karing-reward-screen.mcv` 以及三兽
+`karing-clear*.mcv`，以及固定出生点播放的 P2/P3 `regen` 演出，共 14 个
+VP9 + Alpha MCV。对应
+`Map/Effect.img` marker 位于 `customSkill/karing/*VideoLayer`，进入
+`karing_first`、`goongi_direction`、`dool_direction`、`hondon_direction`
+地图脚本时由服务端发送 FIELD_EFFECT 触发。
 
 ## 最终层级方案和演进记录
 

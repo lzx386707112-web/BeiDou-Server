@@ -1,0 +1,1081 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>五/六转技能平衡对比表</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #1a1a2e; color: #e0e0e0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; font-size: 14px; line-height: 1.6; padding: 20px; }
+h1 { text-align: center; font-size: 22px; margin-bottom: 8px; color: #fff; }
+.subtitle { text-align: center; color: #888; margin-bottom: 20px; font-size: 13px; }
+.rules { background: #16213e; border: 1px solid #2a3a5c; border-radius: 8px; padding: 12px 16px; margin-bottom: 20px; font-size: 13px; color: #aab; }
+.rules b { color: #7dd3fc; }
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-bottom: 28px; }
+.card { background: #16213e; border: 1px solid #2a3a5c; border-radius: 8px; padding: 10px 12px; text-decoration: none; color: #e0e0e0; transition: border-color .2s; }
+.card:hover { border-color: #7dd3fc; }
+.cname { font-weight: 600; color: #fff; font-size: 15px; }
+.bname { color: #7dd3fc; font-size: 12px; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.btotal { color: #888; font-size: 11px; }
+.class-block { background: #16213e; border: 1px solid #2a3a5c; border-radius: 10px; padding: 16px; margin-bottom: 24px; }
+.class-title { font-size: 18px; font-weight: 700; color: #fff; margin-bottom: 10px; border-left: 4px solid #7dd3fc; padding-left: 10px; }
+.cnt { font-size: 13px; color: #888; font-weight: 400; }
+.bl-picker { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; font-size: 13px; color: #8899bb; flex-wrap: wrap; }
+.blsel { background: #1a2749; color: #e0e0e0; border: 1px solid #2a3a5c; border-radius: 6px; padding: 4px 8px; font-size: 13px; max-width: 560px; flex: 1; }
+.blsel:focus { outline: none; border-color: #7dd3fc; }
+.resetbtn { background: #1a2749; color: #8899bb; border: 1px solid #2a3a5c; border-radius: 6px; padding: 4px 10px; cursor: pointer; font-size: 13px; }
+.resetbtn:hover { border-color: #7dd3fc; color: #7dd3fc; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th, td { padding: 5px 8px; text-align: center; border-bottom: 1px solid #223055; }
+th { color: #8899bb; font-weight: 600; background: #1a2749; }
+td.l, th.l { text-align: left; }
+tr.bl-row td { background: #14382a; color: #4ade80; font-weight: 600; border-bottom: 2px solid #2a6a4a; }
+tbody tr:hover { background: #1c2947; }
+.num { font-variant-numeric: tabular-nums; }
+.tgt { color: #7dd3fc; font-weight: 700; }
+.flag { color: #fbbf24; font-size: 11px; cursor: help; }
+.pos { color: #4ade80; font-weight: 600; }
+.neg { color: #f87171; font-weight: 600; }
+.zero { color: #888; }
+</style>
+</head>
+<body>
+<h1>五/六转技能平衡对比表</h1>
+<div class="subtitle">面板 100,000 ｜ 单次总伤 = 单hit% × hit数 × 1000 ｜ baseline 可自选，选择自动保存</div>
+<div class="rules">
+<b>规则：</b>无CD技能目标总伤 = baseline × <b>1.2</b>；有CD技能 = baseline × <b>1.3</b> ｜
+目标% = 目标总伤 ÷ (hit数 × 1000) ｜<br>
+<b>用法：</b>每个职业表格上方的下拉框里选对比基准（列出该职业 4转书+3转书 全部有伤害的原始技能，含召唤/CD/bc 标注），
+切换后目标总伤、目标%、调整量实时重算 ｜
+<b>调整列：</b>绿色 +N = damage% 要加 N；红色 -N = 要减 N
+</div>
+<div class="cards"><a class="card" href="#魂骑士" data-cls="魂骑士"><div class="cname">魂骑士</div><div class="bname">轻舞飞扬</div><div class="btotal" data-btotal>460,000</div></a><a class="card" href="#炎术士" data-cls="炎术士"><div class="cname">炎术士</div><div class="bname">天降落星</div><div class="btotal" data-btotal>520,000</div></a><a class="card" href="#风灵使者" data-cls="风灵使者"><div class="cname">风灵使者</div><div class="bname">疾风扫射</div><div class="btotal" data-btotal>1,050,000</div></a><a class="card" href="#夜行者" data-cls="夜行者"><div class="cname">夜行者</div><div class="bname">三连环光击破</div><div class="btotal" data-btotal>840,000</div></a><a class="card" href="#奇袭者" data-cls="奇袭者"><div class="cname">奇袭者</div><div class="bname">光速拳</div><div class="btotal" data-btotal>1,560,000</div></a><a class="card" href="#阿兰" data-cls="阿兰"><div class="cname">阿兰</div><div class="bname">幻影狼牙</div><div class="btotal" data-btotal>1,600,000</div></a><a class="card" href="#英雄" data-cls="英雄"><div class="cname">英雄</div><div class="bname">轻舞飞扬</div><div class="btotal" data-btotal>1,120,000</div></a><a class="card" href="#圣骑士" data-cls="圣骑士"><div class="cname">圣骑士</div><div class="bname">连环环破</div><div class="btotal" data-btotal>1,200,000</div></a><a class="card" href="#黑骑士" data-cls="黑骑士"><div class="cname">黑骑士 ⚠️</div><div class="bname">矛连击</div><div class="btotal" data-btotal>1,560,000</div></a><a class="card" href="#火毒大魔导士" data-cls="火毒大魔导士"><div class="cname">火毒大魔导士</div><div class="bname">天降落星</div><div class="btotal" data-btotal>1,280,000</div></a><a class="card" href="#冰雷大魔导士" data-cls="冰雷大魔导士"><div class="cname">冰雷大魔导士</div><div class="bname">链环闪电</div><div class="btotal" data-btotal>540,000</div></a><a class="card" href="#主教" data-cls="主教"><div class="cname">主教</div><div class="bname">圣光普照</div><div class="btotal" data-btotal>1,020,000</div></a><a class="card" href="#箭神" data-cls="箭神"><div class="cname">箭神 ⚠️</div><div class="bname">暴风箭雨</div><div class="btotal" data-btotal>120,000</div></a><a class="card" href="#神射手" data-cls="神射手"><div class="cname">神射手</div><div class="bname">穿透箭</div><div class="btotal" data-btotal>850,000</div></a><a class="card" href="#夜使者" data-cls="夜使者"><div class="cname">夜使者</div><div class="bname">三连环光击破</div><div class="btotal" data-btotal>900,000</div></a><a class="card" href="#暗影双刀" data-cls="暗影双刀"><div class="cname">暗影双刀</div><div class="bname">暗杀</div><div class="btotal" data-btotal>2,850,000</div></a><a class="card" href="#拳霸" data-cls="拳霸"><div class="cname">拳霸</div><div class="bname">金手指</div><div class="btotal" data-btotal>2,400,000</div></a><a class="card" href="#枪神" data-cls="枪神"><div class="cname">枪神</div><div class="bname">急速射</div><div class="btotal" data-btotal>1,520,000</div></a></div>
+<div class="class-block" id="魂骑士" data-cls="魂骑士">
+<div class="class-title">魂骑士 <span class="cnt">(7个技能)</span></div>
+<div class="bl-picker">对比基准（4转最高攻击）：
+<select class="blsel"><option value="0" selected>[4转] 轻舞飞扬（11111004）230%×2hit = 460,000</option><option value="1">[4转] 恐慌（11111002）320%×1hit = 320,000</option><option value="2">[4转] 灵魂突刺（11111006）75%×4hit = 300,000</option><option value="3">[3转] 终极剑（11101002）250%×1hit = 250,000（3转、召唤）</option><option value="4">[3转] 灵魂之刃（11101004）180%×1hit = 180,000（3转）</option><option value="5">[4转] 昏迷（11111003）170%×1hit = 170,000</option><option value="6">[4转] 进阶斗气（11110005）140%×1hit = 140,000</option><option value="7">[4转] 斗气集中（11111001）120%×1hit = 120,000（召唤）</option><option value="8">[4转] 灵魂属性（11111007）120%×1hit = 120,000（召唤）</option></select>
+<button class="resetbtn" title="恢复默认">↺</button></div>
+<table>
+<thead><tr class="bl-row">
+<td class="l bl-name">—</td><td class="bl-id">—</td><td class="bl-cd">—</td><td>—</td><td class="bl-hits">—</td>
+<td class="num bl-eff">—</td><td class="num bl-total">—</td>
+<td class="num" colspan="3">基准总伤</td></tr></thead>
+<thead><tr><th class="l">技能名</th><th>ID</th><th>CD</th><th>倍率</th><th>hit</th>
+<th>当前%</th><th>当前总伤</th><th>目标总伤</th><th>目标%</th><th>调整</th></tr></thead>
+<tbody><tr data-hits="15" data-eff="145" data-mult="1.3">
+<td class="l">全蚀之力</td><td>11121006</td><td>25s</td><td>×1.3</td><td>15</td>
+<td class="num cur">145</td><td class="num ct">2,175,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="15" data-eff="145" data-mult="1.3">
+<td class="l">宇宙之花</td><td>11121012</td><td>25s</td><td>×1.3</td><td>15</td>
+<td class="num cur">145</td><td class="num ct">2,175,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="15" data-eff="140" data-mult="1.3">
+<td class="l">银河星爆</td><td>11121005</td><td>25s</td><td>×1.3</td><td>15</td>
+<td class="num cur">140</td><td class="num ct">2,100,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="15" data-eff="140" data-mult="1.2">
+<td class="l">全蚀之力：魂斩</td><td>11121007</td><td>无</td><td>×1.2</td><td>15</td>
+<td class="num cur">140</td><td class="num ct">2,100,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="15" data-eff="140" data-mult="1.2">
+<td class="l">日月分裂</td><td>11121009</td><td>无</td><td>×1.2</td><td>15</td>
+<td class="num cur">140</td><td class="num ct">2,100,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="7" data-eff="136" data-mult="1.2">
+<td class="l">灵魂蚀日</td><td>11121008</td><td>无</td><td>×1.2</td><td>7</td>
+<td class="num cur">136</td><td class="num ct">952,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="5" data-eff="190" data-mult="1.2">
+<td class="l">冥河破</td><td>11121011</td><td>无</td><td>×1.2</td><td>5</td>
+<td class="num cur">190</td><td class="num ct">950,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr></tbody>
+</table>
+</div><div class="class-block" id="炎术士" data-cls="炎术士">
+<div class="class-title">炎术士 <span class="cnt">(16个技能)</span></div>
+<div class="bl-picker">对比基准（4转最高攻击）：
+<select class="blsel"><option value="0" selected>[4转] 天降落星（12111003）260%×2hit = 520,000（cd=1）</option><option value="1">[4转] 火魔兽（12111004）500%×1hit = 500,000（召唤）</option><option value="2">[4转] 火风暴（12111006）210%×2hit = 420,000</option><option value="3">[3转] 火焰箭（12101002）150%×1hit = 150,000（3转）</option><option value="4">[4转] 火牢术屏障（12111005）80%×1hit = 80,000</option><option value="5">[3转] 火柱（12101006）80%×1hit = 80,000（3转）</option><option value="6">[3转] 精神力（12101000）40%×1hit = 40,000（3转、召唤）</option></select>
+<button class="resetbtn" title="恢复默认">↺</button></div>
+<table>
+<thead><tr class="bl-row">
+<td class="l bl-name">—</td><td class="bl-id">—</td><td class="bl-cd">—</td><td>—</td><td class="bl-hits">—</td>
+<td class="num bl-eff">—</td><td class="num bl-total">—</td>
+<td class="num" colspan="3">基准总伤</td></tr></thead>
+<thead><tr><th class="l">技能名</th><th>ID</th><th>CD</th><th>倍率</th><th>hit</th>
+<th>当前%</th><th>当前总伤</th><th>目标总伤</th><th>目标%</th><th>调整</th></tr></thead>
+<tbody><tr data-hits="10" data-eff="210" data-mult="1.3">
+<td class="l">永恒凤炎</td><td>12121025</td><td>25s</td><td>×1.3</td><td>10</td>
+<td class="num cur">210</td><td class="num ct">2,100,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="12" data-eff="175" data-mult="1.3">
+<td class="l">炎焰协奏曲</td><td>12121028</td><td>25s</td><td>×1.3</td><td>12</td>
+<td class="num cur">175</td><td class="num ct">2,100,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="15" data-eff="140" data-mult="1.2">
+<td class="l">炎焰协奏曲：最终乐章</td><td>12121029</td><td>无</td><td>×1.2</td><td>15</td>
+<td class="num cur">140</td><td class="num ct">2,100,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="13" data-eff="160" data-mult="1.2">
+<td class="l">永恒凤炎：循环之焰</td><td>12121026</td><td>无</td><td>×1.2</td><td>13</td>
+<td class="num cur">160</td><td class="num ct">2,080,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="12" data-eff="165" data-mult="1.2">
+<td class="l">炎焰协奏曲：火焰演奏</td><td>12121036</td><td>无</td><td>×1.2</td><td>12</td>
+<td class="num cur">165</td><td class="num ct">1,980,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="10" data-eff="190" data-mult="1.2">
+<td class="l">永恒凤炎：初始焰击</td><td>12121035</td><td>无</td><td>×1.2</td><td>10</td>
+<td class="num cur">190</td><td class="num ct">1,900,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="12" data-eff="95" data-mult="1.3">
+<td class="l">烈炎爆发（火狮）</td><td>12121001</td><td>10s</td><td>×1.3</td><td>12</td>
+<td class="num cur">95</td><td class="num ct">1,140,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="12" data-eff="95" data-mult="1.2">
+<td class="l">烈炎爆发：火狮爆裂</td><td>12121002</td><td>无</td><td>×1.2</td><td>12</td>
+<td class="num cur">95</td><td class="num ct">1,140,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="8" data-eff="138" data-mult="1.3">
+<td class="l">无尽之炎燄</td><td>12121007</td><td>25s</td><td>×1.3</td><td>8</td>
+<td class="num cur">138</td><td class="num ct">1,104,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="1" data-eff="1100" data-mult="1.2">
+<td class="l">烈炎爆发：火狮终焰</td><td>12121004</td><td>无</td><td>×1.2</td><td>1</td>
+<td class="num cur">1100</td><td class="num ct">1,100,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="8" data-eff="130" data-mult="1.2">
+<td class="l">无尽之炎燄：持续攻击</td><td>12121030</td><td>无</td><td>×1.2</td><td>8</td>
+<td class="num cur">130</td><td class="num ct">1,040,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="3" data-eff="330" data-mult="1.2">
+<td class="l">魔法爆发 VI</td><td>12121020</td><td>无</td><td>×1.2</td><td>3</td>
+<td class="num cur">330</td><td class="num ct">990,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="3" data-eff="330" data-mult="1.2">
+<td class="l">魔法爆发 VI：火息</td><td>12121021</td><td>无</td><td>×1.2</td><td>3</td>
+<td class="num cur">330</td><td class="num ct">990,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="1" data-eff="950" data-mult="1.2">
+<td class="l">烈炎爆发：火狮余焰</td><td>12121003</td><td>无</td><td>×1.2</td><td>1</td>
+<td class="num cur">950</td><td class="num ct">950,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="6" data-eff="158" data-mult="1.2">
+<td class="l">凤凰爆裂 VI</td><td>12121022</td><td>无</td><td>×1.2</td><td>6</td>
+<td class="num cur">158</td><td class="num ct">948,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="6" data-eff="158" data-mult="1.2">
+<td class="l">凤凰爆裂 VI：持续攻击</td><td>12121033</td><td>无</td><td>×1.2</td><td>6</td>
+<td class="num cur">158</td><td class="num ct">948,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr></tbody>
+</table>
+</div><div class="class-block" id="风灵使者" data-cls="风灵使者">
+<div class="class-title">风灵使者 <span class="cnt">(16个技能)</span></div>
+<div class="bl-picker">对比基准（4转最高攻击）：
+<select class="blsel"><option value="0" selected>[4转] 疾风扫射（13111007）350%×3hit = 1,050,000（bc=3）</option><option value="1">[4转] 箭扫射（13111001）150%×4hit = 600,000（bc=4）</option><option value="2">[4转] 风灵穿越（13111006）550%×1hit = 550,000</option><option value="3">[4转] 箭雨（13111000）260%×1hit = 260,000</option><option value="4">[3转] 终极弓（13101002）250%×1hit = 250,000（3转、召唤）</option><option value="5">[3转] 风影漫步（13101006）130%×1hit = 130,000（3转）</option><option value="6">[4转] 暴风箭雨（13111002）110%×1hit = 110,000</option><option value="7">[3转] 暴风射击（13101005）160%×0hit = 0（3转）</option></select>
+<button class="resetbtn" title="恢复默认">↺</button></div>
+<table>
+<thead><tr class="bl-row">
+<td class="l bl-name">—</td><td class="bl-id">—</td><td class="bl-cd">—</td><td>—</td><td class="bl-hits">—</td>
+<td class="num bl-eff">—</td><td class="num bl-total">—</td>
+<td class="num" colspan="3">基准总伤</td></tr></thead>
+<thead><tr><th class="l">技能名</th><th>ID</th><th>CD</th><th>倍率</th><th>hit</th>
+<th>当前%</th><th>当前总伤</th><th>目标总伤</th><th>目标%</th><th>调整</th></tr></thead>
+<tbody><tr data-hits="12" data-eff="175" data-mult="1.3">
+<td class="l">季风VI</td><td>13121010</td><td>25s</td><td>×1.3</td><td>12</td>
+<td class="num cur">175</td><td class="num ct">2,100,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="15" data-eff="140" data-mult="1.3">
+<td class="l">阿涅摩伊</td><td>13121011</td><td>25s</td><td>×1.3</td><td>15</td>
+<td class="num cur">140</td><td class="num ct">2,100,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="10" data-eff="210" data-mult="1.3">
+<td class="l">风之圣谕</td><td>13121013</td><td>25s</td><td>×1.3</td><td>10</td>
+<td class="num cur">210</td><td class="num ct">2,100,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="12" data-eff="175" data-mult="1.3">
+<td class="l">元素风暴</td><td>13121019</td><td>25s</td><td>×1.3</td><td>12</td>
+<td class="num cur">175</td><td class="num ct">2,100,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="15" data-eff="140" data-mult="1.2">
+<td class="l">元素风暴：箭雨</td><td>13121020</td><td>无</td><td>×1.2</td><td>15</td>
+<td class="num cur">140</td><td class="num ct">2,100,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="12" data-eff="140" data-mult="1.2">
+<td class="l">元素风暴：风之波动</td><td>13121023</td><td>无</td><td>×1.2</td><td>12</td>
+<td class="num cur">140</td><td class="num ct">1,680,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="10" data-eff="150" data-mult="1.2">
+<td class="l">风之圣谕：风之刃</td><td>13121014</td><td>无</td><td>×1.2</td><td>10</td>
+<td class="num cur">150</td><td class="num ct">1,500,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="10" data-eff="140" data-mult="1.2">
+<td class="l">阿涅摩伊：强风</td><td>13121012</td><td>无</td><td>×1.2</td><td>10</td>
+<td class="num cur">140</td><td class="num ct">1,400,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="5" data-eff="200" data-mult="1.2">
+<td class="l">西尔芙之壁</td><td>13121004</td><td>无</td><td>×1.2</td><td>5</td>
+<td class="num cur">200</td><td class="num ct">1,000,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="5" data-eff="200" data-mult="1.2">
+<td class="l">西尔芙之壁：旋风</td><td>13121005</td><td>无</td><td>×1.2</td><td>5</td>
+<td class="num cur">200</td><td class="num ct">1,000,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="5" data-eff="200" data-mult="1.2">
+<td class="l">妖精护盾VI</td><td>13121009</td><td>无</td><td>×1.2</td><td>5</td>
+<td class="num cur">200</td><td class="num ct">1,000,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="5" data-eff="195" data-mult="1.2">
+<td class="l">风转奇想 <span class="flag" title="bulletCount≠attackCount，实际hit数需人工确认">⚠bc</span></td><td>13121003</td><td>无</td><td>×1.2</td><td>5</td>
+<td class="num cur">195</td><td class="num ct">975,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="5" data-eff="195" data-mult="1.2">
+<td class="l">风转奇想：精灵气息</td><td>13121018</td><td>无</td><td>×1.2</td><td>5</td>
+<td class="num cur">195</td><td class="num ct">975,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="7" data-eff="127" data-mult="1.2">
+<td class="l">风之圣谕：猛烈精灵气息</td><td>13121017</td><td>无</td><td>×1.2</td><td>7</td>
+<td class="num cur">127</td><td class="num ct">889,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="6" data-eff="140" data-mult="1.2">
+<td class="l">风之圣谕：欢快精灵气息</td><td>13121016</td><td>无</td><td>×1.2</td><td>6</td>
+<td class="num cur">140</td><td class="num ct">840,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="5" data-eff="132" data-mult="1.2">
+<td class="l">风之圣谕：精灵气息</td><td>13121015</td><td>无</td><td>×1.2</td><td>5</td>
+<td class="num cur">132</td><td class="num ct">660,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr></tbody>
+</table>
+</div><div class="class-block" id="夜行者" data-cls="夜行者">
+<div class="class-title">夜行者 <span class="cnt">(20个技能)</span></div>
+<div class="bl-picker">对比基准（4转最高攻击）：
+<select class="blsel"><option value="0" selected>[4转] 三连环光击破（14111005）140%×6hit = 840,000（bc=3、影子×2）</option><option value="1">[4转] 多重飞镖（14111002）240%×1hit = 240,000</option><option value="2">[4转] 毒炸弹（14111006）220%×1hit = 220,000</option><option value="3">[3转] 强力投掷（14100001）200%×1hit = 200,000（3转）</option><option value="4">[3转] 驱逐（14100005）130%×1hit = 130,000（3转）</option><option value="5">[3转] 吸血（14101006）30%×4hit = 120,000（3转）</option><option value="6">[4转] 武器用毒液（14110004）50%×1hit = 50,000</option></select>
+<button class="resetbtn" title="恢复默认">↺</button></div>
+<table>
+<thead><tr class="bl-row">
+<td class="l bl-name">—</td><td class="bl-id">—</td><td class="bl-cd">—</td><td>—</td><td class="bl-hits">—</td>
+<td class="num bl-eff">—</td><td class="num bl-total">—</td>
+<td class="num" colspan="3">基准总伤</td></tr></thead>
+<thead><tr><th class="l">技能名</th><th>ID</th><th>CD</th><th>倍率</th><th>hit</th>
+<th>当前%</th><th>当前总伤</th><th>目标总伤</th><th>目标%</th><th>调整</th></tr></thead>
+<tbody><tr data-hits="12" data-eff="175" data-mult="1.3">
+<td class="l">静谧之夜</td><td>14121032</td><td>25s</td><td>×1.3</td><td>12</td>
+<td class="num cur">175</td><td class="num ct">2,100,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="12" data-eff="175" data-mult="1.2">
+<td class="l">静谧之夜：开幕攻击</td><td>14121033</td><td>无</td><td>×1.2</td><td>12</td>
+<td class="num cur">175</td><td class="num ct">2,100,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="12" data-eff="175" data-mult="1.2">
+<td class="l">静谧之夜：追踪飞镖</td><td>14121034</td><td>无</td><td>×1.2</td><td>12</td>
+<td class="num cur">175</td><td class="num ct">2,100,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="14" data-eff="150" data-mult="1.3">
+<td class="l">冥河指令</td><td>14121035</td><td>25s</td><td>×1.3</td><td>14</td>
+<td class="num cur">150</td><td class="num ct">2,100,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="13" data-eff="160" data-mult="1.2">
+<td class="l">暗影投掷：终结</td><td>14121005</td><td>无</td><td>×1.2</td><td>13</td>
+<td class="num cur">160</td><td class="num ct">2,080,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="10" data-eff="200" data-mult="1.3">
+<td class="l">支配 VI</td><td>14121030</td><td>10s</td><td>×1.3</td><td>10</td>
+<td class="num cur">200</td><td class="num ct">2,000,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="14" data-eff="140" data-mult="1.2">
+<td class="l">冥河指令：连续攻击</td><td>14121031</td><td>无</td><td>×1.2</td><td>14</td>
+<td class="num cur">140</td><td class="num ct">1,960,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="15" data-eff="130" data-mult="1.2">
+<td class="l">冥河指令：终结</td><td>14121036</td><td>无</td><td>×1.2</td><td>15</td>
+<td class="num cur">130</td><td class="num ct">1,950,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="10" data-eff="190" data-mult="1.2">
+<td class="l">支配 VI：连续攻击</td><td>14121018</td><td>无</td><td>×1.2</td><td>10</td>
+<td class="num cur">190</td><td class="num ct">1,900,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="8" data-eff="125" data-mult="1.2">
+<td class="l">暗影吞噬 <span class="flag" title="bulletCount≠attackCount，实际hit数需人工确认">⚠bc</span></td><td>14121003</td><td>无</td><td>×1.2</td><td>8</td>
+<td class="num cur">125</td><td class="num ct">1,000,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="8" data-eff="125" data-mult="1.2">
+<td class="l">暗影吞噬：Boss命中</td><td>14121015</td><td>无</td><td>×1.2</td><td>8</td>
+<td class="num cur">125</td><td class="num ct">1,000,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="5" data-eff="195" data-mult="1.2">
+<td class="l">暗影投掷</td><td>14121004</td><td>无</td><td>×1.2</td><td>5</td>
+<td class="num cur">195</td><td class="num ct">975,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="5" data-eff="195" data-mult="1.2">
+<td class="l">暗影投掷：上段飞镖</td><td>14121006</td><td>无</td><td>×1.2</td><td>5</td>
+<td class="num cur">195</td><td class="num ct">975,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="5" data-eff="195" data-mult="1.2">
+<td class="l">暗影投掷：中段飞镖</td><td>14121007</td><td>无</td><td>×1.2</td><td>5</td>
+<td class="num cur">195</td><td class="num ct">975,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="5" data-eff="195" data-mult="1.2">
+<td class="l">暗影投掷：下段飞镖</td><td>14121008</td><td>无</td><td>×1.2</td><td>5</td>
+<td class="num cur">195</td><td class="num ct">975,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="8" data-eff="120" data-mult="1.2">
+<td class="l">暗影吞噬：普通命中</td><td>14121014</td><td>无</td><td>×1.2</td><td>8</td>
+<td class="num cur">120</td><td class="num ct">960,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="2" data-eff="480" data-mult="1.2">
+<td class="l">暗影吞噬：饥饿蝙蝠</td><td>14121017</td><td>无</td><td>×1.2</td><td>2</td>
+<td class="num cur">480</td><td class="num ct">960,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="6" data-eff="155" data-mult="1.2">
+<td class="l">闇黑天魔 VI</td><td>14121027</td><td>无</td><td>×1.2</td><td>6</td>
+<td class="num cur">155</td><td class="num ct">930,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="6" data-eff="155" data-mult="1.2">
+<td class="l">闇黑天魔 VI：持续攻击</td><td>14121028</td><td>无</td><td>×1.2</td><td>6</td>
+<td class="num cur">155</td><td class="num ct">930,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="1" data-eff="150" data-mult="1.2">
+<td class="l">暗影吞噬：暗影蝙蝠 <span class="flag" title="bulletCount≠attackCount，实际hit数需人工确认">⚠bc</span></td><td>14121016</td><td>无</td><td>×1.2</td><td>1</td>
+<td class="num cur">150</td><td class="num ct">150,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr></tbody>
+</table>
+</div><div class="class-block" id="奇袭者" data-cls="奇袭者">
+<div class="class-title">奇袭者 <span class="cnt">(30个技能)</span></div>
+<div class="bl-picker">对比基准（4转最高攻击）：
+<select class="blsel"><option value="0" selected>[4转] 光速拳（15111004）260%×6hit = 1,560,000</option><option value="1">[4转] 碎石乱击（15111003）650%×1hit = 650,000</option><option value="2">[3转] 贯骨击（15101003）420%×1hit = 420,000（3转）</option><option value="3">[4转] 能量耗转（15111001）360%×1hit = 360,000</option><option value="4">[3转] 能量爆破（15101005）360%×1hit = 360,000（3转）</option><option value="5">[4转] 鲨鱼波（15111007）270%×1hit = 270,000</option><option value="6">[4转] 必杀拳（15110000）200%×1hit = 200,000</option><option value="7">[4转] 闪光击（15111006）120%×1hit = 120,000（召唤）</option><option value="8">[3转] 雷鸣（15101006）120%×1hit = 120,000（3转、召唤）</option><option value="9">[3转] 能量获得（15100004）100%×1hit = 100,000（3转）</option></select>
+<button class="resetbtn" title="恢复默认">↺</button></div>
+<table>
+<thead><tr class="bl-row">
+<td class="l bl-name">—</td><td class="bl-id">—</td><td class="bl-cd">—</td><td>—</td><td class="bl-hits">—</td>
+<td class="num bl-eff">—</td><td class="num bl-total">—</td>
+<td class="num" colspan="3">基准总伤</td></tr></thead>
+<thead><tr><th class="l">技能名</th><th>ID</th><th>CD</th><th>倍率</th><th>hit</th>
+<th>当前%</th><th>当前总伤</th><th>目标总伤</th><th>目标%</th><th>调整</th></tr></thead>
+<tbody><tr data-hits="12" data-eff="175" data-mult="1.3">
+<td class="l">疾浪歼灭</td><td>15121019</td><td>25s</td><td>×1.3</td><td>12</td>
+<td class="num cur">175</td><td class="num ct">2,100,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="15" data-eff="140" data-mult="1.2">
+<td class="l">疾浪歼灭：激流</td><td>15121020</td><td>无</td><td>×1.2</td><td>15</td>
+<td class="num cur">140</td><td class="num ct">2,100,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="6" data-eff="167" data-mult="1.2">
+<td class="l">枪雷连击：巨大落雷</td><td>15121011</td><td>无</td><td>×1.2</td><td>6</td>
+<td class="num cur">167</td><td class="num ct">1,002,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="7" data-eff="143" data-mult="1.2">
+<td class="l">枪雷连击：终式</td><td>15121010</td><td>无</td><td>×1.2</td><td>7</td>
+<td class="num cur">143</td><td class="num ct">1,001,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="7" data-eff="143" data-mult="1.2">
+<td class="l">海神降临VI</td><td>15121016</td><td>无</td><td>×1.2</td><td>7</td>
+<td class="num cur">143</td><td class="num ct">1,001,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="7" data-eff="143" data-mult="1.2">
+<td class="l">浪驰雷掣：雷海冲击</td><td>15121018</td><td>无</td><td>×1.2</td><td>7</td>
+<td class="num cur">143</td><td class="num ct">1,001,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="5" data-eff="200" data-mult="1.2">
+<td class="l">枪雷连击</td><td>15121002</td><td>无</td><td>×1.2</td><td>5</td>
+<td class="num cur">200</td><td class="num ct">1,000,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="5" data-eff="200" data-mult="1.2">
+<td class="l">枪雷连击：一式</td><td>15121003</td><td>无</td><td>×1.2</td><td>5</td>
+<td class="num cur">200</td><td class="num ct">1,000,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="5" data-eff="200" data-mult="1.2">
+<td class="l">枪雷连击：二式</td><td>15121004</td><td>无</td><td>×1.2</td><td>5</td>
+<td class="num cur">200</td><td class="num ct">1,000,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="5" data-eff="200" data-mult="1.2">
+<td class="l">枪雷连击：三式</td><td>15121005</td><td>无</td><td>×1.2</td><td>5</td>
+<td class="num cur">200</td><td class="num ct">1,000,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="5" data-eff="200" data-mult="1.2">
+<td class="l">枪雷连击：四式</td><td>15121006</td><td>无</td><td>×1.2</td><td>5</td>
+<td class="num cur">200</td><td class="num ct">1,000,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="5" data-eff="200" data-mult="1.2">
+<td class="l">枪雷连击：五式</td><td>15121007</td><td>无</td><td>×1.2</td><td>5</td>
+<td class="num cur">200</td><td class="num ct">1,000,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="5" data-eff="200" data-mult="1.2">
+<td class="l">枪雷连击：六式</td><td>15121008</td><td>无</td><td>×1.2</td><td>5</td>
+<td class="num cur">200</td><td class="num ct">1,000,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="5" data-eff="200" data-mult="1.2">
+<td class="l">台风VI</td><td>15121015</td><td>无</td><td>×1.2</td><td>5</td>
+<td class="num cur">200</td><td class="num ct">1,000,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="5" data-eff="200" data-mult="1.3">
+<td class="l">浪驰雷掣</td><td>15121017</td><td>10s</td><td>×1.3</td><td>5</td>
+<td class="num cur">200</td><td class="num ct">1,000,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="3" data-eff="333" data-mult="1.2">
+<td class="l">海龙螺旋</td><td>15121000</td><td>无</td><td>×1.2</td><td>3</td>
+<td class="num cur">333</td><td class="num ct">999,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="3" data-eff="333" data-mult="1.2">
+<td class="l">海龙螺旋：持续攻击</td><td>15121021</td><td>无</td><td>×1.2</td><td>3</td>
+<td class="num cur">333</td><td class="num ct">999,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="4" data-eff="240" data-mult="1.2">
+<td class="l">枪雷连击：落雷</td><td>15121009</td><td>无</td><td>×1.2</td><td>4</td>
+<td class="num cur">240</td><td class="num ct">960,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="5" data-eff="190" data-mult="1.2">
+<td class="l">枪雷连击：第1击视觉</td><td>15121022</td><td>无</td><td>×1.2</td><td>5</td>
+<td class="num cur">190</td><td class="num ct">950,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="5" data-eff="190" data-mult="1.2">
+<td class="l">枪雷连击：第2击视觉</td><td>15121023</td><td>无</td><td>×1.2</td><td>5</td>
+<td class="num cur">190</td><td class="num ct">950,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="5" data-eff="190" data-mult="1.2">
+<td class="l">枪雷连击：第3击视觉</td><td>15121024</td><td>无</td><td>×1.2</td><td>5</td>
+<td class="num cur">190</td><td class="num ct">950,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="5" data-eff="190" data-mult="1.2">
+<td class="l">枪雷连击：第4击视觉</td><td>15121025</td><td>无</td><td>×1.2</td><td>5</td>
+<td class="num cur">190</td><td class="num ct">950,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="5" data-eff="190" data-mult="1.2">
+<td class="l">枪雷连击：第5击视觉</td><td>15121026</td><td>无</td><td>×1.2</td><td>5</td>
+<td class="num cur">190</td><td class="num ct">950,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="5" data-eff="190" data-mult="1.2">
+<td class="l">枪雷连击：第6击视觉</td><td>15121027</td><td>无</td><td>×1.2</td><td>5</td>
+<td class="num cur">190</td><td class="num ct">950,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="5" data-eff="190" data-mult="1.2">
+<td class="l">枪雷连击：第7击视觉</td><td>15121028</td><td>无</td><td>×1.2</td><td>5</td>
+<td class="num cur">190</td><td class="num ct">950,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="5" data-eff="190" data-mult="1.2">
+<td class="l">枪雷连击：第8击视觉</td><td>15121029</td><td>无</td><td>×1.2</td><td>5</td>
+<td class="num cur">190</td><td class="num ct">950,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="5" data-eff="190" data-mult="1.2">
+<td class="l">枪雷连击：第9击视觉</td><td>15121030</td><td>无</td><td>×1.2</td><td>5</td>
+<td class="num cur">190</td><td class="num ct">950,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="5" data-eff="190" data-mult="1.2">
+<td class="l">枪雷连击：第10击视觉</td><td>15121031</td><td>无</td><td>×1.2</td><td>5</td>
+<td class="num cur">190</td><td class="num ct">950,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="5" data-eff="190" data-mult="1.2">
+<td class="l">枪雷连击：第11击视觉</td><td>15121032</td><td>无</td><td>×1.2</td><td>5</td>
+<td class="num cur">190</td><td class="num ct">950,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="5" data-eff="190" data-mult="1.2">
+<td class="l">枪雷连击：第12击视觉</td><td>15121033</td><td>无</td><td>×1.2</td><td>5</td>
+<td class="num cur">190</td><td class="num ct">950,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr></tbody>
+</table>
+</div><div class="class-block" id="阿兰" data-cls="阿兰">
+<div class="class-title">阿兰 <span class="cnt">(4个技能)</span></div>
+<div class="bl-picker">对比基准（4转最高攻击）：
+<select class="blsel"><option value="0" selected>[4转] 幻影狼牙（21110004）800%×2hit = 1,600,000</option><option value="1">[3转] 斗气爆裂（21100004）700%×1hit = 700,000（3转）</option><option value="2">[4转] (hidden) 全力挥击 - 三重重击（21110008）350%×1hit = 350,000</option><option value="3">[3转] 三重重击（21100001）250%×1hit = 250,000（3转）</option><option value="4">[4转] （隐藏）全力挥击- 双重重击（21110007）110%×2hit = 220,000</option><option value="5">[4转] 旋风（21110006）120%×1hit = 120,000</option><option value="6">[4转] 终极投掷（21110003）110%×1hit = 110,000</option><option value="7">[4转] 冰雪矛（21111005）110%×1hit = 110,000（召唤）</option><option value="8">[3转] 抗压（21101003）100%×1hit = 100,000（3转、召唤）</option><option value="9">[3转] 战神突进（21100002）90%×1hit = 90,000（3转）</option><option value="10">[4转] 爆击强化（21110000）10%×1hit = 10,000</option></select>
+<button class="resetbtn" title="恢复默认">↺</button></div>
+<table>
+<thead><tr class="bl-row">
+<td class="l bl-name">—</td><td class="bl-id">—</td><td class="bl-cd">—</td><td>—</td><td class="bl-hits">—</td>
+<td class="num bl-eff">—</td><td class="num bl-total">—</td>
+<td class="num" colspan="3">基准总伤</td></tr></thead>
+<thead><tr><th class="l">技能名</th><th>ID</th><th>CD</th><th>倍率</th><th>hit</th>
+<th>当前%</th><th>当前总伤</th><th>目标总伤</th><th>目标%</th><th>调整</th></tr></thead>
+<tbody><tr data-hits="4" data-eff="1500" data-mult="1.2">
+<td class="l">钻石星辰</td><td>21120006</td><td>无</td><td>×1.2</td><td>4</td>
+<td class="num cur">1500</td><td class="num ct">6,000,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="1" data-eff="700" data-mult="1.2">
+<td class="l">巨熊咆哮</td><td>21120005</td><td>无</td><td>×1.2</td><td>1</td>
+<td class="num cur">700</td><td class="num ct">700,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="2" data-eff="240" data-mult="1.2">
+<td class="l">(隐藏) 战神之舞 - 三重重击</td><td>21120010</td><td>无</td><td>×1.2</td><td>2</td>
+<td class="num cur">240</td><td class="num ct">480,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="2" data-eff="170" data-mult="1.2">
+<td class="l">(隐藏) 战神之舞- 双重重击</td><td>21120009</td><td>无</td><td>×1.2</td><td>2</td>
+<td class="num cur">170</td><td class="num ct">340,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr></tbody>
+</table>
+</div><div class="class-block" id="英雄" data-cls="英雄">
+<div class="class-title">英雄 <span class="cnt">(7个技能)</span></div>
+<div class="bl-picker">对比基准（4转最高攻击）：
+<select class="blsel"><option value="0" selected>[4转] 轻舞飞扬（1121008）280%×4hit = 1,120,000</option><option value="1">[4转] 测试（1121001）275%×4hit = 1,100,000</option><option value="2">[3转] 狂乱之剑（1111003）350%×1hit = 350,000（3转）</option><option value="3">[3转] 狂乱之斧（1111004）350%×1hit = 350,000（3转）</option><option value="4">[3转] 气绝剑（1111005）200%×1hit = 200,000（3转）</option><option value="5">[3转] 气绝斧（1111006）200%×1hit = 200,000（3转）</option><option value="6">[4转] 进阶斗气（1120003）150%×1hit = 150,000</option><option value="7">[4转] 突进（1121006）130%×1hit = 130,000</option><option value="8">[3转] 虎咆哮（1111008）130%×1hit = 130,000（3转、cd=1）</option><option value="9">[3转] 斗气集中（1111002）120%×1hit = 120,000（3转、召唤）</option></select>
+<button class="resetbtn" title="恢复默认">↺</button></div>
+<table>
+<thead><tr class="bl-row">
+<td class="l bl-name">—</td><td class="bl-id">—</td><td class="bl-cd">—</td><td>—</td><td class="bl-hits">—</td>
+<td class="num bl-eff">—</td><td class="num bl-total">—</td>
+<td class="num" colspan="3">基准总伤</td></tr></thead>
+<thead><tr><th class="l">技能名</th><th>ID</th><th>CD</th><th>倍率</th><th>hit</th>
+<th>当前%</th><th>当前总伤</th><th>目标总伤</th><th>目标%</th><th>调整</th></tr></thead>
+<tbody><tr data-hits="14" data-eff="180" data-mult="1.3">
+<td class="l">圣剑降临</td><td>1121023</td><td>25s</td><td>×1.3</td><td>14</td>
+<td class="num cur">180</td><td class="num ct">2,520,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="14" data-eff="165" data-mult="1.3">
+<td class="l">斗气死亡断层</td><td>1121012</td><td>25s</td><td>×1.3</td><td>14</td>
+<td class="num cur">165</td><td class="num ct">2,310,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="12" data-eff="152" data-mult="1.3">
+<td class="l">燃烧灵魂之剑</td><td>1121014</td><td>25s</td><td>×1.3</td><td>12</td>
+<td class="num cur">152</td><td class="num ct">1,824,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="8" data-eff="180" data-mult="1.3">
+<td class="l">愤怒爆发VI</td><td>1121025</td><td>15s</td><td>×1.3</td><td>8</td>
+<td class="num cur">180</td><td class="num ct">1,440,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="4" data-eff="320" data-mult="1.2">
+<td class="l">烈焰翔斩VI</td><td>1121030</td><td>无</td><td>×1.2</td><td>4</td>
+<td class="num cur">320</td><td class="num ct">1,280,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="4" data-eff="250" data-mult="1.2">
+<td class="l">狂暴攻击VI</td><td>1121013</td><td>无</td><td>×1.2</td><td>4</td>
+<td class="num cur">250</td><td class="num ct">1,000,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="4" data-eff="235" data-mult="1.2">
+<td class="l">剑影分身</td><td>1121020</td><td>无</td><td>×1.2</td><td>4</td>
+<td class="num cur">235</td><td class="num ct">940,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr></tbody>
+</table>
+</div><div class="class-block" id="圣骑士" data-cls="圣骑士">
+<div class="class-title">圣骑士 <span class="cnt">(5个技能)</span></div>
+<div class="bl-picker">对比基准（4转最高攻击）：
+<select class="blsel"><option value="0" selected>[4转] 连环环破（1221009）300%×4hit = 1,200,000</option><option value="1">[4转] 圣域（1221011）900%×1hit = 900,000（cd=20）</option><option value="2">[4转] 万佛归一破（1220010）400%×1hit = 400,000</option><option value="3">[3转] 属性攻击（1211002）350%×1hit = 350,000（3转）</option><option value="4">[4转] 圣灵之剑（1221003）170%×1hit = 170,000（召唤）</option><option value="5">[4转] 圣灵之锤（1221004）170%×1hit = 170,000（召唤）</option><option value="6">[3转] 烈焰之剑（1211003）160%×1hit = 160,000（3转、召唤）</option><option value="7">[3转] 烈焰钝器（1211004）160%×1hit = 160,000（3转、召唤）</option><option value="8">[3转] 寒冰之剑（1211005）160%×1hit = 160,000（3转、召唤）</option><option value="9">[3转] 寒冰钝器（1211006）160%×1hit = 160,000（3转、召唤）</option><option value="10">[3转] 雷电之击：剑（1211007）160%×1hit = 160,000（3转、召唤）</option><option value="11">[3转] 雷电之击：钝器（1211008）160%×1hit = 160,000（3转、召唤）</option><option value="12">[4转] 突进（1221007）130%×1hit = 130,000</option></select>
+<button class="resetbtn" title="恢复默认">↺</button></div>
+<table>
+<thead><tr class="bl-row">
+<td class="l bl-name">—</td><td class="bl-id">—</td><td class="bl-cd">—</td><td>—</td><td class="bl-hits">—</td>
+<td class="num bl-eff">—</td><td class="num bl-total">—</td>
+<td class="num" colspan="3">基准总伤</td></tr></thead>
+<thead><tr><th class="l">技能名</th><th>ID</th><th>CD</th><th>倍率</th><th>hit</th>
+<th>当前%</th><th>当前总伤</th><th>目标总伤</th><th>目标%</th><th>调整</th></tr></thead>
+<tbody><tr data-hits="10" data-eff="245" data-mult="1.3">
+<td class="l">圣狮之主</td><td>1221030</td><td>25s</td><td>×1.3</td><td>10</td>
+<td class="num cur">245</td><td class="num ct">2,450,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="9" data-eff="250" data-mult="1.3">
+<td class="l">圣域展开</td><td>1221020</td><td>24s</td><td>×1.3</td><td>9</td>
+<td class="num cur">250</td><td class="num ct">2,250,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="8" data-eff="165" data-mult="1.2">
+<td class="l">鬼神之击VI</td><td>1221027</td><td>无</td><td>×1.2</td><td>8</td>
+<td class="num cur">165</td><td class="num ct">1,320,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="12" data-eff="105" data-mult="1.3">
+<td class="l">圣十字架</td><td>1221015</td><td>20s</td><td>×1.3</td><td>12</td>
+<td class="num cur">105</td><td class="num ct">1,260,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="6" data-eff="205" data-mult="1.2">
+<td class="l">雷神战锤</td><td>1221016</td><td>无</td><td>×1.2</td><td>6</td>
+<td class="num cur">205</td><td class="num ct">1,230,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr></tbody>
+</table>
+</div><div class="class-block" id="黑骑士" data-cls="黑骑士">
+<div class="class-title">黑骑士 <span class="cnt">(6个技能)</span></div>
+<div class="bl-picker">对比基准（4转最高攻击）：
+<select class="blsel"><option value="0" selected>[3转] 矛连击（1311002）260%×6hit = 1,560,000（3转）</option><option value="1">[3转] 枪连击（1311001）170%×6hit = 1,020,000（3转）</option><option value="2">[3转] 无双枪（1311003）380%×1hit = 380,000（3转）</option><option value="3">[3转] 龙之献祭（1311005）350%×1hit = 350,000（3转）</option><option value="4">[3转] 无双矛（1311004）250%×1hit = 250,000（3转）</option><option value="5">[3转] 龙咆哮（1311006）240%×1hit = 240,000（3转、cd=1）</option><option value="6">[4转] 突进（1321003）130%×1hit = 130,000</option><option value="7">[4转] 恶龙附身（1320006）100%×1hit = 100,000</option></select>
+<button class="resetbtn" title="恢复默认">↺</button></div>
+<table>
+<thead><tr class="bl-row">
+<td class="l bl-name">—</td><td class="bl-id">—</td><td class="bl-cd">—</td><td>—</td><td class="bl-hits">—</td>
+<td class="num bl-eff">—</td><td class="num bl-total">—</td>
+<td class="num" colspan="3">基准总伤</td></tr></thead>
+<thead><tr><th class="l">技能名</th><th>ID</th><th>CD</th><th>倍率</th><th>hit</th>
+<th>当前%</th><th>当前总伤</th><th>目标总伤</th><th>目标%</th><th>调整</th></tr></thead>
+<tbody><tr data-hits="12" data-eff="175" data-mult="1.3">
+<td class="l">黑暗统合VI</td><td>1321022</td><td>25s</td><td>×1.3</td><td>12</td>
+<td class="num cur">175</td><td class="num ct">2,100,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="12" data-eff="173" data-mult="1.3">
+<td class="l">黑暗契约</td><td>1321025</td><td>25s</td><td>×1.3</td><td>12</td>
+<td class="num cur">173</td><td class="num ct">2,076,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="8" data-eff="153" data-mult="1.2">
+<td class="l">枪刺旋风</td><td>1321015</td><td>无</td><td>×1.2</td><td>8</td>
+<td class="num cur">153</td><td class="num ct">1,224,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="7" data-eff="165" data-mult="1.2">
+<td class="l">断罪之枪</td><td>1321011</td><td>无</td><td>×1.2</td><td>7</td>
+<td class="num cur">165</td><td class="num ct">1,155,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="6" data-eff="183" data-mult="1.2">
+<td class="l">灭世永恒之枪</td><td>1321018</td><td>无</td><td>×1.2</td><td>6</td>
+<td class="num cur">183</td><td class="num ct">1,098,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="6" data-eff="168" data-mult="1.2">
+<td class="l">暗炎斩连杀VI</td><td>1321020</td><td>无</td><td>×1.2</td><td>6</td>
+<td class="num cur">168</td><td class="num ct">1,008,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr></tbody>
+</table>
+</div><div class="class-block" id="火毒大魔导士" data-cls="火毒大魔导士">
+<div class="class-title">火毒大魔导士 <span class="cnt">(7个技能)</span></div>
+<div class="bl-picker">对比基准（4转最高攻击）：
+<select class="blsel"><option value="0" selected>[4转] 天降落星（2121007）320%×4hit = 1,280,000（cd=1）</option><option value="1">[4转] 连环爆破（2121006）300%×4hit = 1,200,000</option><option value="2">[4转] 冰破魔兽（2121005）1000%×1hit = 1,000,000（召唤）</option><option value="3">[4转] 创世之破（2121001）450%×1hit = 450,000</option><option value="4">[4转] 火凤球（2121003）360%×1hit = 360,000</option><option value="5">[3转] 火毒合击（2111006）210%×1hit = 210,000（3转）</option><option value="6">[3转] 末日烈焰（2111002）130%×1hit = 130,000（3转）</option><option value="7">[3转] 致命毒雾（2111003）90%×1hit = 90,000（3转）</option></select>
+<button class="resetbtn" title="恢复默认">↺</button></div>
+<table>
+<thead><tr class="bl-row">
+<td class="l bl-name">—</td><td class="bl-id">—</td><td class="bl-cd">—</td><td>—</td><td class="bl-hits">—</td>
+<td class="num bl-eff">—</td><td class="num bl-total">—</td>
+<td class="num" colspan="3">基准总伤</td></tr></thead>
+<thead><tr><th class="l">技能名</th><th>ID</th><th>CD</th><th>倍率</th><th>hit</th>
+<th>当前%</th><th>当前总伤</th><th>目标总伤</th><th>目标%</th><th>调整</th></tr></thead>
+<tbody><tr data-hits="15" data-eff="135" data-mult="1.3">
+<td class="l">炙焰毒火VI</td><td>2121020</td><td>25s</td><td>×1.3</td><td>15</td>
+<td class="num cur">135</td><td class="num ct">2,025,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="12" data-eff="167" data-mult="1.3">
+<td class="l">火流星VI</td><td>2121028</td><td>25s</td><td>×1.3</td><td>12</td>
+<td class="num cur">167</td><td class="num ct">2,004,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="12" data-eff="160" data-mult="1.3">
+<td class="l">劇毒煉獄</td><td>2121032</td><td>25s</td><td>×1.3</td><td>12</td>
+<td class="num cur">160</td><td class="num ct">1,920,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="10" data-eff="140" data-mult="1.3">
+<td class="l">地獄爆發VI</td><td>2121022</td><td>15s</td><td>×1.3</td><td>10</td>
+<td class="num cur">140</td><td class="num ct">1,400,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="9" data-eff="120" data-mult="1.2">
+<td class="l">豪火烈焰</td><td>2121035</td><td>无</td><td>×1.2</td><td>9</td>
+<td class="num cur">120</td><td class="num ct">1,080,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="6" data-eff="167" data-mult="1.2">
+<td class="l">火炎神之怒號</td><td>2121012</td><td>无</td><td>×1.2</td><td>6</td>
+<td class="num cur">167</td><td class="num ct">1,002,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="7" data-eff="142" data-mult="1.2">
+<td class="l">火焰之襲VI</td><td>2121017</td><td>无</td><td>×1.2</td><td>7</td>
+<td class="num cur">142</td><td class="num ct">994,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr></tbody>
+</table>
+</div><div class="class-block" id="冰雷大魔导士" data-cls="冰雷大魔导士">
+<div class="class-title">冰雷大魔导士 <span class="cnt">(7个技能)</span></div>
+<div class="bl-picker">对比基准（4转最高攻击）：
+<select class="blsel"><option value="0">[4转] 火魔兽（2221005）1000%×1hit = 1,000,000（召唤）</option><option value="1" selected>[4转] 链环闪电（2221006）270%×2hit = 540,000</option><option value="2">[4转] 创世之破（2221001）450%×1hit = 450,000</option><option value="3">[4转] 落霜冰破（2221007）200%×2hit = 400,000（cd=1）</option><option value="4">[4转] 冰凤球（2221003）320%×1hit = 320,000</option><option value="5">[3转] 落雷枪（2211003）220%×1hit = 220,000（3转）</option><option value="6">[3转] 冰雷合击（2211006）190%×1hit = 190,000（3转）</option><option value="7">[3转] 冰咆哮（2211002）110%×1hit = 110,000（3转）</option></select>
+<button class="resetbtn" title="恢复默认">↺</button></div>
+<table>
+<thead><tr class="bl-row">
+<td class="l bl-name">—</td><td class="bl-id">—</td><td class="bl-cd">—</td><td>—</td><td class="bl-hits">—</td>
+<td class="num bl-eff">—</td><td class="num bl-total">—</td>
+<td class="num" colspan="3">基准总伤</td></tr></thead>
+<thead><tr><th class="l">技能名</th><th>ID</th><th>CD</th><th>倍率</th><th>hit</th>
+<th>当前%</th><th>当前总伤</th><th>目标总伤</th><th>目标%</th><th>调整</th></tr></thead>
+<tbody><tr data-hits="15" data-eff="140" data-mult="1.3">
+<td class="l">圆弧雷鸣</td><td>2221030</td><td>25s</td><td>×1.3</td><td>15</td>
+<td class="num cur">140</td><td class="num ct">2,100,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="15" data-eff="135" data-mult="1.3">
+<td class="l">落雷凝聚</td><td>2221010</td><td>25s</td><td>×1.3</td><td>15</td>
+<td class="num cur">135</td><td class="num ct">2,025,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="12" data-eff="125" data-mult="1.3">
+<td class="l">冰雪之精神</td><td>2221014</td><td>25s</td><td>×1.3</td><td>12</td>
+<td class="num cur">125</td><td class="num ct">1,500,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="12" data-eff="120" data-mult="1.3">
+<td class="l">暴风雪VI</td><td>2221020</td><td>25s</td><td>×1.3</td><td>12</td>
+<td class="num cur">120</td><td class="num ct">1,440,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="10" data-eff="102" data-mult="1.2">
+<td class="l">闪电连击VI</td><td>2221017</td><td>无</td><td>×1.2</td><td>10</td>
+<td class="num cur">102</td><td class="num ct">1,020,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="7" data-eff="143" data-mult="1.2">
+<td class="l">殛冻领域</td><td>2221027</td><td>无</td><td>×1.2</td><td>7</td>
+<td class="num cur">143</td><td class="num ct">1,001,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="4" data-eff="245" data-mult="1.2">
+<td class="l">极冻吐息</td><td>2221009</td><td>无</td><td>×1.2</td><td>4</td>
+<td class="num cur">245</td><td class="num ct">980,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr></tbody>
+</table>
+</div><div class="class-block" id="主教" data-cls="主教">
+<div class="class-title">主教 <span class="cnt">(8个技能)</span></div>
+<div class="bl-picker">对比基准（4转最高攻击）：
+<select class="blsel"><option value="0">[4转] 强化圣龙（2321003）3000%×1hit = 3,000,000（召唤）</option><option value="1" selected>[4转] 圣光普照（2321008）510%×2hit = 1,020,000（cd=1）</option><option value="2">[4转] 光芒飞箭（2321007）240%×3hit = 720,000</option><option value="3">[4转] 创世之破（2321001）450%×1hit = 450,000</option><option value="4">[3转] 圣龙召唤（2311006）200%×1hit = 200,000（3转、召唤）</option><option value="5">[3转] 圣光（2311004）150%×1hit = 150,000（3转）</option></select>
+<button class="resetbtn" title="恢复默认">↺</button></div>
+<table>
+<thead><tr class="bl-row">
+<td class="l bl-name">—</td><td class="bl-id">—</td><td class="bl-cd">—</td><td>—</td><td class="bl-hits">—</td>
+<td class="num bl-eff">—</td><td class="num bl-total">—</td>
+<td class="num" colspan="3">基准总伤</td></tr></thead>
+<thead><tr><th class="l">技能名</th><th>ID</th><th>CD</th><th>倍率</th><th>hit</th>
+<th>当前%</th><th>当前总伤</th><th>目标总伤</th><th>目标%</th><th>调整</th></tr></thead>
+<tbody><tr data-hits="12" data-eff="177" data-mult="1.3">
+<td class="l">天堂聖令</td><td>2321042</td><td>25s</td><td>×1.3</td><td>12</td>
+<td class="num cur">177</td><td class="num ct">2,124,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="10" data-eff="190" data-mult="1.3">
+<td class="l">天怒VI</td><td>2321033</td><td>25s</td><td>×1.3</td><td>10</td>
+<td class="num cur">190</td><td class="num ct">1,900,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="8" data-eff="165" data-mult="1.3">
+<td class="l">天堂神罰</td><td>2321037</td><td>25s</td><td>×1.3</td><td>8</td>
+<td class="num cur">165</td><td class="num ct">1,320,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="10" data-eff="115" data-mult="1.3">
+<td class="l">神之懲罰</td><td>2321024</td><td>5s</td><td>×1.3</td><td>10</td>
+<td class="num cur">115</td><td class="num ct">1,150,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="10" data-eff="110" data-mult="1.3">
+<td class="l">天秤之使</td><td>2321020</td><td>5s</td><td>×1.3</td><td>10</td>
+<td class="num cur">110</td><td class="num ct">1,100,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="7" data-eff="150" data-mult="1.2">
+<td class="l">天使之觸VI</td><td>2321032</td><td>无</td><td>×1.2</td><td>7</td>
+<td class="num cur">150</td><td class="num ct">1,050,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="10" data-eff="105" data-mult="1.2">
+<td class="l">天堂之門VI</td><td>2321035</td><td>无</td><td>×1.2</td><td>10</td>
+<td class="num cur">105</td><td class="num ct">1,050,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="5" data-eff="195" data-mult="1.2">
+<td class="l">天使之泉VI</td><td>2321031</td><td>无</td><td>×1.2</td><td>5</td>
+<td class="num cur">195</td><td class="num ct">975,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr></tbody>
+</table>
+</div><div class="class-block" id="箭神" data-cls="箭神">
+<div class="class-title">箭神 <span class="cnt">(7个技能)</span></div>
+<div class="bl-picker">对比基准（4转最高攻击）：
+<select class="blsel"><option value="0">[3转] 箭扫射（3111006）150%×4hit = 600,000（3转、bc=4）</option><option value="1">[3转] 箭雨（3111004）260%×1hit = 260,000（3转）</option><option value="2">[3转] 贯穿箭（3110001）250%×1hit = 250,000（3转）</option><option value="3">[3转] 烈火箭（3111003）240%×1hit = 240,000（3转）</option><option value="4" selected>[4转] 暴风箭雨（3121004）120%×1hit = 120,000</option><option value="5">[4转] 飞龙冲击波（3121003）100%×1hit = 100,000</option></select>
+<button class="resetbtn" title="恢复默认">↺</button></div>
+<table>
+<thead><tr class="bl-row">
+<td class="l bl-name">—</td><td class="bl-id">—</td><td class="bl-cd">—</td><td>—</td><td class="bl-hits">—</td>
+<td class="num bl-eff">—</td><td class="num bl-total">—</td>
+<td class="num" colspan="3">基准总伤</td></tr></thead>
+<thead><tr><th class="l">技能名</th><th>ID</th><th>CD</th><th>倍率</th><th>hit</th>
+<th>当前%</th><th>当前总伤</th><th>目标总伤</th><th>目标%</th><th>调整</th></tr></thead>
+<tbody><tr data-hits="12" data-eff="170" data-mult="1.3">
+<td class="l">波紋衝擊VI</td><td>3121028</td><td>25s</td><td>×1.3</td><td>12</td>
+<td class="num cur">170</td><td class="num ct">2,040,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="14" data-eff="145" data-mult="1.3">
+<td class="l">箭影紛飛</td><td>3121029</td><td>25s</td><td>×1.3</td><td>14</td>
+<td class="num cur">145</td><td class="num ct">2,030,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="7" data-eff="150" data-mult="1.2">
+<td class="l">箭雨</td><td>3121010</td><td>无</td><td>×1.2</td><td>7</td>
+<td class="num cur">150</td><td class="num ct">1,050,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="10" data-eff="105" data-mult="1.2">
+<td class="l">零點射擊</td><td>3121031</td><td>无</td><td>×1.2</td><td>10</td>
+<td class="num cur">105</td><td class="num ct">1,050,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="4" data-eff="245" data-mult="1.2">
+<td class="l">閃光幻象VI</td><td>3121026</td><td>无</td><td>×1.2</td><td>4</td>
+<td class="num cur">245</td><td class="num ct">980,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="1" data-eff="850" data-mult="1.3">
+<td class="l">召喚鳳凰VI</td><td>3121025</td><td>25s</td><td>×1.3</td><td>1</td>
+<td class="num cur">850</td><td class="num ct">850,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="5" data-eff="110" data-mult="1.2">
+<td class="l">驟雨狂矢VI</td><td>3121022</td><td>无</td><td>×1.2</td><td>5</td>
+<td class="num cur">110</td><td class="num ct">550,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr></tbody>
+</table>
+</div><div class="class-block" id="神射手" data-cls="神射手">
+<div class="class-title">神射手 <span class="cnt">(7个技能)</span></div>
+<div class="bl-picker">对比基准（4转最高攻击）：
+<select class="blsel"><option value="0" selected>[4转] 穿透箭（3221001）850%×1hit = 850,000</option><option value="1">[3转] 箭扫射（3211006）140%×6hit = 840,000（3转、bc=6）</option><option value="2">[3转] 贯穿箭（3210001）250%×1hit = 250,000（3转）</option><option value="3">[3转] 升龙弩（3211004）240%×1hit = 240,000（3转）</option><option value="4">[3转] 寒冰箭（3211003）210%×1hit = 210,000（3转）</option><option value="5">[4转] 飞龙冲击波（3221003）100%×1hit = 100,000</option></select>
+<button class="resetbtn" title="恢复默认">↺</button></div>
+<table>
+<thead><tr class="bl-row">
+<td class="l bl-name">—</td><td class="bl-id">—</td><td class="bl-cd">—</td><td>—</td><td class="bl-hits">—</td>
+<td class="num bl-eff">—</td><td class="num bl-total">—</td>
+<td class="num" colspan="3">基准总伤</td></tr></thead>
+<thead><tr><th class="l">技能名</th><th>ID</th><th>CD</th><th>倍率</th><th>hit</th>
+<th>当前%</th><th>当前总伤</th><th>目标总伤</th><th>目标%</th><th>调整</th></tr></thead>
+<tbody><tr data-hits="11" data-eff="183" data-mult="1.3">
+<td class="l">絕命板機</td><td>3221034</td><td>25s</td><td>×1.3</td><td>11</td>
+<td class="num cur">183</td><td class="num ct">2,013,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="12" data-eff="167" data-mult="1.3">
+<td class="l">能量弩矢</td><td>3221013</td><td>25s</td><td>×1.3</td><td>12</td>
+<td class="num cur">167</td><td class="num ct">2,004,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="14" data-eff="143" data-mult="1.3">
+<td class="l">真必殺狙擊</td><td>3221009</td><td>25s</td><td>×1.3</td><td>14</td>
+<td class="num cur">143</td><td class="num ct">2,002,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="7" data-eff="157" data-mult="1.2">
+<td class="l">迅捷射擊VI</td><td>3221030</td><td>无</td><td>×1.2</td><td>7</td>
+<td class="num cur">157</td><td class="num ct">1,099,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="7" data-eff="156" data-mult="1.2">
+<td class="l">裂空狙擊</td><td>3221032</td><td>无</td><td>×1.2</td><td>7</td>
+<td class="num cur">156</td><td class="num ct">1,092,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="9" data-eff="118" data-mult="1.2">
+<td class="l">狙殺之擊VI</td><td>3221031</td><td>无</td><td>×1.2</td><td>9</td>
+<td class="num cur">118</td><td class="num ct">1,062,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="3" data-eff="283" data-mult="1.3">
+<td class="l">召喚銀隼VI</td><td>3221029</td><td>25s</td><td>×1.3</td><td>3</td>
+<td class="num cur">283</td><td class="num ct">849,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr></tbody>
+</table>
+</div><div class="class-block" id="夜使者" data-cls="夜使者">
+<div class="class-title">夜使者 <span class="cnt">(7个技能)</span></div>
+<div class="bl-picker">对比基准（4转最高攻击）：
+<select class="blsel"><option value="0" selected>[4转] 三连环光击破（4121007）150%×6hit = 900,000（bc=3、影子×2）</option><option value="1">[4转] 忍者冲击（4121008）150%×2hit = 300,000</option><option value="2">[3转] 多重飞镖（4111005）240%×1hit = 240,000（3转）</option><option value="3">[4转] 忍者伏击（4121004）100%×1hit = 100,000</option><option value="4">[4转] 武器用毒液（4120005）60%×1hit = 60,000</option></select>
+<button class="resetbtn" title="恢复默认">↺</button></div>
+<table>
+<thead><tr class="bl-row">
+<td class="l bl-name">—</td><td class="bl-id">—</td><td class="bl-cd">—</td><td>—</td><td class="bl-hits">—</td>
+<td class="num bl-eff">—</td><td class="num bl-total">—</td>
+<td class="num" colspan="3">基准总伤</td></tr></thead>
+<thead><tr><th class="l">技能名</th><th>ID</th><th>CD</th><th>倍率</th><th>hit</th>
+<th>当前%</th><th>当前总伤</th><th>目标总伤</th><th>目标%</th><th>调整</th></tr></thead>
+<tbody><tr data-hits="13" data-eff="168" data-mult="1.3">
+<td class="l">致命突襲</td><td>4121028</td><td>25s</td><td>×1.3</td><td>13</td>
+<td class="num cur">168</td><td class="num ct">2,184,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="7" data-eff="140" data-mult="1.2">
+<td class="l">四星鏢雨VI</td><td>4121023</td><td>无</td><td>×1.2</td><td>7</td>
+<td class="num cur">140</td><td class="num ct">980,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="2" data-eff="425" data-mult="1.2">
+<td class="l">挑釁契約VI</td><td>4121019</td><td>无</td><td>×1.2</td><td>2</td>
+<td class="num cur">425</td><td class="num ct">850,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="7" data-eff="120" data-mult="1.2">
+<td class="l">穢土轉生VI</td><td>4121022</td><td>无</td><td>×1.2</td><td>7</td>
+<td class="num cur">120</td><td class="num ct">840,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="7" data-eff="118" data-mult="1.2">
+<td class="l">禁咒之符</td><td>4121026</td><td>无</td><td>×1.2</td><td>7</td>
+<td class="num cur">118</td><td class="num ct">826,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="7" data-eff="115" data-mult="1.2">
+<td class="l">風魔手裏劍</td><td>4121011</td><td>无</td><td>×1.2</td><td>7</td>
+<td class="num cur">115</td><td class="num ct">805,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="4" data-eff="200" data-mult="1.2">
+<td class="l">四飛閃VI</td><td>4121016</td><td>无</td><td>×1.2</td><td>4</td>
+<td class="num cur">200</td><td class="num ct">800,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr></tbody>
+</table>
+</div><div class="class-block" id="暗影双刀" data-cls="暗影双刀">
+<div class="class-title">暗影双刀 <span class="cnt">(9个技能)</span></div>
+<div class="bl-picker">对比基准（4转最高攻击）：
+<select class="blsel"><option value="0" selected>[4转] 暗杀（4221001）950%×3hit = 2,850,000</option><option value="1">[4转] 一出双击（4221007）600%×2hit = 1,200,000</option><option value="2">[3转] 落叶斩（4211002）500%×1hit = 500,000（3转）</option><option value="3">[3转] 分身术（4211004）300%×1hit = 300,000（3转）</option><option value="4">[4转] 忍者伏击（4221004）100%×1hit = 100,000</option><option value="5">[4转] 武器用毒液（4220005）60%×1hit = 60,000</option></select>
+<button class="resetbtn" title="恢复默认">↺</button></div>
+<table>
+<thead><tr class="bl-row">
+<td class="l bl-name">—</td><td class="bl-id">—</td><td class="bl-cd">—</td><td>—</td><td class="bl-hits">—</td>
+<td class="num bl-eff">—</td><td class="num bl-total">—</td>
+<td class="num" colspan="3">基准总伤</td></tr></thead>
+<thead><tr><th class="l">技能名</th><th>ID</th><th>CD</th><th>倍率</th><th>hit</th>
+<th>当前%</th><th>当前总伤</th><th>目标总伤</th><th>目标%</th><th>调整</th></tr></thead>
+<tbody><tr data-hits="11" data-eff="190" data-mult="1.3">
+<td class="l">閻王敕令</td><td>4221027</td><td>25s</td><td>×1.3</td><td>11</td>
+<td class="num cur">190</td><td class="num ct">2,090,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="7" data-eff="170" data-mult="1.2">
+<td class="l">暴風刃</td><td>4221009</td><td>无</td><td>×1.2</td><td>7</td>
+<td class="num cur">170</td><td class="num ct">1,190,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="6" data-eff="185" data-mult="1.2">
+<td class="l">幻影劍VI</td><td>4221018</td><td>无</td><td>×1.2</td><td>6</td>
+<td class="num cur">185</td><td class="num ct">1,110,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="7" data-eff="157" data-mult="1.2">
+<td class="l">炎獄修羅斬</td><td>4221010</td><td>无</td><td>×1.2</td><td>7</td>
+<td class="num cur">157</td><td class="num ct">1,099,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="7" data-eff="136" data-mult="1.2">
+<td class="l">穢土轉生VI</td><td>4221022</td><td>无</td><td>×1.2</td><td>7</td>
+<td class="num cur">136</td><td class="num ct">952,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="6" data-eff="158" data-mult="1.2">
+<td class="l">修羅VI</td><td>4221019</td><td>无</td><td>×1.2</td><td>6</td>
+<td class="num cur">158</td><td class="num ct">948,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="7" data-eff="132" data-mult="1.2">
+<td class="l">疾刃颶風</td><td>4221011</td><td>无</td><td>×1.2</td><td>7</td>
+<td class="num cur">132</td><td class="num ct">924,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="5" data-eff="180" data-mult="1.2">
+<td class="l">短刀護佑VI</td><td>4221020</td><td>无</td><td>×1.2</td><td>5</td>
+<td class="num cur">180</td><td class="num ct">900,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="5" data-eff="175" data-mult="1.2">
+<td class="l">無盡阿修羅</td><td>4221023</td><td>无</td><td>×1.2</td><td>5</td>
+<td class="num cur">175</td><td class="num ct">875,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr></tbody>
+</table>
+</div><div class="class-block" id="拳霸" data-cls="拳霸">
+<div class="class-title">拳霸 <span class="cnt">(8个技能)</span></div>
+<div class="bl-picker">对比基准（4转最高攻击）：
+<select class="blsel"><option value="0" selected>[4转] 金手指（5121004）300%×8hit = 2,400,000</option><option value="1">[4转] 光速拳（5121007）330%×6hit = 1,980,000</option><option value="2">[4转] 潜龙出渊（5121001）900%×1hit = 900,000</option><option value="3">[4转] 超能量（5121002）900%×1hit = 900,000</option><option value="4">[3转] 碎石乱击（5111006）700%×1hit = 700,000（3转）</option><option value="5">[4转] 索命（5121005）600%×1hit = 600,000</option><option value="6">[3转] 能量爆破（5111002）420%×1hit = 420,000（3转）</option><option value="7">[3转] 能量耗转（5111004）360%×1hit = 360,000（3转）</option><option value="8">[3转] 能量获得（5110001）200%×1hit = 200,000（3转）</option><option value="9">[3转] 迷惑攻击（5110000）160%×1hit = 160,000（3转）</option></select>
+<button class="resetbtn" title="恢复默认">↺</button></div>
+<table>
+<thead><tr class="bl-row">
+<td class="l bl-name">—</td><td class="bl-id">—</td><td class="bl-cd">—</td><td>—</td><td class="bl-hits">—</td>
+<td class="num bl-eff">—</td><td class="num bl-total">—</td>
+<td class="num" colspan="3">基准总伤</td></tr></thead>
+<thead><tr><th class="l">技能名</th><th>ID</th><th>CD</th><th>倍率</th><th>hit</th>
+<th>当前%</th><th>当前总伤</th><th>目标总伤</th><th>目标%</th><th>调整</th></tr></thead>
+<tbody><tr data-hits="12" data-eff="176" data-mult="1.3">
+<td class="l">強力打擊</td><td>5121035</td><td>25s</td><td>×1.3</td><td>12</td>
+<td class="num cur">176</td><td class="num ct">2,112,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="13" data-eff="146" data-mult="1.3">
+<td class="l">海龍霸拳</td><td>5121029</td><td>25s</td><td>×1.3</td><td>13</td>
+<td class="num cur">146</td><td class="num ct">1,898,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="10" data-eff="100" data-mult="1.3">
+<td class="l">海龍衝鋒</td><td>5121014</td><td>25s</td><td>×1.3</td><td>10</td>
+<td class="num cur">100</td><td class="num ct">1,000,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="7" data-eff="140" data-mult="1.3">
+<td class="l">戰艦鯨魚號VI</td><td>5121024</td><td>10s</td><td>×1.3</td><td>7</td>
+<td class="num cur">140</td><td class="num ct">980,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="6" data-eff="160" data-mult="1.2">
+<td class="l">海龍正拳</td><td>5121015</td><td>无</td><td>×1.2</td><td>6</td>
+<td class="num cur">160</td><td class="num ct">960,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="8" data-eff="119" data-mult="1.2">
+<td class="l">海龍VI</td><td>5121017</td><td>无</td><td>×1.2</td><td>8</td>
+<td class="num cur">119</td><td class="num ct">952,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="4" data-eff="238" data-mult="1.2">
+<td class="l">勾拳爆破VI</td><td>5121028</td><td>无</td><td>×1.2</td><td>4</td>
+<td class="num cur">238</td><td class="num ct">952,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="6" data-eff="158" data-mult="1.2">
+<td class="l">海龍石VI</td><td>5121025</td><td>无</td><td>×1.2</td><td>6</td>
+<td class="num cur">158</td><td class="num ct">948,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr></tbody>
+</table>
+</div><div class="class-block" id="枪神" data-cls="枪神">
+<div class="class-title">枪神 <span class="cnt">(8个技能)</span></div>
+<div class="bl-picker">对比基准（4转最高攻击）：
+<select class="blsel"><option value="0" selected>[4转] 急速射（5221007）380%×4hit = 1,520,000（bc=4）</option><option value="1">[4转] 地毯式空袭（5221003）1200%×1hit = 1,200,000（cd=5）</option><option value="2">[4转] 重量炮击（5221008）780%×1hit = 780,000</option><option value="3">[3转] 三连射杀（5210000）230%×3hit = 690,000（3转、bc=3）</option><option value="4">[4转] 导航辅助（5220011）580%×1hit = 580,000</option><option value="5">[3转] 导航（5211006）380%×1hit = 380,000（3转）</option><option value="6">[4转] 属性强化（5220001）200%×1hit = 200,000</option><option value="7">[4转] 金属风暴（5221004）200%×1hit = 200,000</option></select>
+<button class="resetbtn" title="恢复默认">↺</button></div>
+<table>
+<thead><tr class="bl-row">
+<td class="l bl-name">—</td><td class="bl-id">—</td><td class="bl-cd">—</td><td>—</td><td class="bl-hits">—</td>
+<td class="num bl-eff">—</td><td class="num bl-total">—</td>
+<td class="num" colspan="3">基准总伤</td></tr></thead>
+<thead><tr><th class="l">技能名</th><th>ID</th><th>CD</th><th>倍率</th><th>hit</th>
+<th>当前%</th><th>当前总伤</th><th>目标总伤</th><th>目标%</th><th>调整</th></tr></thead>
+<tbody><tr data-hits="15" data-eff="141" data-mult="1.3">
+<td class="l">死亡之眼</td><td>5221012</td><td>25s</td><td>×1.3</td><td>15</td>
+<td class="num cur">141</td><td class="num ct">2,115,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="12" data-eff="176" data-mult="1.3">
+<td class="l">非常召集</td><td>5221032</td><td>25s</td><td>×1.3</td><td>12</td>
+<td class="num cur">176</td><td class="num ct">2,112,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="12" data-eff="176" data-mult="1.3">
+<td class="l">爆裂散射</td><td>5221034</td><td>25s</td><td>×1.3</td><td>12</td>
+<td class="num cur">176</td><td class="num ct">2,112,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="13" data-eff="162" data-mult="1.3">
+<td class="l">爆頭射擊VI</td><td>5221022</td><td>25s</td><td>×1.3</td><td>13</td>
+<td class="num cur">162</td><td class="num ct">2,106,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="7" data-eff="136" data-mult="1.2">
+<td class="l">槍彈盛宴</td><td>5221011</td><td>无</td><td>×1.2</td><td>7</td>
+<td class="num cur">136</td><td class="num ct">952,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="4" data-eff="238" data-mult="1.2">
+<td class="l">霸王射VI</td><td>5221024</td><td>无</td><td>×1.2</td><td>4</td>
+<td class="num cur">238</td><td class="num ct">952,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="7" data-eff="136" data-mult="1.3">
+<td class="l">戰艦鯨魚號VI</td><td>5221030</td><td>10s</td><td>×1.3</td><td>7</td>
+<td class="num cur">136</td><td class="num ct">952,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr><tr data-hits="6" data-eff="158" data-mult="1.3">
+<td class="l">鯨魚號突擊</td><td>5221013</td><td>10s</td><td>×1.3</td><td>6</td>
+<td class="num cur">158</td><td class="num ct">948,000</td>
+<td class="num tt"></td><td class="num tgt tdmg"></td><td class="num adj"></td>
+</tr></tbody>
+</table>
+</div>
+<script>
+const CANDS = {"魂骑士": [{"id": "11111004", "name": "轻舞飞扬", "eff": 230, "ac": 2, "bc": 1, "hits": 2, "total": 460, "cool": 0, "time": 0, "book": "1111", "tag": "4转", "shadow": false}, {"id": "11111002", "name": "恐慌", "eff": 320, "ac": 1, "bc": 1, "hits": 1, "total": 320, "cool": 0, "time": 7, "book": "1111", "tag": "4转", "shadow": false}, {"id": "11111006", "name": "灵魂突刺", "eff": 75, "ac": 4, "bc": 1, "hits": 4, "total": 300, "cool": 0, "time": 0, "book": "1111", "tag": "4转", "shadow": false}, {"id": "11101002", "name": "终极剑", "eff": 250, "ac": 1, "bc": 1, "hits": 1, "total": 250, "cool": 0, "time": 300, "book": "1110", "tag": "3转", "shadow": false}, {"id": "11101004", "name": "灵魂之刃", "eff": 180, "ac": 1, "bc": 1, "hits": 1, "total": 180, "cool": 0, "time": 0, "book": "1110", "tag": "3转", "shadow": false}, {"id": "11111003", "name": "昏迷", "eff": 170, "ac": 1, "bc": 1, "hits": 1, "total": 170, "cool": 0, "time": 3, "book": "1111", "tag": "4转", "shadow": false}, {"id": "11110005", "name": "进阶斗气", "eff": 140, "ac": 1, "bc": 1, "hits": 1, "total": 140, "cool": 0, "time": 0, "book": "1111", "tag": "4转", "shadow": false}, {"id": "11111001", "name": "斗气集中", "eff": 120, "ac": 1, "bc": 1, "hits": 1, "total": 120, "cool": 0, "time": 200, "book": "1111", "tag": "4转", "shadow": false}, {"id": "11111007", "name": "灵魂属性", "eff": 120, "ac": 1, "bc": 1, "hits": 1, "total": 120, "cool": 0, "time": 300, "book": "1111", "tag": "4转", "shadow": false}], "炎术士": [{"id": "12111003", "name": "天降落星", "eff": 260, "ac": 2, "bc": 1, "hits": 2, "total": 520, "cool": 1, "time": 0, "book": "1211", "tag": "4转", "shadow": false}, {"id": "12111004", "name": "火魔兽", "eff": 500, "ac": 1, "bc": 1, "hits": 1, "total": 500, "cool": 0, "time": 200, "book": "1211", "tag": "4转", "shadow": false}, {"id": "12111006", "name": "火风暴", "eff": 210, "ac": 2, "bc": 1, "hits": 2, "total": 420, "cool": 0, "time": 0, "book": "1211", "tag": "4转", "shadow": false}, {"id": "12101002", "name": "火焰箭", "eff": 150, "ac": 1, "bc": 1, "hits": 1, "total": 150, "cool": 0, "time": 0, "book": "1210", "tag": "3转", "shadow": false}, {"id": "12111005", "name": "火牢术屏障", "eff": 80, "ac": 1, "bc": 1, "hits": 1, "total": 80, "cool": 0, "time": 40, "book": "1211", "tag": "4转", "shadow": false}, {"id": "12101006", "name": "火柱", "eff": 80, "ac": 1, "bc": 1, "hits": 1, "total": 80, "cool": 0, "time": 0, "book": "1210", "tag": "3转", "shadow": false}, {"id": "12101000", "name": "精神力", "eff": 40, "ac": 1, "bc": 1, "hits": 1, "total": 40, "cool": 0, "time": 200, "book": "1210", "tag": "3转", "shadow": false}], "风灵使者": [{"id": "13111007", "name": "疾风扫射", "eff": 350, "ac": 1, "bc": 3, "hits": 3, "total": 1050, "cool": 0, "time": 0, "book": "1311", "tag": "4转", "shadow": false}, {"id": "13111001", "name": "箭扫射", "eff": 150, "ac": 1, "bc": 4, "hits": 4, "total": 600, "cool": 0, "time": 0, "book": "1311", "tag": "4转", "shadow": false}, {"id": "13111006", "name": "风灵穿越", "eff": 550, "ac": 1, "bc": 1, "hits": 1, "total": 550, "cool": 0, "time": 0, "book": "1311", "tag": "4转", "shadow": false}, {"id": "13111000", "name": "箭雨", "eff": 260, "ac": 1, "bc": 1, "hits": 1, "total": 260, "cool": 0, "time": 0, "book": "1311", "tag": "4转", "shadow": false}, {"id": "13101002", "name": "终极弓", "eff": 250, "ac": 1, "bc": 1, "hits": 1, "total": 250, "cool": 0, "time": 300, "book": "1310", "tag": "3转", "shadow": false}, {"id": "13101006", "name": "风影漫步", "eff": 130, "ac": 1, "bc": 1, "hits": 1, "total": 130, "cool": 0, "time": 20, "book": "1310", "tag": "3转", "shadow": false}, {"id": "13111002", "name": "暴风箭雨", "eff": 110, "ac": 1, "bc": 1, "hits": 1, "total": 110, "cool": 0, "time": 0, "book": "1311", "tag": "4转", "shadow": false}, {"id": "13101005", "name": "暴风射击", "eff": 160, "ac": 1, "bc": 0, "hits": 0, "total": 0, "cool": 0, "time": 0, "book": "1310", "tag": "3转", "shadow": false}], "夜行者": [{"id": "14111005", "name": "三连环光击破", "eff": 140, "ac": 1, "bc": 3, "hits": 6, "total": 840, "cool": 0, "time": 0, "book": "1411", "tag": "4转", "shadow": true}, {"id": "14111002", "name": "多重飞镖", "eff": 240, "ac": 1, "bc": 1, "hits": 1, "total": 240, "cool": 0, "time": 0, "book": "1411", "tag": "4转", "shadow": false}, {"id": "14111006", "name": "毒炸弹", "eff": 220, "ac": 1, "bc": 1, "hits": 1, "total": 220, "cool": 0, "time": 40, "book": "1411", "tag": "4转", "shadow": false}, {"id": "14100001", "name": "强力投掷", "eff": 200, "ac": 1, "bc": 1, "hits": 1, "total": 200, "cool": 0, "time": 0, "book": "1410", "tag": "3转", "shadow": false}, {"id": "14100005", "name": "驱逐", "eff": 130, "ac": 1, "bc": 1, "hits": 1, "total": 130, "cool": 0, "time": 0, "book": "1410", "tag": "3转", "shadow": false}, {"id": "14101006", "name": "吸血", "eff": 30, "ac": 4, "bc": 1, "hits": 4, "total": 120, "cool": 0, "time": 0, "book": "1410", "tag": "3转", "shadow": false}, {"id": "14110004", "name": "武器用毒液", "eff": 50, "ac": 1, "bc": 1, "hits": 1, "total": 50, "cool": 0, "time": 3, "book": "1411", "tag": "4转", "shadow": false}], "奇袭者": [{"id": "15111004", "name": "光速拳", "eff": 260, "ac": 6, "bc": 1, "hits": 6, "total": 1560, "cool": 0, "time": 0, "book": "1511", "tag": "4转", "shadow": false}, {"id": "15111003", "name": "碎石乱击", "eff": 650, "ac": 1, "bc": 1, "hits": 1, "total": 650, "cool": 0, "time": 0, "book": "1511", "tag": "4转", "shadow": false}, {"id": "15101003", "name": "贯骨击", "eff": 420, "ac": 1, "bc": 1, "hits": 1, "total": 420, "cool": 0, "time": 0, "book": "1510", "tag": "3转", "shadow": false}, {"id": "15111001", "name": "能量耗转", "eff": 360, "ac": 1, "bc": 1, "hits": 1, "total": 360, "cool": 0, "time": 0, "book": "1511", "tag": "4转", "shadow": false}, {"id": "15101005", "name": "能量爆破", "eff": 360, "ac": 1, "bc": 1, "hits": 1, "total": 360, "cool": 0, "time": 0, "book": "1510", "tag": "3转", "shadow": false}, {"id": "15111007", "name": "鲨鱼波", "eff": 270, "ac": 1, "bc": 1, "hits": 1, "total": 270, "cool": 0, "time": 0, "book": "1511", "tag": "4转", "shadow": false}, {"id": "15110000", "name": "必杀拳", "eff": 200, "ac": 1, "bc": 1, "hits": 1, "total": 200, "cool": 0, "time": 0, "book": "1511", "tag": "4转", "shadow": false}, {"id": "15111006", "name": "闪光击", "eff": 120, "ac": 1, "bc": 1, "hits": 1, "total": 120, "cool": 0, "time": 240, "book": "1511", "tag": "4转", "shadow": false}, {"id": "15101006", "name": "雷鸣", "eff": 120, "ac": 1, "bc": 1, "hits": 1, "total": 120, "cool": 0, "time": 140, "book": "1510", "tag": "3转", "shadow": false}, {"id": "15100004", "name": "能量获得", "eff": 100, "ac": 1, "bc": 1, "hits": 1, "total": 100, "cool": 0, "time": 50, "book": "1510", "tag": "3转", "shadow": false}], "阿兰": [{"id": "21110004", "name": "幻影狼牙", "eff": 800, "ac": 2, "bc": 1, "hits": 2, "total": 1600, "cool": 0, "time": 0, "book": "2111", "tag": "4转", "shadow": false}, {"id": "21100004", "name": "斗气爆裂", "eff": 700, "ac": 1, "bc": 1, "hits": 1, "total": 700, "cool": 0, "time": 0, "book": "2110", "tag": "3转", "shadow": false}, {"id": "21110008", "name": "(hidden) 全力挥击 - 三重重击", "eff": 350, "ac": 1, "bc": 1, "hits": 1, "total": 350, "cool": 0, "time": 0, "book": "2111", "tag": "4转", "shadow": false}, {"id": "21100001", "name": "三重重击", "eff": 250, "ac": 1, "bc": 1, "hits": 1, "total": 250, "cool": 0, "time": 0, "book": "2110", "tag": "3转", "shadow": false}, {"id": "21110007", "name": "（隐藏）全力挥击- 双重重击", "eff": 110, "ac": 2, "bc": 1, "hits": 2, "total": 220, "cool": 0, "time": 0, "book": "2111", "tag": "4转", "shadow": false}, {"id": "21110006", "name": "旋风", "eff": 120, "ac": 1, "bc": 1, "hits": 1, "total": 120, "cool": 0, "time": 1, "book": "2111", "tag": "4转", "shadow": false}, {"id": "21110003", "name": "终极投掷", "eff": 110, "ac": 1, "bc": 1, "hits": 1, "total": 110, "cool": 0, "time": 0, "book": "2111", "tag": "4转", "shadow": false}, {"id": "21111005", "name": "冰雪矛", "eff": 110, "ac": 1, "bc": 1, "hits": 1, "total": 110, "cool": 0, "time": 200, "book": "2111", "tag": "4转", "shadow": false}, {"id": "21101003", "name": "抗压", "eff": 100, "ac": 1, "bc": 1, "hits": 1, "total": 100, "cool": 0, "time": 120, "book": "2110", "tag": "3转", "shadow": false}, {"id": "21100002", "name": "战神突进", "eff": 90, "ac": 1, "bc": 1, "hits": 1, "total": 90, "cool": 0, "time": 0, "book": "2110", "tag": "3转", "shadow": false}, {"id": "21110000", "name": "爆击强化", "eff": 10, "ac": 1, "bc": 1, "hits": 1, "total": 10, "cool": 0, "time": 0, "book": "2111", "tag": "4转", "shadow": false}], "英雄": [{"id": "1121008", "name": "轻舞飞扬", "eff": 280, "ac": 4, "bc": 1, "hits": 4, "total": 1120, "cool": 0, "time": 0, "book": "112", "tag": "4转", "shadow": false}, {"id": "1121001", "name": "测试", "eff": 275, "ac": 4, "bc": 1, "hits": 4, "total": 1100, "cool": 0, "time": 0, "book": "112", "tag": "4转", "shadow": false}, {"id": "1111003", "name": "狂乱之剑", "eff": 350, "ac": 1, "bc": 1, "hits": 1, "total": 350, "cool": 0, "time": 9, "book": "111", "tag": "3转", "shadow": false}, {"id": "1111004", "name": "狂乱之斧", "eff": 350, "ac": 1, "bc": 1, "hits": 1, "total": 350, "cool": 0, "time": 9, "book": "111", "tag": "3转", "shadow": false}, {"id": "1111005", "name": "气绝剑", "eff": 200, "ac": 1, "bc": 1, "hits": 1, "total": 200, "cool": 0, "time": 4, "book": "111", "tag": "3转", "shadow": false}, {"id": "1111006", "name": "气绝斧", "eff": 200, "ac": 1, "bc": 1, "hits": 1, "total": 200, "cool": 0, "time": 4, "book": "111", "tag": "3转", "shadow": false}, {"id": "1120003", "name": "进阶斗气", "eff": 150, "ac": 1, "bc": 1, "hits": 1, "total": 150, "cool": 0, "time": 0, "book": "112", "tag": "4转", "shadow": false}, {"id": "1121006", "name": "突进", "eff": 130, "ac": 1, "bc": 1, "hits": 1, "total": 130, "cool": 0, "time": 0, "book": "112", "tag": "4转", "shadow": false}, {"id": "1111008", "name": "虎咆哮", "eff": 130, "ac": 1, "bc": 1, "hits": 1, "total": 130, "cool": 1, "time": 10, "book": "111", "tag": "3转", "shadow": false}, {"id": "1111002", "name": "斗气集中", "eff": 120, "ac": 1, "bc": 1, "hits": 1, "total": 120, "cool": 0, "time": 200, "book": "111", "tag": "3转", "shadow": false}], "圣骑士": [{"id": "1221009", "name": "连环环破", "eff": 300, "ac": 4, "bc": 1, "hits": 4, "total": 1200, "cool": 0, "time": 0, "book": "122", "tag": "4转", "shadow": false}, {"id": "1221011", "name": "圣域", "eff": 900, "ac": 1, "bc": 1, "hits": 1, "total": 900, "cool": 20, "time": 0, "book": "122", "tag": "4转", "shadow": false}, {"id": "1220010", "name": "万佛归一破", "eff": 400, "ac": 1, "bc": 1, "hits": 1, "total": 400, "cool": 0, "time": 0, "book": "122", "tag": "4转", "shadow": false}, {"id": "1211002", "name": "属性攻击", "eff": 350, "ac": 1, "bc": 1, "hits": 1, "total": 350, "cool": 0, "time": 4, "book": "121", "tag": "3转", "shadow": false}, {"id": "1221003", "name": "圣灵之剑", "eff": 170, "ac": 1, "bc": 1, "hits": 1, "total": 170, "cool": 0, "time": 300, "book": "122", "tag": "4转", "shadow": false}, {"id": "1221004", "name": "圣灵之锤", "eff": 170, "ac": 1, "bc": 1, "hits": 1, "total": 170, "cool": 0, "time": 300, "book": "122", "tag": "4转", "shadow": false}, {"id": "1211003", "name": "烈焰之剑", "eff": 160, "ac": 1, "bc": 1, "hits": 1, "total": 160, "cool": 0, "time": 300, "book": "121", "tag": "3转", "shadow": false}, {"id": "1211004", "name": "烈焰钝器", "eff": 160, "ac": 1, "bc": 1, "hits": 1, "total": 160, "cool": 0, "time": 300, "book": "121", "tag": "3转", "shadow": false}, {"id": "1211005", "name": "寒冰之剑", "eff": 160, "ac": 1, "bc": 1, "hits": 1, "total": 160, "cool": 0, "time": 300, "book": "121", "tag": "3转", "shadow": false}, {"id": "1211006", "name": "寒冰钝器", "eff": 160, "ac": 1, "bc": 1, "hits": 1, "total": 160, "cool": 0, "time": 300, "book": "121", "tag": "3转", "shadow": false}, {"id": "1211007", "name": "雷电之击：剑", "eff": 160, "ac": 1, "bc": 1, "hits": 1, "total": 160, "cool": 0, "time": 300, "book": "121", "tag": "3转", "shadow": false}, {"id": "1211008", "name": "雷电之击：钝器", "eff": 160, "ac": 1, "bc": 1, "hits": 1, "total": 160, "cool": 0, "time": 300, "book": "121", "tag": "3转", "shadow": false}, {"id": "1221007", "name": "突进", "eff": 130, "ac": 1, "bc": 1, "hits": 1, "total": 130, "cool": 0, "time": 0, "book": "122", "tag": "4转", "shadow": false}], "黑骑士": [{"id": "1311002", "name": "矛连击", "eff": 260, "ac": 6, "bc": 1, "hits": 6, "total": 1560, "cool": 0, "time": 0, "book": "131", "tag": "3转", "shadow": false}, {"id": "1311001", "name": "枪连击", "eff": 170, "ac": 6, "bc": 1, "hits": 6, "total": 1020, "cool": 0, "time": 0, "book": "131", "tag": "3转", "shadow": false}, {"id": "1311003", "name": "无双枪", "eff": 380, "ac": 1, "bc": 1, "hits": 1, "total": 380, "cool": 0, "time": 0, "book": "131", "tag": "3转", "shadow": false}, {"id": "1311005", "name": "龙之献祭", "eff": 350, "ac": 1, "bc": 1, "hits": 1, "total": 350, "cool": 0, "time": 0, "book": "131", "tag": "3转", "shadow": false}, {"id": "1311004", "name": "无双矛", "eff": 250, "ac": 1, "bc": 1, "hits": 1, "total": 250, "cool": 0, "time": 0, "book": "131", "tag": "3转", "shadow": false}, {"id": "1311006", "name": "龙咆哮", "eff": 240, "ac": 1, "bc": 1, "hits": 1, "total": 240, "cool": 1, "time": 0, "book": "131", "tag": "3转", "shadow": false}, {"id": "1321003", "name": "突进", "eff": 130, "ac": 1, "bc": 1, "hits": 1, "total": 130, "cool": 0, "time": 0, "book": "132", "tag": "4转", "shadow": false}, {"id": "1320006", "name": "恶龙附身", "eff": 100, "ac": 1, "bc": 1, "hits": 1, "total": 100, "cool": 0, "time": 0, "book": "132", "tag": "4转", "shadow": false}], "火毒大魔导士": [{"id": "2121007", "name": "天降落星", "eff": 320, "ac": 4, "bc": 1, "hits": 4, "total": 1280, "cool": 1, "time": 0, "book": "212", "tag": "4转", "shadow": false}, {"id": "2121006", "name": "连环爆破", "eff": 300, "ac": 4, "bc": 1, "hits": 4, "total": 1200, "cool": 0, "time": 15, "book": "212", "tag": "4转", "shadow": false}, {"id": "2121005", "name": "冰破魔兽", "eff": 1000, "ac": 1, "bc": 1, "hits": 1, "total": 1000, "cool": 0, "time": 200, "book": "212", "tag": "4转", "shadow": false}, {"id": "2121001", "name": "创世之破", "eff": 450, "ac": 1, "bc": 1, "hits": 1, "total": 450, "cool": 0, "time": 0, "book": "212", "tag": "4转", "shadow": false}, {"id": "2121003", "name": "火凤球", "eff": 360, "ac": 1, "bc": 1, "hits": 1, "total": 360, "cool": 0, "time": 15, "book": "212", "tag": "4转", "shadow": false}, {"id": "2111006", "name": "火毒合击", "eff": 210, "ac": 1, "bc": 1, "hits": 1, "total": 210, "cool": 0, "time": 40, "book": "211", "tag": "3转", "shadow": false}, {"id": "2111002", "name": "末日烈焰", "eff": 130, "ac": 1, "bc": 1, "hits": 1, "total": 130, "cool": 0, "time": 0, "book": "211", "tag": "3转", "shadow": false}, {"id": "2111003", "name": "致命毒雾", "eff": 90, "ac": 1, "bc": 1, "hits": 1, "total": 90, "cool": 0, "time": 40, "book": "211", "tag": "3转", "shadow": false}], "冰雷大魔导士": [{"id": "2221005", "name": "火魔兽", "eff": 1000, "ac": 1, "bc": 1, "hits": 1, "total": 1000, "cool": 0, "time": 200, "book": "222", "tag": "4转", "shadow": false}, {"id": "2221006", "name": "链环闪电", "eff": 270, "ac": 2, "bc": 1, "hits": 2, "total": 540, "cool": 0, "time": 0, "book": "222", "tag": "4转", "shadow": false}, {"id": "2221001", "name": "创世之破", "eff": 450, "ac": 1, "bc": 1, "hits": 1, "total": 450, "cool": 0, "time": 0, "book": "222", "tag": "4转", "shadow": false}, {"id": "2221007", "name": "落霜冰破", "eff": 200, "ac": 2, "bc": 1, "hits": 2, "total": 400, "cool": 1, "time": 3, "book": "222", "tag": "4转", "shadow": false}, {"id": "2221003", "name": "冰凤球", "eff": 320, "ac": 1, "bc": 1, "hits": 1, "total": 320, "cool": 0, "time": 15, "book": "222", "tag": "4转", "shadow": false}, {"id": "2211003", "name": "落雷枪", "eff": 220, "ac": 1, "bc": 1, "hits": 1, "total": 220, "cool": 0, "time": 0, "book": "221", "tag": "3转", "shadow": false}, {"id": "2211006", "name": "冰雷合击", "eff": 190, "ac": 1, "bc": 1, "hits": 1, "total": 190, "cool": 0, "time": 2, "book": "221", "tag": "3转", "shadow": false}, {"id": "2211002", "name": "冰咆哮", "eff": 110, "ac": 1, "bc": 1, "hits": 1, "total": 110, "cool": 0, "time": 3, "book": "221", "tag": "3转", "shadow": false}], "主教": [{"id": "2321003", "name": "强化圣龙", "eff": 3000, "ac": 1, "bc": 1, "hits": 1, "total": 3000, "cool": 0, "time": 86400, "book": "232", "tag": "4转", "shadow": false}, {"id": "2321008", "name": "圣光普照", "eff": 510, "ac": 2, "bc": 1, "hits": 2, "total": 1020, "cool": 1, "time": 0, "book": "232", "tag": "4转", "shadow": false}, {"id": "2321007", "name": "光芒飞箭", "eff": 240, "ac": 3, "bc": 1, "hits": 3, "total": 720, "cool": 0, "time": 0, "book": "232", "tag": "4转", "shadow": false}, {"id": "2321001", "name": "创世之破", "eff": 450, "ac": 1, "bc": 1, "hits": 1, "total": 450, "cool": 0, "time": 0, "book": "232", "tag": "4转", "shadow": false}, {"id": "2311006", "name": "圣龙召唤", "eff": 200, "ac": 1, "bc": 1, "hits": 1, "total": 200, "cool": 0, "time": 300, "book": "231", "tag": "3转", "shadow": false}, {"id": "2311004", "name": "圣光", "eff": 150, "ac": 1, "bc": 1, "hits": 1, "total": 150, "cool": 0, "time": 0, "book": "231", "tag": "3转", "shadow": false}], "箭神": [{"id": "3111006", "name": "箭扫射", "eff": 150, "ac": 1, "bc": 4, "hits": 4, "total": 600, "cool": 0, "time": 0, "book": "311", "tag": "3转", "shadow": false}, {"id": "3111004", "name": "箭雨", "eff": 260, "ac": 1, "bc": 1, "hits": 1, "total": 260, "cool": 0, "time": 0, "book": "311", "tag": "3转", "shadow": false}, {"id": "3110001", "name": "贯穿箭", "eff": 250, "ac": 1, "bc": 1, "hits": 1, "total": 250, "cool": 0, "time": 0, "book": "311", "tag": "3转", "shadow": false}, {"id": "3111003", "name": "烈火箭", "eff": 240, "ac": 1, "bc": 1, "hits": 1, "total": 240, "cool": 0, "time": 10, "book": "311", "tag": "3转", "shadow": false}, {"id": "3121004", "name": "暴风箭雨", "eff": 120, "ac": 1, "bc": 1, "hits": 1, "total": 120, "cool": 0, "time": 0, "book": "312", "tag": "4转", "shadow": false}, {"id": "3121003", "name": "飞龙冲击波", "eff": 100, "ac": 1, "bc": 1, "hits": 1, "total": 100, "cool": 0, "time": 0, "book": "312", "tag": "4转", "shadow": false}], "神射手": [{"id": "3221001", "name": "穿透箭", "eff": 850, "ac": 1, "bc": 1, "hits": 1, "total": 850, "cool": 0, "time": 0, "book": "322", "tag": "4转", "shadow": false}, {"id": "3211006", "name": "箭扫射", "eff": 140, "ac": 1, "bc": 6, "hits": 6, "total": 840, "cool": 0, "time": 0, "book": "321", "tag": "3转", "shadow": false}, {"id": "3210001", "name": "贯穿箭", "eff": 250, "ac": 1, "bc": 1, "hits": 1, "total": 250, "cool": 0, "time": 0, "book": "321", "tag": "3转", "shadow": false}, {"id": "3211004", "name": "升龙弩", "eff": 240, "ac": 1, "bc": 1, "hits": 1, "total": 240, "cool": 0, "time": 0, "book": "321", "tag": "3转", "shadow": false}, {"id": "3211003", "name": "寒冰箭", "eff": 210, "ac": 1, "bc": 1, "hits": 1, "total": 210, "cool": 0, "time": 3, "book": "321", "tag": "3转", "shadow": false}, {"id": "3221003", "name": "飞龙冲击波", "eff": 100, "ac": 1, "bc": 1, "hits": 1, "total": 100, "cool": 0, "time": 0, "book": "322", "tag": "4转", "shadow": false}], "夜使者": [{"id": "4121007", "name": "三连环光击破", "eff": 150, "ac": 1, "bc": 3, "hits": 6, "total": 900, "cool": 0, "time": 0, "book": "412", "tag": "4转", "shadow": true}, {"id": "4121008", "name": "忍者冲击", "eff": 150, "ac": 2, "bc": 1, "hits": 2, "total": 300, "cool": 0, "time": 1, "book": "412", "tag": "4转", "shadow": false}, {"id": "4111005", "name": "多重飞镖", "eff": 240, "ac": 1, "bc": 1, "hits": 1, "total": 240, "cool": 0, "time": 0, "book": "411", "tag": "3转", "shadow": false}, {"id": "4121004", "name": "忍者伏击", "eff": 100, "ac": 1, "bc": 1, "hits": 1, "total": 100, "cool": 0, "time": 12, "book": "412", "tag": "4转", "shadow": false}, {"id": "4120005", "name": "武器用毒液", "eff": 60, "ac": 1, "bc": 1, "hits": 1, "total": 60, "cool": 0, "time": 4, "book": "412", "tag": "4转", "shadow": false}], "暗影双刀": [{"id": "4221001", "name": "暗杀", "eff": 950, "ac": 3, "bc": 1, "hits": 3, "total": 2850, "cool": 0, "time": 0, "book": "422", "tag": "4转", "shadow": false}, {"id": "4221007", "name": "一出双击", "eff": 600, "ac": 2, "bc": 1, "hits": 2, "total": 1200, "cool": 0, "time": 4, "book": "422", "tag": "4转", "shadow": false}, {"id": "4211002", "name": "落叶斩", "eff": 500, "ac": 1, "bc": 1, "hits": 1, "total": 500, "cool": 0, "time": 4, "book": "421", "tag": "3转", "shadow": false}, {"id": "4211004", "name": "分身术", "eff": 300, "ac": 1, "bc": 1, "hits": 1, "total": 300, "cool": 0, "time": 0, "book": "421", "tag": "3转", "shadow": false}, {"id": "4221004", "name": "忍者伏击", "eff": 100, "ac": 1, "bc": 1, "hits": 1, "total": 100, "cool": 0, "time": 12, "book": "422", "tag": "4转", "shadow": false}, {"id": "4220005", "name": "武器用毒液", "eff": 60, "ac": 1, "bc": 1, "hits": 1, "total": 60, "cool": 0, "time": 4, "book": "422", "tag": "4转", "shadow": false}], "拳霸": [{"id": "5121004", "name": "金手指", "eff": 300, "ac": 8, "bc": 1, "hits": 8, "total": 2400, "cool": 0, "time": 1, "book": "512", "tag": "4转", "shadow": false}, {"id": "5121007", "name": "光速拳", "eff": 330, "ac": 6, "bc": 1, "hits": 6, "total": 1980, "cool": 0, "time": 0, "book": "512", "tag": "4转", "shadow": false}, {"id": "5121001", "name": "潜龙出渊", "eff": 900, "ac": 1, "bc": 1, "hits": 1, "total": 900, "cool": 0, "time": 0, "book": "512", "tag": "4转", "shadow": false}, {"id": "5121002", "name": "超能量", "eff": 900, "ac": 1, "bc": 1, "hits": 1, "total": 900, "cool": 0, "time": 0, "book": "512", "tag": "4转", "shadow": false}, {"id": "5111006", "name": "碎石乱击", "eff": 700, "ac": 1, "bc": 1, "hits": 1, "total": 700, "cool": 0, "time": 0, "book": "511", "tag": "3转", "shadow": false}, {"id": "5121005", "name": "索命", "eff": 600, "ac": 1, "bc": 1, "hits": 1, "total": 600, "cool": 0, "time": 1, "book": "512", "tag": "4转", "shadow": false}, {"id": "5111002", "name": "能量爆破", "eff": 420, "ac": 1, "bc": 1, "hits": 1, "total": 420, "cool": 0, "time": 0, "book": "511", "tag": "3转", "shadow": false}, {"id": "5111004", "name": "能量耗转", "eff": 360, "ac": 1, "bc": 1, "hits": 1, "total": 360, "cool": 0, "time": 0, "book": "511", "tag": "3转", "shadow": false}, {"id": "5110001", "name": "能量获得", "eff": 200, "ac": 1, "bc": 1, "hits": 1, "total": 200, "cool": 0, "time": 50, "book": "511", "tag": "3转", "shadow": false}, {"id": "5110000", "name": "迷惑攻击", "eff": 160, "ac": 1, "bc": 1, "hits": 1, "total": 160, "cool": 0, "time": 0, "book": "511", "tag": "3转", "shadow": false}], "枪神": [{"id": "5221007", "name": "急速射", "eff": 380, "ac": 1, "bc": 4, "hits": 4, "total": 1520, "cool": 0, "time": 0, "book": "522", "tag": "4转", "shadow": false}, {"id": "5221003", "name": "地毯式空袭", "eff": 1200, "ac": 1, "bc": 1, "hits": 1, "total": 1200, "cool": 5, "time": 0, "book": "522", "tag": "4转", "shadow": false}, {"id": "5221008", "name": "重量炮击", "eff": 780, "ac": 1, "bc": 1, "hits": 1, "total": 780, "cool": 0, "time": 0, "book": "522", "tag": "4转", "shadow": false}, {"id": "5210000", "name": "三连射杀", "eff": 230, "ac": 1, "bc": 3, "hits": 3, "total": 690, "cool": 0, "time": 0, "book": "521", "tag": "3转", "shadow": false}, {"id": "5220011", "name": "导航辅助", "eff": 580, "ac": 1, "bc": 1, "hits": 1, "total": 580, "cool": 0, "time": 0, "book": "522", "tag": "4转", "shadow": false}, {"id": "5211006", "name": "导航", "eff": 380, "ac": 1, "bc": 1, "hits": 1, "total": 380, "cool": 0, "time": 0, "book": "521", "tag": "3转", "shadow": false}, {"id": "5220001", "name": "属性强化", "eff": 200, "ac": 1, "bc": 1, "hits": 1, "total": 200, "cool": 0, "time": 0, "book": "522", "tag": "4转", "shadow": false}, {"id": "5221004", "name": "金属风暴", "eff": 200, "ac": 1, "bc": 1, "hits": 1, "total": 200, "cool": 0, "time": 0, "book": "522", "tag": "4转", "shadow": false}]};
+const DEFAULTS = {"魂骑士": "11111004", "炎术士": "12111003", "风灵使者": "13111007", "夜行者": "14111005", "奇袭者": "15111004", "阿兰": "21110004", "英雄": "1121008", "圣骑士": "1221009", "黑骑士": "1311002", "火毒大魔导士": "2121007", "冰雷大魔导士": "2221006", "主教": "2321008", "箭神": "3121004", "神射手": "3221001", "夜使者": "4121007", "暗影双刀": "4221001", "拳霸": "5121004", "枪神": "5221007"};
+function fmt(n) { return n.toLocaleString('en-US'); }
+function recalc(block) {
+  const cls = block.dataset.cls;
+  const sel = block.querySelector('.blsel');
+  const c = CANDS[cls][parseInt(sel.value, 10)];
+  const blTotal = c.total * 1000;
+  // baseline 行
+  block.querySelector('.bl-name').textContent = c.name + '（对比基准）';
+  block.querySelector('.bl-id').textContent = c.id;
+  block.querySelector('.bl-cd').textContent = c.cool > 0 ? c.cool + 's' : '无';
+  block.querySelector('.bl-hits').textContent = c.shadow ? c.hits + '（含影子）' : (c.bc > 1 ? c.ac + '×' + c.bc : c.ac);
+  block.querySelector('.bl-eff').textContent = c.eff;
+  block.querySelector('.bl-total').textContent = fmt(blTotal);
+  // 技能行
+  block.querySelectorAll('tbody tr').forEach(tr => {
+    const hits = parseInt(tr.dataset.hits, 10);
+    const eff = parseInt(tr.dataset.eff, 10);
+    const mult = parseFloat(tr.dataset.mult);
+    const tgtTotal = Math.round(blTotal * mult);
+    const tgtDmg = Math.round(tgtTotal / (hits * 1000));
+    tr.querySelector('.tt').textContent = fmt(tgtTotal);
+    tr.querySelector('.tdmg').textContent = tgtDmg;
+    const delta = tgtDmg - eff;
+    const adj = tr.querySelector('.adj');
+    adj.textContent = delta > 0 ? '+' + delta : (delta < 0 ? delta : '0');
+    adj.className = 'num adj ' + (delta > 0 ? 'pos' : (delta < 0 ? 'neg' : 'zero'));
+  });
+  // 摘要卡
+  const card = document.querySelector('.card[data-cls="' + cls + '"]');
+  if (card) {
+    card.querySelector('.bname').textContent = c.name;
+    card.querySelector('.btotal').textContent = fmt(blTotal);
+  }
+  // 保存选择
+  try { localStorage.setItem('blsel_' + cls, sel.value); } catch (e) {}
+}
+document.querySelectorAll('.class-block').forEach(block => {
+  const cls = block.dataset.cls;
+  const sel = block.querySelector('.blsel');
+  // 恢复上次选择
+  try {
+    const saved = localStorage.getItem('blsel_' + cls);
+    if (saved !== null && saved !== '' && parseInt(saved, 10) < CANDS[cls].length) {
+      sel.value = saved;
+    }
+  } catch (e) {}
+  sel.addEventListener('change', () => recalc(block));
+  block.querySelector('.resetbtn').addEventListener('click', () => {
+    const def = CANDS[cls].findIndex(c => c.id === DEFAULTS[cls]);
+    sel.value = def >= 0 ? def : 0;
+    recalc(block);
+  });
+  recalc(block);
+});
+</script>
+</body>
+</html>

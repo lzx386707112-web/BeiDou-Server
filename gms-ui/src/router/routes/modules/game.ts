@@ -23,6 +23,26 @@ const GAME: AppRouteRecordRaw = {
       },
     },
     {
+      path: 'setItem',
+      name: 'SetItemConfig',
+      component: () => import('@/views/game/setItem/index.vue'),
+      meta: {
+        locale: 'menu.game.setItem',
+        requiresAuth: true,
+        roles: ['admin'],
+      },
+    },
+    {
+      path: 'equipmentCatalog',
+      name: 'EquipmentCatalog',
+      component: () => import('@/views/game/equipmentCatalog/index.vue'),
+      meta: {
+        locale: 'menu.game.equipmentCatalog',
+        requiresAuth: true,
+        roles: ['admin'],
+      },
+    },
+    {
       path: 'cashShop',
       name: 'CashShop',
       component: () => import('@/views/game/cashShop/index.vue'),

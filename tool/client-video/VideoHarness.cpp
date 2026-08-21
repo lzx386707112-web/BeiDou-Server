@@ -10,19 +10,27 @@ namespace {
 using AttachDeviceFn = int(BDV_CALL*)(void*);
 using DetachDeviceFn = void(BDV_CALL*)();
 using PlayFileFn = int(BDV_CALL*)(const char*);
+using PlayFileExFn = int(BDV_CALL*)(uint32_t, const char*);
 using StopFn = void(BDV_CALL*)();
+using StopChannelFn = void(BDV_CALL*)(uint32_t);
 using RenderFn = void(BDV_CALL*)();
 using GetStatusFn = int(BDV_CALL*)(BdvStatus*);
+using GetStatusExFn = int(BDV_CALL*)(uint32_t, BdvStatus*);
 using GetLastErrorFn = void(BDV_CALL*)(char*, uint32_t);
+using GetLastErrorExFn = void(BDV_CALL*)(uint32_t, char*, uint32_t);
 
 HMODULE gVideoModule = nullptr;
 IDirect3D8* gDirect3D = nullptr;
 IDirect3DDevice8* gDevice = nullptr;
 DetachDeviceFn gDetachDevice = nullptr;
 StopFn gStop = nullptr;
+StopChannelFn gStopChannel = nullptr;
 RenderFn gRender = nullptr;
 GetStatusFn gGetStatus = nullptr;
+GetStatusExFn gGetStatusEx = nullptr;
 GetLastErrorFn gGetLastError = nullptr;
+GetLastErrorExFn gGetLastErrorEx = nullptr;
+bool gBossVideoEnabled = false;
 
 template <typename Function>
 Function LoadFunction(HMODULE module, const char* name) {
@@ -45,16 +53,21 @@ LRESULT CALLBACK WindowProcedure(HWND window, UINT message, WPARAM wParam, LPARA
     return DefWindowProcA(window, message, wParam, lParam);
 }
 
-void ShowVideoError(const char* title) {
+void ShowVideoError(const char* title, uint32_t channel = BDV_CHANNEL_PLAYER_SKILL) {
     char message[256] = "video operation failed";
-    if (gGetLastError != nullptr) {
+    if (gGetLastErrorEx != nullptr) {
+        gGetLastErrorEx(channel, message, sizeof(message));
+    } else if (gGetLastError != nullptr) {
         gGetLastError(message, sizeof(message));
     }
     MessageBoxA(nullptr, message, title, MB_OK | MB_ICONERROR);
 }
 
 void Cleanup() {
-    if (gStop != nullptr) {
+    if (gStopChannel != nullptr) {
+        gStopChannel(BDV_CHANNEL_BOSS_SCENE);
+        gStopChannel(BDV_CHANNEL_PLAYER_SKILL);
+    } else if (gStop != nullptr) {
         gStop();
     }
     if (gDetachDevice != nullptr) {
@@ -74,11 +87,33 @@ void Cleanup() {
     }
 }
 
+char* TrimArgument(char* value) {
+    while (*value == ' ' || *value == '\t' || *value == '"') {
+        ++value;
+    }
+    char* end = value + lstrlenA(value);
+    while (end > value && (end[-1] == ' ' || end[-1] == '\t' || end[-1] == '"')) {
+        --end;
+    }
+    *end = '\0';
+    return value;
+}
+
 }  // namespace
 
 int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR commandLine, int showCommand) {
-    const char* videoPath = commandLine != nullptr && commandLine[0] != '\0'
-        ? commandLine
+    char* bossVideoPath = nullptr;
+    if (commandLine != nullptr) {
+        bossVideoPath = strchr(commandLine, '|');
+        if (bossVideoPath != nullptr) {
+            *bossVideoPath++ = '\0';
+            bossVideoPath = TrimArgument(bossVideoPath);
+            gBossVideoEnabled = bossVideoPath[0] != '\0';
+        }
+    }
+    char* playerVideoArgument = commandLine == nullptr ? nullptr : TrimArgument(commandLine);
+    const char* playerVideoPath = playerVideoArgument != nullptr && playerVideoArgument[0] != '\0'
+        ? playerVideoArgument
         : "Data\\Video\\soul-eclipse.mcv";
 
     WNDCLASSA windowClass = {};
@@ -139,19 +174,30 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR commandLine, int showCom
     }
     auto attachDevice = LoadFunction<AttachDeviceFn>(gVideoModule, "BDV_AttachDevice");
     auto playFile = LoadFunction<PlayFileFn>(gVideoModule, "BDV_PlayFile");
+    auto playFileEx = LoadFunction<PlayFileExFn>(gVideoModule, "BDV_PlayFileEx");
     gDetachDevice = LoadFunction<DetachDeviceFn>(gVideoModule, "BDV_DetachDevice");
     gStop = LoadFunction<StopFn>(gVideoModule, "BDV_Stop");
+    gStopChannel = LoadFunction<StopChannelFn>(gVideoModule, "BDV_StopChannel");
     gRender = LoadFunction<RenderFn>(gVideoModule, "BDV_Render");
     gGetStatus = LoadFunction<GetStatusFn>(gVideoModule, "BDV_GetStatus");
+    gGetStatusEx = LoadFunction<GetStatusExFn>(gVideoModule, "BDV_GetStatusEx");
     gGetLastError = LoadFunction<GetLastErrorFn>(gVideoModule, "BDV_GetLastError");
+    gGetLastErrorEx = LoadFunction<GetLastErrorExFn>(gVideoModule, "BDV_GetLastErrorEx");
     if (attachDevice == nullptr || playFile == nullptr || gDetachDevice == nullptr ||
-        gStop == nullptr || gRender == nullptr || gGetStatus == nullptr || gGetLastError == nullptr) {
+        playFileEx == nullptr || gStop == nullptr || gStopChannel == nullptr ||
+        gRender == nullptr || gGetStatus == nullptr || gGetStatusEx == nullptr ||
+        gGetLastError == nullptr || gGetLastErrorEx == nullptr) {
         MessageBoxA(window, "BeiDouVideo.dll has an incompatible API", "BeiDou video harness", MB_OK | MB_ICONERROR);
         Cleanup();
         return 1;
     }
-    if (!attachDevice(gDevice) || !playFile(videoPath)) {
+    if (!attachDevice(gDevice) || !playFile(playerVideoPath)) {
         ShowVideoError("BeiDou video harness");
+        Cleanup();
+        return 1;
+    }
+    if (gBossVideoEnabled && !playFileEx(BDV_CHANNEL_BOSS_SCENE, bossVideoPath)) {
+        ShowVideoError("BeiDou boss video decode error", BDV_CHANNEL_BOSS_SCENE);
         Cleanup();
         return 1;
     }
@@ -177,12 +223,21 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR commandLine, int showCom
         }
         gDevice->Present(nullptr, nullptr, nullptr, nullptr);
 
-        BdvStatus status = {};
-        status.structureSize = sizeof(status);
-        if (gGetStatus(&status) && (status.state == BDV_STATE_FINISHED || status.state == BDV_STATE_ERROR)) {
-            if (status.state == BDV_STATE_ERROR) {
-                ShowVideoError("BeiDou video decode error");
-            }
+        BdvStatus playerStatus = {};
+        playerStatus.structureSize = sizeof(playerStatus);
+        BdvStatus bossStatus = {};
+        bossStatus.structureSize = sizeof(bossStatus);
+        const bool playerComplete = gGetStatus(&playerStatus) &&
+            (playerStatus.state == BDV_STATE_FINISHED || playerStatus.state == BDV_STATE_ERROR);
+        const bool bossComplete = !gBossVideoEnabled || (gGetStatusEx(BDV_CHANNEL_BOSS_SCENE, &bossStatus) &&
+            (bossStatus.state == BDV_STATE_FINISHED || bossStatus.state == BDV_STATE_ERROR));
+        if (playerStatus.state == BDV_STATE_ERROR) {
+            ShowVideoError("BeiDou player video decode error");
+            running = false;
+        } else if (bossStatus.state == BDV_STATE_ERROR) {
+            ShowVideoError("BeiDou boss video decode error", BDV_CHANNEL_BOSS_SCENE);
+            running = false;
+        } else if (playerComplete && bossComplete) {
             running = false;
         }
         Sleep(1);

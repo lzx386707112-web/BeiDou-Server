@@ -3,20 +3,31 @@ var mode = 0;
 var shopSelection = -1;
 
 var VIRTUE_SHOP = [
-    {item: 2049115, qty: 1, cost: 240, name: "Forward Chaos Scroll 50%"},
-    {item: 2340000, qty: 1, cost: 360, name: "Blessing Scroll"}
+    {item: 2049115, qty: 1, cost: 240, name: "正向混沌卷轴50%"},
+    {item: 2340000, qty: 1, cost: 360, name: "祝福卷轴"},
+    {item: 1152000, qty: 1, cost: 460, name: "虎爪"},
+    {item: 1152081, qty: 1, cost: 460, name: "公爵肩膀"},
+    {item: 1152108, qty: 1, cost: 460, name: "狮子心形战斗护肩"},
+    {item: 1152174, qty: 1, cost: 460, name: "航海师剑士护肩"},
+    {item: 1152178, qty: 1, cost: 460, name: "航海师盗贼护肩"},
+    {item: 1152191, qty: 1, cost: 460, name: "黑扉护肩"},
+    {item: 1342119, qty: 1, cost: 460, name: "无名刀"},
+    {item: 1342081, qty: 1, cost: 460, name: "觉醒雷本魂黑影翅膀"},
+    {item: 1342111, qty: 1, cost: 460, name: "神秘冥界幽灵之刃"},
+    {item: 1342121, qty: 1, cost: 460, name: "阿斯特拉双刀"},
 ];
 
 var APPRENTICE_SHOP = [
-    {item: 2003609, qty: 1, cost: 80, name: "EXP Potion"},
-    {item: 4260010, qty: 10, cost: 60, name: "Enhancement Gem Fragment x10"},
-    {item: 4260009, qty: 1, cost: 220, name: "Enhancement Gem"},
-    {item: 4007000, qty: 1, cost: 180, name: "Cube"},
-    {item: 4007002, qty: 1, cost: 260, name: "Super Cube"},
-    {item: 4007003, qty: 1, cost: 320, name: "Star Cube"},
-    {item: 2049115, qty: 1, cost: 560, name: "Forward Chaos Scroll 50%"},
-    {item: 2340000, qty: 1, cost: 840, name: "Blessing Scroll"}
+    {item: 2003609, qty: 1, cost: 80, name: "经验秘药"},
+    {item: 4260010, qty: 10, cost: 60, name: "强化宝石碎片x10"},
+    {item: 4260009, qty: 1, cost: 220, name: "强化宝石"},
+    {item: 4007000, qty: 1, cost: 180, name: "奇幻魔方"},
+    {item: 4007002, qty: 1, cost: 260, name: "超级奇幻魔方"},
+    {item: 4007003, qty: 1, cost: 320, name: "星星魔方"},
+    {item: 2049115, qty: 1, cost: 560, name: "正向混沌卷轴50%"},
+    {item: 2340000, qty: 1, cost: 840, name: "祝福卷轴"}
 ];
+
 
 function start() {
     status = -1;
@@ -137,7 +148,7 @@ function sendShop(shop, title, coinName, balance) {
     for (var i = 0; i < shop.length; i++) {
         var item = shop[i];
         if (cm.canGenerateItem(item.item)) {
-            text += "#L" + i + "##v" + item.item + "# " + item.name + " x " + item.qty + " - #r" + item.cost + "#k " + coinName + "#l\r\n";
+            text += "#L" + i + "##i" + item.item + "# " + item.name + " x " + item.qty + " - #r" + item.cost + "#k " + coinName + "#l\r\n";
         }
     }
     cm.sendSimple(text);

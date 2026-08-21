@@ -45,7 +45,7 @@ struct Vertex {
 
 class Player {
 public:
-    Player() {
+    explicit Player(const char* channelName) : channelName_(channelName) {
         InitializeCriticalSection(&lock_);
         QueryPerformanceFrequency(&performanceFrequency_);
         stopEvent_ = CreateEventA(nullptr, TRUE, FALSE, nullptr);
@@ -87,6 +87,13 @@ public:
             device_ = nullptr;
         }
         LeaveCriticalSection(&lock_);
+    }
+
+    void* GetAttachedDevice() {
+        EnterCriticalSection(&lock_);
+        void* device = device_;
+        LeaveCriticalSection(&lock_);
+        return device;
     }
 
     bool Play(const char* path) {
@@ -262,7 +269,9 @@ private:
     bool OpenMappedFile(const char* path, MappedFile* output) {
         output->file = CreateFileA(path, GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
         if (output->file == INVALID_HANDLE_VALUE) {
-            SetError("failed to open MCV file");
+            char message[512] = {};
+            wsprintfA(message, "failed to open MCV file: %s (GetLastError=%lu)", path, GetLastError());
+            SetError(message);
             return false;
         }
         LARGE_INTEGER size = {};
@@ -629,7 +638,7 @@ private:
         Log(text);
     }
 
-    static void Log(const char* text) {
+    void Log(const char* text) const {
         HANDLE file = CreateFileA(
             "BeiDouVideo.log",
             FILE_APPEND_DATA,
@@ -642,6 +651,8 @@ private:
             return;
         }
         DWORD written = 0;
+        WriteFile(file, channelName_, lstrlenA(channelName_), &written, nullptr);
+        WriteFile(file, ": ", 2, &written, nullptr);
         const char* value = text == nullptr ? "unknown" : text;
         WriteFile(file, value, lstrlenA(value), &written, nullptr);
         WriteFile(file, "\r\n", 2, &written, nullptr);
@@ -670,62 +681,121 @@ private:
     uint32_t textureWidth_ = 0;
     uint32_t textureHeight_ = 0;
     char lastError_[256] = {};
+    const char* channelName_ = nullptr;
 };
 
-Player* gPlayer = nullptr;
+Player* gPlayers[BDV_CHANNEL_COUNT] = {};
 
-Player* GetPlayer() {
-    return gPlayer;
+Player* GetPlayer(uint32_t channel) {
+    return channel < BDV_CHANNEL_COUNT ? gPlayers[channel] : nullptr;
 }
 
 }  // namespace
 
 int BDV_CALL BDV_AttachDevice(void* direct3DDevice8) {
-    return GetPlayer() != nullptr && GetPlayer()->AttachDevice(direct3DDevice8) ? 1 : 0;
+    if (direct3DDevice8 == nullptr) {
+        return 0;
+    }
+    for (uint32_t channel = 0; channel < BDV_CHANNEL_COUNT; ++channel) {
+        Player* player = GetPlayer(channel);
+        if (player == nullptr || !player->AttachDevice(direct3DDevice8)) {
+            for (uint32_t attached = 0; attached < channel; ++attached) {
+                GetPlayer(attached)->DetachDevice();
+            }
+            return 0;
+        }
+    }
+    return 1;
+}
+
+void* BDV_CALL BDV_GetAttachedDevice() {
+    Player* player = GetPlayer(BDV_CHANNEL_PLAYER_SKILL);
+    return player == nullptr ? nullptr : player->GetAttachedDevice();
 }
 
 void BDV_CALL BDV_DetachDevice() {
-    if (GetPlayer() != nullptr) {
-        GetPlayer()->DetachDevice();
+    for (uint32_t channel = 0; channel < BDV_CHANNEL_COUNT; ++channel) {
+        if (GetPlayer(channel) != nullptr) {
+            GetPlayer(channel)->DetachDevice();
+        }
     }
 }
 
 int BDV_CALL BDV_PlayFile(const char* path) {
-    return GetPlayer() != nullptr && GetPlayer()->Play(path) ? 1 : 0;
+    return BDV_PlayFileEx(BDV_CHANNEL_PLAYER_SKILL, path);
+}
+
+int BDV_CALL BDV_PlayFileEx(uint32_t channel, const char* path) {
+    Player* player = GetPlayer(channel);
+    return player != nullptr && player->Play(path) ? 1 : 0;
 }
 
 void BDV_CALL BDV_Stop() {
-    if (GetPlayer() != nullptr) {
-        GetPlayer()->Stop();
+    BDV_StopChannel(BDV_CHANNEL_PLAYER_SKILL);
+}
+
+void BDV_CALL BDV_StopChannel(uint32_t channel) {
+    if (GetPlayer(channel) != nullptr) {
+        GetPlayer(channel)->Stop();
     }
 }
 
 void BDV_CALL BDV_Render() {
-    if (GetPlayer() != nullptr) {
-        GetPlayer()->Render();
+    BDV_RenderAll();
+}
+
+void BDV_CALL BDV_RenderAll() {
+    const uint32_t renderOrder[] = {
+        BDV_CHANNEL_BOSS_SCENE,
+        BDV_CHANNEL_PLAYER_SKILL,
+    };
+    for (uint32_t channel : renderOrder) {
+        if (GetPlayer(channel) != nullptr) {
+            GetPlayer(channel)->Render();
+        }
     }
 }
 
 int BDV_CALL BDV_GetStatus(BdvStatus* status) {
-    return GetPlayer() != nullptr && GetPlayer()->GetStatus(status) ? 1 : 0;
+    return BDV_GetStatusEx(BDV_CHANNEL_PLAYER_SKILL, status);
+}
+
+int BDV_CALL BDV_GetStatusEx(uint32_t channel, BdvStatus* status) {
+    Player* player = GetPlayer(channel);
+    return player != nullptr && player->GetStatus(status) ? 1 : 0;
 }
 
 void BDV_CALL BDV_GetLastError(char* buffer, uint32_t capacity) {
-    if (GetPlayer() != nullptr) {
-        GetPlayer()->GetLastErrorText(buffer, capacity);
+    BDV_GetLastErrorEx(BDV_CHANNEL_PLAYER_SKILL, buffer, capacity);
+}
+
+void BDV_CALL BDV_GetLastErrorEx(uint32_t channel, char* buffer, uint32_t capacity) {
+    if (GetPlayer(channel) != nullptr) {
+        GetPlayer(channel)->GetLastErrorText(buffer, capacity);
     } else if (buffer != nullptr && capacity != 0) {
-        lstrcpynA(buffer, "video player is not initialized", static_cast<int>(capacity));
+        lstrcpynA(buffer, "invalid or uninitialized video channel", static_cast<int>(capacity));
     }
 }
 
 extern "C" BOOL WINAPI DllMain(HINSTANCE, DWORD reason, LPVOID) {
     if (reason == DLL_PROCESS_ATTACH) {
-        gPlayer = new (std::nothrow) Player();
-        return gPlayer != nullptr ? TRUE : FALSE;
+        gPlayers[BDV_CHANNEL_PLAYER_SKILL] = new (std::nothrow) Player("player-skill");
+        gPlayers[BDV_CHANNEL_BOSS_SCENE] = new (std::nothrow) Player("boss-scene");
+        if (gPlayers[BDV_CHANNEL_PLAYER_SKILL] == nullptr ||
+            gPlayers[BDV_CHANNEL_BOSS_SCENE] == nullptr) {
+            for (Player*& player : gPlayers) {
+                delete player;
+                player = nullptr;
+            }
+            return FALSE;
+        }
+        return TRUE;
     }
     if (reason == DLL_PROCESS_DETACH) {
-        delete gPlayer;
-        gPlayer = nullptr;
+        for (Player*& player : gPlayers) {
+            delete player;
+            player = nullptr;
+        }
     }
     return TRUE;
 }

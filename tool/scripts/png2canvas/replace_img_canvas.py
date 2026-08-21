@@ -24,7 +24,11 @@ from wzpy import WzImage, WzKey  # noqa: E402
 from wzpy.canvas import _ZLIB_HEADERS, _read_canvas_bytes, encode_canvas_payload  # noqa: E402
 from wzpy.properties import (  # noqa: E402
     WzCanvasProperty,
+    WzDoubleProperty,
+    WzFloatProperty,
     WzIntProperty,
+    WzLongProperty,
+    WzShortProperty,
     WzStringProperty,
     WzSubProperty,
     WzUolProperty,
@@ -218,6 +222,22 @@ def add_cloned_property(parent: WzSubProperty, source, name: str | None = None):
         return clone
     if isinstance(source, WzIntProperty):
         clone = WzIntProperty(out_name, int(source.value), parent)
+        parent.add(clone)
+        return clone
+    if isinstance(source, WzShortProperty):
+        clone = WzShortProperty(out_name, int(source.value), parent)
+        parent.add(clone)
+        return clone
+    if isinstance(source, WzLongProperty):
+        clone = WzLongProperty(out_name, int(source.value), parent)
+        parent.add(clone)
+        return clone
+    if isinstance(source, WzFloatProperty):
+        clone = WzFloatProperty(out_name, float(source.value), parent)
+        parent.add(clone)
+        return clone
+    if isinstance(source, WzDoubleProperty):
+        clone = WzDoubleProperty(out_name, float(source.value), parent)
         parent.add(clone)
         return clone
     if isinstance(source, WzStringProperty):

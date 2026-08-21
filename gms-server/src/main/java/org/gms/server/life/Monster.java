@@ -100,6 +100,7 @@ public class Monster extends AbstractLoadedLife {
     private int VenomMultiplier = 0;
     private boolean fake = false;
     private boolean dropsDisabled = false;
+    private volatile long damageBlockedUntil = 0;
     private final Set<MobSkillId> usedSkills = new HashSet<>();
     private final Set<Integer> usedAttacks = new HashSet<>();
     private Set<Integer> calledMobOids = null;
@@ -411,6 +412,10 @@ public class Monster extends AbstractLoadedLife {
         this.lockMonster();
         try {
             if (!this.isAlive()) {
+                return false;
+            }
+
+            if (System.currentTimeMillis() < damageBlockedUntil) {
                 return false;
             }
 
@@ -1049,7 +1054,7 @@ public class Monster extends AbstractLoadedLife {
 
     public Packet makeBossHPBarPacket() {
         int templateId = switch (getId()) {
-            case 8880700, 8880803, 8880830, 8880831, 8880832 -> 8870000;
+            case 8880700, 8880803 -> 8870000;
             default -> getId();
         };
         return PacketCreator.showBossHP(templateId, getHp(), getMaxHp(), getTagColor(), getTagBgColor());
@@ -1539,7 +1544,8 @@ public class Monster extends AbstractLoadedLife {
         Runnable r = () -> mons.clearSkill(skill.getId());
 
         MobClearSkillService service = (MobClearSkillService) map.getChannelServer().getServiceAccess(ChannelServices.MOB_CLEAR_SKILL);
-        service.registerMobClearSkillAction(mmap.getId(), r, skill.getCoolTime());
+        service.registerMobClearSkillAction(
+                mmap.getId(), r, KaringBossCompat.skillCooldownMillis(this, skill));
     }
 
     private void clearSkill(MobSkillId msId) {
@@ -1554,11 +1560,9 @@ public class Monster extends AbstractLoadedLife {
     public int canUseAttack(int attackPos, boolean isSkill) {
         monsterLock.lock();
         try {
-            /*
-            if (usedAttacks.contains(attackPos)) {
+            if (KaringBossCompat.isKaringBoss(getId()) && usedAttacks.contains(attackPos)) {
                 return -1;
             }
-            */
 
             Pair<Integer, Integer> attackInfo = MonsterInformationProvider.getInstance().getMobAttackInfo(this.getId(), attackPos);
             if (attackInfo == null) {
@@ -1607,6 +1611,10 @@ public class Monster extends AbstractLoadedLife {
         } finally {
             monsterLock.unlock();
         }
+    }
+
+    public void setDamageBlockedUntil(long damageBlockedUntil) {
+        this.damageBlockedUntil = damageBlockedUntil;
     }
 
     public boolean hasAnySkill() {

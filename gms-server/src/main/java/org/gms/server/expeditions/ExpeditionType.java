@@ -47,7 +47,8 @@ public enum ExpeditionType {
     PIERRE(1, 30, 125, 255, 5),
     CQ(1, 30, 125, 255, 5),
     VELLUM(1, 30, 125, 255, 5),
-    AKAYRUM(1, 30, 140, 255, 5);
+    AKAYRUM(1, 30, 140, 255, 5),
+    KARING(1, 30, 100, 255, 5);
 
     private final int minSize;
     private final int maxSize;

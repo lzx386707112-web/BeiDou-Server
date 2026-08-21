@@ -48,10 +48,13 @@ constexpr int kThunderBreakerLastSkill = 15121033;
 constexpr int kMaxTrackedProjectiles = 256;
 
 using PlayFileFn = int(__stdcall*)(const char*);
+using PlayFileExFn = int(__stdcall*)(uint32_t, const char*);
 using GetLastErrorFn = void(__stdcall*)(char*, uint32_t);
+using GetLastErrorExFn = void(__stdcall*)(uint32_t, char*, uint32_t);
 using AttachDeviceFn = int(__stdcall*)(void*);
 using RenderFn = void(__stdcall*)();
 using GetStatusFn = int(__stdcall*)(BdvStatus*);
+using GetStatusExFn = int(__stdcall*)(uint32_t, BdvStatus*);
 using LoadLibraryAFn = HMODULE(WINAPI*)(LPCSTR);
 using GetProcAddressFn = FARPROC(WINAPI*)(HMODULE, LPCSTR);
 using Direct3DCreate8Fn = IDirect3D8*(WINAPI*)(UINT);
@@ -108,10 +111,13 @@ struct HookSite {
 
 HMODULE gVideoModule = nullptr;
 PlayFileFn gPlayFile = nullptr;
+PlayFileExFn gPlayFileEx = nullptr;
 GetLastErrorFn gVideoGetLastError = nullptr;
+GetLastErrorExFn gVideoGetLastErrorEx = nullptr;
 AttachDeviceFn gAttachDevice = nullptr;
 RenderFn gRender = nullptr;
 GetStatusFn gVideoGetStatus = nullptr;
+GetStatusExFn gVideoGetStatusEx = nullptr;
 LoadLibraryAFn gRealLoadLibraryA = nullptr;
 GetProcAddressFn gRealGetProcAddress = nullptr;
 Direct3DCreate8Fn gRealDirect3DCreate8 = nullptr;
@@ -125,13 +131,16 @@ DrawIndexedPrimitiveUpFn gRealDrawIndexedPrimitiveUp = nullptr;
 bool gGr2DHookInstalled = false;
 bool gVideoDeviceAttached = false;
 bool gVideoPlaying = false;
+bool gBossSceneVideoPlaying = false;
 bool gVideoMarkerBound = false;
+int gVideoMarkerBoundCode = 0;
 bool gVideoRenderedThisFrame = false;
 bool gRenderingVideo = false;
 bool gMissingMarkerLogged = false;
 DWORD gMissingMarkerFrames = 0;
 volatile LONG gPendingVideoSkillId = 0;
 IDirect3DBaseTexture8* gVideoMarkerTextures[kMaxVideoMarkerTextures] = {};
+int gVideoMarkerTextureCodes[kMaxVideoMarkerTextures] = {};
 int gVideoMarkerTextureCount = 0;
 DWORD gNightWalkerProjectileWindowEnd = 0;
 constexpr int kProjectileProfileNone = 0;
@@ -1372,69 +1381,170 @@ bool LoadVideoModule() {
     }
     if (gPlayFile == nullptr) {
         gPlayFile = LoadFunction<PlayFileFn>(gVideoModule, "BDV_PlayFile");
+        gPlayFileEx = LoadFunction<PlayFileExFn>(gVideoModule, "BDV_PlayFileEx");
         gVideoGetLastError = LoadFunction<GetLastErrorFn>(gVideoModule, "BDV_GetLastError");
+        gVideoGetLastErrorEx = LoadFunction<GetLastErrorExFn>(gVideoModule, "BDV_GetLastErrorEx");
         gAttachDevice = LoadFunction<AttachDeviceFn>(gVideoModule, "BDV_AttachDevice");
         gRender = LoadFunction<RenderFn>(gVideoModule, "BDV_Render");
         gVideoGetStatus = LoadFunction<GetStatusFn>(gVideoModule, "BDV_GetStatus");
+        gVideoGetStatusEx = LoadFunction<GetStatusExFn>(gVideoModule, "BDV_GetStatusEx");
     }
     return gPlayFile != nullptr && gVideoGetLastError != nullptr &&
-        gAttachDevice != nullptr && gRender != nullptr && gVideoGetStatus != nullptr;
+        gAttachDevice != nullptr && gRender != nullptr && gVideoGetStatus != nullptr &&
+        gPlayFileEx != nullptr && gVideoGetStatusEx != nullptr && gVideoGetLastErrorEx != nullptr;
 }
 
-bool IsKnownVideoMarkerTexture(IDirect3DBaseTexture8* texture) {
+int KnownVideoMarkerTextureCode(IDirect3DBaseTexture8* texture) {
     for (int index = 0; index < gVideoMarkerTextureCount; ++index) {
         if (gVideoMarkerTextures[index] == texture) {
-            return true;
+            return gVideoMarkerTextureCodes[index];
         }
     }
-    return false;
+    return -1;
 }
 
-bool MatchesVideoMarkerPixels(IDirect3DTexture8* texture, const D3DSURFACE_DESC& description) {
+int KaringMarkerCodeFromA4R4G4B4(const uint16_t* pixels) {
+    if (pixels[0] == 0xF214 && pixels[1] == 0xF457 &&
+        pixels[2] == 0xF9AB && pixels[3] == 0xFCDD) {
+        const int code = (pixels[4] >> 8) & 0x0F;
+        return code >= 1 && code <= 14 ? code : -1;
+    }
+    return -1;
+}
+
+int KaringMarkerCodeFromA8R8G8B8(const uint32_t* pixels, bool ignoreAlpha) {
+    const uint32_t alphaMask = ignoreAlpha ? 0x00000000u : 0xFF000000u;
+    const uint32_t colorMask = ignoreAlpha ? 0x00FFFFFFu : 0xFFFFFFFFu;
+    if ((pixels[0] & colorMask) == (alphaMask | 0x00221144u) &&
+        (pixels[1] & colorMask) == (alphaMask | 0x00445577u) &&
+        (pixels[2] & colorMask) == (alphaMask | 0x0099AABBu) &&
+        (pixels[3] & colorMask) == (alphaMask | 0x00CCDDDDu)) {
+        const int red = static_cast<int>((pixels[4] >> 16) & 0xFF);
+        const int code = red / 17;
+        return red == code * 17 && code >= 1 && code <= 14 ? code : -1;
+    }
+    return -1;
+}
+
+int DetectVideoMarkerPixels(IDirect3DTexture8* texture, const D3DSURFACE_DESC& description) {
     D3DLOCKED_RECT locked = {};
     if (FAILED(texture->LockRect(0, &locked, nullptr, D3DLOCK_READONLY))) {
-        return false;
+        return -1;
     }
-    bool matches = false;
+    int markerCode = -1;
     if (description.Format == D3DFMT_A4R4G4B4 && locked.Pitch >= 8) {
         const auto* pixels = static_cast<const uint16_t*>(locked.pBits);
-        matches = pixels[0] == 0xF123 && pixels[1] == 0xF456 &&
-            pixels[2] == 0xF789 && pixels[3] == 0xFABC;
+        if (pixels[0] == 0xF123 && pixels[1] == 0xF456 &&
+            pixels[2] == 0xF789 && pixels[3] == 0xFABC) {
+            markerCode = 0;
+        } else {
+            markerCode = KaringMarkerCodeFromA4R4G4B4(pixels);
+        }
     } else if (description.Format == D3DFMT_A8R8G8B8 && locked.Pitch >= 16) {
         const auto* pixels = static_cast<const uint32_t*>(locked.pBits);
-        matches = pixels[0] == 0xFF112233 && pixels[1] == 0xFF445566 &&
-            pixels[2] == 0xFF778899 && pixels[3] == 0xFFAABBCC;
+        if (pixels[0] == 0xFF112233 && pixels[1] == 0xFF445566 &&
+            pixels[2] == 0xFF778899 && pixels[3] == 0xFFAABBCC) {
+            markerCode = 0;
+        } else {
+            markerCode = KaringMarkerCodeFromA8R8G8B8(pixels, false);
+        }
     } else if (description.Format == D3DFMT_X8R8G8B8 && locked.Pitch >= 16) {
         const auto* pixels = static_cast<const uint32_t*>(locked.pBits);
-        matches = (pixels[0] & 0x00FFFFFF) == 0x00112233 &&
+        if ((pixels[0] & 0x00FFFFFF) == 0x00112233 &&
             (pixels[1] & 0x00FFFFFF) == 0x00445566 &&
             (pixels[2] & 0x00FFFFFF) == 0x00778899 &&
-            (pixels[3] & 0x00FFFFFF) == 0x00AABBCC;
+            (pixels[3] & 0x00FFFFFF) == 0x00AABBCC) {
+            markerCode = 0;
+        } else {
+            markerCode = KaringMarkerCodeFromA8R8G8B8(pixels, true);
+        }
     }
     texture->UnlockRect(0);
-    return matches;
+    return markerCode;
 }
 
-bool DetectVideoMarkerTexture(IDirect3DBaseTexture8* baseTexture) {
+int DetectVideoMarkerTexture(IDirect3DBaseTexture8* baseTexture) {
     if (baseTexture == nullptr || baseTexture->GetType() != D3DRTYPE_TEXTURE) {
-        return false;
+        return -1;
     }
     auto* texture = static_cast<IDirect3DTexture8*>(baseTexture);
     D3DSURFACE_DESC description = {};
     if (FAILED(texture->GetLevelDesc(0, &description))) {
-        return false;
+        return -1;
     }
     const bool plausibleSize =
         description.Width >= kVideoMarkerWidth && description.Width <= 8 &&
         description.Height >= kVideoMarkerHeight && description.Height <= 8;
-    if (!plausibleSize || !MatchesVideoMarkerPixels(texture, description)) {
-        return false;
+    if (!plausibleSize) {
+        return -1;
+    }
+    const int markerCode = DetectVideoMarkerPixels(texture, description);
+    if (markerCode < 0) {
+        return -1;
     }
     if (gVideoMarkerTextureCount < kMaxVideoMarkerTextures) {
         baseTexture->AddRef();
         gVideoMarkerTextures[gVideoMarkerTextureCount++] = baseTexture;
+        gVideoMarkerTextureCodes[gVideoMarkerTextureCount - 1] = markerCode;
     }
-    LogLine("VIDEO OK: Gr2D field-layer marker texture detected");
+    LogLine(markerCode == 0
+        ? "VIDEO OK: Gr2D field-layer marker texture detected"
+        : "VIDEO OK: Karing boss-scene marker texture detected");
+    return markerCode;
+}
+
+struct KaringSceneMapping {
+    int markerCode;
+    const char* path;
+    const char* successMessage;
+};
+
+constexpr KaringSceneMapping kKaringSceneVideos[] = {
+    {1, "Data\\Video\\karing-dark-pulse.mcv", "VIDEO OK: Karing Dark Pulse started"},
+    {2, "Data\\Video\\karing-goongi-screen.mcv", "VIDEO OK: Karing Goongi transition started"},
+    {3, "Data\\Video\\karing-perils-goongi.mcv", "VIDEO OK: Karing Goongi peril screen started"},
+    {4, "Data\\Video\\karing-perils-dool.mcv", "VIDEO OK: Karing Dool peril screen started"},
+    {5, "Data\\Video\\karing-perils-hondon.mcv", "VIDEO OK: Karing Hondon peril screen started"},
+    {6, "Data\\Video\\karing-reward-screen.mcv", "VIDEO OK: Karing reward screen started"},
+    {7, "Data\\Video\\karing-clear-goongi.mcv", "VIDEO OK: Karing Goongi clear started"},
+    {8, "Data\\Video\\karing-clear-goongi2.mcv", "VIDEO OK: Karing Goongi clear 2 started"},
+    {9, "Data\\Video\\karing-clear-dool.mcv", "VIDEO OK: Karing Dool clear started"},
+    {10, "Data\\Video\\karing-clear-dool2.mcv", "VIDEO OK: Karing Dool clear 2 started"},
+    {11, "Data\\Video\\karing-clear-hondon.mcv", "VIDEO OK: Karing Hondon clear started"},
+    {12, "Data\\Video\\karing-clear-hondon2.mcv", "VIDEO OK: Karing Hondon clear 2 started"},
+    {13, "Data\\Video\\karing-p2-regen.mcv", "VIDEO OK: Karing P2 spawn started"},
+    {14, "Data\\Video\\karing-p3-regen.mcv", "VIDEO OK: Karing P3 spawn started"},
+};
+
+bool StartKaringSceneVideo(int markerCode) {
+    if (markerCode <= 0) {
+        return false;
+    }
+    const KaringSceneMapping* mapping = nullptr;
+    for (const KaringSceneMapping& candidate : kKaringSceneVideos) {
+        if (candidate.markerCode == markerCode) {
+            mapping = &candidate;
+            break;
+        }
+    }
+    if (mapping == nullptr) {
+        return false;
+    }
+    if (!LoadVideoModule()) {
+        LogLine("VIDEO ERROR: BeiDouVideo.dll was not found or incompatible");
+        return false;
+    }
+    if (!gPlayFileEx(BDV_CHANNEL_BOSS_SCENE, mapping->path)) {
+        char error[256] = "unknown boss-scene video playback error";
+        gVideoGetLastErrorEx(BDV_CHANNEL_BOSS_SCENE, error, sizeof(error));
+        LogLine(error);
+        return false;
+    }
+    gBossSceneVideoPlaying = true;
+    gVideoRenderedThisFrame = false;
+    gMissingMarkerFrames = 0;
+    gMissingMarkerLogged = false;
+    LogLine(mapping->successMessage);
     return true;
 }
 
@@ -1442,7 +1552,10 @@ bool ConsumeVideoMarkerDraw() {
     if (gRenderingVideo || !gVideoMarkerBound) {
         return false;
     }
-    if (gVideoPlaying && !gVideoRenderedThisFrame && gRender != nullptr) {
+    if (gVideoMarkerBoundCode > 0 && !gBossSceneVideoPlaying) {
+        StartKaringSceneVideo(gVideoMarkerBoundCode);
+    }
+    if ((gVideoPlaying || gBossSceneVideoPlaying) && !gVideoRenderedThisFrame && gRender != nullptr) {
         gVideoRenderedThisFrame = true;
         gRenderingVideo = true;
         gRender();
@@ -1456,8 +1569,12 @@ HRESULT WINAPI HookSetTexture(
     DWORD stage,
     IDirect3DBaseTexture8* texture) {
     if (stage == 0 && !gRenderingVideo) {
-        gVideoMarkerBound = IsKnownVideoMarkerTexture(texture) ||
-            (gVideoPlaying && DetectVideoMarkerTexture(texture));
+        int markerCode = KnownVideoMarkerTextureCode(texture);
+        if (markerCode < 0) {
+            markerCode = DetectVideoMarkerTexture(texture);
+        }
+        gVideoMarkerBound = markerCode >= 0;
+        gVideoMarkerBoundCode = markerCode >= 0 ? markerCode : 0;
     }
     return gRealSetTexture(device, stage, texture);
 }
@@ -1554,7 +1671,15 @@ HRESULT WINAPI HookPresent(
             gVideoPlaying = false;
         }
     }
-    if (gVideoPlaying && !gVideoRenderedThisFrame) {
+    if (gBossSceneVideoPlaying && gVideoGetStatusEx != nullptr) {
+        BdvStatus status = {};
+        status.structureSize = sizeof(status);
+        if (gVideoGetStatusEx(BDV_CHANNEL_BOSS_SCENE, &status) &&
+            (status.state == BDV_STATE_FINISHED || status.state == BDV_STATE_ERROR)) {
+            gBossSceneVideoPlaying = false;
+        }
+    }
+    if ((gVideoPlaying || gBossSceneVideoPlaying) && !gVideoRenderedThisFrame) {
         ++gMissingMarkerFrames;
         if (gVideoDeviceAttached && gRender != nullptr) {
             gVideoRenderedThisFrame = true;
@@ -1575,6 +1700,7 @@ HRESULT WINAPI HookPresent(
     const HRESULT result = gRealPresent(device, source, destination, overrideWindow, dirtyRegion);
     gVideoRenderedThisFrame = false;
     gVideoMarkerBound = false;
+    gVideoMarkerBoundCode = 0;
     return result;
 }
 

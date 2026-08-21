@@ -7663,13 +7663,18 @@ public class PacketCreator {
     private static String setItemSlotName(int itemId) {
         return switch (itemId / 10000) {
             case 100 -> "帽子";
+            case 101 -> "脸饰";
             case 104 -> "上衣";
             case 105 -> "套服";
             case 106 -> "裤子";
             case 107 -> "鞋子";
             case 108 -> "手套";
             case 110 -> "披风";
+            case 111 -> "戒指";
+            case 112 -> "吊坠";
             case 113 -> "腰带";
+            case 114 -> "勋章";
+            case 115 -> "肩章";
             default -> itemId / 1000000 == 1 ? "武器" : "装备";
         };
     }

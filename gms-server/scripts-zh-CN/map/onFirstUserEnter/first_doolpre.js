@@ -1,3 +1,5 @@
 function start(ms) {
-    // The legacy client crashes before this field-layer marker reaches D3D.
+    ms.showEffect("customSkill/karing/perilsDoolVideoLayer");
+    var map = ms.getMap(410007180);
+    ms.scheduleKaringBossOnGroundBelowIfMissing(map, 8880831, 568, 106, 2000, 410007200);
 }

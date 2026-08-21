@@ -83,6 +83,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Consumer;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -795,10 +796,28 @@ public class Character extends AbstractCharacterObject {
     }
 
     public void addSummon(int id, Summon summon) {
-        summons.put(id, summon);
+        chrLock.lock();
+        try {
+            summons.put(id, summon);
 
-        if (summon.isPuppet()) {
-            map.addPlayerPuppet(this);
+            if (summon.isPuppet()) {
+                map.addPlayerPuppet(this);
+            }
+        } finally {
+            chrLock.unlock();
+        }
+    }
+
+    public boolean removeSummon(int id, Summon expectedSummon) {
+        chrLock.lock();
+        try {
+            if (summons.get(id) != expectedSummon) {
+                return false;
+            }
+            summons.remove(id);
+            return true;
+        } finally {
+            chrLock.unlock();
         }
     }
 
@@ -5189,6 +5208,14 @@ public class Character extends AbstractCharacterObject {
         return setItemBonus.get(key);
     }
 
+    public void refreshSetItemBonuses() {
+        updateLocalStats();
+        sendPacket(PacketCreator.setItemUpdate(this));
+        if (getMap() != null) {
+            getMap().broadcastMessage(PacketCreator.nameplatePowerUpdate(this));
+        }
+    }
+
     public int getMaxClassLevel() {
         if (mxjMaxLevel == 0) {
             mxjMaxLevel = GameConfig.getServerInt("mxj_max_level");
@@ -5730,23 +5757,57 @@ public class Character extends AbstractCharacterObject {
     }
 
     public Collection<Summon> getSummonsValues() {
-        return summons.values();
-    }
-
-    public void clearSummons() {
-        summons.clear();
+        chrLock.lock();
+        try {
+            return new ArrayList<>(summons.values());
+        } finally {
+            chrLock.unlock();
+        }
     }
 
     public Summon getSummonByKey(int id) {
-        return summons.get(id);
+        chrLock.lock();
+        try {
+            return summons.get(id);
+        } finally {
+            chrLock.unlock();
+        }
+    }
+
+    public void withSummonForBuff(BuffStat stat, Consumer<Summon> action) {
+        effLock.lock();
+        chrLock.lock();
+        try {
+            BuffStatValueHolder holder = effects.get(stat);
+            if (holder == null) {
+                return;
+            }
+            Summon summon = summons.get(holder.effect.getSourceId());
+            if (summon != null) {
+                action.accept(summon);
+            }
+        } finally {
+            chrLock.unlock();
+            effLock.unlock();
+        }
     }
 
     public boolean isSummonsEmpty() {
-        return summons.isEmpty();
+        chrLock.lock();
+        try {
+            return summons.isEmpty();
+        } finally {
+            chrLock.unlock();
+        }
     }
 
     public boolean containsSummon(Summon summon) {
-        return summons.containsValue(summon);
+        chrLock.lock();
+        try {
+            return summons.containsValue(summon);
+        } finally {
+            chrLock.unlock();
+        }
     }
 
     public MapObject[] getVisibleMapObjects() {
@@ -7253,8 +7314,13 @@ public class Character extends AbstractCharacterObject {
 
             localMaxHp += setItemBonus.get("HP");
             localMaxMp += setItemBonus.get("MP");
+            localstr += setItemBonus.get("STR");
+            localdex += setItemBonus.get("DEX");
+            localint_ += setItemBonus.get("INT");
+            localluk += setItemBonus.get("LUK");
             localwatk += setItemBonus.get("PAD");
             localmagic += setItemBonus.get("MAD");
+            localmagic += setItemBonus.get("INT");
 
             localmagic = Math.min(localmagic, 2000);
 

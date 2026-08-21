@@ -431,13 +431,12 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
             MapleMap expectedMap,
             Summon expectedSummon
     ) {
-        if (chr.getSummonByKey(skillId) != expectedSummon) {
+        if (!chr.removeSummon(skillId, expectedSummon)) {
             return;
         }
         expectedMap.broadcastMessage(PacketCreator.removeSummon(expectedSummon, true));
         expectedMap.removeMapObject(expectedSummon);
         chr.removeVisibleMapObject(expectedSummon);
-        chr.getSummonsValues().remove(expectedSummon);
     }
 
     private static void spawnTimedSummon(
