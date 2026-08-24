@@ -73787,4 +73787,1090 @@
       </imgdir>
     </imgdir>
   </imgdir>
+
+  <imgdir name="34300">
+    <imgdir name="0">
+    </imgdir>
+    <imgdir name="1">
+    </imgdir>
+  </imgdir>
+  <imgdir name="34301">
+    <imgdir name="0">
+    </imgdir>
+    <imgdir name="1">
+    </imgdir>
+  </imgdir>
+  <imgdir name="34302">
+    <imgdir name="0">
+      <imgdir name="sayEx">
+        <imgdir name="0">
+          <string name="msg" value="你應該很好奇吧。我為你說明一下這個地方。"/>
+        </imgdir>
+        <imgdir name="1">
+          <string name="msg" value="用一句話來說，拉契爾恩就是個徹底瘋狂的城市。 \r\n這裡的人會在永無止盡的慶典裡，永遠吃喝玩樂以及跳舞。 他們都被關在露希妲的夢境裡，絲毫不覺得有任何不對勁。"/>
+        </imgdir>
+        <imgdir name="2">
+          <string name="msg" value="#b那您又是哪位？"/>
+          <int name="userSay" value="1"/>
+          <int name="imgPos" value="1"/>
+        </imgdir>
+        <imgdir name="3">
+          <string name="msg" value="我們是#r「覺醒者」#k呢。"/>
+        </imgdir>
+        <imgdir name="4">
+          <string name="msg" value="#b覺醒者？"/>
+          <int name="userSay" value="1"/>
+          <int name="imgPos" value="1"/>
+        </imgdir>
+        <imgdir name="5">
+          <string name="msg" value="我們本來也跟這裡的居民們一樣被關在夢裡。 但不知道從什麼時候開始，一個接一個的醒了，\r\n然後露希妲跟他的部下們就開始追捕我們。 還能有什麼辦法呢？ #r如果不想變成蝴蝶消失，就只能拼命逃跑。"/>
+        </imgdir>
+        <imgdir name="6">
+          <string name="msg" value="#b不能逃到城市外面嗎？"/>
+          <int name="userSay" value="1"/>
+          <int name="imgPos" value="1"/>
+        </imgdir>
+        <imgdir name="7">
+          <string name="msg" value="不可能。 不論我們往哪個方向走，這片#r籠罩城市的霧#k都會讓我們重新回到城市。 你要不要也試一次？"/>
+        </imgdir>
+        <imgdir name="8">
+          <string name="msg" value="我會把你送到城市外圍，你試一次看看。"/>
+        </imgdir>
+      </imgdir>
+      <imgdir name="stop">
+      </imgdir>
+      <imgdir name="yes">
+        <string name="0" value="如果你能出去就好了。 "/>
+      </imgdir>
+      <imgdir name="no">
+        <string name="0" value="看來需要做心理準備。"/>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <imgdir name="sayEx">
+        <imgdir name="0">
+          <string name="msg" value="#b真的沒辦法離開。 但是我得去下層……."/>
+          <int name="userSay" value="1"/>
+          <int name="imgPos" value="1"/>
+        </imgdir>
+        <imgdir name="1">
+          <string name="msg" value="哎呀，結果你也淪落到跟我們一樣的處境。"/>
+        </imgdir>
+      </imgdir>
+      <imgdir name="yes">
+        <string name="0" value="防毒面具好像有話要對你說。 "/>
+      </imgdir>
+      <imgdir name="stop">
+        <imgdir name="default">
+          <string name="0" value="#b被迷霧覆蓋的地方#k啊。"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="34305">
+    <imgdir name="0">
+      <string name="0" value="我聽說您必須去底層。 \r\n如果我們能成功解放這個#b夢之都#k的話，您也能達成您的目標。 "/>
+      <string name="1" value="不能助我們一臂之力嗎？"/>
+      <imgdir name="stop">
+      </imgdir>
+      <imgdir name="yes">
+        <string name="0" value="謝謝你。 詳細的內容老爺會說明給您聽。"/>
+      </imgdir>
+      <imgdir name="no">
+        <string name="0" value="這個？ 如果您改變心意了，請告訴我。"/>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <string name="0" value="目標很單純。 就是保護像我們一樣的#b'甦醒者'，#k#b讓城市從露希妲的夢中#k解放出來。 "/>
+      <string name="1" value="首先，得把'甦醒者'安全地帶過來。 他們應該假扮成那些被迷惑的市民了。"/>
+      <imgdir name="yes">
+        <string name="0" value="準備好的話，就跟防毒面具講話吧。 他正在等你。"/>
+      </imgdir>
+      <imgdir name="stop">
+        <imgdir name="default">
+          <string name="0" value="詳細的您再聽老爺說吧。 "/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="34306">
+    <imgdir name="0">
+      <string name="0" value="如果您都準備好的話，可以出發了嗎？"/>
+      <string name="1" value="往#b右邊走#k就可以了。 "/>
+      <imgdir name="stop">
+      </imgdir>
+      <imgdir name="yesEx">
+        <imgdir name="0">
+          <string name="msg" value="路上小心。 仔細看就能發現誰是「甦醒者」。 "/>
+          <int name="npcID" value="3003209"/>
+          <int name="imgPos" value="1"/>
+        </imgdir>
+      </imgdir>
+      <imgdir name="no">
+        <string name="0" value="準備好的話請告訴我。"/>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <string name="0" value="好險沒看到淨化者。"/>
+      <imgdir name="yes">
+        <string name="0" value="但還是要請您多加注意。 那些淨化者非常厲害。"/>
+      </imgdir>
+      <imgdir name="stop">
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="34307">
+    <imgdir name="0">
+      <string name="0" value="請跟居民們講話做確認。 我去繞一下看有沒有淨化者過來。 "/>
+      <imgdir name="stop">
+      </imgdir>
+      <imgdir name="yes">
+        <string name="0" value="仔細看就能知道誰是「甦醒者」。 "/>
+      </imgdir>
+      <imgdir name="no">
+        <string name="0" value="那個… 改變心意的話再告訴我。"/>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <string name="0" value="辛苦了。 "/>
+      <imgdir name="yes">
+        <string name="0" value="沒有淨化者會出現的徵兆。 "/>
+      </imgdir>
+      <imgdir name="stop">
+        <imgdir name="default">
+          <string name="0" value="請跟居民們講話。"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="34308">
+    <imgdir name="0">
+    </imgdir>
+    <imgdir name="1">
+      <imgdir name="sayEx">
+        <imgdir name="0">
+          <string name="msg" value="#b請問...你是「甦醒者」...？"/>
+          <int name="userSay" value="1"/>
+          <int name="imgPos" value="1"/>
+        </imgdir>
+        <imgdir name="1">
+          <string name="msg" value="噓，拜託您走吧。 如果不想變成蝴蝶消失的話，就不要隨便跟我說話。 淨化者們會出現然後把我們抓走。 "/>
+        </imgdir>
+        <imgdir name="2">
+          <string name="msg" value="…！！我是淨化者！"/>
+          <int name="npcID" value="3003201"/>
+          <int name="imgPos" value="1"/>
+        </imgdir>
+        <imgdir name="3">
+          <string name="msg" value="甦醒之人…怎麼到處都沒有…"/>
+          <int name="npcID" value="3003257"/>
+          <int name="imgPos" value="1"/>
+        </imgdir>
+        <imgdir name="4">
+          <string name="msg" value="呵！ 快點！ 快點走！"/>
+        </imgdir>
+      </imgdir>
+      <imgdir name="yesEx">
+        <imgdir name="0">
+          <string name="msg" value="快回祕密據點吧。"/>
+          <int name="npcID" value="3003202"/>
+          <int name="imgPos" value="1"/>
+        </imgdir>
+      </imgdir>
+      <imgdir name="stop">
+        <imgdir name="defaultEx">
+          <imgdir name="0">
+            <string name="msg" value="請跟蝦面具講話。"/>
+            <int name="npcID" value="3003202"/>
+            <int name="imgPos" value="1"/>
+          </imgdir>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="34309">
+    <imgdir name="0">
+      <imgdir name="sayEx">
+        <imgdir name="0">
+          <string name="msg" value="好險你沒事。 救出「甦醒者」了！ 但防毒面具在哪裡？ "/>
+        </imgdir>
+        <imgdir name="1">
+          <string name="msg" value="#b應該是為了甩開那些淨化者，往反方向逃了。"/>
+          <int name="userSay" value="1"/>
+          <int name="imgPos" value="1"/>
+        </imgdir>
+        <imgdir name="2">
+          <string name="msg" value="呼，那位朋友太不懂得愛惜自己的身體，讓人好擔心啊。 話說回來，可以幫我問蝦面具有沒有想起什麼嗎？"/>
+        </imgdir>
+      </imgdir>
+      <imgdir name="stop">
+      </imgdir>
+      <imgdir name="yes">
+        <string name="0" value="看來他很害怕，好好安慰他吧。"/>
+      </imgdir>
+      <imgdir name="no">
+        <string name="0" value="咦？ 有什麼問題嗎？ "/>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <imgdir name="sayEx">
+        <imgdir name="0">
+          <string name="msg" value="如果是被迷惑時的記憶……\r\n不知道為什麼，好像有記憶又好像沒有。剛醒來時，會想起剛剛在夢裡看到的內容。\r\n啊！一直以來，有一個聲音一直在耳邊聽…。"/>
+        </imgdir>
+        <imgdir name="1">
+          <string name="msg" value="#b音樂盒的聲音？ "/>
+          <int name="userSay" value="1"/>
+          <int name="imgPos" value="1"/>
+        </imgdir>
+        <imgdir name="2">
+          <string name="msg" value="#b音樂盒的聲音！！#k是能讓人產生睡意的溫柔的音樂盒聲音。 好像是從很遠的地方傳來的。 但確切的地點我不清楚。 應該是從#b吵雜不夜城#k那邊傳來的。"/>
+        </imgdir>
+      </imgdir>
+      <imgdir name="yesEx">
+        <imgdir name="0">
+          <string name="msg" value="#b(得跟老頭說了。)"/>
+          <int name="userSay" value="1"/>
+          <int name="imgPos" value="1"/>
+        </imgdir>
+      </imgdir>
+      <imgdir name="stop">
+        <imgdir name="defaultEx">
+          <imgdir name="0">
+            <string name="msg" value="跟蝦面具聊看看。"/>
+            <int name="npcID" value="3003209"/>
+            <int name="imgPos" value="1"/>
+          </imgdir>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="34310">
+    <imgdir name="0">
+      <imgdir name="sayEx">
+        <imgdir name="0">
+          <string name="msg" value="音樂盒的聲音啊 嗯，好像有想起來……#b從夢中醒來的話就聽不到了#k，好奇怪。 說不定這就是讓#b居民們維持夢境的#k裝置。"/>
+        </imgdir>
+        <imgdir name="1">
+          <string name="msg" value="#b(說會過來看看。)"/>
+          <int name="npcID" value="3003201"/>
+          <int name="imgPos" value="1"/>
+        </imgdir>
+        <imgdir name="2">
+          <string name="msg" value="不好意思，能不能跟著防毒面具走呢？ 這個朋友不會照顧自己，有不顧危險往前衝的傾向，希望你能好好幫幫他。"/>
+        </imgdir>
+      </imgdir>
+      <imgdir name="stop">
+      </imgdir>
+      <imgdir name="yes">
+        <string name="0" value="謝謝你！ 兩個人都要平安回來啊。"/>
+      </imgdir>
+      <imgdir name="no">
+        <string name="0" value="這個？改變心意的話跟我說。"/>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <imgdir name="sayEx">
+        <imgdir name="0">
+          <string name="msg" value="安全抵達了呢。"/>
+        </imgdir>
+        <imgdir name="1">
+          <string name="msg" value="#b路上有很多奇怪的事情…"/>
+          <int name="userSay" value="1"/>
+          <int name="imgPos" value="1"/>
+        </imgdir>
+        <imgdir name="2">
+          <string name="msg" value="請不要太在意。 這裡是不論發生什麼事都不奇怪的地方。 因為這裡是#r夢之都#k。"/>
+        </imgdir>
+      </imgdir>
+      <imgdir name="yes">
+        <string name="0" value="那麼，現在請跟居民們講話，收集有關#b音樂盒#k的資訊。 我去看看淨化者有沒有出現。"/>
+      </imgdir>
+      <imgdir name="stop">
+        <imgdir name="defaultEx">
+          <imgdir name="0">
+            <string name="msg" value="防毒面具就拜託你了。 去吵雜不夜城看看吧。"/>
+            <int name="npcID" value="3003209"/>
+            <int name="imgPos" value="1"/>
+          </imgdir>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="34311">
+    <imgdir name="0">
+      <imgdir name="sayEx">
+        <imgdir name="0">
+          <string name="msg" value="不可置信。 消失了。 我的伊莉莎白。 我的愛。 我的夢想。 我的冤家。 我的炸雞。 她就像是我的月光。 啊啊。 月光啊。 請照亮我的愛。 "/>
+        </imgdir>
+        <imgdir name="1">
+          <string name="msg" value="#b(這一邊的人狀況好像更嚴重……伊麗莎白？) "/>
+          <int name="userSay" value="1"/>
+          <int name="imgPos" value="1"/>
+        </imgdir>
+        <imgdir name="2">
+          <string name="msg" value="該怎麼辦才好？ 食慾變得很不好，再這樣下去，說不定會討厭這邊所有的食物。 如果變成這樣的話..如果變成這樣的話… "/>
+        </imgdir>
+        <imgdir name="3">
+          <string name="msg" value="#b如果變成這樣呢？"/>
+          <int name="userSay" value="1"/>
+          <int name="imgPos" value="1"/>
+        </imgdir>
+        <imgdir name="4">
+          <string name="msg" value="是沒看過的面具。  你好可疑。 要叫淨化者嗎？"/>
+        </imgdir>
+        <imgdir name="5">
+          <string name="msg" value="#b(出大事了！)"/>
+          <int name="userSay" value="1"/>
+          <int name="imgPos" value="1"/>
+        </imgdir>
+        <imgdir name="6">
+          <string name="msg" value="不然…去找伊麗莎白吧！"/>
+        </imgdir>
+      </imgdir>
+      <imgdir name="stop">
+      </imgdir>
+      <imgdir name="yesEx">
+        <imgdir name="0">
+          <string name="msg" value="跑到哪去了？ 你說淨化者？ 啊啊 伊莉莎白，我說我的月光。 月光會從那片天空而來。 淨化者也是。 就算淨化者來了，我也不會陷入孤獨。\r\n"/>
+        </imgdir>
+        <imgdir name="1">
+          <string name="msg" value="#b(完全不知道在說什麼。 要問問其他人。)"/>
+          <int name="userSay" value="1"/>
+          <int name="imgPos" value="1"/>
+        </imgdir>
+      </imgdir>
+      <imgdir name="no">
+        <string name="0" value="淨化者！！ 淨化者！！"/>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <imgdir name="sayEx">
+        <imgdir name="0">
+          <string name="msg" value="寵物雞。 那就是伊莉莎白。"/>
+        </imgdir>
+        <imgdir name="1">
+          <string name="msg" value="#b雞？"/>
+          <int name="userSay" value="1"/>
+          <int name="imgPos" value="1"/>
+        </imgdir>
+        <imgdir name="2">
+          <string name="msg" value="雞是偽裝。 牠的確曾經很可愛。 丟東西是他的特徵。 "/>
+        </imgdir>
+      </imgdir>
+      <imgdir name="yes">
+        <string name="0" value="總是跳躍著但不像是跑也不像是飛，跳躍是他獨有的方式。"/>
+      </imgdir>
+      <imgdir name="stop">
+        <imgdir name="defaultEx">
+          <imgdir name="0">
+            <string name="msg" value="艾爾利加~貝斯！"/>
+            <int name="npcID" value="3003239"/>
+            <int name="imgPos" value="1"/>
+          </imgdir>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="34316">
+    <imgdir name="0">
+      <string name="0" value="您沒事吧？ \r\n音樂盒一被摧毀，淨化者們就消失了… 這有什麼意義呢…？"/>
+      <imgdir name="stop">
+      </imgdir>
+      <imgdir name="no">
+        <string name="0" value=" 音樂盒一被摧毀，淨化者們就消失了…？"/>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <imgdir name="sayEx">
+        <imgdir name="0">
+          <string name="msg" value="你沒事吧，防毒面具？"/>
+        </imgdir>
+        <imgdir name="1">
+          <string name="msg" value="如果甦醒者'變多了，這個城市就會崩塌。 為了達到這個目的，必須摧毀剩下的音樂盒。 "/>
+          <int name="npcID" value="3003201"/>
+          <int name="imgPos" value="1"/>
+        </imgdir>
+        <imgdir name="2">
+          <string name="msg" value="這是什麼聲音？ 是還有音樂盒的意思？"/>
+        </imgdir>
+        <imgdir name="3">
+          <string name="msg" value="音樂盒一被摧毀，露希妲的記憶就流入我腦中。 拉契爾恩是凝聚居民們的夢所創造出來的。 然後音樂盒是維持夢境的裝置。"/>
+          <int name="npcID" value="3003201"/>
+          <int name="imgPos" value="1"/>
+        </imgdir>
+        <imgdir name="4">
+          <string name="msg" value="這就是他們要獵捕我們的理由！"/>
+        </imgdir>
+        <imgdir name="5">
+          <string name="msg" value="但是，關於露希妲想透過拉契爾恩完成什麼，還是個未知數。 "/>
+          <int name="npcID" value="3003201"/>
+          <int name="imgPos" value="1"/>
+        </imgdir>
+        <imgdir name="6">
+          <string name="msg" value="這個慢慢查就好。"/>
+        </imgdir>
+      </imgdir>
+      <imgdir name="yes">
+        <string name="0" value="兩位真的辛苦了。"/>
+      </imgdir>
+      <imgdir name="stop">
+        <imgdir name="npcEx">
+          <imgdir name="0">
+            <string name="msg" value="(防毒面具沒事吧…？ 去跟老爺說我們在夜市發生了什麼事吧。)"/>
+            <int name="userSay" value="1"/>
+            <int name="imgPos" value="1"/>
+          </imgdir>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="34317">
+    <imgdir name="0">
+      <string name="0" value="有新來的朋友，問問他是否也有想起來什麼。"/>
+      <imgdir name="stop">
+      </imgdir>
+      <imgdir name="yes">
+        <string name="0" value="現在剛醒來，也不知道記得什麼。"/>
+      </imgdir>
+      <imgdir name="no">
+        <string name="0" value="是需要時間想一下嗎？ 等等再跟你說話吧。"/>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <imgdir name="sayEx">
+        <imgdir name="0">
+          <string name="msg" value="啊，話說回來～在醒來之前有看到#r露希妲#k。 她喃喃自語說著#r「惡夢在哪呢」#k。 "/>
+        </imgdir>
+        <imgdir name="1">
+          <string name="msg" value="#r「惡夢」#k#b？"/>
+          <int name="userSay" value="1"/>
+          <int name="imgPos" value="1"/>
+        </imgdir>
+        <imgdir name="2">
+          <string name="msg" value="她確實是那樣說的。 看起來也有點焦躁。"/>
+        </imgdir>
+        <imgdir name="3">
+          <string name="msg" value="#b怎麼會呢？ "/>
+          <int name="userSay" value="1"/>
+          <int name="imgPos" value="1"/>
+        </imgdir>
+        <imgdir name="4">
+          <string name="msg" value="她怎麼在找惡夢？ 雖然拉契爾恩是露希妲自己創造的夢境，但說不定其中有#r無法控制的不確定要素#k。 "/>
+          <int name="npcID" value="3003209"/>
+          <int name="imgPos" value="1"/>
+        </imgdir>
+        <imgdir name="5">
+          <string name="msg" value="雖然不知道它的形態為何，但說不定是能在決定性的瞬間#r擊敗她的鑰匙#k。 "/>
+          <int name="npcID" value="3003209"/>
+          <int name="imgPos" value="1"/>
+        </imgdir>
+        <imgdir name="6">
+          <string name="msg" value="#b嗯…….#k"/>
+          <int name="userSay" value="1"/>
+          <int name="imgPos" value="1"/>
+        </imgdir>
+      </imgdir>
+      <imgdir name="yesEx">
+        <imgdir name="0">
+          <string name="msg" value="雖然有很多推論，但不知道實際上會怎樣，哈哈。 你別放在心上"/>
+          <int name="npcID" value="3003209"/>
+          <int name="imgPos" value="1"/>
+        </imgdir>
+      </imgdir>
+      <imgdir name="stop">
+        <imgdir name="default">
+          <string name="0" value="跟新來的說說話。"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="34318">
+    <imgdir name="0">
+      <imgdir name="sayEx">
+        <imgdir name="0">
+          <string name="msg" value="#b(問他有沒有聽過音樂盒的聲音。)"/>
+          <int name="userSay" value="1"/>
+          <int name="imgPos" value="1"/>
+        </imgdir>
+        <imgdir name="1">
+          <string name="msg" value="#b音樂盒聲音？#k我說～你們破壞了那個我才醒來的，不是嗎？ 啊啊！ "/>
+        </imgdir>
+        <imgdir name="2">
+          <string name="msg" value="我想起來了。 就算是在音樂盒被破壞之後，還是從遠方傳來一樣的聲音。 雖然醒來時就聽不到了。"/>
+        </imgdir>
+        <imgdir name="3">
+          <string name="msg" value="#b(得跟老頭說了。)"/>
+          <int name="userSay" value="1"/>
+          <int name="imgPos" value="1"/>
+        </imgdir>
+      </imgdir>
+      <imgdir name="stop">
+      </imgdir>
+      <imgdir name="yes">
+        <string name="0" value="我說位置啊～在拉契爾恩舞會場那。"/>
+      </imgdir>
+      <imgdir name="no">
+        <string name="0" value="不是打算和老頭說嗎？"/>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <imgdir name="sayEx">
+        <imgdir name="0">
+          <string name="msg" value="查到#b第二個音樂盒的位置#k了？ 太好了！"/>
+        </imgdir>
+        <imgdir name="1">
+          <string name="msg" value="音樂盒在#b拉契爾恩舞會場#k啊。 有希望了。 按照這樣破壞音樂盒的話，說不定就能解放城市了。"/>
+        </imgdir>
+        <imgdir name="2">
+          <string name="msg" value="…確實很狠。"/>
+          <int name="npcID" value="3003201"/>
+          <int name="imgPos" value="1"/>
+        </imgdir>
+        <imgdir name="3">
+          <string name="msg" value="露希妲還沒站起來，淨化者們的行動也太過被動……."/>
+          <int name="npcID" value="3003201"/>
+          <int name="imgPos" value="1"/>
+        </imgdir>
+        <imgdir name="4">
+          <string name="msg" value="我們還不知道#r在夢中世界和主人相見#k是怎樣的。"/>
+          <int name="npcID" value="3003201"/>
+          <int name="imgPos" value="1"/>
+        </imgdir>
+        <imgdir name="5">
+          <string name="msg" value="呵呵，你說的對。 別掉以輕心，謹慎行動吧。"/>
+        </imgdir>
+      </imgdir>
+      <imgdir name="yes">
+        <string name="0" value="你好像還要再發揮一下。"/>
+      </imgdir>
+      <imgdir name="stop">
+        <imgdir name="defaultEx">
+          <imgdir name="0">
+            <string name="msg" value="我說～不是打算跟老頭說嗎？ "/>
+            <int name="npcID" value="3003220"/>
+            <int name="imgPos" value="1"/>
+          </imgdir>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="34319">
+    <imgdir name="0">
+      <string name="0" value="必須去#b拉契爾恩舞會場#k。 準備好了嗎？"/>
+      <string name="1" value="舞廳在主街右邊。 我先過去看看。"/>
+      <imgdir name="stop">
+      </imgdir>
+      <imgdir name="yesEx">
+        <imgdir name="0">
+          <string name="msg" value="防毒面具就拜託你了。 他是我們的希望……當然你也是，呵呵。"/>
+          <int name="npcID" value="3003209"/>
+          <int name="imgPos" value="1"/>
+        </imgdir>
+      </imgdir>
+      <imgdir name="no">
+        <string name="0" value="有什麼問題嗎？"/>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <string name="0" value="別在意剛剛說的話。"/>
+      <string name="1" value="使用和在#b吵雜不夜城#k同樣的方式進行就可以了。"/>
+      <imgdir name="yes">
+        <string name="0" value="應該從那邊靠近的人開始就行。 \r\n#b必須掌握音樂盒的位置，破壞它。 #k"/>
+      </imgdir>
+      <imgdir name="stop">
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="34320">
+    <imgdir name="0">
+      <string name="0" value="不懂著裝要求的人沒資格跳舞。 沒資格跳舞的人無法做好著裝要求的準備。"/>
+      <string name="1" value="你穿好服裝吧。 至少也要戴面具。"/>
+      <string name="2" value="存在的是搗亂#b「顯露本色之處」#k的笨蛋們。 \r\n想要華麗裝飾面具而著急的傢伙是笨蛋。\r期待使用20個材料完成華麗的面具。"/>
+      <imgdir name="stop">
+      </imgdir>
+      <imgdir name="yes">
+        <string name="0" value="#b生氣的舞會居民#k就是那些笨蛋。 一心想著不要來搶。"/>
+      </imgdir>
+      <imgdir name="no">
+        <string name="0" value="誰也不理的笨蛋。 那就是你。 "/>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <string name="0" value="比想像中還強的你。 不是笨蛋。"/>
+      <imgdir name="yes">
+        <string name="0" value="著裝要求、著裝要求。 完成你的著裝要求。"/>
+      </imgdir>
+      <imgdir name="stop">
+        <imgdir name="default">
+          <string name="0" value="20個材料。 顯露本色之處1。  顯露本色之處3。必須知道那個。 "/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="34321">
+    <imgdir name="0">
+      <string name="0" value="朋友啊，我好幸福。 你幸福嗎？ 我那時在那裡那個位置上碰到小孩子們了。 哈哈哈，但他們不會還我從我這借走的東西。"/>
+      <string name="1" value="100名就行了。 填補我的幸福的100名。 #b狂放的舞會居民#k該去學習之地。 老師啊，教教正義。 哈哈哈。"/>
+      <imgdir name="stop">
+      </imgdir>
+      <imgdir name="yes">
+        <string name="0" value="叫作#b顯露本色之處2#k。 把它變成學習之地吧。"/>
+      </imgdir>
+      <imgdir name="no">
+        <string name="0" value="讓你消失，老師啊。呵呵。 "/>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <imgdir name="sayEx">
+        <imgdir name="0">
+          <string name="msg" value="呵呵呵。 你是真正的教育家。 夥伴啊、老師啊、陌生人啊、不幸之人啊，全都因為傳聞開心起來吧。 傳來的故事把你吹跑。 "/>
+        </imgdir>
+        <imgdir name="1">
+          <string name="msg" value="#b傳聞？#k"/>
+          <int name="userSay" value="1"/>
+          <int name="imgPos" value="1"/>
+        </imgdir>
+      </imgdir>
+      <imgdir name="yes">
+        <string name="0" value="專心於黑色面具吧。 你又是老師，呵呵呵。"/>
+      </imgdir>
+      <imgdir name="stop">
+        <imgdir name="default">
+          <string name="0" value="聽說有100名狂放的舞會居民，呵呵。 去顯露本色之處2吧。 雖然我不會去。"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="34322">
+    <imgdir name="0">
+      <imgdir name="sayEx">
+        <imgdir name="0">
+          <string name="msg" value="你知道音樂盒聲音是從哪傳來的嗎？"/>
+          <int name="userSay" value="1"/>
+          <int name="imgPos" value="1"/>
+        </imgdir>
+        <imgdir name="1">
+          <string name="msg" value="你們一點也不怕嗎？ 全都丟下，快走吧！ 因為我還想活命。"/>
+        </imgdir>
+        <imgdir name="2">
+          <string name="msg" value="睜開眼睛！"/>
+          <int name="userSay" value="1"/>
+          <int name="imgPos" value="1"/>
+        </imgdir>
+        <imgdir name="3">
+          <string name="msg" value="睜眼有什麼用，反正這裡都是那些傢伙的巢穴。"/>
+        </imgdir>
+        <imgdir name="4">
+          <string name="msg" value="以為那女的不知道你們做的事嗎？ 只是時間早晚的問題而已。 切。 我要走了。 就算聚在一起，也只是趕著去送死。"/>
+        </imgdir>
+      </imgdir>
+      <imgdir name="stop">
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <imgdir name="sayEx">
+        <imgdir name="0">
+          <string name="msg" value="嘖，完蛋了。"/>
+        </imgdir>
+        <imgdir name="1">
+          <string name="msg" value="#b怎麼回事？"/>
+          <int name="userSay" value="1"/>
+          <int name="imgPos" value="1"/>
+        </imgdir>
+        <imgdir name="2">
+          <string name="msg" value="他為了保護我而受傷了。 像個笨蛋。 到底為什麼要那樣做？！"/>
+        </imgdir>
+      </imgdir>
+      <imgdir name="yes">
+        <string name="0" value="不過，竟然連你也跟過來，我們三個都被隔離了！"/>
+      </imgdir>
+      <imgdir name="stop">
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="34323">
+    <imgdir name="0">
+      <imgdir name="sayEx">
+        <imgdir name="0">
+          <string name="msg" value="我沒關係。 比起那個，要先逃離這裡才行。 "/>
+        </imgdir>
+        <imgdir name="1">
+          <string name="msg" value="你錯了。 還不明白嗎？ 完全被包圍了。"/>
+          <int name="npcID" value="3003211"/>
+          <int name="imgPos" value="1"/>
+        </imgdir>
+        <imgdir name="2">
+          <string name="msg" value="不是。這些淨化者並不怎麼強。這可能是#b因為你破壞了不夜城的音樂盒。#k"/>
+        </imgdir>
+        <imgdir name="3">
+          <string name="msg" value="#b(那樣的話，我來擊退那些傢伙。 在轉移視線時，你快跑吧。)"/>
+          <int name="userSay" value="1"/>
+          <int name="imgPos" value="1"/>
+        </imgdir>
+        <imgdir name="4">
+          <string name="msg" value="你有辦法擊退淨化者？ 露希妲在找的人就是你嗎？ 就是那個惡夢。 "/>
+          <int name="npcID" value="3003211"/>
+          <int name="imgPos" value="1"/>
+        </imgdir>
+        <imgdir name="5">
+          <string name="msg" value="#b惡夢？？"/>
+          <int name="userSay" value="1"/>
+          <int name="imgPos" value="1"/>
+        </imgdir>
+        <imgdir name="6">
+          <string name="msg" value="等我們安全了再談吧。 請除掉100隻#b淨化者#k。 \r\n那樣就可以逃離這裡了。"/>
+        </imgdir>
+      </imgdir>
+      <imgdir name="stop">
+      </imgdir>
+      <imgdir name="yesEx">
+        <imgdir name="0">
+          <string name="msg" value="等等，在逃走之前我有事要跟你說。 我不知道#r音樂盒聲音#k是從哪發出來的。 \r\n不過，#r舞會面具#k知道。 他總是說音樂盒怎樣怎樣的。"/>
+          <int name="npcID" value="3003211"/>
+          <int name="imgPos" value="1"/>
+        </imgdir>
+        <imgdir name="1">
+          <string name="msg" value="#b舞會面具#k是吧。 知道了。 "/>
+          <int name="npcID" value="3003206"/>
+          <int name="imgPos" value="1"/>
+        </imgdir>
+      </imgdir>
+      <imgdir name="no">
+        <string name="0" value="沒時間了。"/>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <imgdir name="sayEx">
+        <imgdir name="0">
+          <string name="msg" value="黑色面具好像順利逃脫了。 "/>
+        </imgdir>
+        <imgdir name="1">
+          <string name="msg" value="而你卻沒逃跑。"/>
+          <int name="userSay" value="1"/>
+          <int name="imgPos" value="1"/>
+        </imgdir>
+        <imgdir name="2">
+          <string name="msg" value="我沒關係。 必須回到舞廳找音樂盒。"/>
+        </imgdir>
+        <imgdir name="3">
+          <string name="msg" value="…為什麼要做到這種地步？"/>
+          <int name="userSay" value="1"/>
+          <int name="imgPos" value="1"/>
+        </imgdir>
+        <imgdir name="4">
+          <string name="msg" value="因為那是我的使命。"/>
+        </imgdir>
+      </imgdir>
+      <imgdir name="yesEx">
+        <imgdir name="0">
+          <string name="msg" value="使命……"/>
+          <int name="userSay" value="1"/>
+          <int name="imgPos" value="1"/>
+        </imgdir>
+      </imgdir>
+      <imgdir name="stop">
+        <imgdir name="default">
+          <string name="0" value="100隻淨化者。 那樣應該就夠了。"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="34324">
+    <imgdir name="0">
+      <imgdir name="sayEx">
+        <imgdir name="0">
+          <string name="msg" value="我之前「跟艾爾達斯問過有沒有靈魂」。 沒關係。\r\n#r完成使命時消失的話，以「活下去」的意義來說就夠了。#k"/>
+        </imgdir>
+        <imgdir name="1">
+          <string name="msg" value="#b我說的是惡夢的故事…."/>
+          <int name="userSay" value="1"/>
+          <int name="imgPos" value="1"/>
+        </imgdir>
+        <imgdir name="2">
+          <string name="msg" value="還記得在巷子裡的事嗎？ 露希妲的力量對你來說沒用。 \r\n最終可以擊退她的人、成為她的惡夢的人，只有你。 "/>
+        </imgdir>
+        <imgdir name="3">
+          <string name="msg" value="受傷的地方好像好得差不多了。 我們回到舞廳吧。"/>
+        </imgdir>
+      </imgdir>
+      <imgdir name="stop">
+      </imgdir>
+      <imgdir name="yesEx">
+        <imgdir name="0">
+          <string name="msg" value="#b「活著」…\r\n"/>
+          <int name="userSay" value="1"/>
+          <int name="imgPos" value="1"/>
+        </imgdir>
+      </imgdir>
+      <imgdir name="no">
+        <string name="0" value="有沒有哪裡受傷？"/>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <string name="0" value="平安抵達了。"/>
+      <imgdir name="yes">
+        <string name="0" value="黑色面具說#b「舞會面具#k」知道音樂盒的位置。"/>
+      </imgdir>
+      <imgdir name="stop">
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="34325">
+    <imgdir name="0">
+      <imgdir name="sayEx">
+        <imgdir name="0">
+          <string name="msg" value="我很幸福……？ 沒錯，我很幸福，因為可以這樣跳舞，所以感到幸福。 但是，好傷心。 誰都不瞧我一眼。 誰也不在乎我。 就算穿著這麼美麗的洋裝，其他人還是對我沒興趣。 所以說，我想跳舞。 "/>
+        </imgdir>
+        <imgdir name="1">
+          <string name="msg" value="#b跳舞？"/>
+          <int name="userSay" value="1"/>
+          <int name="imgPos" value="1"/>
+        </imgdir>
+        <imgdir name="2">
+          <string name="msg" value="我想在那舞廳中央華麗地跳舞。 我想抓住所有人的目光。 那真的很夢幻。 我真的會變得幸福。 "/>
+        </imgdir>
+        <imgdir name="3">
+          <string name="msg" value="哀。 要是我有那個紅鞋，真的會很幸福。 當然我已經很幸福了。 "/>
+        </imgdir>
+        <imgdir name="4">
+          <string name="msg" value="夢中的居民反射出露希妲的潛意識。 觀察居民的話，可以發現露希妲#b想獲得別人認可的心意#k很強烈。 "/>
+          <int name="npcID" value="3003206"/>
+          <int name="imgPos" value="1"/>
+        </imgdir>
+        <imgdir name="5">
+          <string name="msg" value="如果在#b跳舞鞋佔領地2#k狩獵#b100隻跳舞的紅皮鞋#k，應該就能找到適合她穿的鞋子。\r\n"/>
+          <int name="npcID" value="3003205"/>
+          <int name="imgPos" value="1"/>
+        </imgdir>
+      </imgdir>
+      <imgdir name="stop">
+      </imgdir>
+      <imgdir name="yesEx">
+        <imgdir name="0">
+          <string name="msg" value="在跳舞鞋佔領地2狩獵100隻。"/>
+          <int name="npcID" value="3003205"/>
+          <int name="imgPos" value="1"/>
+        </imgdir>
+      </imgdir>
+      <imgdir name="noEx">
+        <imgdir name="0">
+          <string name="msg" value="哪裡受傷了嗎？ "/>
+          <int name="npcID" value="3003205"/>
+          <int name="imgPos" value="1"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <string name="0" value="我…我真的很幸福！從現在開始幸福嗎？不，本來我就很幸福。但是這種心情是什麼？我…"/>
+      <string name="1" value="呃呃…呃呃呃…幸福？那是什麼？ "/>
+      <imgdir name="yes">
+        <string name="0" value="看著我。不要忘記我…不，我希望大家都消失不見。"/>
+      </imgdir>
+      <imgdir name="stop">
+        <imgdir name="default">
+          <string name="0" value="快、快、快！ 我想擁有鞋子～"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="34326">
+    <imgdir name="0">
+    </imgdir>
+    <imgdir name="1">
+      <string name="0" value="呃呃..."/>
+      <imgdir name="yes">
+        <string name="0" value="我是…誰？"/>
+      </imgdir>
+      <imgdir name="stop">
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="34327">
+    <imgdir name="0">
+      <imgdir name="sayEx">
+        <imgdir name="0">
+          <string name="msg" value="拉契爾恩的夢是巨大的一塊物體……成員減少的話夢也會變弱…"/>
+        </imgdir>
+        <imgdir name="1">
+          <string name="msg" value="#b你是……蝦子面具？？？"/>
+          <int name="userSay" value="1"/>
+          <int name="imgPos" value="1"/>
+        </imgdir>
+        <imgdir name="2">
+          <string name="msg" value="減少淨化者……讓我能活下來。"/>
+        </imgdir>
+      </imgdir>
+      <imgdir name="stop">
+      </imgdir>
+      <imgdir name="yes">
+        <string name="0" value="必須除掉100隻淨化者。 幫幫我，讓我走過去……"/>
+      </imgdir>
+      <imgdir name="no">
+        <string name="0" value="好…不要走……."/>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <string name="0" value="呃呃…呃！"/>
+      <imgdir name="yesEx">
+        <imgdir name="0">
+          <string name="msg" value="#b回來了嗎？"/>
+          <int name="userSay" value="1"/>
+          <int name="imgPos" value="1"/>
+        </imgdir>
+        <imgdir name="1">
+          <string name="msg" value="呼，多虧你，我活下來了。 變成他們的一份子，真不愉快。"/>
+        </imgdir>
+        <imgdir name="2">
+          <string name="msg" value="看來為了做個了斷，終究只能和露希妲見面了。"/>
+        </imgdir>
+        <imgdir name="3">
+          <string name="msg" value="#b防毒面具……."/>
+          <int name="userSay" value="1"/>
+          <int name="imgPos" value="1"/>
+        </imgdir>
+        <imgdir name="4">
+          <string name="msg" value="你不說我也知道。 因為露希妲的記憶是共享的。"/>
+        </imgdir>
+        <imgdir name="5">
+          <string name="msg" value="我替你打開上去的門了。 我能做的就到這了。"/>
+        </imgdir>
+        <imgdir name="6">
+          <string name="msg" value="雖然想說的話很多，但你快走吧。 憑我的力量，無法讓門開太久。"/>
+        </imgdir>
+      </imgdir>
+      <imgdir name="stop">
+        <imgdir name="defaultEx">
+          <imgdir name="0">
+            <string name="msg" value="100隻的…淨化者…"/>
+            <int name="imgPos" value="1"/>
+          </imgdir>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="34328">
+    <imgdir name="0">
+      <imgdir name="sayEx">
+        <imgdir name="0">
+          <string name="msg" value="是這樣的… 就是… 我是… 誰？"/>
+        </imgdir>
+        <imgdir name="1">
+          <string name="msg" value="#b得幫你減少淨化者？"/>
+          <int name="userSay" value="1"/>
+          <int name="imgPos" value="1"/>
+        </imgdir>
+        <imgdir name="2">
+          <string name="msg" value="只要100隻……."/>
+        </imgdir>
+      </imgdir>
+      <imgdir name="stop">
+      </imgdir>
+      <imgdir name="yes">
+        <string name="0" value="所以……. 100隻… 拜託了… 我想變老。"/>
+      </imgdir>
+      <imgdir name="no">
+        <string name="0" value="那個……."/>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <string name="0" value="呃呃..."/>
+      <imgdir name="yes">
+        <string name="0" value="我說～我能活著真是太好了。 你不用說我也知道。 別管我們了，上去吧。"/>
+        <string name="1" value="嗯！門不能開著太久。對了～一定要活下來。"/>
+      </imgdir>
+      <imgdir name="stop">
+        <imgdir name="default">
+          <string name="0" value="就是…淨化者100隻。"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="34329">
+    <imgdir name="0">
+      <string name="0" value="這真是...？太丟臉了。 可以先幫我減少一些這裡的傢伙嗎？ 我有東西要給你，但我的身體無法自由行動。"/>
+      <string name="1" value="啊，你問我怎麼能自由地說話？ 大概是因為你除掉很多淨化者，所以這個空間的夢變弱了吧。"/>
+      <imgdir name="stop">
+      </imgdir>
+      <imgdir name="yes">
+        <string name="0" value="100隻。 請加油。"/>
+      </imgdir>
+      <imgdir name="no">
+        <string name="0" value="什麼？"/>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <string name="0" value="收下。 這個能幫上忙。 "/>
+      <string name="1" value="本來想等它貴了再賣掉… 唔。"/>
+      <imgdir name="yes">
+        <string name="0" value="如果沒有能爬上高處的繩子或梯子時，可以利用我給你的東西。"/>
+        <string name="1" value="反正我們一時也離不開這。 所以，別管我們了，走吧。 "/>
+      </imgdir>
+      <imgdir name="stop">
+        <imgdir name="default">
+          <string name="0" value="100隻啊，100隻。"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="34330">
+    <imgdir name="0">
+      <string name="0" value="呃呃…請幫幫我。身體無法動彈。"/>
+      <imgdir name="stop">
+      </imgdir>
+      <imgdir name="yes">
+        <string name="0" value="請消滅100隻…那些傢伙。"/>
+      </imgdir>
+      <imgdir name="no">
+        <string name="0" value="咳呃……."/>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <string name="0" value="嗯…夢變得越來越弱。"/>
+      <string name="1" value="先接受這個吧。不知道什麼時候又會變成淨化者。"/>
+      <imgdir name="yesEx">
+        <imgdir name="0">
+          <string name="msg" value="變成淨化者時發現的，我一直抱在懷裡。 在這情況之下，似乎還殘留著意識。 不知道能不能幫上忙。"/>
+        </imgdir>
+        <imgdir name="1">
+          <string name="msg" value="是說，結果防毒面具來不了。 你一定備受衝擊吧。 "/>
+        </imgdir>
+        <imgdir name="2">
+          <string name="msg" value="但是別太擔心了。 他會恢復的。 "/>
+        </imgdir>
+        <imgdir name="3">
+          <string name="msg" value="你……."/>
+        </imgdir>
+        <imgdir name="4">
+          <string name="msg" value="要擊退露希妲。"/>
+          <int name="userSay" value="1"/>
+          <int name="imgPos" value="1"/>
+        </imgdir>
+        <imgdir name="5">
+          <string name="msg" value="我不會阻止你的。 #ho#，要打贏。 為了你，還有為了我們。"/>
+        </imgdir>
+      </imgdir>
+      <imgdir name="stop">
+        <imgdir name="default">
+          <string name="0" value="100隻啊… 哼。"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="34331">
+    <imgdir name="0">
+    </imgdir>
+    <imgdir name="1">
+      <imgdir name="stop">
+        <imgdir name="mob">
+          <string name="0" value="我們一定要擊退露希妲。"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="34332">
+    <imgdir name="0">
+    </imgdir>
+    <imgdir name="1">
+    </imgdir>
+  </imgdir>
 </imgdir>

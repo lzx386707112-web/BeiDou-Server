@@ -86504,4 +86504,589 @@
       </imgdir>
     </imgdir>
   </imgdir>
+
+  <imgdir name="34300">
+    <imgdir name="0">
+      <int name="npc" value="3003209"/>
+      <int name="lvmin" value="220"/>
+      <imgdir name="quest">
+        <imgdir name="0">
+          <int name="id" value="1465"/>
+          <int name="state" value="2"/>
+          <int name="order" value="1"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <int name="order" value="1"/>
+      <int name="npc" value="3003202"/>
+      <imgdir name="npcSpeech">
+        <imgdir name="0">
+          <int name="id" value="3003225"/>
+          <int name="order" value="1"/>
+          <string name="script" value="q34300_1"/>
+        </imgdir>
+        <imgdir name="1">
+          <int name="id" value="3003226"/>
+          <int name="order" value="2"/>
+          <string name="script" value="q34300_2"/>
+        </imgdir>
+        <imgdir name="2">
+          <int name="id" value="3003227"/>
+          <int name="order" value="3"/>
+          <string name="script" value="q34300_3"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="34301">
+    <imgdir name="0">
+      <int name="npc" value="3003209"/>
+      <int name="lvmin" value="220"/>
+      <imgdir name="quest">
+        <imgdir name="0">
+          <int name="id" value="34300"/>
+          <int name="state" value="2"/>
+          <int name="order" value="1"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <int name="order" value="1"/>
+      <int name="npc" value="3003209"/>
+    </imgdir>
+  </imgdir>
+  <imgdir name="34302">
+    <imgdir name="0">
+      <int name="npc" value="3003209"/>
+      <int name="lvmin" value="220"/>
+      <imgdir name="quest">
+        <imgdir name="0">
+          <int name="id" value="34301"/>
+          <int name="state" value="2"/>
+          <int name="order" value="1"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <int name="order" value="1"/>
+      <int name="npc" value="3003209"/>
+    </imgdir>
+  </imgdir>
+  <imgdir name="34305">
+    <imgdir name="0">
+      <int name="npc" value="3003201"/>
+      <int name="lvmin" value="220"/>
+      <imgdir name="quest">
+        <imgdir name="0">
+          <int name="id" value="34304"/>
+          <int name="state" value="2"/>
+          <int name="order" value="1"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <int name="order" value="1"/>
+      <int name="npc" value="3003209"/>
+    </imgdir>
+  </imgdir>
+  <imgdir name="34306">
+    <imgdir name="0">
+      <int name="npc" value="3003201"/>
+      <int name="lvmin" value="220"/>
+      <imgdir name="quest">
+        <imgdir name="0">
+          <int name="id" value="34305"/>
+          <int name="state" value="2"/>
+          <int name="order" value="1"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <int name="order" value="1"/>
+      <int name="npc" value="3003202"/>
+    </imgdir>
+  </imgdir>
+  <imgdir name="34307">
+    <imgdir name="0">
+      <int name="npc" value="3003202"/>
+      <int name="lvmin" value="220"/>
+      <imgdir name="quest">
+        <imgdir name="0">
+          <int name="id" value="34306"/>
+          <int name="state" value="2"/>
+          <int name="order" value="1"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <int name="order" value="1"/>
+      <int name="npc" value="3003202"/>
+      <imgdir name="npcSpeech">
+        <imgdir name="0">
+          <int name="id" value="3003228"/>
+          <int name="order" value="1"/>
+          <string name="script" value="q34307_1"/>
+        </imgdir>
+        <imgdir name="1">
+          <int name="id" value="3003229"/>
+          <int name="order" value="2"/>
+          <string name="script" value="q34307_2"/>
+        </imgdir>
+        <imgdir name="2">
+          <int name="id" value="3003215"/>
+          <int name="order" value="3"/>
+          <string name="script" value="q34307_3"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="34308">
+    <imgdir name="0">
+      <int name="npc" value="3003202"/>
+      <int name="lvmin" value="220"/>
+      <imgdir name="quest">
+        <imgdir name="0">
+          <int name="id" value="34307"/>
+          <int name="state" value="2"/>
+          <int name="order" value="1"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <int name="order" value="1"/>
+      <int name="npc" value="3003215"/>
+    </imgdir>
+  </imgdir>
+  <imgdir name="34309">
+    <imgdir name="0">
+      <int name="npc" value="3003209"/>
+      <int name="lvmin" value="220"/>
+      <imgdir name="quest">
+        <imgdir name="0">
+          <int name="id" value="34308"/>
+          <int name="state" value="2"/>
+          <int name="order" value="1"/>
+        </imgdir>
+        <imgdir name="1">
+          <int name="id" value="1465"/>
+          <int name="state" value="2"/>
+          <int name="order" value="1"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <int name="order" value="1"/>
+      <int name="npc" value="3003214"/>
+    </imgdir>
+  </imgdir>
+  <imgdir name="34310">
+    <imgdir name="0">
+      <int name="npc" value="3003209"/>
+      <int name="lvmin" value="220"/>
+      <imgdir name="quest">
+        <imgdir name="0">
+          <int name="id" value="34309"/>
+          <int name="state" value="2"/>
+          <int name="order" value="1"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <int name="order" value="1"/>
+      <int name="npc" value="3003203"/>
+    </imgdir>
+  </imgdir>
+  <imgdir name="34311">
+    <imgdir name="0">
+      <int name="npc" value="3003239"/>
+      <int name="lvmin" value="220"/>
+      <imgdir name="quest">
+        <imgdir name="0">
+          <int name="id" value="34310"/>
+          <int name="state" value="2"/>
+          <int name="order" value="1"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <int name="order" value="1"/>
+      <int name="npc" value="3003235"/>
+    </imgdir>
+  </imgdir>
+  <imgdir name="34316">
+    <imgdir name="0">
+      <int name="npc" value="3003203"/>
+      <int name="lvmin" value="220"/>
+      <imgdir name="quest">
+        <imgdir name="0">
+          <int name="id" value="34315"/>
+          <int name="state" value="2"/>
+          <int name="order" value="1"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <int name="order" value="1"/>
+      <int name="npc" value="3003209"/>
+    </imgdir>
+  </imgdir>
+  <imgdir name="34317">
+    <imgdir name="0">
+      <int name="npc" value="3003209"/>
+      <int name="lvmin" value="220"/>
+      <imgdir name="quest">
+        <imgdir name="0">
+          <int name="id" value="34316"/>
+          <int name="state" value="2"/>
+          <int name="order" value="1"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <int name="order" value="1"/>
+      <int name="npc" value="3003220"/>
+    </imgdir>
+  </imgdir>
+  <imgdir name="34318">
+    <imgdir name="0">
+      <int name="npc" value="3003220"/>
+      <int name="lvmin" value="220"/>
+      <imgdir name="quest">
+        <imgdir name="0">
+          <int name="id" value="34317"/>
+          <int name="state" value="2"/>
+          <int name="order" value="1"/>
+        </imgdir>
+        <imgdir name="1">
+          <int name="id" value="1465"/>
+          <int name="state" value="2"/>
+          <int name="order" value="1"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <int name="order" value="1"/>
+      <int name="npc" value="3003209"/>
+    </imgdir>
+  </imgdir>
+  <imgdir name="34319">
+    <imgdir name="0">
+      <int name="npc" value="3003201"/>
+      <int name="lvmin" value="220"/>
+      <imgdir name="quest">
+        <imgdir name="0">
+          <int name="id" value="34318"/>
+          <int name="state" value="2"/>
+          <int name="order" value="1"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <int name="order" value="1"/>
+      <int name="npc" value="3003205"/>
+    </imgdir>
+  </imgdir>
+  <imgdir name="34320">
+    <imgdir name="0">
+      <int name="npc" value="3003241"/>
+      <int name="lvmin" value="220"/>
+      <imgdir name="quest">
+        <imgdir name="0">
+          <int name="id" value="34319"/>
+          <int name="state" value="2"/>
+          <int name="order" value="1"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <int name="order" value="1"/>
+      <int name="npc" value="3003241"/>
+      <imgdir name="item">
+        <imgdir name="0">
+          <int name="id" value="4034980"/>
+          <int name="count" value="20"/>
+          <int name="order" value="1"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="34321">
+    <imgdir name="0">
+      <int name="npc" value="3003243"/>
+      <int name="lvmin" value="220"/>
+      <imgdir name="quest">
+        <imgdir name="0">
+          <int name="id" value="34320"/>
+          <int name="state" value="2"/>
+          <int name="order" value="1"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <int name="order" value="1"/>
+      <int name="npc" value="3003243"/>
+      <imgdir name="mob">
+        <imgdir name="0">
+          <int name="id" value="8643009"/>
+          <int name="count" value="100"/>
+          <int name="order" value="1"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="34322">
+    <imgdir name="0">
+      <int name="npc" value="3003218"/>
+      <int name="lvmin" value="220"/>
+      <imgdir name="quest">
+        <imgdir name="0">
+          <int name="id" value="34321"/>
+          <int name="state" value="2"/>
+          <int name="order" value="1"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <int name="order" value="1"/>
+      <int name="npc" value="3003211"/>
+    </imgdir>
+  </imgdir>
+  <imgdir name="34323">
+    <imgdir name="0">
+      <int name="npc" value="3003206"/>
+      <int name="lvmin" value="220"/>
+      <imgdir name="quest">
+        <imgdir name="0">
+          <int name="id" value="34322"/>
+          <int name="state" value="2"/>
+          <int name="order" value="1"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <int name="order" value="1"/>
+      <int name="npc" value="3003206"/>
+      <imgdir name="mob">
+        <imgdir name="0">
+          <int name="id" value="8643012"/>
+          <int name="count" value="100"/>
+          <int name="order" value="1"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="34324">
+    <imgdir name="0">
+      <int name="npc" value="3003206"/>
+      <int name="lvmin" value="220"/>
+      <imgdir name="quest">
+        <imgdir name="0">
+          <int name="id" value="34323"/>
+          <int name="state" value="2"/>
+          <int name="order" value="1"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <int name="order" value="1"/>
+      <int name="npc" value="3003205"/>
+    </imgdir>
+  </imgdir>
+  <imgdir name="34325">
+    <imgdir name="0">
+      <int name="npc" value="3003224"/>
+      <int name="lvmin" value="220"/>
+      <imgdir name="quest">
+        <imgdir name="0">
+          <int name="id" value="34324"/>
+          <int name="state" value="2"/>
+          <int name="order" value="1"/>
+        </imgdir>
+        <imgdir name="1">
+          <int name="id" value="1465"/>
+          <int name="state" value="2"/>
+          <int name="order" value="1"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <int name="order" value="1"/>
+      <int name="npc" value="3003224"/>
+      <imgdir name="mob">
+        <imgdir name="0">
+          <int name="id" value="8643007"/>
+          <int name="count" value="100"/>
+          <int name="order" value="1"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="34326">
+    <imgdir name="0">
+      <int name="npc" value="3003209"/>
+      <int name="lvmin" value="220"/>
+      <imgdir name="quest">
+        <imgdir name="0">
+          <int name="id" value="34325"/>
+          <int name="state" value="2"/>
+          <int name="order" value="1"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <int name="order" value="1"/>
+      <int name="npc" value="3003216"/>
+    </imgdir>
+  </imgdir>
+  <imgdir name="34327">
+    <imgdir name="0">
+      <int name="npc" value="3003216"/>
+      <int name="lvmin" value="220"/>
+      <imgdir name="quest">
+        <imgdir name="0">
+          <int name="id" value="34326"/>
+          <int name="state" value="2"/>
+          <int name="order" value="1"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <int name="order" value="1"/>
+      <int name="npc" value="3003216"/>
+      <imgdir name="mob">
+        <imgdir name="0">
+          <int name="id" value="8643000"/>
+          <int name="count" value="100"/>
+          <int name="order" value="1"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="34328">
+    <imgdir name="0">
+      <int name="npc" value="3003222"/>
+      <int name="lvmin" value="220"/>
+      <imgdir name="quest">
+        <imgdir name="0">
+          <int name="id" value="34327"/>
+          <int name="state" value="2"/>
+          <int name="order" value="1"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <int name="order" value="1"/>
+      <int name="npc" value="3003222"/>
+      <imgdir name="mob">
+        <imgdir name="0">
+          <int name="id" value="8643000"/>
+          <int name="count" value="100"/>
+          <int name="order" value="1"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="34329">
+    <imgdir name="0">
+      <int name="npc" value="3003219"/>
+      <int name="lvmin" value="220"/>
+      <imgdir name="quest">
+        <imgdir name="0">
+          <int name="id" value="34328"/>
+          <int name="state" value="2"/>
+          <int name="order" value="1"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <int name="order" value="1"/>
+      <int name="npc" value="3003219"/>
+      <imgdir name="mob">
+        <imgdir name="0">
+          <int name="id" value="8643010"/>
+          <int name="count" value="100"/>
+          <int name="order" value="1"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="34330">
+    <imgdir name="0">
+      <int name="npc" value="3003210"/>
+      <int name="lvmin" value="220"/>
+      <imgdir name="quest">
+        <imgdir name="0">
+          <int name="id" value="34329"/>
+          <int name="state" value="2"/>
+          <int name="order" value="1"/>
+        </imgdir>
+        <imgdir name="1">
+          <int name="id" value="1465"/>
+          <int name="state" value="2"/>
+          <int name="order" value="1"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <int name="order" value="1"/>
+      <int name="npc" value="3003210"/>
+      <imgdir name="mob">
+        <imgdir name="0">
+          <int name="id" value="8643011"/>
+          <int name="count" value="100"/>
+          <int name="order" value="1"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="34331">
+    <imgdir name="0">
+      <int name="npc" value="3003200"/>
+      <int name="lvmin" value="220"/>
+      <imgdir name="quest">
+        <imgdir name="0">
+          <int name="id" value="34330"/>
+          <int name="state" value="2"/>
+          <int name="order" value="1"/>
+        </imgdir>
+        <imgdir name="1">
+          <int name="id" value="1465"/>
+          <int name="state" value="2"/>
+          <int name="order" value="1"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <int name="order" value="1"/>
+      <int name="npc" value="3003208"/>
+    </imgdir>
+  </imgdir>
+  <imgdir name="34332">
+    <imgdir name="0">
+      <int name="npc" value="3003165"/>
+      <int name="lvmin" value="220"/>
+      <int name="subJobFlags" value="15"/>
+      <int name="notInTeleportItemLimitedField" value="1"/>
+      <imgdir name="quest">
+        <imgdir name="0">
+          <int name="id" value="1465"/>
+          <int name="state" value="2"/>
+          <int name="order" value="1"/>
+        </imgdir>
+        <imgdir name="1">
+          <int name="id" value="34218"/>
+          <int name="state" value="2"/>
+          <int name="order" value="1"/>
+        </imgdir>
+        <imgdir name="2">
+          <int name="id" value="34300"/>
+          <int name="order" value="1"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <int name="order" value="1"/>
+    </imgdir>
+  </imgdir>
 </imgdir>
