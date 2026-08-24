@@ -59,6 +59,15 @@ class MapMigrateComparisonTest(unittest.TestCase):
         self.assertIsNone(compat.action_for(compat.evaluate(known_modern, "map"), known_modern))
         self.assertEqual(compat.evaluate(proven_karing, "map").status, "ok")
 
+    def test_local_swim_area_projects_modern_water_rectangles_to_legacy(self):
+        legacy = {"name": "swimArea", "parent_name": "", "path": "swimArea", "type": "imgdir"}
+        modern_rect = {"name": "y1", "parent_name": "swim01", "path": "rapidStream/swim01/y1", "type": "int", "value": 206}
+        modern_physics = {"name": "forceX", "parent_name": "swim01", "path": "areaCtrl/swim01/forceX", "type": "float", "value": 150000.0}
+        self.assertEqual(compat.evaluate(legacy, "map").status, "ok")
+        self.assertEqual(compat.evaluate(modern_rect, "map").status, "modern")
+        self.assertIn("swimArea", compat.evaluate(modern_rect, "map").suggestion)
+        self.assertEqual(compat.evaluate(modern_physics, "map").status, "modern")
+
     def test_modern_projection_rules_cover_links_canvas_and_extended_fields(self):
         outlink = {"name": "_outlink", "parent_name": "0", "path": "stand/0/_outlink", "type": "string", "value": "Mob/_Canvas/1.img/stand/0"}
         canvas = {"name": "0", "parent_name": "stand", "path": "stand/0", "type": "canvas", "format": 4098, "format2": 0, "width": 32, "height": 32}

@@ -1,5 +1,6 @@
 const $ = (id) => document.getElementById(id);
 const tmsDataRoot = document.body.dataset.tmsDataRoot;
+const defaultExportRoot = document.body.dataset.defaultExportRoot;
 
 const state = {
   kind: "map",
@@ -8,11 +9,14 @@ const state = {
   children: new Map(),
   expanded: new Set([""]),
   selectedPath: null,
+  addParentPath: "",
   leftPath: "",
   rightPath: "",
   leftInfo: null,
   rightInfo: null,
   compatibility: null,
+  diagnostic: null,
+  diagnosticPath: "",
   preview: null,
   rightPreview: null,
   zoom: 1,
@@ -24,6 +28,7 @@ const state = {
   mobFrame: 0,
   mobPlaying: true,
   mobTimer: null,
+  loadSequence: 0,
 };
 
 function escapeHtml(value) {
@@ -78,6 +83,7 @@ function setKind(kind) {
   $("mapControls").hidden = kind !== "map";
   $("mobControls").hidden = kind !== "mob";
   $("itemId").placeholder = kind === "map" ? "9 位地图 ID" : "7 位怪物 ID";
+  $("diagnosticTab").disabled = kind !== "map";
   clearWorkspace();
   updateDefaultPaths($("itemId").value.trim());
   searchCatalog();
@@ -92,7 +98,7 @@ function updateDefaultPaths(id) {
     $("rightPath").value = `${tmsDataRoot}/Map/Map/${bucket}/${id}.img`;
   } else {
     $("leftPath").value = `clien/Data/Mob/${id}.img`;
-    $("rightPath").value = `${tmsDataRoot}/Mob/${id}.img`;
+    $("rightPath").value = `${tmsDataRoot}/Mob/_Canvas/${id}.img`;
   }
 }
 
@@ -104,6 +110,8 @@ function clearWorkspace() {
   state.preview = null;
   state.rightPreview = null;
   state.compatibility = null;
+  state.diagnostic = null;
+  state.diagnosticPath = "";
   for (const view of Object.values(state.mapViews)) {
     view.preview = null;
     view.images = [];
@@ -118,6 +126,9 @@ function clearWorkspace() {
   $("leftOnlyCount").textContent = "0";
   $("rightOnlyCount").textContent = "0";
   $("compatibilityCount").textContent = "0";
+  $("diagnosticCount").textContent = "–";
+  $("crashDiagnostic").innerHTML = '<div class="empty-state compact"><strong>检查地图还是生命资源导致崩溃</strong><span>解析地图、场景引用、怪物/NPC 动作和服务端同步状态。</span><button id="runDiagnosticBtn" class="primary-button" type="button">运行崩溃诊断</button></div>';
+  $("runDiagnosticBtn").addEventListener("click", runCrashDiagnostic);
   $("previewEmpty").hidden = false;
   $("mapCompareView").hidden = true;
   $("mobStage").hidden = true;
@@ -126,6 +137,16 @@ function clearWorkspace() {
   $("inspector").innerHTML = '<span class="empty-mark small" aria-hidden="true">⌖</span><strong>选择左侧节点</strong><span>这里会显示属性、差异与可编辑值。</span>';
   $("compatibility").innerHTML = '<div class="empty-state compact"><strong>等待对比结果</strong><span>加载后会分析 B 独有节点和现代资源兼容风险。</span></div>';
   setInspectorMode("compatibility");
+  $("selectedPath").textContent = "未选择节点";
+  $("selectedPath").title = "";
+  $("nodeActions").hidden = true;
+  $("createMainBtn").hidden = true;
+  $("createMainBtn").disabled = true;
+  $("copyTmsBtn").disabled = true;
+  $("addRootBtn").disabled = true;
+  $("addChildBtn").disabled = true;
+  $("deleteBtn").disabled = true;
+  $("exportBtn").disabled = true;
   $("editActions").hidden = true;
   $("operationResult").hidden = true;
 }
@@ -249,10 +270,12 @@ async function loadComparison() {
   const leftPath = $("leftPath").value.trim();
   const rightPath = $("rightPath").value.trim();
   if (!leftPath || !rightPath) return;
+  const loadSequence = ++state.loadSequence;
   $("catalog").hidden = true;
   clearWorkspace();
   try {
     const data = await post("/api/compare", {kind: state.kind, leftPath, rightPath});
+    if (loadSequence !== state.loadSequence) return;
     state.rows = data.nodes;
     state.leftPath = data.leftPath;
     state.rightPath = data.rightPath;
@@ -267,49 +290,64 @@ async function loadComparison() {
     $("rightOnlyCount").textContent = data.counts.rightOnly;
     renderCompatibility(data.compatibility);
     renderTree();
+    $("nodeActions").hidden = false;
+    updateNodeActions();
     setInspectorMode("compatibility");
-    await loadPreview();
+    await loadPreview(loadSequence);
   } catch (error) {
+    if (loadSequence !== state.loadSequence) return;
     showResult(error.message, true);
     $("previewEmpty").innerHTML = `<strong>加载失败</strong><span>${escapeHtml(error.message)}</span>`;
   }
 }
 
-async function loadPreview() {
+async function loadPreview(loadSequence = state.loadSequence) {
   try {
     if (state.kind === "map") {
       const [leftResult, rightResult] = await Promise.allSettled([
         post("/api/preview", {kind: "map", sourcePath: state.leftPath}),
         post("/api/preview", {kind: "map", sourcePath: state.rightPath}),
       ]);
-      if (leftResult.status === "rejected") throw leftResult.reason;
-      state.preview = leftResult.value;
-      state.rightPreview = rightResult.status === "fulfilled" ? rightResult.value : null;
+      if (loadSequence !== state.loadSequence) return;
+      const leftData = leftResult.status === "fulfilled" ? leftResult.value : null;
+      const rightData = rightResult.status === "fulfilled" ? rightResult.value : null;
+      if (!leftData && !rightData) throw leftResult.reason || rightResult.reason;
+      state.preview = leftData;
+      state.rightPreview = rightData;
       $("previewEmpty").hidden = true;
-      await prepareMapPreview(state.preview, state.rightPreview, rightResult.status === "rejected" ? rightResult.reason : null);
+      await prepareMapPreview(
+        leftData,
+        rightData,
+        leftResult.status === "rejected" ? leftResult.reason : null,
+        rightResult.status === "rejected" ? rightResult.reason : null,
+      );
     } else {
       const data = await post("/api/preview", {kind: "mob", sourcePath: state.leftPath});
+      if (loadSequence !== state.loadSequence) return;
       state.preview = data;
       $("previewEmpty").hidden = true;
       prepareMobPreview(data);
     }
   } catch (error) {
+    if (loadSequence !== state.loadSequence) return;
     $("previewEmpty").hidden = false;
     $("previewEmpty").innerHTML = `<strong>预览不可用</strong><span>${escapeHtml(error.message)}</span>`;
   }
 }
 
-async function prepareMapPreview(leftData, rightData, rightError = null) {
+async function prepareMapPreview(leftData, rightData, leftError = null, rightError = null) {
   stopMobTimer();
   $("mobStage").hidden = true;
   $("mapCompareView").hidden = false;
-  $("previewMeta").textContent = rightData
-    ? `A ${leftData.summary.elements} 个场景元素 · B ${rightData.summary.elements} 个场景元素`
-    : `A ${leftData.summary.elements} 个场景元素 · B 预览不可用`;
-  $("leftMapMeta").textContent = `${leftData.summary.mobs} 怪 · ${leftData.summary.npcs} NPC · ${leftData.summary.portals} 门`;
+  const leftSummary = leftData?.summary;
+  const rightSummary = rightData?.summary;
+  $("previewMeta").textContent = `${leftSummary ? `A ${leftSummary.elements} 个场景元素` : "A 主文件不存在"} · ${rightSummary ? `B ${rightSummary.elements} 个场景元素` : "B 预览不可用"}`;
+  $("leftMapMeta").textContent = leftSummary
+    ? `${leftSummary.mobs} 怪 · ${leftSummary.npcs} NPC · ${leftSummary.portals} 门`
+    : (state.leftInfo?.exists === false ? "主文件不存在，可先创建空白主文件" : (leftError?.message || "无法生成预览"));
   $("rightMapSourceLabel").textContent = state.rightPath.includes("/TMS/") ? "TMS 对比" : "对比文件";
-  $("rightMapMeta").textContent = rightData
-    ? `${rightData.summary.mobs} 怪 · ${rightData.summary.npcs} NPC · ${rightData.summary.portals} 门`
+  $("rightMapMeta").textContent = rightSummary
+    ? `${rightSummary.mobs} 怪 · ${rightSummary.npcs} NPC · ${rightSummary.portals} 门`
     : (rightError?.message || "无法生成预览");
   const imageCache = new Map();
   const loadImage = (url) => {
@@ -565,25 +603,131 @@ function selectNode(path) {
   renderTree();
   const row = state.rowByPath.get(path);
   if (!row) return;
-  $("selectedPath").textContent = path;
-  $("selectedPath").title = path;
+  $("selectedPath").textContent = path || "/";
+  $("selectedPath").title = path || "/";
   setInspectorMode("node");
   renderInspector(row);
 }
 
+function updateNodeActions() {
+  const leftExists = state.leftInfo?.exists !== false;
+  const projectPath = state.leftPath.startsWith("clien/") || state.leftPath.startsWith("gms-server/");
+  const clientImgPath = state.leftPath.startsWith("clien/") && state.leftInfo?.format === "img";
+  const writable = Boolean(state.leftInfo && leftExists && projectPath);
+  const row = state.selectedPath === null ? null : state.rowByPath.get(state.selectedPath);
+  const left = row?.left;
+  const parentPath = row?.path?.includes("/") ? row.path.slice(0, row.path.lastIndexOf("/")) : "";
+  const parentExists = parentPath === "" || Boolean(state.rowByPath.get(parentPath)?.left);
+  const copyCompatibility = row?.right?.compatibility;
+  const supportedCopyTypes = new Set(["imgdir", "short", "int", "long", "float", "double", "string", "vector", "uol", "null"]);
+  const unsafeDescendant = row?.path ? state.rows.find((candidate) => (
+    (candidate.path === row.path || candidate.path.startsWith(`${row.path}/`))
+    && candidate.right
+    && (candidate.right.compatibility?.status !== "ok" || !supportedCopyTypes.has(candidate.right.type))
+  )) : null;
+  const safeToCopy = copyCompatibility?.status === "ok" && !unsafeDescendant;
+  const validParent = left?.type === "imgdir" || (state.leftInfo?.format === "xml" && left?.type === "canvas");
+  $("createMainBtn").hidden = leftExists || !clientImgPath;
+  $("createMainBtn").disabled = leftExists || !clientImgPath;
+  $("copyTmsBtn").title = safeToCopy
+    ? "按原路径复制，并同步客户端 IMG 与服务端 XML"
+    : (unsafeDescendant && unsafeDescendant.path !== row?.path
+      ? `子树包含不兼容节点 ${unsafeDescendant.path}；请缩小选择范围或先手工建立父目录`
+      : (copyCompatibility?.suggestion || "该节点不能直接复制到旧端"));
+  $("copyTmsBtn").disabled = !(
+    writable && clientImgPath && row?.right && !row?.left && row.path && parentExists
+    && safeToCopy && state.rightInfo?.format === "img"
+  );
+  $("addRootBtn").disabled = !writable;
+  $("addChildBtn").disabled = !(writable && validParent);
+  $("deleteBtn").disabled = !(writable && left && Boolean(row.path));
+  $("exportBtn").disabled = !writable;
+}
+
 function setInspectorMode(mode) {
   const compatibilityMode = mode === "compatibility";
+  const diagnosticMode = mode === "diagnostic";
   $("compatibility").hidden = !compatibilityMode;
-  $("inspector").hidden = compatibilityMode;
+  $("crashDiagnostic").hidden = !diagnosticMode;
+  $("inspector").hidden = compatibilityMode || diagnosticMode;
   $("compatibilityTab").classList.toggle("active", compatibilityMode);
-  $("nodeDetailTab").classList.toggle("active", !compatibilityMode);
+  $("diagnosticTab").classList.toggle("active", diagnosticMode);
+  $("nodeDetailTab").classList.toggle("active", !compatibilityMode && !diagnosticMode);
   $("compatibilityTab").setAttribute("aria-selected", String(compatibilityMode));
-  $("nodeDetailTab").setAttribute("aria-selected", String(!compatibilityMode));
-  if (compatibilityMode) {
+  $("diagnosticTab").setAttribute("aria-selected", String(diagnosticMode));
+  $("nodeDetailTab").setAttribute("aria-selected", String(!compatibilityMode && !diagnosticMode));
+  if (compatibilityMode || diagnosticMode) {
     $("editActions").hidden = true;
-  } else if (state.selectedPath) {
+    if (diagnosticMode && state.kind === "map" && state.leftInfo?.exists !== false && state.diagnosticPath !== state.leftPath) {
+      runCrashDiagnostic();
+    }
+  } else if (state.selectedPath !== null) {
     renderInspector(state.rowByPath.get(state.selectedPath));
   }
+}
+
+function diagnosticConfidence(value) {
+  return ({high: "高", medium: "中", low: "低"})[value] || value;
+}
+
+function renderCrashDiagnostic(report) {
+  const container = $("crashDiagnostic");
+  const findings = report.findings.length ? report.findings.map((item) => `
+    <div class="diagnostic-finding">
+      <div class="diagnostic-finding-head"><strong>${escapeHtml(item.title)}</strong><span class="diagnostic-badge ${escapeHtml(item.severity)}">${item.severity === "crash" ? "高风险" : "嫌疑"} · ${escapeHtml(diagnosticConfidence(item.confidence))}置信</span></div>
+      <p>${escapeHtml(item.detail)}</p>
+      <p class="diagnostic-action">${escapeHtml(item.action)}</p>
+      <div class="diagnostic-links">
+        ${item.mapPath ? `<button type="button" data-diagnostic-path="${escapeHtml(item.mapPath)}">定位地图节点 ${escapeHtml(item.mapPath)}</button>` : ""}
+        ${item.entityKind === "mob" && item.entityId ? `<button type="button" data-diagnostic-entity="${escapeHtml(item.entityId)}">打开怪物 ${escapeHtml(item.entityId)}</button>` : ""}
+      </div>
+    </div>`).join("") : '<span class="compat-empty">没有发现静态崩溃风险。</span>';
+  const entities = report.entities.length
+    ? report.entities.map((item) => `${item.kind === "mob" ? "怪物" : "NPC"} ${item.id} × ${item.spawns}${item.canvases !== undefined ? ` · ${item.visible}/${item.canvases} 可见 Canvas` : ""}`).join("<br>")
+    : "无生命节点";
+  container.innerHTML = `
+    <div class="diagnostic-overview">
+      <strong>${escapeHtml(report.conclusion)}</strong>
+      <span>${escapeHtml(report.confidence)}置信度 · 地图 ${report.scores.map + report.scores.resource} 分 · 生命资源 ${report.scores.entity} 分 · 服务端 ${report.scores.server} 分</span>
+      <div class="diagnostic-counts">
+        <span><b>${report.counts.checked}</b><small>检查组</small></span>
+        <span><b>${report.counts.crash}</b><small>高风险</small></span>
+        <span><b>${report.counts.warn}</b><small>嫌疑</small></span>
+        <span><b>${report.counts.verified}</b><small>已排除</small></span>
+      </div>
+      <p>${escapeHtml(report.note)}</p>
+    </div>
+    <section class="diagnostic-section"><h3>地图生命资源</h3><p>${entities}</p></section>
+    <section class="diagnostic-section"><h3>风险与嫌疑</h3>${findings}</section>
+    <section class="diagnostic-section"><h3>已通过检查</h3><ul class="diagnostic-verified">${report.verified.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul></section>
+    <section class="diagnostic-section"><h3>最小 A/B 隔离顺序</h3><ol class="diagnostic-isolation">${report.isolation.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ol></section>`;
+  container.querySelectorAll("[data-diagnostic-path]").forEach((button) => button.addEventListener("click", () => revealNode(button.dataset.diagnosticPath)));
+  container.querySelectorAll("[data-diagnostic-entity]").forEach((button) => button.addEventListener("click", () => openDiagnosticMob(button.dataset.diagnosticEntity)));
+}
+
+async function runCrashDiagnostic() {
+  if (state.kind !== "map" || !state.leftPath || state.leftInfo?.exists === false) return;
+  const requestedPath = state.leftPath;
+  $("crashDiagnostic").innerHTML = '<div class="empty-state compact"><strong>正在检查地图和生命资源</strong><span>会解码被引用实体的实际 Canvas 像素。</span></div>';
+  try {
+    const report = await post("/api/diagnose-map", {sourcePath: requestedPath});
+    if (state.leftPath !== requestedPath) return;
+    state.diagnostic = report;
+    state.diagnosticPath = requestedPath;
+    $("diagnosticCount").textContent = report.counts.crash + report.counts.warn;
+    renderCrashDiagnostic(report);
+  } catch (error) {
+    $("crashDiagnostic").innerHTML = `<div class="empty-state compact"><strong>诊断失败</strong><span>${escapeHtml(error.message)}</span><button id="runDiagnosticBtn" class="primary-button" type="button">重新诊断</button></div>`;
+    $("runDiagnosticBtn").addEventListener("click", runCrashDiagnostic);
+  }
+}
+
+async function openDiagnosticMob(id) {
+  setKind("mob");
+  $("itemId").value = id;
+  $("leftPath").value = `clien/Data/Mob/${id}.img`;
+  $("rightPath").value = `gms-server/wz/Mob.wz/${id}.img.xml`;
+  await loadComparison();
 }
 
 function renderCompatibility(report) {
@@ -684,7 +828,9 @@ function renderInspector(row) {
       <dt>值域</dt><dd>${escapeHtml(semantic.valueGuide || "需结合客户端读取逻辑判断")}</dd>
       <dt>影响范围</dt><dd>${escapeHtml(semantic.scope || "当前节点")}</dd>
       <dt>兼容动作</dt><dd class="migration-advice">${escapeHtml(semantic.migration || "先对照旧端可工作结构")}</dd>
+      ${semantic.placement ? `<dt>添加位置</dt><dd>${escapeHtml(semantic.placement)}</dd>` : ""}
     </dl>
+    ${semantic.structure ? `<div class="side-label">目标节点结构</div><pre class="node-structure">${escapeHtml(semantic.structure)}</pre>` : ""}
     <div class="compat-verdicts">
       <span class="verdict verdict-${escapeHtml(leftCompatibility?.status || "missing")}">A ${escapeHtml(leftCompatibility?.label || "缺失")}</span>
       <span class="verdict verdict-${escapeHtml(rightCompatibility?.status || "missing")}">B ${escapeHtml(rightCompatibility?.label || "缺失")}</span>
@@ -697,12 +843,11 @@ function renderInspector(row) {
   const leftXml = state.leftInfo?.format === "xml";
   const editable = Boolean(left?.editable && (leftXml || state.leftInfo?.format === "img"));
   $("editActions").hidden = !editable;
-  $("addBtn").disabled = !(leftXml && ["imgdir", "canvas"].includes(left?.type));
-  $("deleteBtn").disabled = !(leftXml && left && row.path);
+  updateNodeActions();
 }
 
 function editorMarkup(meta) {
-  if (!meta?.editable) return `<p class="editor-note">该节点在主文件中只读。二进制 IMG 只开放等长标量原位编辑，增删节点请在 XML 中完成。</p>`;
+  if (!meta?.editable) return `<p class="editor-note">该节点没有可直接编辑的值。可使用上方“添加子节点”或“删除节点”；二进制 IMG 会按原始记录增量修改并校验未触碰的兄弟记录。</p>`;
   let control = "";
   if (meta.type === "vector") {
     control = `<div class="vector-editor"><input id="editX" type="number" value="${escapeHtml(meta.value?.x ?? 0)}" aria-label="X"><input id="editY" type="number" value="${escapeHtml(meta.value?.y ?? 0)}" aria-label="Y"></div>`;
@@ -729,12 +874,16 @@ function currentEditValue(meta) {
 async function saveEdit() {
   const row = state.rowByPath.get(state.selectedPath);
   if (!row?.left) return;
-  const dryRun = $("dryRun").checked;
-  if (!dryRun && !confirm(`写入主文件节点 ${state.selectedPath}？`)) return;
+  const editedPath = state.selectedPath;
+  if (!confirm(`写入主文件节点 ${state.selectedPath}？`)) return;
   try {
-    const data = await post("/api/edit", {sourcePath: state.leftPath, path: state.selectedPath, value: currentEditValue(row.left), dryRun, backup: true});
-    showResult(`${dryRun ? "预演完成" : "写入完成"}\n${JSON.stringify(data, null, 2)}`);
-    if (!dryRun) await loadComparison();
+    const syncServer = $("syncServer").checked;
+    const data = await post("/api/edit", {sourcePath: state.leftPath, path: state.selectedPath, value: currentEditValue(row.left), dryRun: false, backup: true, syncServer});
+    const targetText = syncServer ? "客户端与服务端" : "客户端";
+    const resultText = `${targetText}写入完成，已重新加载左侧节点\n${JSON.stringify(data, null, 2)}`;
+    await loadComparison();
+    revealNode(editedPath);
+    showResult(resultText);
   } catch (error) {
     showResult(error.message, true);
   }
@@ -742,12 +891,48 @@ async function saveEdit() {
 
 async function deleteNode() {
   if (!state.selectedPath) return;
-  const dryRun = $("dryRun").checked;
-  if (!confirm(`${dryRun ? "预演删除" : "删除"}节点 ${state.selectedPath}？`)) return;
+  const deletedPath = state.selectedPath;
+  const parentPath = deletedPath.includes("/") ? deletedPath.slice(0, deletedPath.lastIndexOf("/")) : "";
+  if (!confirm(`删除节点 ${state.selectedPath}？`)) return;
   try {
-    const data = await post("/api/delete", {sourcePath: state.leftPath, path: state.selectedPath, dryRun, backup: true});
-    showResult(`${dryRun ? "预演完成" : "删除完成"}\n${JSON.stringify(data, null, 2)}`);
-    if (!dryRun) await loadComparison();
+    const syncServer = $("syncServer").checked;
+    const data = await post("/api/delete", {sourcePath: state.leftPath, path: deletedPath, dryRun: false, backup: true, syncServer});
+    const targetText = syncServer ? "客户端与服务端" : "客户端";
+    const resultText = `${targetText}删除完成，左侧节点已重新加载\n${JSON.stringify(data, null, 2)}`;
+    await loadComparison();
+    revealNode(parentPath);
+    showResult(resultText);
+  } catch (error) {
+    showResult(error.message, true);
+  }
+}
+
+async function createMainFile() {
+  if (!confirm(`创建空白主文件 ${state.leftPath}，并建立对应服务端 XML？`)) return;
+  try {
+    const data = await post("/api/create-main", {sourcePath: state.leftPath});
+    const resultText = `空白主文件创建完成，可从 TMS 逐个复制兼容节点。\n${JSON.stringify(data, null, 2)}`;
+    await loadComparison();
+    showResult(resultText);
+  } catch (error) {
+    showResult(error.message, true);
+  }
+}
+
+async function copyTmsNode() {
+  const path = state.selectedPath;
+  if (!path) return;
+  if (!confirm(`从 TMS 复制节点 ${path} 到 A，并同步服务端 XML？`)) return;
+  try {
+    const data = await post("/api/copy-tms-node", {
+      sourcePath: state.leftPath,
+      tmsPath: state.rightPath,
+      path,
+    });
+    const resultText = `TMS 节点已按原路径复制到 A，并同步服务端 XML。\n${JSON.stringify(data, null, 2)}`;
+    await loadComparison();
+    revealNode(path);
+    showResult(resultText);
   } catch (error) {
     showResult(error.message, true);
   }
@@ -760,7 +945,7 @@ function showResult(text, error = false) {
   result.style.color = error ? "#ef918a" : "#bad7c9";
 }
 
-const fileBrowser = {path: "", parent: null, items: [], selected: null};
+const fileBrowser = {path: "", parent: null, items: [], selected: null, mode: "file"};
 
 function formatFileSize(bytes) {
   if (bytes < 1024) return `${bytes} B`;
@@ -770,12 +955,15 @@ function formatFileSize(bytes) {
 
 function renderFileList() {
   const query = $("fileSearch").value.trim().toLowerCase();
-  const matches = fileBrowser.items.filter((item) => !query || item.name.toLowerCase().includes(query));
+  const matches = fileBrowser.items.filter((item) => {
+    if (fileBrowser.mode === "directory" && item.type !== "directory") return false;
+    return !query || item.name.toLowerCase().includes(query);
+  });
   const items = matches.slice(0, 200);
   const list = $("fileList");
   list.innerHTML = "";
   if (!items.length) {
-    list.innerHTML = '<div class="file-list-empty">当前目录没有可选择的文件</div>';
+    list.innerHTML = `<div class="file-list-empty">当前目录没有可选择的${fileBrowser.mode === "directory" ? "子目录" : "文件"}</div>`;
     return;
   }
   for (const item of items) {
@@ -818,8 +1006,8 @@ async function browseDirectory(path) {
     $("fileBrowserPath").textContent = data.path;
     $("fileBrowserPath").title = data.path;
     $("fileUpBtn").disabled = !data.parent;
-    $("selectedFileName").textContent = "未选择文件";
-    $("chooseFileBtn").disabled = true;
+    $("selectedFileName").textContent = fileBrowser.mode === "directory" ? `当前目录：${data.path}` : "未选择文件";
+    $("chooseFileBtn").disabled = fileBrowser.mode !== "directory";
     renderFileList();
   } catch (error) {
     $("fileList").innerHTML = `<div class="file-list-empty">${escapeHtml(error.message)}</div>`;
@@ -827,15 +1015,65 @@ async function browseDirectory(path) {
 }
 
 function openFileBrowser() {
+  fileBrowser.mode = "file";
+  $("fileDialogTitle").textContent = "选择对比文件";
+  $("chooseFileBtn").textContent = "选择文件";
   $("fileSearch").value = "";
   $("fileDialog").showModal();
   browseDirectory($("rightPath").value.trim());
 }
 
 function chooseFile() {
+  if (fileBrowser.mode === "directory") {
+    $("exportDestination").value = fileBrowser.path;
+    updateExportPreview();
+    $("fileDialog").close();
+    return;
+  }
   if (!fileBrowser.selected) return;
   $("rightPath").value = fileBrowser.selected.path;
   $("fileDialog").close();
+}
+
+function updateExportPreview() {
+  const destination = $("exportDestination").value.trim() || defaultExportRoot;
+  const serverLine = $("exportIncludeServer").checked ? "\n└─ 对应服务端 XML（按仓库目录）" : "";
+  $("exportStructurePreview").textContent = `${destination}/\n└─ ${state.leftPath}${serverLine}`;
+}
+
+function openExportDialog() {
+  $("exportSourcePath").textContent = state.leftPath;
+  $("exportSourcePath").title = state.leftPath;
+  if (!$("exportDestination").value) $("exportDestination").value = defaultExportRoot;
+  const canIncludeServer = state.leftInfo?.format === "img";
+  $("exportIncludeServer").disabled = !canIncludeServer;
+  $("exportIncludeServer").checked = canIncludeServer && $("syncServer").checked;
+  updateExportPreview();
+  $("exportDialog").showModal();
+}
+
+function openExportDirectoryBrowser() {
+  $("exportDialog").close();
+  fileBrowser.mode = "directory";
+  $("fileDialogTitle").textContent = "选择下载目录";
+  $("chooseFileBtn").textContent = "选择当前目录";
+  $("fileSearch").value = "";
+  $("fileDialog").showModal();
+  browseDirectory($("exportDestination").value.trim() || defaultExportRoot);
+}
+
+async function exportFiles() {
+  const destination = $("exportDestination").value.trim() || defaultExportRoot;
+  const includeServer = $("exportIncludeServer").checked && !$("exportIncludeServer").disabled;
+  if (!confirm(`复制当前修改文件到 ${destination}？`)) return;
+  try {
+    const data = await post("/api/export", {sourcePath: state.leftPath, destination, includeServer});
+    $("exportDialog").close();
+    const files = data.files.map((item) => `${item.target}\nSHA-256 ${item.sha256}`).join("\n\n");
+    showResult(`已复制 ${data.files.length} 个文件，并保持原目录结构：\n${files}`);
+  } catch (error) {
+    showResult(error.message, true);
+  }
 }
 
 function addNodeValue() {
@@ -846,21 +1084,39 @@ function addNodeValue() {
   return $("newNodeValue").value;
 }
 
+function openAddDialog(parentPath) {
+  state.addParentPath = parentPath;
+  const rootTarget = parentPath === "";
+  $("addDialogTitle").textContent = rootTarget ? "添加根节点" : "添加子节点";
+  $("addParentPath").textContent = `父节点：${rootTarget ? "/" : parentPath}`;
+  $("addParentPath").title = rootTarget ? "/" : parentPath;
+  $("newNodeName").value = "";
+  $("addDialog").showModal();
+  $("newNodeName").focus();
+}
+
 async function addNode() {
-  const dryRun = $("dryRun").checked;
+  const name = $("newNodeName").value.trim();
+  const addedPath = `${state.addParentPath}/${name}`.replace(/^\//, "");
+  if (!confirm(`写入节点 ${addedPath}？`)) return;
   try {
+    const syncServer = $("syncServer").checked;
     const data = await post("/api/add", {
       sourcePath: state.leftPath,
-      parentPath: state.selectedPath,
-      name: $("newNodeName").value.trim(),
+      parentPath: state.addParentPath,
+      name,
       type: $("newNodeType").value,
       value: addNodeValue(),
-      dryRun,
+      dryRun: false,
       backup: true,
+      syncServer,
     });
     $("addDialog").close();
-    showResult(`${dryRun ? "预演完成" : "添加完成"}\n${JSON.stringify(data, null, 2)}`);
-    if (!dryRun) await loadComparison();
+    const targetText = syncServer ? "客户端与服务端" : "客户端";
+    const resultText = `${targetText}添加完成，左侧节点已重新加载并定位到 ${addedPath}。\n${JSON.stringify(data, null, 2)}`;
+    await loadComparison();
+    revealNode(addedPath);
+    showResult(resultText);
   } catch (error) {
     showResult(error.message, true);
     $("addDialog").close();
@@ -868,10 +1124,11 @@ async function addNode() {
 }
 
 document.querySelectorAll(".segment").forEach((button) => button.addEventListener("click", () => setKind(button.dataset.kind)));
-$("itemId").addEventListener("input", debounce(() => {
+const searchCatalogDebounced = debounce(searchCatalog, 180);
+$("itemId").addEventListener("input", () => {
   updateDefaultPaths($("itemId").value.trim());
-  searchCatalog();
-}, 180));
+  searchCatalogDebounced();
+});
 $("itemId").addEventListener("focus", searchCatalog);
 document.addEventListener("click", (event) => {
   if (!event.target.closest(".id-field")) $("catalog").hidden = true;
@@ -879,7 +1136,9 @@ document.addEventListener("click", (event) => {
 $("compareBtn").addEventListener("click", loadComparison);
 $("reloadBtn").addEventListener("click", loadComparison);
 $("compatibilityTab").addEventListener("click", () => setInspectorMode("compatibility"));
+$("diagnosticTab").addEventListener("click", () => setInspectorMode("diagnostic"));
 $("nodeDetailTab").addEventListener("click", () => setInspectorMode("node"));
+$("runDiagnosticBtn").addEventListener("click", runCrashDiagnostic);
 $("swapBtn").addEventListener("click", () => {
   const left = $("leftPath").value;
   $("leftPath").value = $("rightPath").value;
@@ -889,6 +1148,11 @@ $("browseRightBtn").addEventListener("click", openFileBrowser);
 $("fileUpBtn").addEventListener("click", () => { if (fileBrowser.parent) browseDirectory(fileBrowser.parent); });
 $("fileSearch").addEventListener("input", renderFileList);
 $("chooseFileBtn").addEventListener("click", chooseFile);
+$("fileDialog").addEventListener("close", () => {
+  if (fileBrowser.mode !== "directory") return;
+  fileBrowser.mode = "file";
+  if (!$("exportDialog").open) $("exportDialog").showModal();
+});
 $("treeSearch").addEventListener("input", renderTree);
 $("diffOnly").addEventListener("change", renderTree);
 $("collapseBtn").addEventListener("click", () => { state.expanded = new Set([""]); renderTree(); });
@@ -900,12 +1164,16 @@ $("expandBtn").addEventListener("click", () => {
   renderTree();
 });
 $("saveBtn").addEventListener("click", saveEdit);
+$("createMainBtn").addEventListener("click", createMainFile);
+$("copyTmsBtn").addEventListener("click", copyTmsNode);
+$("exportBtn").addEventListener("click", openExportDialog);
+$("browseExportBtn").addEventListener("click", openExportDirectoryBrowser);
+$("exportDestination").addEventListener("input", updateExportPreview);
+$("exportIncludeServer").addEventListener("change", updateExportPreview);
+$("confirmExportBtn").addEventListener("click", exportFiles);
 $("deleteBtn").addEventListener("click", deleteNode);
-$("addBtn").addEventListener("click", () => {
-  $("newNodeName").value = "";
-  $("addDialog").showModal();
-  $("newNodeName").focus();
-});
+$("addRootBtn").addEventListener("click", () => openAddDialog(""));
+$("addChildBtn").addEventListener("click", () => openAddDialog(state.selectedPath));
 $("confirmAddBtn").addEventListener("click", addNode);
 $("newNodeType").addEventListener("change", () => {
   const type = $("newNodeType").value;

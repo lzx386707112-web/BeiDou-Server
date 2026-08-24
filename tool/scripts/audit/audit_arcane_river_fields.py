@@ -19,10 +19,14 @@ from wzpy.canvas import decode_canvas  # noqa: E402
 from wzpy.writer import _read_sound_payload  # noqa: E402
 
 import migrate_arcane_river_fields as migration  # noqa: E402
+import migrate_chewchew_story_maps as story  # noqa: E402
+import migrate_yumyum_island_maps as yumyum  # noqa: E402
 
 
 CLIENT = ROOT / "clien" / "Data"
 REQUIRED_MOB_INFO = set(migration.OLD_MOB_FIELDS)
+ALL_MAP_IDS = (*migration.MAP_IDS, *story.MAP_IDS, *yumyum.MAP_IDS)
+ALL_MAP_ID_SET = set(ALL_MAP_IDS)
 
 
 class Audit:
@@ -135,7 +139,7 @@ class Audit:
         for layer in [child for child in image.root.children() if child.name.isdigit()]:
             objects = layer.child("obj")
             if isinstance(objects, WzSubProperty):
-                if map_id in migration.LEGACY_CONNECT_FIRST_MAPS:
+                if map_id in ALL_MAP_ID_SET:
                     entries = list(objects.children())
                     connect_count = sum(
                         self.child_value(entry, "oS") == "connect" for entry in entries
@@ -200,7 +204,7 @@ class Audit:
                 target = self.child_value(entry, "tm")
                 target_name = str(self.child_value(entry, "tn") or "")
                 if isinstance(target, int) and target != 999999999:
-                    if target not in migration.MAP_ID_SET:
+                    if target not in ALL_MAP_ID_SET:
                         self.error(f"{map_id}: portal {entry.name} targets absent map {target}")
                     elif target_name and target_name not in self.portal_names(target):
                         self.error(
@@ -352,8 +356,22 @@ class Audit:
             for name in migration.MOB_INFO_UNSUPPORTED:
                 if info.child(name) is not None:
                     self.error(f"{mob_id}: unsupported mob info/{name}")
-        if not any(isinstance(node, WzCanvasProperty) for node, _ in migration.walk(image.root)):
-            self.error(f"{mob_id}: no materialized action frames")
+        has_canvases = any(
+            isinstance(node, WzCanvasProperty) for node, _ in migration.walk(image.root)
+        )
+        if not has_canvases:
+            linked = self.child_value(info, "link")
+            if not isinstance(linked, str) or not linked.isdigit():
+                self.error(f"{mob_id}: no materialized action frames or legacy info/link")
+            elif int(linked) not in self.dependencies["mobs"]:
+                self.error(f"{mob_id}: linked mob {linked} is outside the dependency closure")
+            else:
+                target = self.image(CLIENT / f"Mob/{int(linked):07d}.img")
+                if target is None or not any(
+                    isinstance(node, WzCanvasProperty)
+                    for node, _ in migration.walk(target.root)
+                ):
+                    self.error(f"{mob_id}: linked mob {linked} has no action frames")
         if mob_id == 8641002:
             attack = image.root.child("attack1")
             names = tuple(child.name for child in attack.children()) if attack is not None else ()
@@ -433,19 +451,19 @@ class Audit:
             self.check_string("wz", "Npc", npc_id)
 
     def run(self) -> int:
-        if len(migration.MAP_IDS) != 155:
-            self.error(f"migration whitelist changed: {len(migration.MAP_IDS)} maps")
-        for map_id in migration.MAP_IDS:
+        if len(ALL_MAP_IDS) != 187:
+            self.error(f"migration whitelist changed: {len(ALL_MAP_IDS)} maps")
+        for map_id in ALL_MAP_IDS:
             self.check_map(map_id)
             self.check_client_string("Map", map_id, "grandis")
             for tree in ("wz", "wz-zh-CN"):
                 self.check_string(tree, "Map", map_id, "grandis")
-        if len(self.dependencies["mobs"]) != 84:
-            self.error(f"expected 84 mobs, found {len(self.dependencies['mobs'])}")
-        if len(self.dependencies["npcs"]) > 186:
-            self.error(f"expected at most 186 retained NPCs, found {len(self.dependencies['npcs'])}")
-        if len(self.dependencies["bgms"]) != 16:
-            self.error(f"expected 16 BGM tracks, found {len(self.dependencies['bgms'])}")
+        if len(self.dependencies["mobs"]) != 96:
+            self.error(f"expected 96 mobs, found {len(self.dependencies['mobs'])}")
+        if len(self.dependencies["npcs"]) != 223:
+            self.error(f"expected 223 retained NPCs, found {len(self.dependencies['npcs'])}")
+        if len(self.dependencies["bgms"]) != 19:
+            self.error(f"expected 19 BGM tracks, found {len(self.dependencies['bgms'])}")
         self.check_assets()
         self.check_bgms()
         for mob_id in sorted(self.dependencies["mobs"]):
@@ -453,7 +471,7 @@ class Audit:
         for npc_id in sorted(self.dependencies["npcs"]):
             self.check_npc(npc_id)
         print(
-            f"audited maps={len(migration.MAP_IDS)} mobs={len(self.dependencies['mobs'])} "
+            f"audited maps={len(ALL_MAP_IDS)} mobs={len(self.dependencies['mobs'])} "
             f"npcs={len(self.dependencies['npcs'])} bgms={len(self.dependencies['bgms'])} "
             f"asset_files={len(self.dependencies['assets'])} canvases={self.canvas_count}"
         )

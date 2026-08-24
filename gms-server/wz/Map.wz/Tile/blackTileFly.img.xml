@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<imgdir name="blackTileFly.img">
+  <imgdir name="edD">
+    <canvas name="0" width="6" height="3" format="1">
+      <vector name="origin" x="3" y="0"/>
+      <int name="z" value="-4"/>
+      <extended name="foothold">
+        <vector name="0" x="3" y="0"/>
+        <vector name="1" x="3" y="3"/>
+        <vector name="2" x="-3" y="3"/>
+        <vector name="3" x="-3" y="0"/>
+      </extended>
+    </canvas>
+  </imgdir>
+  <imgdir name="edU">
+    <canvas name="0" width="6" height="3" format="1">
+      <vector name="origin" x="3" y="3"/>
+      <int name="z" value="-4"/>
+      <extended name="foothold">
+        <vector name="0" x="-3" y="0"/>
+        <vector name="1" x="-3" y="-3"/>
+        <vector name="2" x="3" y="-3"/>
+        <vector name="3" x="3" y="0"/>
+      </extended>
+    </canvas>
+  </imgdir>
+</imgdir>

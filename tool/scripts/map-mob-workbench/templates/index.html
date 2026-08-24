@@ -6,7 +6,7 @@
   <title>Map & Mob Workbench</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
 </head>
-<body data-tms-data-root="{{ tms_data_root }}">
+<body data-tms-data-root="{{ tms_data_root }}" data-default-export-root="{{ default_export_root }}">
   <header class="app-header">
     <div class="brand">
       <span class="brand-mark" aria-hidden="true"><i></i><i></i></span>
@@ -142,9 +142,18 @@
           <h2>检查器</h2>
           <span id="selectedPath" class="panel-meta path-meta">未选择节点</span>
         </div>
-        <div class="panel-tools">
-          <button id="addBtn" class="icon-button small" type="button" title="添加子节点" aria-label="添加子节点" disabled>+</button>
-          <button id="deleteBtn" class="icon-button small danger" type="button" title="删除节点" aria-label="删除节点" disabled>⌫</button>
+      </div>
+      <div id="nodeActions" class="node-actions" hidden>
+        <div class="node-action-buttons">
+          <button id="createMainBtn" class="node-action-button create" type="button" hidden>新建空白主文件</button>
+          <button id="addRootBtn" class="node-action-button" type="button">＋ 添加根节点</button>
+          <button id="addChildBtn" class="node-action-button" type="button" disabled>＋ 添加子节点</button>
+          <button id="deleteBtn" class="node-action-button danger" type="button" disabled>删除节点</button>
+        </div>
+        <button id="copyTmsBtn" class="node-copy-button" type="button" disabled>复制选中的 TMS 节点到 A</button>
+        <button id="exportBtn" class="node-export-button" type="button" disabled>⇩ 复制修改文件到下载目录</button>
+        <div class="write-options">
+          <label class="toggle-label sync-toggle"><input id="syncServer" type="checkbox" checked><span>同步服务端 XML</span></label>
         </div>
       </div>
       <div id="compareSummary" class="summary-strip">
@@ -154,10 +163,18 @@
       </div>
       <div class="inspector-tabs" role="tablist" aria-label="检查器视图">
         <button id="compatibilityTab" class="active" type="button" role="tab" aria-selected="true">兼容分析 <span id="compatibilityCount">0</span></button>
+        <button id="diagnosticTab" type="button" role="tab" aria-selected="false">崩溃诊断 <span id="diagnosticCount">–</span></button>
         <button id="nodeDetailTab" type="button" role="tab" aria-selected="false">节点详情</button>
       </div>
       <div class="inspector-content">
         <div id="compatibility" class="compatibility"></div>
+        <div id="crashDiagnostic" class="crash-diagnostic" hidden>
+          <div class="empty-state compact">
+            <strong>检查地图还是生命资源导致崩溃</strong>
+            <span>解析地图、场景引用、怪物/NPC 动作和服务端同步状态。</span>
+            <button id="runDiagnosticBtn" class="primary-button" type="button">运行崩溃诊断</button>
+          </div>
+        </div>
         <div id="inspector" class="inspector empty-state compact" hidden>
           <span class="empty-mark small" aria-hidden="true">⌖</span>
           <strong>选择左侧节点</strong>
@@ -165,8 +182,7 @@
         </div>
       </div>
       <div id="editActions" class="edit-actions" hidden>
-        <label class="toggle-label dry-run-toggle"><input id="dryRun" type="checkbox" checked><span>仅预演</span></label>
-        <button id="saveBtn" class="primary-button" type="button">应用修改</button>
+        <button id="saveBtn" class="primary-button" type="button">写入主文件</button>
       </div>
       <pre id="operationResult" class="operation-result" hidden></pre>
     </aside>
@@ -175,16 +191,21 @@
   <dialog id="addDialog">
     <form method="dialog" id="addForm">
       <div class="dialog-head">
-        <h2>添加子节点</h2>
-        <button class="icon-button small" value="cancel" aria-label="关闭">×</button>
+        <div>
+          <h2 id="addDialogTitle">添加节点</h2>
+          <span id="addParentPath" class="dialog-parent-path">父节点：/</span>
+        </div>
+        <button class="icon-button small" value="cancel" formnovalidate aria-label="关闭">×</button>
       </div>
       <label>节点名<input id="newNodeName" required autocomplete="off"></label>
       <label>类型
         <select id="newNodeType">
           <option value="imgdir">imgdir</option>
           <option value="int">int</option>
+          <option value="short">short</option>
           <option value="string">string</option>
           <option value="float">float</option>
+          <option value="double">double</option>
           <option value="long">long</option>
           <option value="vector">vector</option>
           <option value="uol">uol</option>
@@ -197,8 +218,35 @@
         <label>Y<input id="newVectorY" type="number" value="0"></label>
       </div>
       <div class="dialog-actions">
-        <button class="text-button" value="cancel">取消</button>
-        <button id="confirmAddBtn" class="primary-button" type="button">添加</button>
+        <button class="text-button" value="cancel" formnovalidate>取消</button>
+        <button id="confirmAddBtn" class="primary-button" type="button">写入并添加节点</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="exportDialog">
+    <form method="dialog" id="exportForm">
+      <div class="dialog-head">
+        <div>
+          <h2>复制修改文件</h2>
+          <span id="exportSourcePath" class="dialog-parent-path"></span>
+        </div>
+        <button class="icon-button small" value="cancel" formnovalidate aria-label="关闭">×</button>
+      </div>
+      <label>下载目录
+        <span class="file-input-row">
+          <input id="exportDestination" type="text" spellcheck="false">
+          <button id="browseExportBtn" class="icon-button browse-button" type="button" title="选择下载目录" aria-label="选择下载目录">…</button>
+        </span>
+      </label>
+      <label class="toggle-label export-server-toggle"><input id="exportIncludeServer" type="checkbox" checked><span>同时复制对应服务端 XML</span></label>
+      <div class="export-structure">
+        <strong>保持原目录结构</strong>
+        <code id="exportStructurePreview"></code>
+      </div>
+      <div class="dialog-actions">
+        <button class="text-button" value="cancel" formnovalidate>取消</button>
+        <button id="confirmExportBtn" class="primary-button" type="button">复制文件</button>
       </div>
     </form>
   </dialog>
@@ -207,7 +255,7 @@
     <form method="dialog" id="fileForm">
       <div class="dialog-head">
         <div>
-          <h2>选择对比文件</h2>
+          <h2 id="fileDialogTitle">选择对比文件</h2>
           <span id="fileBrowserPath" class="browser-path"></span>
         </div>
         <button class="icon-button small" value="cancel" aria-label="关闭">×</button>

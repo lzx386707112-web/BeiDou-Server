@@ -37,7 +37,7 @@ from dataclasses import dataclass
 # 旧端地图允许的根节点来自已落地的 Arcane River / Karing 白名单。
 LEGACY_MAP_ROOTS = {
     "info", "back", "life", "reactor", "foothold", "ladderRope",
-    "miniMap", "portal", *(str(index) for index in range(8)),
+    "miniMap", "portal", "swimArea", *(str(index) for index in range(8)),
 }
 
 # 根级目录：迁移脚本和实机记录均要求移除。
@@ -211,6 +211,19 @@ def _evaluate_map(node, name, parent, ntype, value) -> Verdict:
     path = node.get("path", "") or ""
     segs = [p for p in path.split("/") if p]
     ancestors = set(segs[:-1]) if segs else set()
+
+    if segs and segs[0] == "rapidStream":
+        return Verdict(
+            "modern",
+            "rapidStream 定义现代客户端的局部水流矩形，旧端不直接读取。",
+            "将每个 rapidStream/<区域名>/x1,y1,x2,y2 投影为旧端 swimArea/<区域名>/同名坐标。",
+        )
+    if segs and segs[0] == "areaCtrl":
+        return Verdict(
+            "modern",
+            "areaCtrl 定义现代客户端的区域移动物理，旧端 swimArea 没有这些参数。",
+            "局部游泳只迁移同名 rapidStream 矩形；areaCtrl 参数需兼容 DLL 支持，否则不复制。",
+        )
 
     # 根级现代目录
     if parent == "" and name.lower() in MODERN_ROOT_DIRS:

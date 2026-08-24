@@ -140,6 +140,15 @@ LEGACY_CAVE_COLLISION_PORTALS = {
     # keeps the waterfall collision route and lands in the installed Chu Chu hub.
     450001250: {"PCS00": (450002000, "sp")},
 }
+LEGACY_CHUCHU_SKY_WHALE_PORTALS = {
+    # The modern client pushes the player from skyWhale/sky1/start to end.
+    # The legacy client has no skyWhale controller. Match the Free Market's
+    # proven air-current pattern: a touch portal targeting an existing portal
+    # whose position is anchored to the destination platform.
+    450002000: {
+        "skyWhaleLift": (14, 3, 2475, -421, 450002000, "out04"),
+    },
+}
 
 REMOVED_NPCS = {
     9000123, 9000124, 9000131, 9000132, 9010100, 9010106, 9010109,
@@ -203,6 +212,7 @@ LEGACY_BALLISTIC_ATTACKS = {
     8642015: (2, 400),
     8642021: (2, 400),
     8642022: (2, 400),
+    8642050: (1, 300),
     8644001: (1, 300),
     8644005: (1, 300),
     8644007: (2, 300),
@@ -778,6 +788,24 @@ def sanitize_map(root: WzSubProperty, map_id: int) -> None:
     portal = root.child("portal")
     if not isinstance(portal, WzSubProperty):
         return
+    for portal_name, values in LEGACY_CHUCHU_SKY_WHALE_PORTALS.get(map_id, {}).items():
+        record_name, portal_type, x, y, target_map, target_name = values
+        entry = next(
+            (
+                node for node in portal.children()
+                if child_value(node, "pn") == portal_name
+            ),
+            None,
+        )
+        if entry is None:
+            entry = WzSubProperty(str(record_name), portal)
+            portal.add(entry)
+        set_string(entry, "pn", portal_name)
+        set_int(entry, "pt", portal_type)
+        set_int(entry, "x", x)
+        set_int(entry, "y", y)
+        set_int(entry, "tm", target_map)
+        set_string(entry, "tn", target_name)
     downgrade_portal_types(root)
     for entry in list(portal.children()):
         portal_name = str(child_value(entry, "pn") or "")

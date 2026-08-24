@@ -4,7 +4,7 @@
     <int name="version" value="10"/>
     <int name="cloud" value="0"/>
     <int name="town" value="0"/>
-    <int name="swim" value="1"/>
+    <int name="swim" value="0"/>
     <int name="returnMap" value="450002000"/>
     <int name="forcedReturn" value="999999999"/>
     <float name="mobRate" value="1.2000000476837158"/>
@@ -4564,6 +4564,14 @@
       <int name="y" value="148"/>
       <int name="tm" value="999999999"/>
       <string name="tn" value="pt_StreamPoint2"/>
+    </imgdir>
+  </imgdir>
+  <imgdir name="swimArea">
+    <imgdir name="swim01">
+      <int name="x1" value="-819"/>
+      <int name="y1" value="206"/>
+      <int name="x2" value="5000"/>
+      <int name="y2" value="474"/>
     </imgdir>
   </imgdir>
 </imgdir>

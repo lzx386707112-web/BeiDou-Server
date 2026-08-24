@@ -16,6 +16,11 @@ sys.path.insert(0, str(ROOT / "tool/wz-python"))
 sys.path.insert(0, str(ROOT / "tool/scripts/migration"))
 
 import migrate_arcane_river_fields as migration  # noqa: E402
+import migrate_chewchew_story_maps as story  # noqa: E402
+import migrate_yumyum_island_maps as yumyum  # noqa: E402
+
+
+ALL_MAP_IDS = (*migration.MAP_IDS, *story.MAP_IDS, *yumyum.MAP_IDS)
 
 
 def copy(source: Path, destination: Path) -> None:
@@ -34,17 +39,17 @@ def dependencies() -> dict[str, object]:
     result = {
         "assets": defaultdict(set), "mobs": set(), "npcs": set(), "bgms": set(), "marks": set()
     }
-    for map_id in migration.MAP_IDS:
+    for map_id in ALL_MAP_IDS:
         image = migration.load_image(
             ROOT / f"clien/Data/Map/Map/Map4/{map_id}.img", migration.GMS_KEY
         )
         migration.merge_dependency_sets(result, migration.collect_dependencies(image))
     expected = {
-        "maps": (len(migration.MAP_IDS), 155),
-        "assets": (len(result["assets"]), 27),
-        "mobs": (len(result["mobs"]), 84),
-        "npcs": (len(result["npcs"]), 184),
-        "bgm_packs": (len({name.split("/", 1)[0] for name in result["bgms"]}), 5),
+        "maps": (len(ALL_MAP_IDS), 187),
+        "assets": (len(result["assets"]), 31),
+        "mobs": (len(result["mobs"]), 96),
+        "npcs": (len(result["npcs"]), 223),
+        "bgm_packs": (len({name.split("/", 1)[0] for name in result["bgms"]}), 6),
     }
     invalid = {name: values for name, values in expected.items() if values[0] != values[1]}
     if invalid:
@@ -55,7 +60,7 @@ def dependencies() -> dict[str, object]:
 def sync_client(deps: dict[str, object]) -> None:
     source = ROOT / "clien/Data"
     target = DESTINATION / "Client/Data"
-    for map_id in migration.MAP_IDS:
+    for map_id in ALL_MAP_IDS:
         copy_relative(source, target, f"Map/Map/Map4/{map_id}.img")
     for kind, name in sorted(deps["assets"]):
         copy_relative(source, target, f"Map/{kind}/{name}.img")
@@ -77,7 +82,7 @@ def sync_client(deps: dict[str, object]) -> None:
 def sync_server(deps: dict[str, object]) -> None:
     source = ROOT / "gms-server"
     target = DESTINATION / "Server"
-    for map_id in migration.MAP_IDS:
+    for map_id in ALL_MAP_IDS:
         copy_relative(source, target, f"wz/Map.wz/Map/Map4/{map_id}.img.xml")
     for mob_id in sorted(deps["mobs"]):
         copy_relative(source, target, f"wz/Mob.wz/{mob_id}.img.xml")
@@ -94,6 +99,7 @@ def sync_server(deps: dict[str, object]) -> None:
         "V2.1.45__add_arcane_river_core_gemstone_drop.sql",
         "V2.1.46__increase_arcane_river_core_gemstone_drop_rate.sql",
         "V2.1.61__complete_vanishing_journey_quest_drops.sql",
+        "V2.1.62__add_yumyum_mob_and_quest_drops.sql",
     ):
         copy_relative(source, target, f"src/main/resources/db/migration/{migration_name}")
     copy_relative(
@@ -117,6 +123,9 @@ def sync_tools() -> None:
         "tool/scripts/audit/audit_arcane_river_detailed.py",
         "tool/scripts/audit/audit_arcane_river_fields.py",
         "tool/scripts/migration/migrate_arcane_river_fields.py",
+        "tool/scripts/migration/migrate_chewchew_story_maps.py",
+        "tool/scripts/migration/migrate_yumyum_island_maps.py",
+        "tool/scripts/migration/migrate_chewchew_quests.py",
         "tool/scripts/migration/migrate_arcane_river_quests.py",
         "tool/scripts/migration/migrate_vanishing_journey_quests.py",
         "tool/scripts/migration/normalize_arcane_river_mob_eva.py",
@@ -127,6 +136,9 @@ def sync_tools() -> None:
         "tool/scripts/migration/test_arcane_river_450001014_contract.py",
         "tool/scripts/migration/test_arcane_river_ballistic_attack_contract.py",
         "tool/scripts/migration/test_arcane_river_cave_portal_contract.py",
+        "tool/scripts/migration/test_chewchew_story_maps_contract.py",
+        "tool/scripts/migration/test_yumyum_island_contract.py",
+        "tool/scripts/migration/test_chewchew_yumyum_quest_contract.py",
         "tool/scripts/migration/test_vanishing_journey_quest_contract.py",
         "tool/scripts/package/pack_img_wz.sh",
         "tool/scripts/package/sync_arcane_river_complete.py",
@@ -165,7 +177,7 @@ def main() -> int:
     sync_tools()
     files = write_manifest()
     print(
-        f"Arcane River sync rebuilt: files={files}, maps={len(migration.MAP_IDS)}, "
+        f"Arcane River sync rebuilt: files={files}, maps={len(ALL_MAP_IDS)}, "
         f"mobs={len(deps['mobs'])}, npcs={len(deps['npcs'])}, assets={len(deps['assets'])}"
     )
     return 0

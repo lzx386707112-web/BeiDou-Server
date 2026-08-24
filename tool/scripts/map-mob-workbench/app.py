@@ -4,12 +4,14 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import html
 import io
 import json
 import os
 import re
 import shutil
+import struct
 import sys
 import tempfile
 import threading
@@ -40,6 +42,7 @@ from wzpy import (  # noqa: E402
 )
 from wzpy import writer as wz_writer  # noqa: E402
 from wzpy.canvas import decode_canvas  # noqa: E402
+from wzpy.reader import WzBinaryReader  # noqa: E402
 from wzpy.properties import (  # noqa: E402
     WzCanvasProperty,
     WzDoubleProperty,
@@ -61,6 +64,7 @@ _WRITE_LOCK = threading.Lock()
 _ALLOWED_SUFFIXES = (".img", ".img.xml", ".xml", ".json")
 _SCALAR_TYPES = {"short", "int", "long", "float", "double", "string", "uol", "vector"}
 _TMS_DATA = _ROOT.parent / "TMS" / "MapleStory-IMG" / "Data"
+_DEFAULT_EXPORT_ROOT = Path.home() / "Downloads" / "MapMobWorkbenchExport"
 
 
 def natural_key(value: str) -> list[object]:
@@ -136,9 +140,13 @@ def relative_path(path: Path) -> str:
 def default_paths(kind: str, item_id: str) -> tuple[Path, Path]:
     if kind == "mob":
         tms = _TMS_DATA / "Mob" / f"{item_id}.img"
+        tms_canvas = _TMS_DATA / "Mob" / "_Canvas" / f"{item_id}.img"
         return (
             _ROOT / "clien" / "Data" / "Mob" / f"{item_id}.img",
-            tms if tms.is_file() else _ROOT / "gms-server" / "wz" / "Mob.wz" / f"{item_id}.img.xml",
+            tms if tms.is_file() else (
+                tms_canvas if tms_canvas.is_file()
+                else _ROOT / "gms-server" / "wz" / "Mob.wz" / f"{item_id}.img.xml"
+            ),
         )
     if kind != "map" or not re.fullmatch(r"\d{9}", item_id):
         raise ValueError("地图 ID 必须是 9 位数字")
@@ -148,6 +156,19 @@ def default_paths(kind: str, item_id: str) -> tuple[Path, Path]:
         _ROOT / "clien" / "Data" / "Map" / "Map" / bucket / f"{item_id}.img",
         tms if tms.is_file() else _ROOT / "gms-server" / "wz" / "Map.wz" / "Map" / bucket / f"{item_id}.img.xml",
     )
+
+
+def server_xml_for_client(path: Path) -> Path | None:
+    try:
+        relative = path.resolve().relative_to((_ROOT / "clien" / "Data").resolve())
+    except ValueError:
+        return None
+    parts = relative.parts
+    if len(parts) == 4 and parts[:2] == ("Map", "Map") and path.name.lower().endswith(".img"):
+        return _ROOT / "gms-server" / "wz" / "Map.wz" / "Map" / parts[2] / f"{path.name}.xml"
+    if len(parts) == 2 and parts[0] == "Mob" and path.name.lower().endswith(".img"):
+        return _ROOT / "gms-server" / "wz" / "Mob.wz" / f"{path.name}.xml"
+    return None
 
 
 def key_for_data(data: bytes):
@@ -338,6 +359,14 @@ def flatten_source(path: Path) -> tuple[dict[str, dict[str, Any]], dict[str, Any
     return flatten_xml(path)
 
 
+def flatten_optional_source(path: Path) -> tuple[dict[str, dict[str, Any]], dict[str, Any]]:
+    if path.is_file():
+        nodes, info = flatten_source(path)
+        return nodes, {**info, "exists": True}
+    root_type = "img" if path.name.lower().endswith(".img") else "xml"
+    return {}, {"format": root_type, "exists": False, "missing": relative_path(path)}
+
+
 def comparable(meta: dict[str, Any] | None) -> dict[str, Any] | None:
     if meta is None:
         return None
@@ -355,12 +384,16 @@ def operational_guide(path: str, meta: dict[str, Any], item_id: str) -> dict[str
     scope = "当前节点；父容器和引用它的节点可能同时受影响。"
     values = "值域取决于客户端读取逻辑；未知字段不能只凭数值猜测。"
     migration = "先与旧端同类可工作节点对照，再做最小增量修改；不要整树序列化 IMG。"
+    placement = ""
+    structure = ""
     if path == "info/swim":
         scope = "整张地图的移动物理。旧端没有单独的水域矩形范围；VR 和 foothold 不决定 swim 开关范围。"
         values = "0=普通陆地移动；1=启用旧端水下/游泳移动。"
         migration = "客户端 Map IMG 与服务端 Map XML 的 info/swim 必须一致。客户端只做等长 int 标量原位修改。"
         if item_id == "450002011":
-            migration = "本项目已验证方案：保留 A 的 info/swim=1，不要用 TMS B 的 0 覆盖；服务端 XML 同步为 1。fieldLimit、VR 边界、foothold 和传送门均不修改。"
+            migration = "精确还原应使用旧端诺特勒斯结构：info/swim=0，并把 TMS rapidStream/swim01 的矩形投影为 swimArea/swim01；不要修改 fieldLimit、VR、foothold 或传送门。"
+            placement = "info/swim 保留在 info 下；新增的 swimArea 必须放在地图 IMG 根节点，与 info、back、life、portal 同级。"
+            structure = "/\n└─ swimArea (imgdir)\n   └─ swim01 (imgdir)\n      ├─ x1 = -819 (int)\n      ├─ y1 = 206 (int)\n      ├─ x2 = 5000 (int)\n      └─ y2 = 474 (int)"
     elif path == "info/fieldLimit":
         scope = "整张地图的动作/技能限制位掩码，与游泳区域范围无关。"
         values = "整数位掩码，不是连续范围；不能按大小阈值判断新旧版本。"
@@ -369,6 +402,25 @@ def operational_guide(path: str, meta: dict[str, Any], item_id: str) -> dict[str
         scope = "整张地图的镜头可见边界，不改变碰撞、刷怪或游泳物理。"
         values = "地图坐标；Left < Right、Top < Bottom。"
         migration = "仅在画面裁切或镜头范围错误时修改，并成组核对四个边界。"
+    elif parts and parts[0] in {"swimArea", "rapidStream"}:
+        modern = parts[0] == "rapidStream"
+        scope = "当前矩形内的局部游泳/水流区域；可存在多个子区域，区域名只用于配对和区分。"
+        values = "地图坐标矩形：x1 < x2、y1 < y2；x1/y1 为左上角，x2/y2 为右下角，y 越大位置越低。"
+        migration = ("旧端已验证 swimArea 结构；修改范围只改 x1/y1/x2/y2，info/swim 保持 0。"
+                     if not modern else
+                     "现代 rapidStream 不能原样复制；将同名子节点的 x1/y1/x2/y2 写入旧端 swimArea，info/swim 保持 0。")
+        if item_id == "450002011":
+            migration += " 本图 TMS 矩形为 x=-819..5000、y=206..474，对应下方河流。"
+        placement = ("swimArea 是地图 IMG 根节点，与 info、back、life、portal 同级；区域名是 swimArea 的子节点。"
+                     if not modern else
+                     "rapidStream 是 TMS 根节点；迁移到旧端时不要把它放入其他容器，而是在旧端根节点新建 swimArea。")
+        structure = "/\n└─ swimArea (imgdir)\n   └─ swim01 (imgdir)\n      ├─ x1 (int)\n      ├─ y1 (int)\n      ├─ x2 (int)\n      └─ y2 (int)"
+    elif parts and parts[0] == "areaCtrl":
+        scope = "与同名 rapidStream 区域配对的现代移动物理配置；不决定矩形边界。"
+        values = "force/keyForce/speed/jump 为现代客户端物理参数，倍率通常为浮点数；精确单位依赖现代客户端实现。"
+        migration = "旧端 swimArea 只支持矩形，不支持这些物理参数。节点迁移时不复制；需要相同水流手感时必须由兼容 DLL 实现。"
+        placement = "areaCtrl 是 TMS 根节点，但旧端目标不新增 areaCtrl；应在旧端地图 IMG 根节点新增 swimArea。"
+        structure = "/\n└─ swimArea (imgdir)\n   └─ swim01 (imgdir)\n      ├─ x1 (int)\n      ├─ y1 (int)\n      ├─ x2 (int)\n      └─ y2 (int)"
     elif "life" in ancestors:
         scope = "单个怪物/NPC 刷新点。rx0/rx1 控制横向活动范围，x/y 是出生坐标，fh 是落脚 foothold。"
         values = "id/type 为实体身份；坐标使用地图世界坐标；mobTime 为刷新周期。"
@@ -385,7 +437,10 @@ def operational_guide(path: str, meta: dict[str, Any], item_id: str) -> dict[str
         scope = "当前场景元素；资源名和层级路径决定图片，x/y/z/f 决定位置、层级和翻转。"
         values = "坐标为地图世界坐标；资源路径必须能在旧客户端解析到实际 Canvas。"
         migration = "优先映射到旧版 Back/Obj/Tile 结构；动态、Spine、piece 等现代元数据不能整段复制。"
-    return {"scope": scope, "valueGuide": values, "migration": migration}
+    return {
+        "scope": scope, "valueGuide": values, "migration": migration,
+        "placement": placement, "structure": structure,
+    }
 
 
 def contextual_meaning(path: str, meta: dict[str, Any], mode: str) -> str:
@@ -395,6 +450,38 @@ def contextual_meaning(path: str, meta: dict[str, Any], mode: str) -> str:
         return "资源文件根节点；所有地图结构、属性和引用都位于其子树中。"
     if mode != "map":
         return map_compat.node_meaning(name, path, meta, mode)
+    if parts[0] in {"swimArea", "rapidStream", "areaCtrl"}:
+        root = parts[0]
+        root_meanings = {
+            "swimArea": "旧客户端已验证的局部游泳区域容器；诺特勒斯等地图使用此结构。",
+            "rapidStream": "现代客户端的局部水流区域容器；每个子节点用矩形坐标定义作用范围。",
+            "areaCtrl": "现代客户端的区域移动物理容器；与 rapidStream 的同名区域配对。",
+        }
+        if len(parts) == 1:
+            return root_meanings[root]
+        if len(parts) == 2:
+            if root == "swimArea":
+                return f"旧端局部游泳区域“{name}”；其四个坐标组成生效矩形。"
+            if root == "rapidStream":
+                return f"现代水流区域“{name}”；同名 areaCtrl 节点提供区域内的移动参数。"
+            return f"现代区域控制配置“{name}”；应与 rapidStream/{name} 配对。"
+        if root in {"swimArea", "rapidStream"} and name in {"x1", "y1", "x2", "y2"}:
+            coordinate_meanings = {
+                "x1": "局部水域矩形左边界。", "y1": "局部水域矩形上边界，通常对应水面高度。",
+                "x2": "局部水域矩形右边界。", "y2": "局部水域矩形下边界。",
+            }
+            return coordinate_meanings[name]
+        area_fields = {
+            "inputX": "现代区域控制器的水平输入方向参数。", "inputY": "现代区域控制器的垂直输入方向参数。",
+            "fixSpeedShoe": "现代区域内鞋子移动速度修正倍率。", "forceX": "现代区域的水平基础作用力。",
+            "forceY": "现代区域的垂直基础作用力。", "keyForceX": "按方向键时追加的水平作用力。",
+            "keyForceY": "按方向键时追加的垂直作用力。", "revdir_vrate": "逆着水流移动时的速度倍率。",
+            "samedir_vrate": "顺着水流移动时的速度倍率。", "speedX": "现代区域的水平速度参数。",
+            "speedY": "现代区域的垂直速度参数。", "outjump": "离开区域时使用的跳跃/推出力度。",
+            "jump": "区域内使用的跳跃力度。",
+        }
+        if root == "areaCtrl" and name in area_fields:
+            return area_fields[name]
     if parts[0] == "info":
         specific = map_compat._meaning_map(name, "info", meta.get("type"))
         if not specific.startswith("地图节点；"):
@@ -464,6 +551,13 @@ def annotate_meta(path: str, meta: dict[str, Any] | None, mode: str, item_id: st
         "reason": verdict.reason, "suggestion": verdict.suggestion,
     }
     output.update(operational_guide(path, output, item_id))
+    if mode == "map" and item_id == "450002011" and path == "info/swim" and output.get("value") == 1:
+        output["compatibility"] = {
+            "status": "review",
+            "label": "全图兼容降级",
+            "reason": "值 1 可被旧端解析，但会让整张地图进入游泳物理；诺特勒斯证明局部水域应使用 swimArea。",
+            "suggestion": output["migration"],
+        }
     return output
 
 
@@ -799,6 +893,8 @@ def map_preview(path: Path) -> dict[str, Any]:
 
 
 def compatibility_category(path: str) -> str:
+    if path.split("/", 1)[0] in {"swimArea", "rapidStream", "areaCtrl"}:
+        return "waterArea"
     if re.fullmatch(r"[0-7]/obj/[^/]+/(dynamic|move|piece|r)", path):
         return "modernRenderer"
     if path.startswith("life/"):
@@ -909,10 +1005,14 @@ def compatibility_analysis(
     left: dict[str, dict[str, Any]], right: dict[str, dict[str, Any]], left_path: Path, right_path: Path,
 ) -> dict[str, Any]:
     item_id = infer_id(left_path)
-    right_only = sorted(set(right) - set(left), key=lambda value: [natural_key(part) for part in value.split("/")])
+    right_only = sorted(
+        (set(right) - set(left)) - {""},
+        key=lambda value: [natural_key(part) for part in value.split("/")],
+    )
     right_only_set = set(right_only)
     added_roots = [path for path in right_only if (path.rsplit("/", 1)[0] if "/" in path else "") not in right_only_set]
     definitions = {
+        "waterArea": ("局部游泳与水流区域", "中", "旧端使用 swimArea 矩形；现代 rapidStream 的坐标可投影，areaCtrl 物理参数不能直接复制。"),
         "modernRenderer": ("现代渲染字段候选", "高", "旧客户端通常不识别这组对象控制字段。不要直接复制；忽略字段并用旧版 oS/l0/l1/l2、x/y/z/f 结构重建可见对象。"),
         "scene": ("场景与图层结构", "中", "核对引用的 Back/Obj/Tile IMG 与 Canvas 路径；只迁移可见帧和旧客户端已证明支持的字段。"),
         "life": ("怪物与 NPC 节点", "中", "先验证旧客户端 Mob/Npc 资源和服务端生命节点，再按旧版 life 字段投影。"),
@@ -963,6 +1063,304 @@ def compatibility_analysis(
         "reviewCount": finding_counts["review"], "findings": findings, "changedNodes": changed_nodes,
         "categories": categories, "resources": resources,
         "missingResourceCount": sum(item["status"] != "ready" for item in resources),
+    }
+
+
+def _diagnostic_finding(
+    domain: str, severity: str, title: str, detail: str, action: str, *,
+    confidence: str = "high", map_path: str = "", entity_kind: str = "", entity_id: str = "",
+) -> dict[str, Any]:
+    return {
+        "domain": domain, "severity": severity, "title": title, "detail": detail,
+        "action": action, "confidence": confidence, "mapPath": map_path,
+        "entityKind": entity_kind, "entityId": entity_id,
+    }
+
+
+def _normalized_nodes(path: Path) -> list[dict[str, Any]]:
+    flattened, _ = flatten_source(path)
+    output = []
+    for node_path, meta in flattened.items():
+        name = str(meta.get("name") or (node_path.rsplit("/", 1)[-1] if node_path else "root"))
+        parent_name = node_path.rsplit("/", 2)[-2] if "/" in node_path else ""
+        output.append({**meta, "path": node_path, "name": name, "parent_name": parent_name})
+    return output
+
+
+def _audit_canvas_payloads(path: Path) -> dict[str, Any]:
+    image = load_image(path)
+    canvases = [node for node in iter_subtree(image.root) if isinstance(node, WzCanvasProperty)]
+    visible = 0
+    errors = []
+    for node in canvases:
+        node_path = property_path(node)
+        if (int(node.format), int(node.format2)) != (1, 0):
+            errors.append(f"{node_path}: Canvas 格式 {node.format}/{node.format2}，不是 GMS ARGB4444 1/0")
+            continue
+        if int(node.width) > 2048 or int(node.height) > 2048:
+            errors.append(f"{node_path}: Canvas 尺寸 {node.width}x{node.height} 超过旧端 2048 单边上限")
+            continue
+        try:
+            resolved_image, canvas, resolved_path = resolve_canvas_node(image, node_path, path)
+            del resolved_image
+            stat = resolved_path.stat()
+            bitmap = decode_canvas(
+                canvas, region=canvas_region(str(resolved_path), stat.st_mtime_ns, stat.st_size),
+            )
+            if bitmap.size != (int(canvas.width), int(canvas.height)):
+                errors.append(f"{node_path}: 解码尺寸与 Canvas 头不一致")
+            elif bitmap.getbbox() is not None:
+                visible += 1
+        except Exception as exc:
+            errors.append(f"{node_path}: {exc}")
+    return {"canvases": len(canvases), "visible": visible, "errors": errors}
+
+
+def _scalar_sync_differences(client_path: Path, server_path: Path) -> list[str]:
+    client, _ = flatten_source(client_path)
+    server, _ = flatten_source(server_path)
+    differences = []
+    scalar_types = {"short", "int", "long", "float", "double", "string", "vector", "uol", "null"}
+    for node_path in sorted(set(client) | set(server), key=natural_key):
+        left, right = client.get(node_path), server.get(node_path)
+        if (left and left.get("type") not in scalar_types) and (right and right.get("type") not in scalar_types):
+            continue
+        if comparable(left) != comparable(right):
+            differences.append(node_path or "/")
+    return differences
+
+
+def diagnose_map_crash(path: Path) -> dict[str, Any]:
+    require_repo_write(path)
+    if not path.is_file() or "/clien/Data/Map/Map/" not in path.as_posix():
+        raise ValueError("崩溃诊断只支持项目内客户端地图 IMG")
+    map_id = infer_id(path)
+    findings: list[dict[str, Any]] = []
+    verified: list[str] = []
+    checked = 0
+
+    image = load_image(path)
+    checked += 1
+    if image.truncated or image.parse_warnings:
+        findings.append(_diagnostic_finding(
+            "map", "crash", "地图 IMG 结构损坏", str(image.parse_warnings),
+            "先恢复最后可工作的地图 IMG；不要在损坏文件上继续叠加修改。",
+        ))
+    else:
+        verified.append("地图 IMG 可完整解析，无 truncated 或 parse_warnings")
+
+    server_path = server_xml_for_client(path)
+    checked += 1
+    if server_path is None or not server_path.is_file():
+        findings.append(_diagnostic_finding(
+            "server", "crash", "服务端地图 XML 缺失", relative_path(server_path) if server_path else path.name,
+            "补齐对应 Map.wz XML，并确认它与客户端地图引用相同的 life、portal 和 foothold。",
+        ))
+    else:
+        try:
+            ET.parse(server_path)
+            differences = _scalar_sync_differences(path, server_path)
+            if differences:
+                findings.append(_diagnostic_finding(
+                    "server", "warn", "客户端与服务端地图节点不同步",
+                    f"{len(differences)} 个标量节点不同，前几项：{', '.join(differences[:8])}",
+                    "先核对差异是否有意；life、portal、foothold 和 info 物理字段应保持一致。",
+                    confidence="medium", map_path=differences[0] if differences else "",
+                ))
+            else:
+                verified.append("客户端与服务端地图标量节点一致")
+        except Exception as exc:
+            findings.append(_diagnostic_finding(
+                "server", "crash", "服务端地图 XML 无法解析", str(exc), "恢复或重新生成该地图 XML。",
+            ))
+
+    checked += 1
+    map_nodes = _normalized_nodes(path)
+    map_rule_groups: dict[tuple[str, str, str], list[str]] = {}
+    for item in map_compat.post_analyze(map_nodes, "map"):
+        verdict = item["verdict"]
+        if verdict.status == "ok":
+            continue
+        key = (verdict.status, verdict.reason, verdict.suggestion)
+        map_rule_groups.setdefault(key, []).append(item["path"] or "/")
+    for (status, reason, suggestion), paths in map_rule_groups.items():
+        severity = "crash" if status == "incompatible" else "warn"
+        examples = "、".join(paths[:4])
+        detail = reason if len(paths) == 1 else f"{reason} 共 {len(paths)} 个节点，示例：{examples}。"
+        findings.append(_diagnostic_finding(
+            "map", severity, f"地图节点规则：{map_compat.STATUS_LABELS[status]}", detail,
+            suggestion or "与旧端同类可工作地图对照。",
+            confidence="high" if severity == "crash" else ("low" if status == "modern" else "medium"),
+            map_path=paths[0] if paths else "",
+        ))
+    if not any(item["domain"] == "map" and item["severity"] == "crash" for item in findings):
+        verified.append("地图节点未命中已知旧端必崩规则")
+
+    checked += 1
+    map_canvas = _audit_canvas_payloads(path)
+    if map_canvas["errors"]:
+        findings.append(_diagnostic_finding(
+            "map", "crash", "地图内嵌 Canvas 解码失败", "；".join(map_canvas["errors"][:5]),
+            "修复列出的 Canvas 格式、尺寸或像素负载；不能只修改 XML 尺寸。",
+        ))
+    else:
+        verified.append(f"地图内嵌 {map_canvas['canvases']} 个 Canvas 均可解码")
+
+    checked += 1
+    resources = audit_map_resources(path, path)
+    broken_resources = [item for item in resources if item["status"] != "ready"]
+    for item in broken_resources:
+        findings.append(_diagnostic_finding(
+            "resource", "crash", f"{item['kind'].upper()} 资源不可用：{item['name']}",
+            f"{item['clientPath']}，状态 {item['status']}",
+            "补齐旧端资源并解析实际 Canvas；同名 IMG 存在不代表引用路径可用。",
+            map_path=item["nodes"][0] if item["nodes"] else "",
+        ))
+    if not broken_resources:
+        verified.append(f"地图引用的 {len(resources)} 组 Back/Obj/Tile/生命资源路径均可解析")
+
+    footholds = {
+        node.name for node in iter_subtree(image.root.child("foothold"))
+        if isinstance(node, WzSubProperty) and node.child("x1") is not None and node.child("x2") is not None
+    }
+    life_root = image.root.child("life")
+    entities: dict[tuple[str, str], list[str]] = {}
+    if isinstance(life_root, WzSubProperty):
+        for spawn in life_root.children():
+            kind = str(child_value(spawn, "type", ""))
+            entity_id = str(child_value(spawn, "id", ""))
+            entities.setdefault((kind, entity_id), []).append(property_path(spawn))
+            fh = str(child_value(spawn, "fh", ""))
+            if fh and fh not in footholds:
+                findings.append(_diagnostic_finding(
+                    "map", "crash", f"生命节点引用不存在的 foothold：{entity_id}",
+                    f"{property_path(spawn)}/fh={fh}，地图碰撞层没有该编号。",
+                    "把刷新点 fh 改到实际存在的 foothold；客户端和服务端必须同步。",
+                    map_path=property_path(spawn),
+                ))
+
+    entity_summaries = []
+    for (kind, entity_id), spawns in sorted(entities.items()):
+        if kind not in {"m", "n"} or not entity_id:
+            findings.append(_diagnostic_finding(
+                "map", "warn", f"未知 life 类型：{kind or '空'}", f"实体 {entity_id or '?'} 出现 {len(spawns)} 次。",
+                "核对 life/type，旧端只应使用 m（怪物）或 n（NPC）。", map_path=spawns[0],
+            ))
+            continue
+        folder = "Mob" if kind == "m" else "Npc"
+        entity_kind = "mob" if kind == "m" else "npc"
+        client_path = _ROOT / "clien" / "Data" / folder / f"{int(entity_id):07d}.img"
+        entity_server = _ROOT / "gms-server" / "wz" / f"{folder}.wz" / f"{int(entity_id):07d}.img.xml"
+        summary = {"kind": entity_kind, "id": entity_id, "spawns": len(spawns), "clientPath": relative_path(client_path)}
+        entity_summaries.append(summary)
+        checked += 1
+        if not client_path.is_file():
+            findings.append(_diagnostic_finding(
+                "entity", "crash", f"{folder} {entity_id} 客户端资源缺失", relative_path(client_path),
+                "先补齐客户端 IMG；地图进入视野时加载不到怪物资源极可能直接崩溃。",
+                map_path=spawns[0], entity_kind=entity_kind, entity_id=entity_id,
+            ))
+            continue
+        try:
+            entity_image = load_image(client_path)
+            if entity_image.truncated or entity_image.parse_warnings:
+                raise ValueError(str(entity_image.parse_warnings))
+            canvas = _audit_canvas_payloads(client_path)
+            summary.update(canvases=canvas["canvases"], visible=canvas["visible"])
+            if canvas["errors"] or (canvas["canvases"] and not canvas["visible"]):
+                detail = "；".join(canvas["errors"][:5]) or "所有 Canvas 都没有可见像素"
+                findings.append(_diagnostic_finding(
+                    "entity", "crash", f"{folder} {entity_id} Canvas 不可用", detail,
+                    "修复实体动作帧的真实像素、格式和链接后再进图。",
+                    map_path=spawns[0], entity_kind=entity_kind, entity_id=entity_id,
+                ))
+            elif canvas["canvases"]:
+                verified.append(f"{folder} {entity_id}：{canvas['canvases']} 个 Canvas 可解码，{canvas['visible']} 个有可见像素")
+        except Exception as exc:
+            findings.append(_diagnostic_finding(
+                "entity", "crash", f"{folder} {entity_id} IMG 无法解析", str(exc),
+                "恢复该实体最后可工作的客户端 IMG。", map_path=spawns[0],
+                entity_kind=entity_kind, entity_id=entity_id,
+            ))
+            continue
+
+        checked += 1
+        if not entity_server.is_file():
+            findings.append(_diagnostic_finding(
+                "server", "crash", f"{folder} {entity_id} 服务端 XML 缺失", relative_path(entity_server),
+                "补齐服务端实体 XML；怪物生成阶段可能失败或断开地图线程。",
+                map_path=spawns[0], entity_kind=entity_kind, entity_id=entity_id,
+            ))
+        else:
+            try:
+                ET.parse(entity_server)
+                sync_diffs = _scalar_sync_differences(client_path, entity_server)
+                if sync_diffs:
+                    findings.append(_diagnostic_finding(
+                        "server", "warn", f"{folder} {entity_id} 客户端/服务端字段不同步",
+                        f"{len(sync_diffs)} 项：{', '.join(sync_diffs[:8])}",
+                        "核对差异是否是有意的客户端安全投影；动作选择和必读属性不能意外分叉。",
+                        confidence="medium", map_path=spawns[0], entity_kind=entity_kind, entity_id=entity_id,
+                    ))
+            except Exception as exc:
+                findings.append(_diagnostic_finding(
+                    "server", "crash", f"{folder} {entity_id} 服务端 XML 无法解析", str(exc),
+                    "修复该实体 XML。", map_path=spawns[0], entity_kind=entity_kind, entity_id=entity_id,
+                ))
+
+        if kind == "m":
+            checked += 1
+            for item in map_compat.post_analyze(_normalized_nodes(client_path), "boss"):
+                verdict = item["verdict"]
+                if verdict.status == "ok":
+                    continue
+                is_mob_type = item["path"] == "info/mobType" and item.get("type") == "string"
+                severity = "warn" if is_mob_type or verdict.status != "incompatible" else "crash"
+                detail = verdict.reason
+                action = verdict.suggestion or "与已验证可工作的旧端怪物对照。"
+                confidence = "medium" if is_mob_type else ("high" if severity == "crash" else "low")
+                if is_mob_type:
+                    detail += " 当前仓库还有 160 个服务端 Mob XML 使用字符串 1N，单凭该字段不能证明必崩。"
+                    action = "优先做无怪物地图 A/B；若确认由该怪物触发，再与同类可工作的旧端怪物比较 mobType 和动作树。"
+                findings.append(_diagnostic_finding(
+                    "entity", severity, f"怪物 {entity_id} / {item['path'] or '/'}", detail, action,
+                    confidence=confidence, map_path=spawns[0], entity_kind="mob", entity_id=entity_id,
+                ))
+
+    scores = {"map": 0, "entity": 0, "server": 0, "resource": 0}
+    for finding in findings:
+        if finding["severity"] == "crash":
+            weight = 5
+        else:
+            weight = {"high": 3, "medium": 2, "low": 0}.get(finding["confidence"], 0)
+        scores[finding["domain"]] += weight
+    map_side = scores["map"] + scores["resource"]
+    entity_side = scores["entity"]
+    if entity_side > map_side and entity_side:
+        conclusion = "更偏向怪物/NPC 资源问题"
+        confidence = "高" if any(item["domain"] == "entity" and item["severity"] == "crash" for item in findings) else "中"
+    elif map_side > entity_side and map_side:
+        conclusion = "更偏向地图结构或场景资源问题"
+        confidence = "高" if any(item["domain"] in {"map", "resource"} and item["severity"] == "crash" for item in findings) else "中"
+    elif map_side or entity_side:
+        conclusion, confidence = "地图与生命资源都有嫌疑，需要 A/B 隔离", "中"
+    else:
+        conclusion, confidence = "离线检查未发现明确崩溃点", "低"
+
+    findings.sort(key=lambda item: ({"crash": 0, "warn": 1}[item["severity"]], item["domain"], item["title"]))
+    crash_count = sum(item["severity"] == "crash" for item in findings)
+    warn_count = sum(item["severity"] == "warn" for item in findings)
+    entity_ids = [item["id"] for item in entity_summaries if item["kind"] == "mob"]
+    return {
+        "mapId": map_id, "conclusion": conclusion, "confidence": confidence, "scores": scores,
+        "counts": {"checked": checked, "crash": crash_count, "warn": warn_count, "verified": len(verified)},
+        "findings": findings[:80], "verified": verified[:24], "entities": entity_summaries,
+        "isolation": [
+            f"先在测试副本中同步移除 life，重进 {map_id}。若不再崩溃，嫌疑收敛到 {'、'.join(entity_ids) if entity_ids else '生命资源'}。",
+            "若无 life 仍崩，保留 portal/foothold/miniMap，分批关闭 back 和 0-7 层 obj/tile，定位具体场景资源。",
+            "记录崩溃发生在进图前、怪物首次出现、怪物攻击还是死亡阶段；不同时间点对应地图加载、stand/move、attack 或 die 动作。",
+        ],
+        "note": "离线诊断能证明文件结构、引用和像素是否有效，但不能替代旧客户端实际加载时序。",
     }
 
 
@@ -1090,6 +1488,204 @@ def encode_img_scalar(image: WzImage, node: WzProperty, value: Any) -> list[tupl
     return [(int(offset), encoded, normalized)]
 
 
+def _skip_raw_property_body(reader: Any, tag: int) -> None:
+    if tag == 0:
+        return
+    if tag in (2, 11):
+        reader.skip(2)
+        return
+    if tag in (3, 19):
+        reader.read_compressed_int()
+        return
+    if tag == 20:
+        reader.read_compressed_long()
+        return
+    if tag == 4:
+        if reader.read_byte() == 0x80:
+            reader.skip(4)
+        return
+    if tag == 5:
+        reader.skip(8)
+        return
+    if tag == 8:
+        reader.read_string_block(0)
+        return
+    if tag == 9:
+        block_size = reader.read_u32()
+        reader.seek(reader.position + block_size)
+        return
+    raise ValueError(f"不支持的 IMG 属性标签: {tag}")
+
+
+def locate_img_records(
+    image: WzImage, data: bytes, parent_path: tuple[str, ...],
+) -> tuple[tuple[int, ...], int, int, tuple[str, ...], tuple[tuple[int, int], ...], int]:
+    reader = image.wz_file.reader
+    reader.seek(0)
+    if reader.read_byte() != 0x73 or reader.read_string() != "Property":
+        raise ValueError("只支持独立 Property IMG")
+    reader.skip(2)
+
+    def read_list(size_offsets: tuple[int, ...], block_end: int):
+        count_offset = reader.position
+        count = reader.read_compressed_int()
+        count_end = reader.position
+        names: list[str] = []
+        spans: list[tuple[int, int]] = []
+        for _ in range(count):
+            start = reader.position
+            names.append(reader.read_string_block(0))
+            _skip_raw_property_body(reader, reader.read_byte())
+            spans.append((start, reader.position))
+        if reader.position != block_end:
+            raise ValueError("属性记录没有填满父节点块")
+        return size_offsets, count_offset, count_end, tuple(names), tuple(spans), block_end
+
+    if not parent_path:
+        return read_list((), len(data))
+
+    def descend(segments: tuple[str, ...], block_end: int, size_offsets: tuple[int, ...]):
+        count = reader.read_compressed_int()
+        for _ in range(count):
+            name = reader.read_string_block(0)
+            tag = reader.read_byte()
+            if tag != 9:
+                _skip_raw_property_body(reader, tag)
+                continue
+            size_offset = reader.position
+            block_size = reader.read_u32()
+            child_start = reader.position
+            child_end = child_start + block_size
+            if name != segments[0]:
+                reader.seek(child_end)
+                continue
+            reader.seek(child_start)
+            if reader.read_string_block(0) != "Property":
+                raise ValueError(f"父节点 {'/'.join(parent_path)} 不是 imgdir Property")
+            reader.skip(2)
+            next_offsets = (*size_offsets, size_offset)
+            if len(segments) == 1:
+                return read_list(next_offsets, child_end)
+            return descend(segments[1:], child_end, next_offsets)
+        reader.seek(block_end)
+        raise ValueError(f"父节点不存在: {'/'.join(parent_path)}")
+
+    return descend(parent_path, len(data), ())
+
+
+def build_img_node(name: str, node_type: str, value: Any) -> WzProperty:
+    if not name or "/" in name or "\\" in name:
+        raise ValueError("节点名不能为空且不能包含路径分隔符")
+    scalar_types = {
+        "short": (WzShortProperty, int), "int": (WzIntProperty, int),
+        "long": (WzLongProperty, int), "float": (WzFloatProperty, float),
+        "double": (WzDoubleProperty, float), "string": (WzStringProperty, str),
+        "uol": (WzUolProperty, str),
+    }
+    if node_type == "imgdir":
+        return WzSubProperty(name)
+    if node_type == "null":
+        return WzNullProperty(name)
+    if node_type == "vector":
+        vector = value if isinstance(value, dict) else {}
+        return WzVectorProperty(name, int(vector.get("x", 0)), int(vector.get("y", 0)))
+    if node_type not in scalar_types:
+        raise ValueError(f"二进制 IMG 不支持添加 {node_type} 节点")
+    node_class, converter = scalar_types[node_type]
+    return node_class(name, converter(value))
+
+
+def encode_img_record(node: WzProperty, image: WzImage) -> bytes:
+    encoded = wz_writer._encode_property_list((node,), image.wz_file.reader)
+    prefix = wz_writer.encode_compressed_int(1)
+    if not encoded.startswith(prefix):
+        raise ValueError("新增节点记录编码异常")
+    return encoded[len(prefix):]
+
+
+def _verified_img_from_bytes(path: Path, data: bytes) -> WzImage:
+    image = WzImage.from_bytes(data, key=key_for_data(data), name=path.name)
+    image.parse()
+    if image.truncated or image.parse_warnings:
+        raise ValueError(f"增量结果解析失败: {image.parse_warnings}")
+    return image
+
+
+def patch_img_add(
+    path: Path, parent_path: str, name: str, node_type: str, value: Any, *, dry_run: bool, backup: bool,
+    node: WzProperty | None = None,
+) -> dict[str, Any]:
+    original = path.read_bytes()
+    image = _verified_img_from_bytes(path, original)
+    parent_parts = tuple(part for part in parent_path.split("/") if part)
+    size_offsets, count_offset, count_end, names, spans, records_end = locate_img_records(image, original, parent_parts)
+    if len(set(names)) != len(names):
+        raise ValueError("父节点存在重名子节点，拒绝自动增删")
+    if name in names:
+        raise ValueError(f"同名节点已存在: {parent_path}/{name}".strip("/"))
+    raw_before = {item: original[start:end] for item, (start, end) in zip(names, spans)}
+    record = encode_img_record(node if node is not None else build_img_node(name, node_type, value), image)
+    new_count = wz_writer.encode_compressed_int(len(names) + 1)
+    if len(new_count) != count_end - count_offset:
+        raise ValueError("子节点计数编码长度变化，拒绝增量插入")
+    updated = bytearray(original[:records_end] + record + original[records_end:])
+    updated[count_offset:count_end] = new_count
+    for size_offset in size_offsets:
+        struct.pack_into("<I", updated, size_offset, struct.unpack_from("<I", original, size_offset)[0] + len(record))
+    output = bytes(updated)
+    verified = _verified_img_from_bytes(path, output)
+    _, _, _, new_names, new_spans, _ = locate_img_records(verified, output, parent_parts)
+    raw_after = {item: output[start:end] for item, (start, end) in zip(new_names, new_spans)}
+    if new_names != (*names, name) or raw_after.get(name) != record:
+        raise ValueError("新增记录顺序或内容验证失败")
+    if any(raw_after.get(item) != raw for item, raw in raw_before.items()):
+        raise ValueError("检测到未修改的兄弟记录发生变化")
+    if not dry_run:
+        atomic_write(path, output, backup=backup)
+        _load_image_cached.cache_clear()
+    return {"path": f"{parent_path}/{name}".strip("/"), "insertedBytes": len(record)}
+
+
+def patch_img_delete(path: Path, node_path: str, *, dry_run: bool, backup: bool) -> dict[str, Any]:
+    if not node_path:
+        raise ValueError("不能删除 IMG 根节点")
+    parent_text, _, child_name = node_path.rpartition("/")
+    parent_parts = tuple(part for part in parent_text.split("/") if part)
+    original = path.read_bytes()
+    image = _verified_img_from_bytes(path, original)
+    size_offsets, count_offset, count_end, names, spans, _ = locate_img_records(image, original, parent_parts)
+    if len(set(names)) != len(names):
+        raise ValueError("父节点存在重名子节点，拒绝自动增删")
+    if child_name not in names:
+        raise ValueError(f"节点不存在: {node_path}")
+    index = names.index(child_name)
+    start, end = spans[index]
+    raw_before = {
+        item: original[record_start:record_end]
+        for item, (record_start, record_end) in zip(names, spans) if item != child_name
+    }
+    new_count = wz_writer.encode_compressed_int(len(names) - 1)
+    if len(new_count) != count_end - count_offset:
+        raise ValueError("子节点计数编码长度变化，拒绝增量删除")
+    updated = bytearray(original[:start] + original[end:])
+    updated[count_offset:count_end] = new_count
+    removed_bytes = end - start
+    for size_offset in size_offsets:
+        struct.pack_into("<I", updated, size_offset, struct.unpack_from("<I", original, size_offset)[0] - removed_bytes)
+    output = bytes(updated)
+    verified = _verified_img_from_bytes(path, output)
+    _, _, _, new_names, new_spans, _ = locate_img_records(verified, output, parent_parts)
+    raw_after = {item: output[record_start:record_end] for item, (record_start, record_end) in zip(new_names, new_spans)}
+    if new_names != tuple(item for item in names if item != child_name):
+        raise ValueError("删除后兄弟节点顺序发生变化")
+    if any(raw_after.get(item) != raw for item, raw in raw_before.items()):
+        raise ValueError("检测到未修改的兄弟记录发生变化")
+    if not dry_run:
+        atomic_write(path, output, backup=backup)
+        _load_image_cached.cache_clear()
+    return {"path": node_path, "removedBytes": removed_bytes}
+
+
 def patch_img(path: Path, node_path: str, value: Any, *, dry_run: bool, backup: bool) -> dict[str, Any]:
     image = load_image(path)
     node = image.root.get(node_path)
@@ -1138,6 +1734,38 @@ def patch_xml_value(path: Path, node_path: str, value: Any, *, dry_run: bool, ba
     if not dry_run and output != data:
         atomic_write(path, output, backup=backup)
     return {"changedBytes": sum(a != b for a, b in zip(data, output)) + abs(len(data) - len(output)), "attributes": attrs}
+
+
+def patch_with_server_sync(
+    client_path: Path, node_path: str, value: Any, *, dry_run: bool, backup: bool,
+) -> dict[str, Any]:
+    server_path = server_xml_for_client(client_path)
+    if server_path is None or not server_path.is_file():
+        target = relative_path(server_path) if server_path is not None else client_path.name
+        raise ValueError(f"找不到对应的服务端 XML: {target}")
+
+    client_preview = patch_img(client_path, node_path, value, dry_run=True, backup=False)
+    server_preview = patch_xml_value(server_path, node_path, value, dry_run=True, backup=False)
+    if dry_run:
+        return {
+            "clientPath": relative_path(client_path), "serverPath": relative_path(server_path),
+            "client": client_preview, "server": server_preview,
+        }
+
+    client_original = client_path.read_bytes()
+    server_original = server_path.read_bytes()
+    try:
+        client_result = patch_img(client_path, node_path, value, dry_run=False, backup=backup)
+        server_result = patch_xml_value(server_path, node_path, value, dry_run=False, backup=backup)
+    except Exception:
+        atomic_write(client_path, client_original, backup=False)
+        atomic_write(server_path, server_original, backup=False)
+        _load_image_cached.cache_clear()
+        raise
+    return {
+        "clientPath": relative_path(client_path), "serverPath": relative_path(server_path),
+        "client": client_result, "server": server_result,
+    }
 
 
 def xml_add_node(path: Path, parent_path: str, name: str, node_type: str, value: Any, *, dry_run: bool, backup: bool) -> dict[str, Any]:
@@ -1204,6 +1832,306 @@ def xml_delete_node(path: Path, node_path: str, *, dry_run: bool, backup: bool) 
     return {"path": node_path, "removedBytes": end - start}
 
 
+def add_with_server_sync(
+    client_path: Path, parent_path: str, name: str, node_type: str, value: Any, *, dry_run: bool, backup: bool,
+) -> dict[str, Any]:
+    server_path = server_xml_for_client(client_path)
+    if server_path is None or not server_path.is_file():
+        target = relative_path(server_path) if server_path is not None else client_path.name
+        raise ValueError(f"找不到对应的服务端 XML: {target}")
+
+    client_preview = patch_img_add(
+        client_path, parent_path, name, node_type, value, dry_run=True, backup=False,
+    )
+    server_preview = xml_add_node(
+        server_path, parent_path, name, node_type, value, dry_run=True, backup=False,
+    )
+    if dry_run:
+        return {
+            "clientPath": relative_path(client_path), "serverPath": relative_path(server_path),
+            "client": client_preview, "server": server_preview,
+        }
+
+    client_original = client_path.read_bytes()
+    server_original = server_path.read_bytes()
+    try:
+        client_result = patch_img_add(
+            client_path, parent_path, name, node_type, value, dry_run=False, backup=backup,
+        )
+        server_result = xml_add_node(
+            server_path, parent_path, name, node_type, value, dry_run=False, backup=backup,
+        )
+    except Exception:
+        atomic_write(client_path, client_original, backup=False)
+        atomic_write(server_path, server_original, backup=False)
+        _load_image_cached.cache_clear()
+        raise
+    return {
+        "clientPath": relative_path(client_path), "serverPath": relative_path(server_path),
+        "client": client_result, "server": server_result,
+    }
+
+
+def delete_with_server_sync(
+    client_path: Path, node_path: str, *, dry_run: bool, backup: bool,
+) -> dict[str, Any]:
+    server_path = server_xml_for_client(client_path)
+    if server_path is None or not server_path.is_file():
+        target = relative_path(server_path) if server_path is not None else client_path.name
+        raise ValueError(f"找不到对应的服务端 XML: {target}")
+
+    client_preview = patch_img_delete(client_path, node_path, dry_run=True, backup=False)
+    server_preview = xml_delete_node(server_path, node_path, dry_run=True, backup=False)
+    if dry_run:
+        return {
+            "clientPath": relative_path(client_path), "serverPath": relative_path(server_path),
+            "client": client_preview, "server": server_preview,
+        }
+
+    client_original = client_path.read_bytes()
+    server_original = server_path.read_bytes()
+    try:
+        client_result = patch_img_delete(client_path, node_path, dry_run=False, backup=backup)
+        server_result = xml_delete_node(server_path, node_path, dry_run=False, backup=backup)
+    except Exception:
+        atomic_write(client_path, client_original, backup=False)
+        atomic_write(server_path, server_original, backup=False)
+        _load_image_cached.cache_clear()
+        raise
+    return {
+        "clientPath": relative_path(client_path), "serverPath": relative_path(server_path),
+        "client": client_result, "server": server_result,
+    }
+
+
+def empty_gms_img_bytes() -> bytes:
+    reader = WzBinaryReader(io.BytesIO(), WzKey.for_region("GMS"))
+    return wz_writer.encode_image_type_string(reader, "Property") + b"\x00\x00\x00"
+
+
+def create_empty_main_files(client_path: Path) -> dict[str, Any]:
+    require_repo_write(client_path)
+    server_path = server_xml_for_client(client_path)
+    if server_path is None:
+        raise ValueError("当前路径不是受支持的地图或怪物客户端 IMG")
+    if client_path.exists():
+        raise ValueError(f"主文件已存在: {relative_path(client_path)}")
+
+    client_data = empty_gms_img_bytes()
+    _verified_img_from_bytes(client_path, client_data)
+    server_data = f'<imgdir name="{html.escape(client_path.name, quote=True)}">\n</imgdir>\n'.encode("utf-8")
+    ET.fromstring(server_data)
+    server_original = server_path.read_bytes() if server_path.is_file() else None
+    try:
+        client_path.parent.mkdir(parents=True, exist_ok=True)
+        atomic_write(client_path, client_data, backup=False)
+        if not server_path.exists():
+            server_path.parent.mkdir(parents=True, exist_ok=True)
+            atomic_write(server_path, server_data, backup=False)
+        _load_image_cached.cache_clear()
+        _verified_img_from_bytes(client_path, client_path.read_bytes())
+        ET.parse(server_path)
+    except Exception:
+        if client_path.exists():
+            client_path.unlink()
+        if server_original is not None:
+            atomic_write(server_path, server_original, backup=False)
+        elif server_path.exists():
+            server_path.unlink()
+        _load_image_cached.cache_clear()
+        raise
+    return {
+        "clientPath": relative_path(client_path), "serverPath": relative_path(server_path),
+        "createdClient": True, "createdServer": server_original is None,
+    }
+
+
+def clone_supported_node(source: WzProperty) -> WzProperty:
+    if isinstance(source, WzCanvasProperty):
+        raise ValueError(f"节点 {property_path(source)} 包含 Canvas，不能直接复制到旧端")
+    if isinstance(source, WzSubProperty):
+        clone = WzSubProperty(source.name)
+        for child in source.children():
+            clone.add(clone_supported_node(child))
+        return clone
+    if isinstance(source, WzVectorProperty):
+        return WzVectorProperty(source.name, int(source.x), int(source.y))
+    if isinstance(source, WzUolProperty):
+        return WzUolProperty(source.name, str(source.value))
+    if isinstance(source, WzNullProperty):
+        return WzNullProperty(source.name)
+    scalar_classes = (
+        WzShortProperty, WzIntProperty, WzLongProperty, WzFloatProperty,
+        WzDoubleProperty, WzStringProperty,
+    )
+    if isinstance(source, scalar_classes):
+        return type(source)(source.name, source.value)
+    raise ValueError(f"节点 {property_path(source)} 的类型 {source.type_name} 不支持安全复制")
+
+
+def xml_snippet_for_node(node: WzProperty, indent: bytes) -> bytes:
+    name = html.escape(node.name, quote=True)
+    if isinstance(node, WzSubProperty):
+        child_indent = indent + b"  "
+        children = b"".join(xml_snippet_for_node(child, child_indent) for child in node.children())
+        return indent + f'<imgdir name="{name}">\n'.encode() + children + indent + b"</imgdir>\n"
+    if isinstance(node, WzVectorProperty):
+        return indent + f'<vector name="{name}" x="{int(node.x)}" y="{int(node.y)}"/>\n'.encode()
+    if isinstance(node, WzNullProperty):
+        return indent + f'<null name="{name}"/>\n'.encode()
+    tag = {
+        WzShortProperty: "short", WzIntProperty: "int", WzLongProperty: "long",
+        WzFloatProperty: "float", WzDoubleProperty: "double", WzStringProperty: "string",
+        WzUolProperty: "uol",
+    }.get(type(node))
+    if tag is None:
+        raise ValueError(f"节点 {node.name} 不能生成服务端 XML")
+    value = html.escape(str(node.value), quote=True)
+    return indent + f'<{tag} name="{name}" value="{value}"/>\n'.encode()
+
+
+def xml_add_cloned_node(path: Path, parent_path: str, node: WzProperty, *, dry_run: bool) -> dict[str, Any]:
+    data = path.read_bytes()
+    spans = index_xml(data)
+    parent = spans.get(parent_path)
+    if parent is None or parent.tag != "imgdir":
+        raise ValueError(f"服务端父节点不存在或不是 imgdir: {parent_path or '/'}")
+    target_path = f"{parent_path}/{node.name}".strip("/")
+    if target_path in spans:
+        raise ValueError(f"服务端同名节点已存在: {target_path}")
+    line_start = data.rfind(b"\n", 0, parent.start) + 1
+    parent_indent = data[line_start:parent.start]
+    indent = parent_indent + b"  "
+    snippet = xml_snippet_for_node(node, indent)
+    if parent.self_closing:
+        tag = data[parent.start:parent.open_end]
+        trimmed_end = len(tag.rstrip())
+        open_tag = tag[:trimmed_end - 2] + b">" + tag[trimmed_end:]
+        replacement = open_tag + b"\n" + snippet + parent_indent + b"</imgdir>"
+        output = data[:parent.start] + replacement + data[parent.open_end:]
+        inserted_bytes = len(replacement) - len(tag)
+    else:
+        close_start = data.rfind(b"</", parent.open_end, parent.end)
+        close_line_start = data.rfind(b"\n", parent.open_end, close_start) + 1
+        output = data[:close_line_start] + snippet + data[close_line_start:]
+        inserted_bytes = len(snippet)
+    ET.fromstring(output)
+    if not dry_run:
+        atomic_write(path, output, backup=True)
+    return {"path": target_path, "insertedBytes": inserted_bytes}
+
+
+def copy_tms_node_with_server_sync(
+    client_path: Path, source_path: Path, node_path: str,
+) -> dict[str, Any]:
+    require_repo_write(client_path)
+    if not client_path.is_file():
+        raise ValueError("主文件不存在，请先创建空白主文件")
+    if not node_path:
+        raise ValueError("不能复制 TMS 根节点")
+    source_image = load_image(source_path)
+    source_node = source_image.root.get(node_path)
+    if source_node is None:
+        raise ValueError(f"TMS 节点不存在: {node_path}")
+    if "/Data/Map/Map/" in source_path.as_posix():
+        candidates = [source_node]
+        if isinstance(source_node, WzSubProperty):
+            candidates.extend(iter_subtree(source_node))
+        for candidate in candidates:
+            candidate_path = property_path(candidate)
+            annotated = annotate_meta(
+                candidate_path, property_meta(candidate), "map", infer_id(client_path),
+            )
+            compatibility = annotated["compatibility"]
+            if compatibility["status"] == "ok":
+                continue
+            raise ValueError(
+                f"所选子树包含“{compatibility['label']}”节点 {candidate_path}，不能直接复制到旧端。"
+                f"{compatibility['suggestion']} 请缩小选择范围，或先手工建立兼容父目录。"
+            )
+    clone = clone_supported_node(source_node)
+    parent_path = node_path.rpartition("/")[0]
+    server_path = server_xml_for_client(client_path)
+    if server_path is None or not server_path.is_file():
+        raise ValueError("找不到对应的服务端 XML")
+
+    patch_img_add(
+        client_path, parent_path, clone.name, "imgdir", None, dry_run=True, backup=False, node=clone,
+    )
+    xml_add_cloned_node(server_path, parent_path, clone, dry_run=True)
+    client_original = client_path.read_bytes()
+    server_original = server_path.read_bytes()
+    try:
+        client_result = patch_img_add(
+            client_path, parent_path, clone.name, "imgdir", None,
+            dry_run=False, backup=True, node=clone,
+        )
+        server_result = xml_add_cloned_node(server_path, parent_path, clone, dry_run=False)
+    except Exception:
+        atomic_write(client_path, client_original, backup=False)
+        atomic_write(server_path, server_original, backup=False)
+        _load_image_cached.cache_clear()
+        raise
+    return {
+        "path": node_path, "clientPath": relative_path(client_path),
+        "serverPath": relative_path(server_path), "client": client_result, "server": server_result,
+    }
+
+
+def validate_export_source(path: Path) -> tuple[bytes, str]:
+    data = path.read_bytes()
+    lower_name = path.name.lower()
+    if lower_name.endswith(".img"):
+        _verified_img_from_bytes(path, data)
+    elif lower_name.endswith((".xml", ".img.xml")):
+        ET.fromstring(data)
+    elif lower_name.endswith(".json"):
+        json.loads(data.decode("utf-8"))
+    else:
+        raise ValueError(f"不支持导出的文件类型: {path.name}")
+    return data, hashlib.sha256(data).hexdigest()
+
+
+def export_current_files(source: Path, destination_text: str, *, include_server: bool) -> dict[str, Any]:
+    require_repo_write(source)
+    downloads = (Path.home() / "Downloads").resolve()
+    destination = Path(destination_text).expanduser() if destination_text else _DEFAULT_EXPORT_ROOT
+    if not destination.is_absolute():
+        destination = downloads / destination
+    destination = destination.resolve()
+    if destination != downloads and not destination.is_relative_to(downloads):
+        raise ValueError("导出目录必须位于 Downloads 内")
+
+    sources = [source]
+    if include_server and source.name.lower().endswith(".img"):
+        server_path = server_xml_for_client(source)
+        if server_path is None or not server_path.is_file():
+            target = relative_path(server_path) if server_path is not None else source.name
+            raise ValueError(f"找不到对应的服务端 XML: {target}")
+        sources.append(server_path)
+
+    verified = []
+    for item in sources:
+        relative = item.resolve().relative_to(_ROOT.resolve())
+        data, digest = validate_export_source(item)
+        verified.append((item, relative, data, digest))
+
+    exported = []
+    for item, relative, data, digest in verified:
+        target = destination / relative
+        overwritten = target.exists()
+        target.parent.mkdir(parents=True, exist_ok=True)
+        atomic_write(target, data, backup=False)
+        target_digest = hashlib.sha256(target.read_bytes()).hexdigest()
+        if target_digest != digest:
+            raise ValueError(f"导出后哈希不一致: {target}")
+        exported.append({
+            "source": relative_path(item), "target": str(target), "sha256": digest,
+            "size": len(data), "overwritten": overwritten,
+        })
+    return {"destination": str(destination), "files": exported}
+
+
 @app.errorhandler(Exception)
 def handle_error(exc: Exception):
     status = getattr(exc, "code", 400)
@@ -1212,7 +2140,9 @@ def handle_error(exc: Exception):
 
 @app.get("/")
 def index():
-    return render_template("index.html", tms_data_root=str(_TMS_DATA))
+    return render_template(
+        "index.html", tms_data_root=str(_TMS_DATA), default_export_root=str(_DEFAULT_EXPORT_ROOT),
+    )
 
 
 @app.get("/api/catalog")
@@ -1225,21 +2155,55 @@ def api_files():
     return jsonify({"ok": True, **browse_directory(request.args.get("path", ""))})
 
 
+@app.post("/api/export")
+def api_export():
+    body = request.get_json(silent=True) or {}
+    source = resolve_repo_path(str(body.get("sourcePath", "")))
+    with _WRITE_LOCK:
+        result = export_current_files(
+            source, str(body.get("destination", "")), include_server=bool(body.get("includeServer", True)),
+        )
+    return jsonify({"ok": True, **result})
+
+
 @app.post("/api/compare")
 def api_compare():
     body = request.get_json(silent=True) or {}
-    left_path = resolve_repo_path(str(body.get("leftPath", "")))
-    right_path = resolve_repo_path(str(body.get("rightPath", "")))
-    left, left_info = flatten_source(left_path)
-    right, right_info = flatten_source(right_path)
+    kind = str(body.get("kind", "map"))
+    left_path = resolve_repo_path(str(body.get("leftPath", "")), must_exist=False)
+    right_path = resolve_repo_path(str(body.get("rightPath", "")), must_exist=kind == "map")
+    left, left_info = flatten_optional_source(left_path)
+    right, right_info = flatten_optional_source(right_path)
     nodes, counts = merge_sources(left, right)
-    mode = "map" if str(body.get("kind", "map")) == "map" else "boss"
+    mode = "map" if kind == "map" else "boss"
     compatibility = compatibility_analysis(left, right, left_path, right_path) if mode == "map" else None
     annotate_rows(nodes, mode, infer_id(left_path))
     return jsonify({
         "ok": True, "leftPath": relative_path(left_path), "rightPath": relative_path(right_path),
         "leftInfo": left_info, "rightInfo": right_info, "nodes": nodes, "counts": counts, "compatibility": compatibility,
     })
+
+
+@app.post("/api/create-main")
+def api_create_main():
+    body = request.get_json(silent=True) or {}
+    path = resolve_repo_path(str(body.get("sourcePath", "")), must_exist=False)
+    with _WRITE_LOCK:
+        result = create_empty_main_files(path)
+    return jsonify({"ok": True, **result})
+
+
+@app.post("/api/copy-tms-node")
+def api_copy_tms_node():
+    body = request.get_json(silent=True) or {}
+    client_path = resolve_repo_path(str(body.get("sourcePath", "")))
+    tms_path = resolve_repo_path(str(body.get("tmsPath", "")))
+    if tms_path != _TMS_DATA and not tms_path.is_relative_to(_TMS_DATA):
+        raise ValueError("复制来源必须位于 TMS 数据目录")
+    node_path = str(body.get("path", "")).strip("/")
+    with _WRITE_LOCK:
+        result = copy_tms_node_with_server_sync(client_path, tms_path, node_path)
+    return jsonify({"ok": True, **result})
 
 
 @app.post("/api/preview")
@@ -1252,6 +2216,13 @@ def api_preview():
         source = resolve_repo_path(relative_path(client))
     payload = map_preview(source) if kind == "map" else mob_preview(source)
     return jsonify({"ok": True, "sourcePath": relative_path(source), **payload})
+
+
+@app.post("/api/diagnose-map")
+def api_diagnose_map():
+    body = request.get_json(silent=True) or {}
+    source = resolve_repo_path(str(body.get("sourcePath", "")))
+    return jsonify({"ok": True, **diagnose_map_crash(source)})
 
 
 @app.get("/api/canvas")
@@ -1273,16 +2244,22 @@ def api_edit():
     path = resolve_repo_path(str(body.get("sourcePath", "")))
     require_repo_write(path)
     node_path = str(body.get("path", "")).strip("/")
-    dry_run = bool(body.get("dryRun", True))
+    dry_run = bool(body.get("dryRun", False))
     backup = bool(body.get("backup", True))
+    sync_server = bool(body.get("syncServer", True))
     with _WRITE_LOCK:
         if path.name.lower().endswith(".img"):
-            result = patch_img(path, node_path, body.get("value"), dry_run=dry_run, backup=backup)
+            if sync_server:
+                result = patch_with_server_sync(path, node_path, body.get("value"), dry_run=dry_run, backup=backup)
+            else:
+                result = {"clientPath": relative_path(path), "client": patch_img(
+                    path, node_path, body.get("value"), dry_run=dry_run, backup=backup,
+                )}
         elif path.name.lower().endswith((".xml", ".img.xml")):
             result = patch_xml_value(path, node_path, body.get("value"), dry_run=dry_run, backup=backup)
         else:
             raise ValueError("JSON 文件当前只读")
-    return jsonify({"ok": True, "dryRun": dry_run, **result})
+    return jsonify({"ok": True, "dryRun": dry_run, "syncServer": sync_server, **result})
 
 
 @app.post("/api/add")
@@ -1290,16 +2267,30 @@ def api_add():
     body = request.get_json(silent=True) or {}
     path = resolve_repo_path(str(body.get("sourcePath", "")))
     require_repo_write(path)
-    if path.name.lower().endswith(".img"):
-        raise ValueError("二进制 IMG 不允许增删节点；请编辑对应 XML，再通过审核过的增量迁移脚本同步客户端")
     if path.suffix.lower() == ".json":
         raise ValueError("JSON 文件当前只读")
+    parent_path = str(body.get("parentPath", "")).strip("/")
+    name = str(body.get("name", "")).strip()
+    node_type = str(body.get("type", "int"))
+    value = body.get("value")
+    dry_run = bool(body.get("dryRun", False))
+    backup = bool(body.get("backup", True))
+    sync_server = bool(body.get("syncServer", True))
     with _WRITE_LOCK:
-        result = xml_add_node(
-            path, str(body.get("parentPath", "")).strip("/"), str(body.get("name", "")).strip(),
-            str(body.get("type", "int")), body.get("value"), dry_run=bool(body.get("dryRun", True)), backup=bool(body.get("backup", True)),
-        )
-    return jsonify({"ok": True, "dryRun": bool(body.get("dryRun", True)), **result})
+        if path.name.lower().endswith(".img"):
+            if sync_server:
+                result = add_with_server_sync(
+                    path, parent_path, name, node_type, value, dry_run=dry_run, backup=backup,
+                )
+            else:
+                result = {"clientPath": relative_path(path), "client": patch_img_add(
+                    path, parent_path, name, node_type, value, dry_run=dry_run, backup=backup,
+                )}
+        else:
+            result = xml_add_node(
+                path, parent_path, name, node_type, value, dry_run=dry_run, backup=backup,
+            )
+    return jsonify({"ok": True, "dryRun": dry_run, "syncServer": sync_server, **result})
 
 
 @app.post("/api/delete")
@@ -1307,13 +2298,25 @@ def api_delete():
     body = request.get_json(silent=True) or {}
     path = resolve_repo_path(str(body.get("sourcePath", "")))
     require_repo_write(path)
-    if path.name.lower().endswith(".img"):
-        raise ValueError("二进制 IMG 不允许删除节点；请使用审核过的原始记录增量替换脚本")
     if path.suffix.lower() == ".json":
         raise ValueError("JSON 文件当前只读")
+    node_path = str(body.get("path", "")).strip("/")
+    dry_run = bool(body.get("dryRun", False))
+    backup = bool(body.get("backup", True))
+    sync_server = bool(body.get("syncServer", True))
     with _WRITE_LOCK:
-        result = xml_delete_node(path, str(body.get("path", "")).strip("/"), dry_run=bool(body.get("dryRun", True)), backup=bool(body.get("backup", True)))
-    return jsonify({"ok": True, "dryRun": bool(body.get("dryRun", True)), **result})
+        if path.name.lower().endswith(".img"):
+            if sync_server:
+                result = delete_with_server_sync(
+                    path, node_path, dry_run=dry_run, backup=backup,
+                )
+            else:
+                result = {"clientPath": relative_path(path), "client": patch_img_delete(
+                    path, node_path, dry_run=dry_run, backup=backup,
+                )}
+        else:
+            result = xml_delete_node(path, node_path, dry_run=dry_run, backup=backup)
+    return jsonify({"ok": True, "dryRun": dry_run, "syncServer": sync_server, **result})
 
 
 def main() -> int:
