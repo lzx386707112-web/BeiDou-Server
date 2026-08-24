@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Map & Mob Workbench</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+</head>
+<body data-tms-data-root="{{ tms_data_root }}">
+  <header class="app-header">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true"><i></i><i></i></span>
+      <div>
+        <h1>地图与怪物工作台</h1>
+        <p>MAP &amp; MOB RESOURCE EDITOR</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <span class="safety-badge">安全写入</span>
+      <span id="connectionStatus" class="status-dot">就绪</span>
+      <button id="reloadBtn" class="icon-button" type="button" title="重新加载" aria-label="重新加载">↻</button>
+    </div>
+  </header>
+
+  <section class="source-bar">
+    <div class="source-mode">
+      <span class="field-caption">资源类型</span>
+      <div class="segmented" role="tablist" aria-label="资源类型">
+        <button class="segment active" type="button" data-kind="map">地图</button>
+        <button class="segment" type="button" data-kind="mob">怪物</button>
+      </div>
+    </div>
+    <label class="compact-field id-field">
+      <span class="field-caption">资源 ID</span>
+      <input id="itemId" type="search" inputmode="numeric" autocomplete="off" placeholder="输入资源 ID">
+      <div id="catalog" class="catalog" hidden></div>
+    </label>
+    <label class="path-field">
+      <span class="file-label"><b>A</b> 主文件</span>
+      <input id="leftPath" type="text" spellcheck="false">
+    </label>
+    <button id="swapBtn" class="icon-button swap-button" type="button" title="交换对比文件" aria-label="交换对比文件">⇄</button>
+    <div class="path-field">
+      <label class="file-label secondary" for="rightPath"><b>B</b> 对比文件</label>
+      <span class="file-input-row">
+        <input id="rightPath" type="text" spellcheck="false">
+        <button id="browseRightBtn" class="icon-button browse-button" type="button" title="浏览对比文件" aria-label="浏览对比文件">…</button>
+      </span>
+    </div>
+    <button id="compareBtn" class="primary-button compare-button" type="button">加载并对比</button>
+  </section>
+
+  <nav class="mobile-tabs" aria-label="工作区">
+    <button type="button" class="active" data-panel="treePanel">节点</button>
+    <button type="button" data-panel="previewPanel">预览</button>
+    <button type="button" data-panel="inspectorPanel">属性</button>
+  </nav>
+
+  <main class="workspace">
+    <aside id="treePanel" class="panel tree-panel mobile-active">
+      <div class="panel-head">
+        <div>
+          <h2>节点浏览器</h2>
+          <span id="nodeCount" class="panel-meta">0</span>
+        </div>
+        <div class="panel-tools">
+          <button id="collapseBtn" class="icon-button small" type="button" title="全部折叠" aria-label="全部折叠">−</button>
+          <button id="expandBtn" class="icon-button small" type="button" title="展开差异" aria-label="展开差异">+</button>
+        </div>
+      </div>
+      <div class="tree-filter">
+        <input id="treeSearch" type="search" placeholder="筛选节点或值" autocomplete="off">
+        <label class="toggle-label compact-toggle"><input id="diffOnly" type="checkbox"> 仅差异</label>
+      </div>
+      <div class="tree-guide" aria-label="节点对比说明">
+        <div class="tree-source-guide">
+          <strong>合并节点树</strong>
+          <span class="source-chip a"><b>A</b>主文件</span>
+          <span class="source-chip b"><b>B</b>对比文件</span>
+        </div>
+        <div class="legend" aria-label="差异图例">
+          <span><i class="legend-dot changed"></i>修改</span>
+          <span><i class="legend-dot left-only"></i>仅 A</span>
+          <span><i class="legend-dot right-only"></i>仅 B</span>
+        </div>
+      </div>
+      <div id="tree" class="tree" role="tree"></div>
+    </aside>
+
+    <section id="previewPanel" class="panel preview-panel">
+      <div class="panel-head preview-head">
+        <div>
+          <h2 id="previewTitle">地图预览</h2>
+          <span id="previewMeta" class="panel-meta">未加载</span>
+        </div>
+        <div id="mobControls" class="preview-controls" hidden>
+          <select id="actionSelect" aria-label="怪物动作"></select>
+          <button id="playBtn" class="icon-button small" type="button" title="播放或暂停" aria-label="播放或暂停">Ⅱ</button>
+        </div>
+        <div id="mapControls" class="preview-controls">
+          <label class="layer-toggle"><input id="showFootholds" type="checkbox" checked><span>地形</span></label>
+          <label class="layer-toggle"><input id="showMobs" type="checkbox" checked><span>怪物</span></label>
+          <label class="layer-toggle"><input id="showNpcs" type="checkbox" checked><span>NPC</span></label>
+          <label class="layer-toggle"><input id="showPortals" type="checkbox" checked><span>传送门</span></label>
+        </div>
+      </div>
+      <div id="previewStage" class="preview-stage">
+        <div id="mapCompareView" class="map-compare-view" hidden>
+          <section class="map-preview-pane">
+            <div class="map-pane-head"><span><b class="column-badge a">A</b>主文件</span><small id="leftMapMeta">未加载</small></div>
+            <div id="leftMapStage" class="map-stage"><canvas id="mapCanvas"></canvas></div>
+          </section>
+          <section class="map-preview-pane secondary">
+            <div class="map-pane-head"><span><b class="column-badge b">B</b><span id="rightMapSourceLabel">对比文件</span></span><small id="rightMapMeta">未加载</small></div>
+            <div id="rightMapStage" class="map-stage"><canvas id="rightMapCanvas"></canvas></div>
+          </section>
+        </div>
+        <div id="mobStage" class="mob-stage" hidden>
+          <div class="mob-ground"></div>
+          <img id="mobImage" alt="怪物动作帧">
+          <span id="frameCounter" class="frame-counter"></span>
+        </div>
+        <div id="previewEmpty" class="empty-state">
+          <span class="empty-mark" aria-hidden="true">◇</span>
+          <strong>等待加载资源</strong>
+          <span>预览区域会显示地图场景或怪物动作。</span>
+        </div>
+      </div>
+      <div class="preview-footer">
+        <button id="fitBtn" class="text-button" type="button">适应视图</button>
+        <label class="zoom-control">
+          <span>缩放</span>
+          <input id="zoomRange" type="range" min="10" max="200" value="100">
+          <output id="zoomValue">100%</output>
+        </label>
+      </div>
+    </section>
+
+    <aside id="inspectorPanel" class="panel inspector-panel">
+      <div class="panel-head">
+        <div>
+          <h2>检查器</h2>
+          <span id="selectedPath" class="panel-meta path-meta">未选择节点</span>
+        </div>
+        <div class="panel-tools">
+          <button id="addBtn" class="icon-button small" type="button" title="添加子节点" aria-label="添加子节点" disabled>+</button>
+          <button id="deleteBtn" class="icon-button small danger" type="button" title="删除节点" aria-label="删除节点" disabled>⌫</button>
+        </div>
+      </div>
+      <div id="compareSummary" class="summary-strip">
+        <span class="summary-changed"><strong id="changedCount">0</strong><small>修改</small></span>
+        <span class="summary-left"><strong id="leftOnlyCount">0</strong><small>仅 A</small></span>
+        <span class="summary-right"><strong id="rightOnlyCount">0</strong><small>仅 B</small></span>
+      </div>
+      <div class="inspector-tabs" role="tablist" aria-label="检查器视图">
+        <button id="compatibilityTab" class="active" type="button" role="tab" aria-selected="true">兼容分析 <span id="compatibilityCount">0</span></button>
+        <button id="nodeDetailTab" type="button" role="tab" aria-selected="false">节点详情</button>
+      </div>
+      <div class="inspector-content">
+        <div id="compatibility" class="compatibility"></div>
+        <div id="inspector" class="inspector empty-state compact" hidden>
+          <span class="empty-mark small" aria-hidden="true">⌖</span>
+          <strong>选择左侧节点</strong>
+          <span>这里会显示属性、差异与可编辑值。</span>
+        </div>
+      </div>
+      <div id="editActions" class="edit-actions" hidden>
+        <label class="toggle-label dry-run-toggle"><input id="dryRun" type="checkbox" checked><span>仅预演</span></label>
+        <button id="saveBtn" class="primary-button" type="button">应用修改</button>
+      </div>
+      <pre id="operationResult" class="operation-result" hidden></pre>
+    </aside>
+  </main>
+
+  <dialog id="addDialog">
+    <form method="dialog" id="addForm">
+      <div class="dialog-head">
+        <h2>添加子节点</h2>
+        <button class="icon-button small" value="cancel" aria-label="关闭">×</button>
+      </div>
+      <label>节点名<input id="newNodeName" required autocomplete="off"></label>
+      <label>类型
+        <select id="newNodeType">
+          <option value="imgdir">imgdir</option>
+          <option value="int">int</option>
+          <option value="string">string</option>
+          <option value="float">float</option>
+          <option value="long">long</option>
+          <option value="vector">vector</option>
+          <option value="uol">uol</option>
+          <option value="null">null</option>
+        </select>
+      </label>
+      <label id="newValueField">初始值<input id="newNodeValue" value="0"></label>
+      <div id="vectorFields" class="vector-fields" hidden>
+        <label>X<input id="newVectorX" type="number" value="0"></label>
+        <label>Y<input id="newVectorY" type="number" value="0"></label>
+      </div>
+      <div class="dialog-actions">
+        <button class="text-button" value="cancel">取消</button>
+        <button id="confirmAddBtn" class="primary-button" type="button">添加</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="fileDialog" class="file-dialog">
+    <form method="dialog" id="fileForm">
+      <div class="dialog-head">
+        <div>
+          <h2>选择对比文件</h2>
+          <span id="fileBrowserPath" class="browser-path"></span>
+        </div>
+        <button class="icon-button small" value="cancel" aria-label="关闭">×</button>
+      </div>
+      <div class="file-browser-toolbar">
+        <button id="fileUpBtn" class="icon-button small" type="button" title="返回上级目录" aria-label="返回上级目录">↑</button>
+        <input id="fileSearch" type="search" placeholder="筛选当前目录" autocomplete="off">
+      </div>
+      <div id="fileList" class="file-list" role="listbox" aria-label="文件列表"></div>
+      <div class="file-browser-footer">
+        <span id="selectedFileName">未选择文件</span>
+        <div class="dialog-actions">
+          <button class="text-button" value="cancel">取消</button>
+          <button id="chooseFileBtn" class="primary-button" type="button" disabled>选择文件</button>
+        </div>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

@@ -14,6 +14,13 @@ COMPAT = (
     / "karing-scene-compat"
     / "KaringSceneCompat.cpp"
 )
+WZ_LOGGER = (
+    ROOT
+    / "tool"
+    / "client-debug"
+    / "wz_file_logger"
+    / "WzFileLogger.cpp"
+)
 
 
 class MultiChannelContractTest(unittest.TestCase):
@@ -102,6 +109,29 @@ class MultiChannelContractTest(unittest.TestCase):
         self.assertIn("gNextPresent = FunctionFromPointer<PresentFn>(original);", source)
         self.assertIn("return gNextSetTexture(device, stage, texture);", source)
         self.assertNotIn('LoadLibraryA("DawnWarriorSkillCompat.dll")', source)
+
+    def test_karing_compat_load_waits_for_a_karing_map(self) -> None:
+        source = WZ_LOGGER.read_text(encoding="utf-8")
+        for map_id in range(410007100, 410007301, 20):
+            self.assertIn(f'L"{map_id}.img"', source)
+        self.assertIn("DetectKaringMapOpen(fileName);", source)
+        self.assertIn("DetectKaringMapOpen(widePath);", source)
+        load_condition = source[source.index("if (sawClientWindow") :]
+        load_condition = load_condition[: load_condition.index("HMODULE karingCompat")]
+        self.assertIn("g_karingMapDetected", load_condition)
+        self.assertIn('GetModuleHandleA("BeiDouVideo.dll")', load_condition)
+
+    def test_wz_logger_holds_modules_while_patching_imports(self) -> None:
+        source = WZ_LOGGER.read_text(encoding="utf-8")
+        patch_module = source[source.index("static int PatchModule(") :]
+        patch_module = patch_module[: patch_module.index("static void PatchAllModules()")]
+        self.assertIn("GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS", patch_module)
+        self.assertIn("heldModule != module", patch_module)
+        self.assertEqual(3, patch_module.count("FreeLibrary(heldModule);"))
+        self.assertLess(
+            patch_module.index("GetModuleHandleExW("),
+            patch_module.index("PatchImport(module"),
+        )
 
     def test_karing_markers_cannot_restart_or_render_twice_while_playing(self) -> None:
         source = COMPAT.read_text(encoding="utf-8")

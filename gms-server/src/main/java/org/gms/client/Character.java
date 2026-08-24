@@ -5634,7 +5634,7 @@ public class Character extends AbstractCharacterObject {
     }
 
     public boolean needQuestItem(int questid, int itemid) {
-        if (questid <= 0) { //For non quest items :3
+        if (questid == 0) { // Zero is the only unrestricted drop marker; signed quest IDs are valid.
             return true;
         }
 

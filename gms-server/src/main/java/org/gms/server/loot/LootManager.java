@@ -33,7 +33,7 @@ import java.util.List;
 public class LootManager {
 
     private static boolean isRelevantDrop(MonsterDropEntry dropEntry, List<Character> players, List<LootInventory> playersInv) {
-        if (dropEntry.questid <= 0) {
+        if (dropEntry.questid == 0) {
             return true;
         }
         
@@ -48,7 +48,7 @@ public class LootManager {
         for (int i = 0; i < players.size(); i++) {
             LootInventory chrInv = playersInv.get(i);
 
-            if (dropEntry.questid > 0) {
+            if (dropEntry.questid != 0) {
                 int qItemAmount, chrQuestStatus = players.get(i).getQuestStatus(dropEntry.questid);
                 if (chrQuestStatus == 0) {
                     qItemAmount = qStartAmount;

@@ -15,7 +15,7 @@ ROOT = Path(__file__).resolve().parents[3]
 SCRIPT = ROOT / "tool/scripts/migration/migrate_karing_p1_maps.py"
 sys.path.insert(0, str(ROOT / "tool/wz-python"))
 
-from wzpy import WzCanvasProperty, WzImage, WzKey, WzSubProperty  # noqa: E402
+from wzpy import WzCanvasProperty, WzImage, WzKey, WzStringProperty, WzSubProperty  # noqa: E402
 from wzpy.canvas import decode_canvas  # noqa: E402
 
 
@@ -46,7 +46,9 @@ def test_karing_p1_maps_are_present_and_legacy_safe():
 
         info = image.root.child("info")
         assert isinstance(info, WzSubProperty)
-        assert info.child("bgm") is None
+        bgm = info.child("bgm")
+        assert isinstance(bgm, WzStringProperty)
+        assert bgm.value == migration.KARING_MAP_BGM[map_id]
         assert info.child("mapMark") is None
         assert info.child("fieldType") is None
         expected_field_limit = migration.LEGACY_FIELD_LIMIT_OVERRIDES.get(map_id)

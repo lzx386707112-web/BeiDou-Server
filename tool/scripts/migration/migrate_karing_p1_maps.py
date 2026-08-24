@@ -56,6 +56,19 @@ from migrate_arcane_river_fields import (  # noqa: E402
 
 
 MAP_IDS = (410007100, 410007120, 410007140, 410007160, 410007180, 410007200, 410007220)
+KARING_MAP_BGM = {
+    410007100: "Bgm57/Invasion",
+    410007120: "Bgm00/Silence",
+    410007140: "Bgm57/DestroyedFourSeasons",
+    410007160: "Bgm00/Silence",
+    410007180: "Bgm57/DestroyedFourSeasons",
+    410007200: "Bgm00/Silence",
+    410007220: "Bgm57/DestroyedFourSeasons",
+    410007240: "Bgm00/Silence",
+    410007260: "Bgm57/FadedWinter",
+    410007280: "Bgm00/Silence",
+    410007300: "Bgm57/RuinationOfFourSeasons",
+}
 NPC_IDS = (9091029, 9091030, 9091031)
 RETURN_MAP = 910000000
 MAX_CANVAS_EDGE = 2048
@@ -68,7 +81,7 @@ MAP_ROOTS = {
 MAP_INFO_REMOVE = {
     "AmbientBGM", "AmbientBGMv", "ReviveCurFieldOfNoTransfer",
     "ReviveCurFieldOfNoTransferNotDamaged", "ReviveCurFieldOfNoTransferPoint",
-    "barrierArc", "barrierAut", "bgm", "bgmSub", "consumeItemCoolTime",
+    "barrierArc", "barrierAut", "bgmSub", "consumeItemCoolTime",
     "fieldLimit2", "fieldScript", "fieldType", "footStepSound", "largeSplit",
     "limitUpgradeItem", "limitUseShop", "lvLimit", "mapMark", "mode", "noChair",
     "noHekatonEffect", "noMapCmd", "partyStandAlone", "qrLimit", "quarterView",
@@ -182,6 +195,9 @@ def sanitize_map(root: WzSubProperty, map_id: int) -> None:
     if isinstance(info, WzSubProperty):
         for name in MAP_INFO_REMOVE:
             remove_child(info, name)
+        bgm = KARING_MAP_BGM.get(map_id)
+        if bgm is not None:
+            add_string(info, "bgm", bgm)
         field_limit = LEGACY_FIELD_LIMIT_OVERRIDES.get(map_id)
         if field_limit is not None:
             set_int(info, "fieldLimit", field_limit)
@@ -493,9 +509,12 @@ def verify_map_contract(map_id: int) -> None:
         raise RuntimeError(f"{client_path}: modern particle root remains")
     info = image.root.child("info")
     if isinstance(info, WzSubProperty):
-        for name in ("bgm", "mapMark", "fieldType"):
+        for name in ("mapMark", "fieldType"):
             if info.child(name) is not None:
                 raise RuntimeError(f"{client_path}: unsupported info/{name} remains")
+        bgm = info.child("bgm")
+        if not isinstance(bgm, WzStringProperty) or bgm.value != KARING_MAP_BGM.get(map_id):
+            raise RuntimeError(f"{client_path}: BGM is not {KARING_MAP_BGM.get(map_id)}")
         expected_field_limit = LEGACY_FIELD_LIMIT_OVERRIDES.get(map_id)
         if expected_field_limit is not None and child_value(info, "fieldLimit") != expected_field_limit:
             raise RuntimeError(

@@ -206,6 +206,59 @@ class Audit:
                         self.error(
                             f"{map_id}: portal {entry.name} targets missing portal {target}/{target_name}"
                         )
+            cave_portals = [
+                (name, 2, target_map, target_name)
+                for name, (target_map, target_name) in migration.LEGACY_CAVE_ROUTE_PORTALS.get(
+                    map_id, {}
+                ).items()
+            ] + [
+                (name, 3, target_map, target_name)
+                for name, (target_map, target_name) in migration.LEGACY_CAVE_COLLISION_PORTALS.get(
+                    map_id, {}
+                ).items()
+            ]
+            for portal_name, portal_type, target_map, target_name in cave_portals:
+                entry = next(
+                    (
+                        node for node in portal.children()
+                        if self.child_value(node, "pn") == portal_name
+                    ),
+                    None,
+                )
+                expected = {"pt": portal_type, "tm": target_map, "tn": target_name}
+                actual = {
+                    name: self.child_value(entry, name) if entry is not None else None
+                    for name in expected
+                }
+                if actual != expected:
+                    self.error(
+                        f"{map_id}: incompatible cave portal {portal_name}: {actual}"
+                    )
+                xml = self.server_xml(
+                    ROOT / f"gms-server/wz/Map.wz/Map/Map4/{map_id}.img.xml"
+                )
+                xml_portal = self.xml_direct_child(xml, "portal")
+                xml_entry = next(
+                    (
+                        node for node in xml_portal if xml_portal is not None
+                        if self.xml_direct_child(node, "pn") is not None
+                        and self.xml_direct_child(node, "pn").get("value") == portal_name
+                    ),
+                    None,
+                )
+                xml_actual = {
+                    name: (
+                        self.xml_direct_child(xml_entry, name).get("value")
+                        if self.xml_direct_child(xml_entry, name) is not None
+                        else None
+                    )
+                    for name in expected
+                }
+                xml_expected = {name: str(value) for name, value in expected.items()}
+                if xml_actual != xml_expected:
+                    self.error(
+                        f"{map_id}: incompatible server cave portal {portal_name}: {xml_actual}"
+                    )
         self.merge_dependencies(migration.collect_dependencies(image))
         self.check_canvas_tree(image, f"Map/{map_id}.img")
 
@@ -301,10 +354,60 @@ class Audit:
                     self.error(f"{mob_id}: unsupported mob info/{name}")
         if not any(isinstance(node, WzCanvasProperty) for node, _ in migration.walk(image.root)):
             self.error(f"{mob_id}: no materialized action frames")
+        if mob_id == 8641002:
+            attack = image.root.child("attack1")
+            names = tuple(child.name for child in attack.children()) if attack is not None else ()
+            expected = ("info", *(str(index) for index in range(16)))
+            if names != expected:
+                self.error(f"8641002: non-contiguous attack1 frames {names}")
+        ballistic = migration.LEGACY_BALLISTIC_ATTACKS.get(mob_id)
+        if ballistic is not None:
+            attack_number, bullet_speed = ballistic
+            attack_info = image.root.get(f"attack{attack_number}/info")
+            info_names = (
+                tuple(child.name for child in attack_info.children())
+                if isinstance(attack_info, WzSubProperty)
+                else ()
+            )
+            expected_info = (
+                "range", "ball", "hit", "type", "attackAfter", "bulletSpeed"
+            )
+            if info_names != expected_info:
+                self.error(f"{mob_id}: incompatible attack{attack_number}/info nodes {info_names}")
+            if self.child_value(attack_info, "type") != 2:
+                self.error(f"{mob_id}: attack{attack_number}/info/type is not 2")
+            if self.child_value(attack_info, "bulletSpeed") != bullet_speed:
+                self.error(
+                    f"{mob_id}: attack{attack_number}/info/bulletSpeed is not {bullet_speed}"
+                )
         xml_info = self.xml_direct_child(xml, "info")
         xml_fields = {child.get("name") for child in xml_info} if xml_info is not None else set()
         if REQUIRED_MOB_INFO - xml_fields:
             self.error(f"{mob_id}: server mob missing {sorted(REQUIRED_MOB_INFO - xml_fields)}")
+        if ballistic is not None:
+            attack_number, bullet_speed = ballistic
+            xml_attack = self.xml_direct_child(xml, f"attack{attack_number}")
+            xml_attack_info = self.xml_direct_child(xml_attack, "info")
+            xml_info_names = (
+                tuple(child.get("name") for child in xml_attack_info)
+                if xml_attack_info is not None
+                else ()
+            )
+            expected_info = (
+                "range", "ball", "hit", "type", "attackAfter", "bulletSpeed"
+            )
+            if xml_info_names != expected_info:
+                self.error(
+                    f"{mob_id}: server attack{attack_number}/info nodes {xml_info_names}"
+                )
+            xml_type = self.xml_direct_child(xml_attack_info, "type")
+            xml_bullet_speed = self.xml_direct_child(xml_attack_info, "bulletSpeed")
+            if xml_type is None or xml_type.get("value") != "2":
+                self.error(f"{mob_id}: server attack{attack_number}/info/type is not 2")
+            if xml_bullet_speed is None or xml_bullet_speed.get("value") != str(bullet_speed):
+                self.error(
+                    f"{mob_id}: server attack{attack_number}/info/bulletSpeed is not {bullet_speed}"
+                )
         self.check_canvas_tree(image, f"Mob/{mob_id:07d}.img")
         self.check_client_string("Mob", mob_id)
         for tree in ("wz", "wz-zh-CN"):
@@ -330,15 +433,15 @@ class Audit:
             self.check_string("wz", "Npc", npc_id)
 
     def run(self) -> int:
-        if len(migration.MAP_IDS) != 151:
+        if len(migration.MAP_IDS) != 155:
             self.error(f"migration whitelist changed: {len(migration.MAP_IDS)} maps")
         for map_id in migration.MAP_IDS:
             self.check_map(map_id)
             self.check_client_string("Map", map_id, "grandis")
             for tree in ("wz", "wz-zh-CN"):
                 self.check_string(tree, "Map", map_id, "grandis")
-        if len(self.dependencies["mobs"]) != 83:
-            self.error(f"expected 83 mobs, found {len(self.dependencies['mobs'])}")
+        if len(self.dependencies["mobs"]) != 84:
+            self.error(f"expected 84 mobs, found {len(self.dependencies['mobs'])}")
         if len(self.dependencies["npcs"]) > 186:
             self.error(f"expected at most 186 retained NPCs, found {len(self.dependencies['npcs'])}")
         if len(self.dependencies["bgms"]) != 16:

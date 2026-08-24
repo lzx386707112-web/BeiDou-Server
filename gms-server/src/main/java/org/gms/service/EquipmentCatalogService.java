@@ -7,7 +7,6 @@ import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.gms.model.dto.EquipmentCatalogCategoryDTO;
 import org.gms.model.dto.EquipmentCatalogItemDTO;
-import org.gms.client.inventory.WeaponType;
 import org.gms.model.dto.EquipmentCatalogPageDTO;
 import org.gms.model.dto.SetItemEquipmentDTO;
 import org.springframework.core.io.ClassPathResource;
@@ -68,7 +67,7 @@ public class EquipmentCatalogService {
                             stats.put(key, ((Number) statValue).intValue()));
                 }
                 boolean isCash = sourceStats != null && sourceStats.getIntValue("cash") == 1;
-                WeaponType weaponType = resolveWeaponType(source.getIntValue("id"));
+                String equipKind = resolveEquipKind(source.getIntValue("id"));
                 CatalogItem item = new CatalogItem(
                         source.getIntValue("id"),
                         source.getString("name"),
@@ -77,7 +76,7 @@ public class EquipmentCatalogService {
                         Collections.unmodifiableMap(stats),
                         source.getBooleanValue("icon"),
                         isCash,
-                        weaponType,
+                        equipKind,
                         source.getIntValue("x"),
                         source.getIntValue("y"));
                 if (byId.putIfAbsent(item.id(), item) == null) {
@@ -124,7 +123,7 @@ public class EquipmentCatalogService {
                 ? base
                 : base.stream().filter(item -> item.cash() == cashFilter).toList();
         List<EquipmentCatalogCategoryDTO> weaponTypes = forWeaponCounts.stream()
-                .map(item -> WEAPON_TYPE_NAMES.get(item.weaponType()))
+                .map(CatalogItem::equipKind)
                 .filter(Objects::nonNull)
                 .collect(Collectors.groupingBy(name -> name, Collectors.counting()))
                 .entrySet().stream()
@@ -135,14 +134,14 @@ public class EquipmentCatalogService {
         // 现金分面计数：受武器类型筛选影响，但不受自身选择影响
         List<CatalogItem> forCashCounts = weaponFilter.isEmpty()
                 ? base
-                : base.stream().filter(item -> isWeaponType(item, weaponFilter)).toList();
+                : base.stream().filter(item -> isEquipKind(item, weaponFilter)).toList();
         long cashCount = forCashCounts.stream().filter(CatalogItem::cash).count();
         long nonCashCount = forCashCounts.stream().filter(item -> !item.cash()).count();
 
         // 最终匹配：叠加全部筛选条件
         List<CatalogItem> matched = base.stream()
                 .filter(item -> cashFilter == null || item.cash() == cashFilter)
-                .filter(item -> weaponFilter.isEmpty() || isWeaponType(item, weaponFilter))
+                .filter(item -> weaponFilter.isEmpty() || isEquipKind(item, weaponFilter))
                 .sorted(Comparator.comparingInt((CatalogItem item) -> matchRank(item, query))
                         .thenComparingInt(CatalogItem::id))
                 .toList();
@@ -250,46 +249,61 @@ public class EquipmentCatalogService {
         }
         return data;
     }
+    // 装备种类映射：itemId/10000 前缀 -> 中文名（覆盖防具/装饰/武器全部段）
+    private static final Map<Integer, String> EQUIP_KIND_NAMES = Map.ofEntries(
+            // 防具 / 装饰
+            Map.entry(100, "帽子"),
+            Map.entry(101, "脸饰"),
+            Map.entry(102, "眼饰"),
+            Map.entry(103, "耳环"),
+            Map.entry(104, "上衣"),
+            Map.entry(105, "套服"),
+            Map.entry(106, "裤子"),
+            Map.entry(107, "鞋子"),
+            Map.entry(108, "手套"),
+            Map.entry(109, "盾牌"),
+            Map.entry(110, "披风"),
+            Map.entry(111, "戒指"),
+            Map.entry(112, "项环"),
+            Map.entry(113, "腰带"),
+            Map.entry(114, "勋章"),
+            Map.entry(115, "护肩"),
+            Map.entry(118, "纹章"),
+            Map.entry(119, "徽章"),
+            // 武器
+            Map.entry(130, "单手剑"),
+            Map.entry(131, "单手斧"),
+            Map.entry(132, "单手钝器"),
+            Map.entry(133, "短刀"),
+            Map.entry(134, "副刀"),
+            Map.entry(137, "短杖"),
+            Map.entry(138, "长杖"),
+            Map.entry(140, "双手剑"),
+            Map.entry(141, "双手斧"),
+            Map.entry(142, "双手钝器"),
+            Map.entry(143, "长枪"),
+            Map.entry(144, "枪戟"),
+            Map.entry(145, "弓"),
+            Map.entry(146, "弩"),
+            Map.entry(147, "拳套"),
+            Map.entry(148, "指虎"),
+            Map.entry(149, "短枪"),
+            // 其他
+            Map.entry(167, "心脏"),
+            Map.entry(170, "扇子"),
+            Map.entry(180, "头饰"));
 
-    private static final Map<WeaponType, String> WEAPON_TYPE_NAMES = Map.ofEntries(
-            Map.entry(WeaponType.SWORD1H, "单手剑"),
-            Map.entry(WeaponType.SWORD2H, "双手剑"),
-            Map.entry(WeaponType.DAGGER_OTHER, "短刀"),
-            Map.entry(WeaponType.GENERAL1H_SWING, "单手斧钝器"),
-            Map.entry(WeaponType.GENERAL2H_SWING, "双手斧钝器"),
-            Map.entry(WeaponType.WAND, "短杖"),
-            Map.entry(WeaponType.STAFF, "长杖"),
-            Map.entry(WeaponType.SPEAR_STAB, "长矛"),
-            Map.entry(WeaponType.POLE_ARM_SWING, "枪戟"),
-            Map.entry(WeaponType.BOW, "弓"),
-            Map.entry(WeaponType.CROSSBOW, "弩"),
-            Map.entry(WeaponType.CLAW, "拳套"),
-            Map.entry(WeaponType.KNUCKLE, "指虎"),
-            Map.entry(WeaponType.GUN, "枪"));
-
-    private static WeaponType resolveWeaponType(int itemId) {
-        int cat = (itemId / 10000) % 100;
-        if (cat < 30 || cat > 49) {
-            return WeaponType.NOT_A_WEAPON;
-        }
-        WeaponType[] type = {
-                WeaponType.SWORD1H, WeaponType.GENERAL1H_SWING, WeaponType.GENERAL1H_SWING,
-                WeaponType.DAGGER_OTHER, WeaponType.NOT_A_WEAPON, WeaponType.NOT_A_WEAPON,
-                WeaponType.NOT_A_WEAPON, WeaponType.WAND, WeaponType.STAFF, WeaponType.NOT_A_WEAPON,
-                WeaponType.SWORD2H, WeaponType.GENERAL2H_SWING, WeaponType.GENERAL2H_SWING,
-                WeaponType.SPEAR_STAB, WeaponType.POLE_ARM_SWING, WeaponType.BOW,
-                WeaponType.CROSSBOW, WeaponType.CLAW, WeaponType.KNUCKLE, WeaponType.GUN};
-        return type[cat - 30];
+    private static String resolveEquipKind(int itemId) {
+        return EQUIP_KIND_NAMES.get(itemId / 10000);
     }
 
-    private static boolean isWeaponType(CatalogItem item, String weaponTypeName) {
-        String name = WEAPON_TYPE_NAMES.get(item.weaponType());
-        return name != null && name.equals(weaponTypeName);
+    private static boolean isEquipKind(CatalogItem item, String equipKindName) {
+        return equipKindName.equals(item.equipKind());
     }
 
-    private record CatalogItem(int id, String name, String description,
+private record CatalogItem(int id, String name, String description,
                                String category, Map<String, Integer> stats,
-                               boolean iconAvailable, boolean cash, WeaponType weaponType,
+                               boolean iconAvailable, boolean cash, String equipKind,
                                int x, int y) {
     }
 

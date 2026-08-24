@@ -79,6 +79,7 @@ static volatile LONG g_eventSequence = 0;
 static volatile LONG g_shutdownRequested = 0;
 static volatile LONG g_exitDumpStarted = 0;
 static volatile LONG g_errorDialogDumpStarted = 0;
+static volatile LONG g_karingMapDetected = 0;
 static volatile LONG g_karingCompatLoadStarted = 0;
 static BOOL g_inLog = FALSE;
 static WCHAR g_wideLogLine[4096];
@@ -232,6 +233,48 @@ static BOOL ContainsNoCase(const WCHAR *s, const WCHAR *needle) {
     return FALSE;
 }
 
+static BOOL EqualsNoCaseW(const WCHAR *a, const WCHAR *b) {
+    if (a == NULL || b == NULL) {
+        return FALSE;
+    }
+    while (*a && *b) {
+        if (ToLowerW(*a) != ToLowerW(*b)) {
+            return FALSE;
+        }
+        ++a;
+        ++b;
+    }
+    return *a == L'\0' && *b == L'\0';
+}
+
+static BOOL IsKaringMapPath(const WCHAR *path) {
+    if (path == NULL
+            || (!ContainsNoCase(path, L"\\Map\\Map\\Map4\\")
+                && !ContainsNoCase(path, L"/Map/Map/Map4/"))) {
+        return FALSE;
+    }
+
+    const WCHAR *fileName = path;
+    for (const WCHAR *p = path; *p; ++p) {
+        if (*p == L'\\' || *p == L'/') {
+            fileName = p + 1;
+        }
+    }
+
+    static const WCHAR *const kKaringMapFiles[] = {
+        L"410007100.img", L"410007120.img", L"410007140.img",
+        L"410007160.img", L"410007180.img", L"410007200.img",
+        L"410007220.img", L"410007240.img", L"410007260.img",
+        L"410007280.img", L"410007300.img",
+    };
+    for (size_t i = 0; i < sizeof(kKaringMapFiles) / sizeof(kKaringMapFiles[0]); ++i) {
+        if (EqualsNoCaseW(fileName, kKaringMapFiles[i])) {
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
 static ULONGLONG CurrentTick() {
     return GetTickCount64();
 }
@@ -348,6 +391,16 @@ static void AppendLine(const WCHAR *line) {
 
     LeaveCriticalSection(&g_logLock);
     g_inLog = FALSE;
+}
+
+static void DetectKaringMapOpen(const WCHAR *path) {
+    if (!IsKaringMapPath(path)
+            || InterlockedCompareExchange(&g_karingMapDetected, 1, 0) != 0) {
+        return;
+    }
+    WCHAR line[2048];
+    wsprintfW(line, L"event=karing_map status=detected path=\"%s\"", path);
+    AppendLine(line);
 }
 
 static BOOL ShouldLogPath(const WCHAR *path) {
@@ -495,6 +548,9 @@ static HANDLE WINAPI HookCreateFileW(
         flagsAndAttributes,
         templateFile);
     DWORD savedError = result == INVALID_HANDLE_VALUE ? GetLastError() : 0;
+    if (result != INVALID_HANDLE_VALUE) {
+        DetectKaringMapOpen(fileName);
+    }
     TrackResourceHandle(result, fileName);
     if (result == INVALID_HANDLE_VALUE) {
         SetLastError(savedError);
@@ -526,6 +582,9 @@ static HANDLE WINAPI HookCreateFileA(
 
     WCHAR widePath[2048];
     AnsiToWide(fileName, widePath, 2048);
+    if (result != INVALID_HANDLE_VALUE) {
+        DetectKaringMapOpen(widePath);
+    }
     TrackResourceHandle(result, widePath);
     if (result == INVALID_HANDLE_VALUE) {
         SetLastError(savedError);
@@ -543,6 +602,9 @@ static HFILE WINAPI HookLopen(LPCSTR fileName, int flags) {
 
     WCHAR widePath[2048];
     AnsiToWide(fileName, widePath, 2048);
+    if (result != HFILE_ERROR) {
+        DetectKaringMapOpen(widePath);
+    }
     TrackResourceHandle((HANDLE)result, widePath);
     if (result == HFILE_ERROR) {
         SetLastError(savedError);
@@ -979,10 +1041,23 @@ static int PatchModule(HMODULE module, BOOL logResult) {
         return 0;
     }
 
+    HMODULE heldModule = NULL;
+    if (!GetModuleHandleExW(
+            GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS,
+            reinterpret_cast<LPCWSTR>(module),
+            &heldModule)) {
+        return 0;
+    }
+    if (heldModule != module) {
+        FreeLibrary(heldModule);
+        return 0;
+    }
+
     WCHAR path[MAX_PATH];
     path[0] = L'\0';
     GetModuleFileNameW(module, path, MAX_PATH);
     if (!IsClientModulePath(path)) {
+        FreeLibrary(heldModule);
         return 0;
     }
 
@@ -1052,6 +1127,7 @@ static int PatchModule(HMODULE module, BOOL logResult) {
             path);
         AppendLine(line);
     }
+    FreeLibrary(heldModule);
     return total;
 }
 
@@ -1333,6 +1409,7 @@ static DWORD WINAPI WatchdogThreadProc(LPVOID) {
             sawClientWindow = TRUE;
         }
         if (sawClientWindow
+                && InterlockedCompareExchange(&g_karingMapDetected, 0, 0) != 0
                 && GetModuleHandleA("BeiDouVideo.dll") != NULL
                 && InterlockedCompareExchange(&g_karingCompatLoadStarted, 1, 0) == 0) {
             HMODULE karingCompat = RealLoadLibraryA != NULL

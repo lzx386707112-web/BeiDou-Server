@@ -1,0 +1,3300 @@
+{
+  "name": "8610023.img",
+  "type": "Image",
+  "children": [
+    {
+      "name": "info",
+      "type": "SubProperty",
+      "children": [
+        {
+          "name": "chaseSpeed",
+          "type": "Int",
+          "value": 50
+        },
+        {
+          "name": "partyBonusMob",
+          "type": "Int",
+          "value": 1
+        },
+        {
+          "name": "level",
+          "type": "Int",
+          "value": 177
+        },
+        {
+          "name": "bodyAttack",
+          "type": "Int",
+          "value": 1
+        },
+        {
+          "name": "maxHP",
+          "type": "Int",
+          "value": 25000000
+        },
+        {
+          "name": "maxMP",
+          "type": "Int",
+          "value": 1000000
+        },
+        {
+          "name": "PADamage",
+          "type": "Int",
+          "value": 10099
+        },
+        {
+          "name": "PDDamage",
+          "type": "Int",
+          "value": 170
+        },
+        {
+          "name": "PDRate",
+          "type": "Int",
+          "value": 35
+        },
+        {
+          "name": "MADamage",
+          "type": "Int",
+          "value": 9662
+        },
+        {
+          "name": "MDDamage",
+          "type": "Int",
+          "value": 210
+        },
+        {
+          "name": "MDRate",
+          "type": "Int",
+          "value": 35
+        },
+        {
+          "name": "acc",
+          "type": "Int",
+          "value": 640
+        },
+        {
+          "name": "eva",
+          "type": "Int",
+          "value": 180
+        },
+        {
+          "name": "pushed",
+          "type": "Int",
+          "value": 6500
+        },
+        {
+          "name": "fs",
+          "type": "Float",
+          "value": 10.0
+        },
+        {
+          "name": "boss",
+          "type": "Int",
+          "value": 1
+        },
+        {
+          "name": "exp",
+          "type": "Int",
+          "value": 104529
+        },
+        {
+          "name": "summonType",
+          "type": "Int",
+          "value": 1
+        },
+        {
+          "name": "category",
+          "type": "Int",
+          "value": 8
+        },
+        {
+          "name": "mobType",
+          "type": "String",
+          "value": "7N"
+        },
+        {
+          "name": "attack",
+          "type": "SubProperty",
+          "children": [
+            {
+              "name": "0",
+              "type": "SubProperty",
+              "children": [
+                {
+                  "name": "action",
+                  "type": "Int",
+                  "value": 1
+                },
+                {
+                  "name": "attackRatio",
+                  "type": "Int",
+                  "value": 100
+                },
+                {
+                  "name": "type",
+                  "type": "Int",
+                  "value": 2
+                },
+                {
+                  "name": "conMP",
+                  "type": "Int",
+                  "value": 2
+                },
+                {
+                  "name": "bulletSpeed",
+                  "type": "Int",
+                  "value": 350
+                }
+              ]
+            },
+            {
+              "name": "1",
+              "type": "SubProperty",
+              "children": [
+                {
+                  "name": "action",
+                  "type": "Int",
+                  "value": 2
+                },
+                {
+                  "name": "attackRatio",
+                  "type": "Int",
+                  "value": 18
+                },
+                {
+                  "name": "type",
+                  "type": "Int",
+                  "value": 0
+                },
+                {
+                  "name": "conMP",
+                  "type": "Int",
+                  "value": 2
+                },
+                {
+                  "name": "attackCount",
+                  "type": "Int",
+                  "value": 6
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "stand",
+      "type": "SubProperty",
+      "children": [
+        {
+          "name": "0",
+          "type": "Canvas",
+          "width": 43,
+          "height": 67,
+          "format": 2,
+          "children": [
+            {
+              "name": "origin",
+              "type": "Vector",
+              "value": {
+                "x": 23,
+                "y": 67
+              }
+            },
+            {
+              "name": "head",
+              "type": "Vector",
+              "value": {
+                "x": -2,
+                "y": -63
+              }
+            },
+            {
+              "name": "lt",
+              "type": "Vector",
+              "value": {
+                "x": -23,
+                "y": -67
+              }
+            },
+            {
+              "name": "rb",
+              "type": "Vector",
+              "value": {
+                "x": 20,
+                "y": 0
+              }
+            },
+            {
+              "name": "delay",
+              "type": "Int",
+              "value": 150
+            }
+          ]
+        },
+        {
+          "name": "1",
+          "type": "Canvas",
+          "width": 43,
+          "height": 68,
+          "format": 2,
+          "children": [
+            {
+              "name": "origin",
+              "type": "Vector",
+              "value": {
+                "x": 23,
+                "y": 68
+              }
+            },
+            {
+              "name": "head",
+              "type": "Vector",
+              "value": {
+                "x": -2,
+                "y": -63
+              }
+            },
+            {
+              "name": "lt",
+              "type": "Vector",
+              "value": {
+                "x": -23,
+                "y": -68
+              }
+            },
+            {
+              "name": "rb",
+              "type": "Vector",
+              "value": {
+                "x": 20,
+                "y": 0
+              }
+            },
+            {
+              "name": "delay",
+              "type": "Int",
+              "value": 150
+            }
+          ]
+        },
+        {
+          "name": "2",
+          "type": "Canvas",
+          "width": 43,
+          "height": 69,
+          "format": 2,
+          "children": [
+            {
+              "name": "origin",
+              "type": "Vector",
+              "value": {
+                "x": 23,
+                "y": 69
+              }
+            },
+            {
+              "name": "head",
+              "type": "Vector",
+              "value": {
+                "x": -2,
+                "y": -63
+              }
+            },
+            {
+              "name": "lt",
+              "type": "Vector",
+              "value": {
+                "x": -23,
+                "y": -69
+              }
+            },
+            {
+              "name": "rb",
+              "type": "Vector",
+              "value": {
+                "x": 20,
+                "y": 0
+              }
+            },
+            {
+              "name": "delay",
+              "type": "Int",
+              "value": 150
+            }
+          ]
+        },
+        {
+          "name": "3",
+          "type": "Canvas",
+          "width": 43,
+          "height": 68,
+          "format": 2,
+          "children": [
+            {
+              "name": "origin",
+              "type": "Vector",
+              "value": {
+                "x": 23,
+                "y": 68
+              }
+            },
+            {
+              "name": "head",
+              "type": "Vector",
+              "value": {
+                "x": -2,
+                "y": -63
+              }
+            },
+            {
+              "name": "lt",
+              "type": "Vector",
+              "value": {
+                "x": -23,
+                "y": -68
+              }
+            },
+            {
+              "name": "rb",
+              "type": "Vector",
+              "value": {
+                "x": 20,
+                "y": 0
+              }
+            },
+            {
+              "name": "delay",
+              "type": "Int",
+              "value": 150
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "move",
+      "type": "SubProperty",
+      "children": [
+        {
+          "name": "0",
+          "type": "Canvas",
+          "width": 43,
+          "height": 70,
+          "format": 2,
+          "children": [
+            {
+              "name": "origin",
+              "type": "Vector",
+              "value": {
+                "x": 23,
+                "y": 70
+              }
+            },
+            {
+              "name": "head",
+              "type": "Vector",
+              "value": {
+                "x": -2,
+                "y": -63
+              }
+            },
+            {
+              "name": "lt",
+              "type": "Vector",
+              "value": {
+                "x": -23,
+                "y": -70
+              }
+            },
+            {
+              "name": "rb",
+              "type": "Vector",
+              "value": {
+                "x": 20,
+                "y": 0
+              }
+            },
+            {
+              "name": "delay",
+              "type": "Int",
+              "value": 120
+            }
+          ]
+        },
+        {
+          "name": "1",
+          "type": "Canvas",
+          "width": 43,
+          "height": 69,
+          "format": 2,
+          "children": [
+            {
+              "name": "origin",
+              "type": "Vector",
+              "value": {
+                "x": 23,
+                "y": 69
+              }
+            },
+            {
+              "name": "head",
+              "type": "Vector",
+              "value": {
+                "x": -2,
+                "y": -63
+              }
+            },
+            {
+              "name": "lt",
+              "type": "Vector",
+              "value": {
+                "x": -23,
+                "y": -69
+              }
+            },
+            {
+              "name": "rb",
+              "type": "Vector",
+              "value": {
+                "x": 20,
+                "y": 0
+              }
+            },
+            {
+              "name": "delay",
+              "type": "Int",
+              "value": 120
+            }
+          ]
+        },
+        {
+          "name": "2",
+          "type": "Canvas",
+          "width": 43,
+          "height": 70,
+          "format": 2,
+          "children": [
+            {
+              "name": "origin",
+              "type": "Vector",
+              "value": {
+                "x": 23,
+                "y": 70
+              }
+            },
+            {
+              "name": "head",
+              "type": "Vector",
+              "value": {
+                "x": -2,
+                "y": -63
+              }
+            },
+            {
+              "name": "lt",
+              "type": "Vector",
+              "value": {
+                "x": -23,
+                "y": -70
+              }
+            },
+            {
+              "name": "rb",
+              "type": "Vector",
+              "value": {
+                "x": 20,
+                "y": 0
+              }
+            },
+            {
+              "name": "delay",
+              "type": "Int",
+              "value": 120
+            }
+          ]
+        },
+        {
+          "name": "3",
+          "type": "Canvas",
+          "width": 43,
+          "height": 69,
+          "format": 2,
+          "children": [
+            {
+              "name": "origin",
+              "type": "Vector",
+              "value": {
+                "x": 23,
+                "y": 69
+              }
+            },
+            {
+              "name": "head",
+              "type": "Vector",
+              "value": {
+                "x": -2,
+                "y": -63
+              }
+            },
+            {
+              "name": "lt",
+              "type": "Vector",
+              "value": {
+                "x": -23,
+                "y": -69
+              }
+            },
+            {
+              "name": "rb",
+              "type": "Vector",
+              "value": {
+                "x": 20,
+                "y": 0
+              }
+            },
+            {
+              "name": "delay",
+              "type": "Int",
+              "value": 120
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "attack1",
+      "type": "SubProperty",
+      "children": [
+        {
+          "name": "info",
+          "type": "SubProperty",
+          "children": [
+            {
+              "name": "range",
+              "type": "SubProperty",
+              "children": [
+                {
+                  "name": "sp",
+                  "type": "Vector",
+                  "value": {
+                    "x": -30,
+                    "y": -30
+                  }
+                },
+                {
+                  "name": "r",
+                  "type": "Int",
+                  "value": 350
+                }
+              ]
+            },
+            {
+              "name": "ball",
+              "type": "SubProperty",
+              "children": [
+                {
+                  "name": "0",
+                  "type": "Canvas",
+                  "width": 65,
+                  "height": 65,
+                  "format": 2,
+                  "children": [
+                    {
+                      "name": "origin",
+                      "type": "Vector",
+                      "value": {
+                        "x": 31,
+                        "y": 33
+                      }
+                    },
+                    {
+                      "name": "delay",
+                      "type": "Int",
+                      "value": 60
+                    }
+                  ]
+                },
+                {
+                  "name": "1",
+                  "type": "Canvas",
+                  "width": 65,
+                  "height": 64,
+                  "format": 2,
+                  "children": [
+                    {
+                      "name": "origin",
+                      "type": "Vector",
+                      "value": {
+                        "x": 31,
+                        "y": 33
+                      }
+                    },
+                    {
+                      "name": "delay",
+                      "type": "Int",
+                      "value": 60
+                    }
+                  ]
+                },
+                {
+                  "name": "2",
+                  "type": "Canvas",
+                  "width": 66,
+                  "height": 65,
+                  "format": 2,
+                  "children": [
+                    {
+                      "name": "origin",
+                      "type": "Vector",
+                      "value": {
+                        "x": 32,
+                        "y": 33
+                      }
+                    },
+                    {
+                      "name": "delay",
+                      "type": "Int",
+                      "value": 60
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "hit",
+              "type": "SubProperty",
+              "children": [
+                {
+                  "name": "0",
+                  "type": "Canvas",
+                  "width": 53,
+                  "height": 51,
+                  "format": 2,
+                  "children": [
+                    {
+                      "name": "origin",
+                      "type": "Vector",
+                      "value": {
+                        "x": 26,
+                        "y": 26
+                      }
+                    },
+                    {
+                      "name": "z",
+                      "type": "Int",
+                      "value": 0
+                    },
+                    {
+                      "name": "delay",
+                      "type": "Int",
+                      "value": 90
+                    }
+                  ]
+                },
+                {
+                  "name": "1",
+                  "type": "Canvas",
+                  "width": 106,
+                  "height": 102,
+                  "format": 2,
+                  "children": [
+                    {
+                      "name": "origin",
+                      "type": "Vector",
+                      "value": {
+                        "x": 49,
+                        "y": 53
+                      }
+                    },
+                    {
+                      "name": "z",
+                      "type": "Int",
+                      "value": 0
+                    },
+                    {
+                      "name": "delay",
+                      "type": "Int",
+                      "value": 90
+                    }
+                  ]
+                },
+                {
+                  "name": "2",
+                  "type": "Canvas",
+                  "width": 106,
+                  "height": 99,
+                  "format": 2,
+                  "children": [
+                    {
+                      "name": "origin",
+                      "type": "Vector",
+                      "value": {
+                        "x": 49,
+                        "y": 52
+                      }
+                    },
+                    {
+                      "name": "z",
+                      "type": "Int",
+                      "value": 0
+                    },
+                    {
+                      "name": "delay",
+                      "type": "Int",
+                      "value": 90
+                    }
+                  ]
+                },
+                {
+                  "name": "3",
+                  "type": "Canvas",
+                  "width": 93,
+                  "height": 87,
+                  "format": 2,
+                  "children": [
+                    {
+                      "name": "origin",
+                      "type": "Vector",
+                      "value": {
+                        "x": 41,
+                        "y": 46
+                      }
+                    },
+                    {
+                      "name": "z",
+                      "type": "Int",
+                      "value": 0
+                    },
+                    {
+                      "name": "delay",
+                      "type": "Int",
+                      "value": 90
+                    }
+                  ]
+                },
+                {
+                  "name": "4",
+                  "type": "Canvas",
+                  "width": 65,
+                  "height": 63,
+                  "format": 2,
+                  "children": [
+                    {
+                      "name": "origin",
+                      "type": "Vector",
+                      "value": {
+                        "x": 36,
+                        "y": 35
+                      }
+                    },
+                    {
+                      "name": "z",
+                      "type": "Int",
+                      "value": 0
+                    },
+                    {
+                      "name": "delay",
+                      "type": "Int",
+                      "value": 90
+                    }
+                  ]
+                },
+                {
+                  "name": "5",
+                  "type": "Canvas",
+                  "width": 57,
+                  "height": 54,
+                  "format": 2,
+                  "children": [
+                    {
+                      "name": "origin",
+                      "type": "Vector",
+                      "value": {
+                        "x": 32,
+                        "y": 30
+                      }
+                    },
+                    {
+                      "name": "z",
+                      "type": "Int",
+                      "value": 0
+                    },
+                    {
+                      "name": "delay",
+                      "type": "Int",
+                      "value": 90
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "attackAfter",
+              "type": "Int",
+              "value": 720
+            }
+          ]
+        },
+        {
+          "name": "0",
+          "type": "Canvas",
+          "width": 61,
+          "height": 74,
+          "format": 2,
+          "children": [
+            {
+              "name": "origin",
+              "type": "Vector",
+              "value": {
+                "x": 33,
+                "y": 74
+              }
+            },
+            {
+              "name": "head",
+              "type": "Vector",
+              "value": {
+                "x": -10,
+                "y": -61
+              }
+            },
+            {
+              "name": "lt",
+              "type": "Vector",
+              "value": {
+                "x": -33,
+                "y": -64
+              }
+            },
+            {
+              "name": "rb",
+              "type": "Vector",
+              "value": {
+                "x": 28,
+                "y": 0
+              }
+            },
+            {
+              "name": "delay",
+              "type": "Int",
+              "value": 60
+            }
+          ]
+        },
+        {
+          "name": "1",
+          "type": "Canvas",
+          "width": 61,
+          "height": 74,
+          "format": 2,
+          "children": [
+            {
+              "name": "origin",
+              "type": "Vector",
+              "value": {
+                "x": 33,
+                "y": 74
+              }
+            },
+            {
+              "name": "head",
+              "type": "Vector",
+              "value": {
+                "x": -10,
+                "y": -61
+              }
+            },
+            {
+              "name": "lt",
+              "type": "Vector",
+              "value": {
+                "x": -33,
+                "y": -64
+              }
+            },
+            {
+              "name": "rb",
+              "type": "Vector",
+              "value": {
+                "x": 28,
+                "y": 0
+              }
+            },
+            {
+              "name": "delay",
+              "type": "Int",
+              "value": 60
+            }
+          ]
+        },
+        {
+          "name": "2",
+          "type": "Canvas",
+          "width": 61,
+          "height": 74,
+          "format": 2,
+          "children": [
+            {
+              "name": "origin",
+              "type": "Vector",
+              "value": {
+                "x": 33,
+                "y": 74
+              }
+            },
+            {
+              "name": "head",
+              "type": "Vector",
+              "value": {
+                "x": -10,
+                "y": -61
+              }
+            },
+            {
+              "name": "lt",
+              "type": "Vector",
+              "value": {
+                "x": -33,
+                "y": -64
+              }
+            },
+            {
+              "name": "rb",
+              "type": "Vector",
+              "value": {
+                "x": 28,
+                "y": 0
+              }
+            },
+            {
+              "name": "delay",
+              "type": "Int",
+              "value": 60
+            }
+          ]
+        },
+        {
+          "name": "3",
+          "type": "Canvas",
+          "width": 82,
+          "height": 74,
+          "format": 2,
+          "children": [
+            {
+              "name": "origin",
+              "type": "Vector",
+              "value": {
+                "x": 33,
+                "y": 74
+              }
+            },
+            {
+              "name": "head",
+              "type": "Vector",
+              "value": {
+                "x": -10,
+                "y": -61
+              }
+            },
+            {
+              "name": "lt",
+              "type": "Vector",
+              "value": {
+                "x": -33,
+                "y": -64
+              }
+            },
+            {
+              "name": "rb",
+              "type": "Vector",
+              "value": {
+                "x": 28,
+                "y": 0
+              }
+            },
+            {
+              "name": "delay",
+              "type": "Int",
+              "value": 60
+            }
+          ]
+        },
+        {
+          "name": "4",
+          "type": "Canvas",
+          "width": 84,
+          "height": 74,
+          "format": 2,
+          "children": [
+            {
+              "name": "origin",
+              "type": "Vector",
+              "value": {
+                "x": 33,
+                "y": 74
+              }
+            },
+            {
+              "name": "head",
+              "type": "Vector",
+              "value": {
+                "x": -10,
+                "y": -61
+              }
+            },
+            {
+              "name": "lt",
+              "type": "Vector",
+              "value": {
+                "x": -33,
+                "y": -64
+              }
+            },
+            {
+              "name": "rb",
+              "type": "Vector",
+              "value": {
+                "x": 28,
+                "y": 0
+              }
+            },
+            {
+              "name": "delay",
+              "type": "Int",
+              "value": 60
+            }
+          ]
+        },
+        {
+          "name": "5",
+          "type": "Canvas",
+          "width": 84,
+          "height": 74,
+          "format": 2,
+          "children": [
+            {
+              "name": "origin",
+              "type": "Vector",
+              "value": {
+                "x": 33,
+                "y": 74
+              }
+            },
+            {
+              "name": "head",
+              "type": "Vector",
+              "value": {
+                "x": -10,
+                "y": -61
+              }
+            },
+            {
+              "name": "lt",
+              "type": "Vector",
+              "value": {
+                "x": -33,
+                "y": -64
+              }
+            },
+            {
+              "name": "rb",
+              "type": "Vector",
+              "value": {
+                "x": 28,
+                "y": 0
+              }
+            },
+            {
+              "name": "delay",
+              "type": "Int",
+              "value": 60
+            }
+          ]
+        },
+        {
+          "name": "6",
+          "type": "Canvas",
+          "width": 84,
+          "height": 74,
+          "format": 2,
+          "children": [
+            {
+              "name": "origin",
+              "type": "Vector",
+              "value": {
+                "x": 33,
+                "y": 74
+              }
+            },
+            {
+              "name": "head",
+              "type": "Vector",
+              "value": {
+                "x": -10,
+                "y": -61
+              }
+            },
+            {
+              "name": "lt",
+              "type": "Vector",
+              "value": {
+                "x": -33,
+                "y": -64
+              }
+            },
+            {
+              "name": "rb",
+              "type": "Vector",
+              "value": {
+                "x": 28,
+                "y": 0
+              }
+            },
+            {
+              "name": "delay",
+              "type": "Int",
+              "value": 60
+            }
+          ]
+        },
+        {
+          "name": "7",
+          "type": "Canvas",
+          "width": 84,
+          "height": 74,
+          "format": 2,
+          "children": [
+            {
+              "name": "origin",
+              "type": "Vector",
+              "value": {
+                "x": 33,
+                "y": 74
+              }
+            },
+            {
+              "name": "head",
+              "type": "Vector",
+              "value": {
+                "x": -10,
+                "y": -61
+              }
+            },
+            {
+              "name": "lt",
+              "type": "Vector",
+              "value": {
+                "x": -33,
+                "y": -64
+              }
+            },
+            {
+              "name": "rb",
+              "type": "Vector",
+              "value": {
+                "x": 28,
+                "y": 0
+              }
+            },
+            {
+              "name": "delay",
+              "type": "Int",
+              "value": 60
+            }
+          ]
+        },
+        {
+          "name": "8",
+          "type": "Canvas",
+          "width": 84,
+          "height": 74,
+          "format": 2,
+          "children": [
+            {
+              "name": "origin",
+              "type": "Vector",
+              "value": {
+                "x": 33,
+                "y": 74
+              }
+            },
+            {
+              "name": "head",
+              "type": "Vector",
+              "value": {
+                "x": -10,
+                "y": -61
+              }
+            },
+            {
+              "name": "lt",
+              "type": "Vector",
+              "value": {
+                "x": -33,
+                "y": -64
+              }
+            },
+            {
+              "name": "rb",
+              "type": "Vector",
+              "value": {
+                "x": 28,
+                "y": 0
+              }
+            },
+            {
+              "name": "delay",
+              "type": "Int",
+              "value": 60
+            }
+          ]
+        },
+        {
+          "name": "9",
+          "type": "Canvas",
+          "width": 84,
+          "height": 74,
+          "format": 2,
+          "children": [
+            {
+              "name": "origin",
+              "type": "Vector",
+              "value": {
+                "x": 33,
+                "y": 74
+              }
+            },
+            {
+              "name": "head",
+              "type": "Vector",
+              "value": {
+                "x": -10,
+                "y": -61
+              }
+            },
+            {
+              "name": "lt",
+              "type": "Vector",
+              "value": {
+                "x": -33,
+                "y": -64
+              }
+            },
+            {
+              "name": "rb",
+              "type": "Vector",
+              "value": {
+                "x": 28,
+                "y": 0
+              }
+            },
+            {
+              "name": "delay",
+              "type": "Int",
+              "value": 60
+            }
+          ]
+        },
+        {
+          "name": "10",
+          "type": "Canvas",
+          "width": 87,
+          "height": 77,
+          "format": 2,
+          "children": [
+            {
+              "name": "origin",
+              "type": "Vector",
+              "value": {
+                "x": 33,
+                "y": 77
+              }
+            },
+            {
+              "name": "head",
+              "type": "Vector",
+              "value": {
+                "x": -10,
+                "y": -61
+              }
+            },
+            {
+              "name": "lt",
+              "type": "Vector",
+              "value": {
+                "x": -33,
+                "y": -64
+              }
+            },
+            {
+              "name": "rb",
+              "type": "Vector",
+              "value": {
+                "x": 28,
+                "y": 0
+              }
+            },
+            {
+              "name": "delay",
+              "type": "Int",
+              "value": 60
+            }
+          ]
+        },
+        {
+          "name": "11",
+          "type": "Canvas",
+          "width": 88,
+          "height": 78,
+          "format": 2,
+          "children": [
+            {
+              "name": "origin",
+              "type": "Vector",
+              "value": {
+                "x": 33,
+                "y": 78
+              }
+            },
+            {
+              "name": "head",
+              "type": "Vector",
+              "value": {
+                "x": -10,
+                "y": -61
+              }
+            },
+            {
+              "name": "lt",
+              "type": "Vector",
+              "value": {
+                "x": -33,
+                "y": -64
+              }
+            },
+            {
+              "name": "rb",
+              "type": "Vector",
+              "value": {
+                "x": 28,
+                "y": 0
+              }
+            },
+            {
+              "name": "delay",
+              "type": "Int",
+              "value": 60
+            }
+          ]
+        },
+        {
+          "name": "12",
+          "type": "Canvas",
+          "width": 120,
+          "height": 76,
+          "format": 2,
+          "children": [
+            {
+              "name": "origin",
+              "type": "Vector",
+              "value": {
+                "x": 61,
+                "y": 76
+              }
+            },
+            {
+              "name": "head",
+              "type": "Vector",
+              "value": {
+                "x": -21,
+                "y": -62
+              }
+            },
+            {
+              "name": "lt",
+              "type": "Vector",
+              "value": {
+                "x": -41,
+                "y": -64
+              }
+            },
+            {
+              "name": "rb",
+              "type": "Vector",
+              "value": {
+                "x": 12,
+                "y": 0
+              }
+            },
+            {
+              "name": "delay",
+              "type": "Int",
+              "value": 60
+            }
+          ]
+        },
+        {
+          "name": "13",
+          "type": "Canvas",
+          "width": 77,
+          "height": 64,
+          "format": 2,
+          "children": [
+            {
+              "name": "origin",
+              "type": "Vector",
+              "value": {
+                "x": 62,
+                "y": 64
+              }
+            },
+            {
+              "name": "head",
+              "type": "Vector",
+              "value": {
+                "x": -13,
+                "y": -61
+              }
+            },
+            {
+              "name": "lt",
+              "type": "Vector",
+              "value": {
+                "x": -33,
+                "y": -64
+              }
+            },
+            {
+              "name": "rb",
+              "type": "Vector",
+              "value": {
+                "x": 16,
+                "y": 0
+              }
+            },
+            {
+              "name": "delay",
+              "type": "Int",
+              "value": 60
+            }
+          ]
+        },
+        {
+          "name": "14",
+          "type": "Canvas",
+          "width": 48,
+          "height": 64,
+          "format": 2,
+          "children": [
+            {
+              "name": "origin",
+              "type": "Vector",
+              "value": {
+                "x": 33,
+                "y": 64
+              }
+            },
+            {
+              "name": "head",
+              "type": "Vector",
+              "value": {
+                "x": -13,
+                "y": -61
+              }
+            },
+            {
+              "name": "lt",
+              "type": "Vector",
+              "value": {
+                "x": -33,
+                "y": -64
+              }
+            },
+            {
+              "name": "rb",
+              "type": "Vector",
+              "value": {
+                "x": 16,
+                "y": 0
+              }
+            },
+            {
+              "name": "delay",
+              "type": "Int",
+              "value": 120
+            }
+          ]
+        },
+        {
+          "name": "15",
+          "type": "UOL",
+          "target": "../stand/0"
+        },
+        {
+          "name": "16",
+          "type": "UOL",
+          "target": "../stand/1"
+        },
+        {
+          "name": "17",
+          "type": "UOL",
+          "target": "../stand/2"
+        },
+        {
+          "name": "18",
+          "type": "UOL",
+          "target": "../stand/3"
+        },
+        {
+          "name": "19",
+          "type": "UOL",
+          "target": "../stand/0"
+        },
+        {
+          "name": "20",
+          "type": "UOL",
+          "target": "../stand/1"
+        },
+        {
+          "name": "21",
+          "type": "UOL",
+          "target": "../stand/2"
+        },
+        {
+          "name": "22",
+          "type": "UOL",
+          "target": "../stand/3"
+        }
+      ]
+    },
+    {
+      "name": "attack2",
+      "type": "SubProperty",
+      "children": [
+        {
+          "name": "info",
+          "type": "SubProperty",
+          "children": [
+            {
+              "name": "range",
+              "type": "SubProperty",
+              "children": [
+                {
+                  "name": "lt",
+                  "type": "Vector",
+                  "value": {
+                    "x": -200,
+                    "y": -55
+                  }
+                },
+                {
+                  "name": "rb",
+                  "type": "Vector",
+                  "value": {
+                    "x": 200,
+                    "y": 0
+                  }
+                }
+              ]
+            },
+            {
+              "name": "hit",
+              "type": "SubProperty",
+              "children": [
+                {
+                  "name": "0",
+                  "type": "Canvas",
+                  "width": 28,
+                  "height": 29,
+                  "format": 2,
+                  "children": [
+                    {
+                      "name": "origin",
+                      "type": "Vector",
+                      "value": {
+                        "x": -25,
+                        "y": -11
+                      }
+                    },
+                    {
+                      "name": "delay",
+                      "type": "Int",
+                      "value": 60
+                    }
+                  ]
+                },
+                {
+                  "name": "1",
+                  "type": "Canvas",
+                  "width": 115,
+                  "height": 64,
+                  "format": 2,
+                  "children": [
+                    {
+                      "name": "origin",
+                      "type": "Vector",
+                      "value": {
+                        "x": 57,
+                        "y": 15
+                      }
+                    },
+                    {
+                      "name": "delay",
+                      "type": "Int",
+                      "value": 60
+                    }
+                  ]
+                },
+                {
+                  "name": "2",
+                  "type": "Canvas",
+                  "width": 139,
+                  "height": 131,
+                  "format": 2,
+                  "children": [
+                    {
+                      "name": "origin",
+                      "type": "Vector",
+                      "value": {
+                        "x": 74,
+                        "y": 60
+                      }
+                    },
+                    {
+                      "name": "delay",
+                      "type": "Int",
+                      "value": 60
+                    }
+                  ]
+                },
+                {
+                  "name": "3",
+                  "type": "Canvas",
+                  "width": 147,
+                  "height": 142,
+                  "format": 2,
+                  "children": [
+                    {
+                      "name": "origin",
+                      "type": "Vector",
+                      "value": {
+                        "x": 74,
+                        "y": 66
+                      }
+                    },
+                    {
+                      "name": "delay",
+                      "type": "Int",
+                      "value": 60
+                    }
+                  ]
+                },
+                {
+                  "name": "4",
+                  "type": "Canvas",
+                  "width": 155,
+                  "height": 155,
+                  "format": 2,
+                  "children": [
+                    {
+                      "name": "origin",
+                      "type": "Vector",
+                      "value": {
+                        "x": 77,
+                        "y": 74
+                      }
+                    },
+                    {
+                      "name": "delay",
+                      "type": "Int",
+                      "value": 60
+                    }
+                  ]
+                },
+                {
+                  "name": "5",
+                  "type": "Canvas",
+                  "width": 161,
+                  "height": 128,
+                  "format": 2,
+                  "children": [
+                    {
+                      "name": "origin",
+                      "type": "Vector",
+                      "value": {
+                        "x": 82,
+                        "y": 75
+                      }
+                    },
+                    {
+                      "name": "delay",
+                      "type": "Int",
+                      "value": 60
+                    }
+                  ]
+                },
+                {
+                  "name": "6",
+                  "type": "Canvas",
+                  "width": 163,
+                  "height": 128,
+                  "format": 2,
+                  "children": [
+                    {
+                      "name": "origin",
+                      "type": "Vector",
+                      "value": {
+                        "x": 81,
+                        "y": 75
+                      }
+                    },
+                    {
+                      "name": "delay",
+                      "type": "Int",
+                      "value": 60
+                    }
+                  ]
+                },
+                {
+                  "name": "7",
+                  "type": "Canvas",
+                  "width": 165,
+                  "height": 129,
+                  "format": 2,
+                  "children": [
+                    {
+                      "name": "origin",
+                      "type": "Vector",
+                      "value": {
+                        "x": 77,
+                        "y": 75
+                      }
+                    },
+                    {
+                      "name": "delay",
+                      "type": "Int",
+                      "value": 60
+                    }
+                  ]
+                },
+                {
+                  "name": "8",
+                  "type": "Canvas",
+                  "width": 157,
+                  "height": 127,
+                  "format": 2,
+                  "children": [
+                    {
+                      "name": "origin",
+                      "type": "Vector",
+                      "value": {
+                        "x": 81,
+                        "y": 75
+                      }
+                    },
+                    {
+                      "name": "delay",
+                      "type": "Int",
+                      "value": 60
+                    }
+                  ]
+                },
+                {
+                  "name": "9",
+                  "type": "Canvas",
+                  "width": 152,
+                  "height": 104,
+                  "format": 2,
+                  "children": [
+                    {
+                      "name": "origin",
+                      "type": "Vector",
+                      "value": {
+                        "x": 77,
+                        "y": 75
+                      }
+                    },
+                    {
+                      "name": "delay",
+                      "type": "Int",
+                      "value": 60
+                    }
+                  ]
+                },
+                {
+                  "name": "10",
+                  "type": "Canvas",
+                  "width": 145,
+                  "height": 113,
+                  "format": 2,
+                  "children": [
+                    {
+                      "name": "origin",
+                      "type": "Vector",
+                      "value": {
+                        "x": 81,
+                        "y": 75
+                      }
+                    },
+                    {
+                      "name": "delay",
+                      "type": "Int",
+                      "value": 60
+                    }
+                  ]
+                },
+                {
+                  "name": "11",
+                  "type": "Canvas",
+                  "width": 151,
+                  "height": 104,
+                  "format": 2,
+                  "children": [
+                    {
+                      "name": "origin",
+                      "type": "Vector",
+                      "value": {
+                        "x": 80,
+                        "y": 75
+                      }
+                    },
+                    {
+                      "name": "delay",
+                      "type": "Int",
+                      "value": 60
+                    }
+                  ]
+                },
+                {
+                  "name": "12",
+                  "type": "Canvas",
+                  "width": 141,
+                  "height": 113,
+                  "format": 2,
+                  "children": [
+                    {
+                      "name": "origin",
+                      "type": "Vector",
+                      "value": {
+                        "x": 77,
+                        "y": 75
+                      }
+                    },
+                    {
+                      "name": "delay",
+                      "type": "Int",
+                      "value": 60
+                    }
+                  ]
+                },
+                {
+                  "name": "13",
+                  "type": "Canvas",
+                  "width": 148,
+                  "height": 104,
+                  "format": 2,
+                  "children": [
+                    {
+                      "name": "origin",
+                      "type": "Vector",
+                      "value": {
+                        "x": 77,
+                        "y": 75
+                      }
+                    },
+                    {
+                      "name": "delay",
+                      "type": "Int",
+                      "value": 60
+                    }
+                  ]
+                },
+                {
+                  "name": "14",
+                  "type": "Canvas",
+                  "width": 135,
+                  "height": 113,
+                  "format": 2,
+                  "children": [
+                    {
+                      "name": "origin",
+                      "type": "Vector",
+                      "value": {
+                        "x": 70,
+                        "y": 75
+                      }
+                    },
+                    {
+                      "name": "delay",
+                      "type": "Int",
+                      "value": 60
+                    }
+                  ]
+                },
+                {
+                  "name": "15",
+                  "type": "Canvas",
+                  "width": 126,
+                  "height": 85,
+                  "format": 2,
+                  "children": [
+                    {
+                      "name": "origin",
+                      "type": "Vector",
+                      "value": {
+                        "x": 77,
+                        "y": 56
+                      }
+                    },
+                    {
+                      "name": "delay",
+                      "type": "Int",
+                      "value": 60
+                    }
+                  ]
+                },
+                {
+                  "name": "16",
+                  "type": "Canvas",
+                  "width": 129,
+                  "height": 65,
+                  "format": 2,
+                  "children": [
+                    {
+                      "name": "origin",
+                      "type": "Vector",
+                      "value": {
+                        "x": 64,
+                        "y": 34
+                      }
+                    },
+                    {
+                      "name": "delay",
+                      "type": "Int",
+                      "value": 60
+                    }
+                  ]
+                },
+                {
+                  "name": "17",
+                  "type": "Canvas",
+                  "width": 164,
+                  "height": 57,
+                  "format": 2,
+                  "children": [
+                    {
+                      "name": "origin",
+                      "type": "Vector",
+                      "value": {
+                        "x": 69,
+                        "y": 26
+                      }
+                    },
+                    {
+                      "name": "delay",
+                      "type": "Int",
+                      "value": 60
+                    }
+                  ]
+                },
+                {
+                  "name": "18",
+                  "type": "Canvas",
+                  "width": 173,
+                  "height": 56,
+                  "format": 2,
+                  "children": [
+                    {
+                      "name": "origin",
+                      "type": "Vector",
+                      "value": {
+                        "x": 71,
+                        "y": 25
+                      }
+                    },
+                    {
+                      "name": "delay",
+                      "type": "Int",
+                      "value": 60
+                    }
+                  ]
+                },
+                {
+                  "name": "19",
+                  "type": "Canvas",
+                  "width": 134,
+                  "height": 43,
+                  "format": 2,
+                  "children": [
+                    {
+                      "name": "origin",
+                      "type": "Vector",
+                      "value": {
+                        "x": 31,
+                        "y": 13
+                      }
+                    },
+                    {
+                      "name": "delay",
+                      "type": "Int",
+                      "value": 60
+                    }
+                  ]
+                },
+                {
+                  "name": "20",
+                  "type": "Canvas",
+                  "width": 55,
+                  "height": 39,
+                  "format": 2,
+                  "children": [
+                    {
+                      "name": "origin",
+                      "type": "Vector",
+                      "value": {
+                        "x": -46,
+                        "y": 11
+                      }
+                    },
+                    {
+                      "name": "delay",
+                      "type": "Int",
+                      "value": 60
+                    }
+                  ]
+                },
+                {
+                  "name": "pos",
+                  "type": "Int",
+                  "value": 4
+                },
+                {
+                  "name": "attach",
+                  "type": "Int",
+                  "value": 1
+                }
+              ]
+            },
+            {
+              "name": "attackAfter",
+              "type": "Int",
+              "value": 450
+            }
+          ]
+        },
+        {
+          "name": "0",
+          "type": "Canvas",
+          "width": 142,
+          "height": 150,
+          "format": 2,
+          "children": [
+            {
+              "name": "origin",
+              "type": "Vector",
+              "value": {
+                "x": 77,
+                "y": 150
+              }
+            },
+            {
+              "name": "head",
+              "type": "Vector",
+              "value": {
+                "x": -2,
+                "y": -63
+              }
+            },
+            {
+              "name": "lt",
+              "type": "Vector",
+              "value": {
+                "x": -23,
+                "y": -67
+              }
+            },
+            {
+              "name": "rb",
+              "type": "Vector",
+              "value": {
+                "x": 20,
+                "y": 0
+              }
+            },
+            {
+              "name": "delay",
+              "type": "Int",
+              "value": 90
+            }
+          ]
+        },
+        {
+          "name": "1",
+          "type": "Canvas",
+          "width": 123,
+          "height": 145,
+          "format": 2,
+          "children": [
+            {
+              "name": "origin",
+              "type": "Vector",
+              "value": {
+                "x": 65,
+                "y": 145
+              }
+            },
+            {
+              "name": "head",
+              "type": "Vector",
+              "value": {
+                "x": -2,
+                "y": -63
+              }
+            },
+            {
+              "name": "lt",
+              "type": "Vector",
+              "value": {
+                "x": -23,
+                "y": -67
+              }
+            },
+            {
+              "name": "rb",
+              "type": "Vector",
+              "value": {
+                "x": 20,
+                "y": 0
+              }
+            },
+            {
+              "name": "delay",
+              "type": "Int",
+              "value": 90
+            }
+          ]
+        },
+        {
+          "name": "2",
+          "type": "Canvas",
+          "width": 104,
+          "height": 139,
+          "format": 2,
+          "children": [
+            {
+              "name": "origin",
+              "type": "Vector",
+              "value": {
+                "x": 55,
+                "y": 139
+              }
+            },
+            {
+              "name": "head",
+              "type": "Vector",
+              "value": {
+                "x": -2,
+                "y": -63
+              }
+            },
+            {
+              "name": "lt",
+              "type": "Vector",
+              "value": {
+                "x": -23,
+                "y": -67
+              }
+            },
+            {
+              "name": "rb",
+              "type": "Vector",
+              "value": {
+                "x": 20,
+                "y": 0
+              }
+            },
+            {
+              "name": "delay",
+              "type": "Int",
+              "value": 90
+            }
+          ]
+        },
+        {
+          "name": "3",
+          "type": "Canvas",
+          "width": 83,
+          "height": 131,
+          "format": 2,
+          "children": [
+            {
+              "name": "origin",
+              "type": "Vector",
+              "value": {
+                "x": 45,
+                "y": 131
+              }
+            },
+            {
+              "name": "head",
+              "type": "Vector",
+              "value": {
+                "x": -2,
+                "y": -63
+              }
+            },
+            {
+              "name": "lt",
+              "type": "Vector",
+              "value": {
+                "x": -23,
+                "y": -67
+              }
+            },
+            {
+              "name": "rb",
+              "type": "Vector",
+              "value": {
+                "x": 20,
+                "y": 0
+              }
+            },
+            {
+              "name": "delay",
+              "type": "Int",
+              "value": 90
+            }
+          ]
+        },
+        {
+          "name": "4",
+          "type": "Canvas",
+          "width": 112,
+          "height": 120,
+          "format": 2,
+          "children": [
+            {
+              "name": "origin",
+              "type": "Vector",
+              "value": {
+                "x": 56,
+                "y": 120
+              }
+            },
+            {
+              "name": "head",
+              "type": "Vector",
+              "value": {
+                "x": -2,
+                "y": -63
+              }
+            },
+            {
+              "name": "lt",
+              "type": "Vector",
+              "value": {
+                "x": -23,
+                "y": -67
+              }
+            },
+            {
+              "name": "rb",
+              "type": "Vector",
+              "value": {
+                "x": 20,
+                "y": 0
+              }
+            },
+            {
+              "name": "delay",
+              "type": "Int",
+              "value": 90
+            }
+          ]
+        },
+        {
+          "name": "5",
+          "type": "Canvas",
+          "width": 135,
+          "height": 131,
+          "format": 2,
+          "children": [
+            {
+              "name": "origin",
+              "type": "Vector",
+              "value": {
+                "x": 68,
+                "y": 131
+              }
+            },
+            {
+              "name": "head",
+              "type": "Vector",
+              "value": {
+                "x": -2,
+                "y": -63
+              }
+            },
+            {
+              "name": "lt",
+              "type": "Vector",
+              "value": {
+                "x": -23,
+                "y": -67
+              }
+            },
+            {
+              "name": "rb",
+              "type": "Vector",
+              "value": {
+                "x": 20,
+                "y": 0
+              }
+            },
+            {
+              "name": "delay",
+              "type": "Int",
+              "value": 90
+            }
+          ]
+        },
+        {
+          "name": "6",
+          "type": "Canvas",
+          "width": 133,
+          "height": 142,
+          "format": 2,
+          "children": [
+            {
+              "name": "origin",
+              "type": "Vector",
+              "value": {
+                "x": 67,
+                "y": 142
+              }
+            },
+            {
+              "name": "head",
+              "type": "Vector",
+              "value": {
+                "x": -2,
+                "y": -63
+              }
+            },
+            {
+              "name": "lt",
+              "type": "Vector",
+              "value": {
+                "x": -23,
+                "y": -67
+              }
+            },
+            {
+              "name": "rb",
+              "type": "Vector",
+              "value": {
+                "x": 20,
+                "y": 0
+              }
+            },
+            {
+              "name": "delay",
+              "type": "Int",
+              "value": 90
+            }
+          ]
+        },
+        {
+          "name": "7",
+          "type": "Canvas",
+          "width": 133,
+          "height": 143,
+          "format": 2,
+          "children": [
+            {
+              "name": "origin",
+              "type": "Vector",
+              "value": {
+                "x": 67,
+                "y": 143
+              }
+            },
+            {
+              "name": "head",
+              "type": "Vector",
+              "value": {
+                "x": -2,
+                "y": -63
+              }
+            },
+            {
+              "name": "lt",
+              "type": "Vector",
+              "value": {
+                "x": -23,
+                "y": -67
+              }
+            },
+            {
+              "name": "rb",
+              "type": "Vector",
+              "value": {
+                "x": 20,
+                "y": 0
+              }
+            },
+            {
+              "name": "delay",
+              "type": "Int",
+              "value": 90
+            }
+          ]
+        },
+        {
+          "name": "8",
+          "type": "Canvas",
+          "width": 133,
+          "height": 142,
+          "format": 2,
+          "children": [
+            {
+              "name": "origin",
+              "type": "Vector",
+              "value": {
+                "x": 67,
+                "y": 142
+              }
+            },
+            {
+              "name": "head",
+              "type": "Vector",
+              "value": {
+                "x": -2,
+                "y": -63
+              }
+            },
+            {
+              "name": "lt",
+              "type": "Vector",
+              "value": {
+                "x": -23,
+                "y": -67
+              }
+            },
+            {
+              "name": "rb",
+              "type": "Vector",
+              "value": {
+                "x": 20,
+                "y": 0
+              }
+            },
+            {
+              "name": "delay",
+              "type": "Int",
+              "value": 90
+            }
+          ]
+        },
+        {
+          "name": "9",
+          "type": "Canvas",
+          "width": 135,
+          "height": 139,
+          "format": 2,
+          "children": [
+            {
+              "name": "origin",
+              "type": "Vector",
+              "value": {
+                "x": 68,
+                "y": 139
+              }
+            },
+            {
+              "name": "head",
+              "type": "Vector",
+              "value": {
+                "x": -2,
+                "y": -63
+              }
+            },
+            {
+              "name": "lt",
+              "type": "Vector",
+              "value": {
+                "x": -23,
+                "y": -67
+              }
+            },
+            {
+              "name": "rb",
+              "type": "Vector",
+              "value": {
+                "x": 20,
+                "y": 0
+              }
+            },
+            {
+              "name": "delay",
+              "type": "Int",
+              "value": 90
+            }
+          ]
+        },
+        {
+          "name": "10",
+          "type": "Canvas",
+          "width": 133,
+          "height": 142,
+          "format": 2,
+          "children": [
+            {
+              "name": "origin",
+              "type": "Vector",
+              "value": {
+                "x": 67,
+                "y": 142
+              }
+            },
+            {
+              "name": "head",
+              "type": "Vector",
+              "value": {
+                "x": -2,
+                "y": -63
+              }
+            },
+            {
+              "name": "lt",
+              "type": "Vector",
+              "value": {
+                "x": -23,
+                "y": -67
+              }
+            },
+            {
+              "name": "rb",
+              "type": "Vector",
+              "value": {
+                "x": 20,
+                "y": 0
+              }
+            },
+            {
+              "name": "delay",
+              "type": "Int",
+              "value": 90
+            }
+          ]
+        },
+        {
+          "name": "11",
+          "type": "Canvas",
+          "width": 124,
+          "height": 147,
+          "format": 2,
+          "children": [
+            {
+              "name": "origin",
+              "type": "Vector",
+              "value": {
+                "x": 71,
+                "y": 142
+              }
+            },
+            {
+              "name": "head",
+              "type": "Vector",
+              "value": {
+                "x": -2,
+                "y": -63
+              }
+            },
+            {
+              "name": "lt",
+              "type": "Vector",
+              "value": {
+                "x": -23,
+                "y": -67
+              }
+            },
+            {
+              "name": "rb",
+              "type": "Vector",
+              "value": {
+                "x": 20,
+                "y": 0
+              }
+            },
+            {
+              "name": "delay",
+              "type": "Int",
+              "value": 90
+            }
+          ]
+        },
+        {
+          "name": "12",
+          "type": "Canvas",
+          "width": 125,
+          "height": 132,
+          "format": 2,
+          "children": [
+            {
+              "name": "origin",
+              "type": "Vector",
+              "value": {
+                "x": 72,
+                "y": 113
+              }
+            },
+            {
+              "name": "head",
+              "type": "Vector",
+              "value": {
+                "x": -2,
+                "y": -63
+              }
+            },
+            {
+              "name": "lt",
+              "type": "Vector",
+              "value": {
+                "x": -23,
+                "y": -67
+              }
+            },
+            {
+              "name": "rb",
+              "type": "Vector",
+              "value": {
+                "x": 20,
+                "y": 0
+              }
+            },
+            {
+              "name": "delay",
+              "type": "Int",
+              "value": 90
+            }
+          ]
+        },
+        {
+          "name": "13",
+          "type": "Canvas",
+          "width": 124,
+          "height": 101,
+          "format": 2,
+          "children": [
+            {
+              "name": "origin",
+              "type": "Vector",
+              "value": {
+                "x": 71,
+                "y": 83
+              }
+            },
+            {
+              "name": "head",
+              "type": "Vector",
+              "value": {
+                "x": -2,
+                "y": -63
+              }
+            },
+            {
+              "name": "lt",
+              "type": "Vector",
+              "value": {
+                "x": -23,
+                "y": -67
+              }
+            },
+            {
+              "name": "rb",
+              "type": "Vector",
+              "value": {
+                "x": 20,
+                "y": 0
+              }
+            },
+            {
+              "name": "delay",
+              "type": "Int",
+              "value": 90
+            }
+          ]
+        },
+        {
+          "name": "14",
+          "type": "Canvas",
+          "width": 119,
+          "height": 86,
+          "format": 2,
+          "children": [
+            {
+              "name": "origin",
+              "type": "Vector",
+              "value": {
+                "x": 71,
+                "y": 67
+              }
+            },
+            {
+              "name": "head",
+              "type": "Vector",
+              "value": {
+                "x": -2,
+                "y": -63
+              }
+            },
+            {
+              "name": "lt",
+              "type": "Vector",
+              "value": {
+                "x": -23,
+                "y": -67
+              }
+            },
+            {
+              "name": "rb",
+              "type": "Vector",
+              "value": {
+                "x": 20,
+                "y": 0
+              }
+            },
+            {
+              "name": "delay",
+              "type": "Int",
+              "value": 90
+            }
+          ]
+        },
+        {
+          "name": "15",
+          "type": "Canvas",
+          "width": 43,
+          "height": 68,
+          "format": 2,
+          "children": [
+            {
+              "name": "origin",
+              "type": "Vector",
+              "value": {
+                "x": 23,
+                "y": 68
+              }
+            },
+            {
+              "name": "head",
+              "type": "Vector",
+              "value": {
+                "x": -2,
+                "y": -63
+              }
+            },
+            {
+              "name": "lt",
+              "type": "Vector",
+              "value": {
+                "x": -23,
+                "y": -67
+              }
+            },
+            {
+              "name": "rb",
+              "type": "Vector",
+              "value": {
+                "x": 20,
+                "y": 0
+              }
+            },
+            {
+              "name": "delay",
+              "type": "Int",
+              "value": 120
+            }
+          ]
+        },
+        {
+          "name": "16",
+          "type": "UOL",
+          "target": "../stand/0"
+        },
+        {
+          "name": "17",
+          "type": "UOL",
+          "target": "../stand/1"
+        },
+        {
+          "name": "18",
+          "type": "UOL",
+          "target": "../stand/2"
+        },
+        {
+          "name": "19",
+          "type": "UOL",
+          "target": "../stand/3"
+        }
+      ]
+    },
+    {
+      "name": "hit1",
+      "type": "SubProperty",
+      "children": [
+        {
+          "name": "0",
+          "type": "Canvas",
+          "width": 59,
+          "height": 71,
+          "format": 2,
+          "children": [
+            {
+              "name": "origin",
+              "type": "Vector",
+              "value": {
+                "x": 34,
+                "y": 71
+              }
+            },
+            {
+              "name": "head",
+              "type": "Vector",
+              "value": {
+                "x": -2,
+                "y": -63
+              }
+            },
+            {
+              "name": "lt",
+              "type": "Vector",
+              "value": {
+                "x": -23,
+                "y": -67
+              }
+            },
+            {
+              "name": "rb",
+              "type": "Vector",
+              "value": {
+                "x": 20,
+                "y": 0
+              }
+            },
+            {
+              "name": "delay",
+              "type": "Int",
+              "value": 300
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "die1",
+      "type": "SubProperty",
+      "children": [
+        {
+          "name": "0",
+          "type": "Canvas",
+          "width": 59,
+          "height": 71,
+          "format": 2,
+          "children": [
+            {
+              "name": "origin",
+              "type": "Vector",
+              "value": {
+                "x": 14,
+                "y": 71
+              }
+            },
+            {
+              "name": "head",
+              "type": "Vector",
+              "value": {
+                "x": -2,
+                "y": -63
+              }
+            },
+            {
+              "name": "delay",
+              "type": "Int",
+              "value": 120
+            }
+          ]
+        },
+        {
+          "name": "1",
+          "type": "Canvas",
+          "width": 75,
+          "height": 71,
+          "format": 2,
+          "children": [
+            {
+              "name": "origin",
+              "type": "Vector",
+              "value": {
+                "x": 20,
+                "y": 71
+              }
+            },
+            {
+              "name": "head",
+              "type": "Vector",
+              "value": {
+                "x": -2,
+                "y": -63
+              }
+            },
+            {
+              "name": "delay",
+              "type": "Int",
+              "value": 120
+            }
+          ]
+        },
+        {
+          "name": "2",
+          "type": "Canvas",
+          "width": 79,
+          "height": 68,
+          "format": 2,
+          "children": [
+            {
+              "name": "origin",
+              "type": "Vector",
+              "value": {
+                "x": 23,
+                "y": 68
+              }
+            },
+            {
+              "name": "head",
+              "type": "Vector",
+              "value": {
+                "x": -2,
+                "y": -63
+              }
+            },
+            {
+              "name": "delay",
+              "type": "Int",
+              "value": 120
+            }
+          ]
+        },
+        {
+          "name": "3",
+          "type": "Canvas",
+          "width": 49,
+          "height": 67,
+          "format": 2,
+          "children": [
+            {
+              "name": "origin",
+              "type": "Vector",
+              "value": {
+                "x": -11,
+                "y": 67
+              }
+            },
+            {
+              "name": "head",
+              "type": "Vector",
+              "value": {
+                "x": -2,
+                "y": -63
+              }
+            },
+            {
+              "name": "delay",
+              "type": "Int",
+              "value": 120
+            }
+          ]
+        },
+        {
+          "name": "4",
+          "type": "Canvas",
+          "width": 82,
+          "height": 149,
+          "format": 2,
+          "children": [
+            {
+              "name": "origin",
+              "type": "Vector",
+              "value": {
+                "x": 7,
+                "y": 108
+              }
+            },
+            {
+              "name": "head",
+              "type": "Vector",
+              "value": {
+                "x": -2,
+                "y": -63
+              }
+            },
+            {
+              "name": "delay",
+              "type": "Int",
+              "value": 120
+            }
+          ]
+        },
+        {
+          "name": "5",
+          "type": "Canvas",
+          "width": 63,
+          "height": 125,
+          "format": 2,
+          "children": [
+            {
+              "name": "origin",
+              "type": "Vector",
+              "value": {
+                "x": -3,
+                "y": 95
+              }
+            },
+            {
+              "name": "head",
+              "type": "Vector",
+              "value": {
+                "x": -2,
+                "y": -63
+              }
+            },
+            {
+              "name": "delay",
+              "type": "Int",
+              "value": 120
+            }
+          ]
+        },
+        {
+          "name": "6",
+          "type": "Canvas",
+          "width": 54,
+          "height": 103,
+          "format": 2,
+          "children": [
+            {
+              "name": "origin",
+              "type": "Vector",
+              "value": {
+                "x": -8,
+                "y": 84
+              }
+            },
+            {
+              "name": "head",
+              "type": "Vector",
+              "value": {
+                "x": -2,
+                "y": -63
+              }
+            },
+            {
+              "name": "delay",
+              "type": "Int",
+              "value": 120
+            }
+          ]
+        },
+        {
+          "name": "7",
+          "type": "Canvas",
+          "width": 45,
+          "height": 49,
+          "format": 2,
+          "children": [
+            {
+              "name": "origin",
+              "type": "Vector",
+              "value": {
+                "x": -13,
+                "y": 56
+              }
+            },
+            {
+              "name": "head",
+              "type": "Vector",
+              "value": {
+                "x": -2,
+                "y": -63
+              }
+            },
+            {
+              "name": "delay",
+              "type": "Int",
+              "value": 120
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "chase",
+      "type": "SubProperty",
+      "children": [
+        {
+          "name": "0",
+          "type": "Canvas",
+          "width": 43,
+          "height": 70,
+          "format": 2,
+          "children": [
+            {
+              "name": "origin",
+              "type": "Vector",
+              "value": {
+                "x": 23,
+                "y": 70
+              }
+            },
+            {
+              "name": "head",
+              "type": "Vector",
+              "value": {
+                "x": -2,
+                "y": -63
+              }
+            },
+            {
+              "name": "lt",
+              "type": "Vector",
+              "value": {
+                "x": -23,
+                "y": -70
+              }
+            },
+            {
+              "name": "rb",
+              "type": "Vector",
+              "value": {
+                "x": 20,
+                "y": 0
+              }
+            },
+            {
+              "name": "delay",
+              "type": "Int",
+              "value": 90
+            }
+          ]
+        },
+        {
+          "name": "1",
+          "type": "Canvas",
+          "width": 43,
+          "height": 69,
+          "format": 2,
+          "children": [
+            {
+              "name": "origin",
+              "type": "Vector",
+              "value": {
+                "x": 23,
+                "y": 69
+              }
+            },
+            {
+              "name": "head",
+              "type": "Vector",
+              "value": {
+                "x": -2,
+                "y": -63
+              }
+            },
+            {
+              "name": "delay",
+              "type": "Int",
+              "value": 90
+            }
+          ]
+        },
+        {
+          "name": "2",
+          "type": "Canvas",
+          "width": 43,
+          "height": 70,
+          "format": 2,
+          "children": [
+            {
+              "name": "origin",
+              "type": "Vector",
+              "value": {
+                "x": 23,
+                "y": 70
+              }
+            },
+            {
+              "name": "head",
+              "type": "Vector",
+              "value": {
+                "x": -2,
+                "y": -63
+              }
+            },
+            {
+              "name": "delay",
+              "type": "Int",
+              "value": 90
+            }
+          ]
+        },
+        {
+          "name": "3",
+          "type": "Canvas",
+          "width": 43,
+          "height": 69,
+          "format": 2,
+          "children": [
+            {
+              "name": "origin",
+              "type": "Vector",
+              "value": {
+                "x": 23,
+                "y": 69
+              }
+            },
+            {
+              "name": "head",
+              "type": "Vector",
+              "value": {
+                "x": -2,
+                "y": -63
+              }
+            },
+            {
+              "name": "lt",
+              "type": "Vector",
+              "value": {
+                "x": -23,
+                "y": -69
+              }
+            },
+            {
+              "name": "rb",
+              "type": "Vector",
+              "value": {
+                "x": 20,
+                "y": 0
+              }
+            },
+            {
+              "name": "delay",
+              "type": "Int",
+              "value": 90
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

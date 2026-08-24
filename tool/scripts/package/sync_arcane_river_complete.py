@@ -40,10 +40,10 @@ def dependencies() -> dict[str, object]:
         )
         migration.merge_dependency_sets(result, migration.collect_dependencies(image))
     expected = {
-        "maps": (len(migration.MAP_IDS), 151),
+        "maps": (len(migration.MAP_IDS), 155),
         "assets": (len(result["assets"]), 27),
-        "mobs": (len(result["mobs"]), 83),
-        "npcs": (len(result["npcs"]), 182),
+        "mobs": (len(result["mobs"]), 84),
+        "npcs": (len(result["npcs"]), 184),
         "bgm_packs": (len({name.split("/", 1)[0] for name in result["bgms"]}), 5),
     }
     invalid = {name: values for name, values in expected.items() if values[0] != values[1]}
@@ -93,6 +93,7 @@ def sync_server(deps: dict[str, object]) -> None:
         "V2.1.42__add_arcane_river_mob_and_quest_drops.sql",
         "V2.1.45__add_arcane_river_core_gemstone_drop.sql",
         "V2.1.46__increase_arcane_river_core_gemstone_drop_rate.sql",
+        "V2.1.61__complete_vanishing_journey_quest_drops.sql",
     ):
         copy_relative(source, target, f"src/main/resources/db/migration/{migration_name}")
     copy_relative(
@@ -100,6 +101,8 @@ def sync_server(deps: dict[str, object]) -> None:
         target,
         "src/main/java/org/gms/net/server/channel/handlers/QuestActionHandler.java",
     )
+    copy_relative(source, target, "src/main/java/org/gms/client/Character.java")
+    copy_relative(source, target, "src/main/java/org/gms/server/loot/LootManager.java")
     for relative in ("scripts-zh-CN/BeiDouSpecial/万能传送.js", "scripts-zh-CN/npc/9330045.js"):
         copy_relative(source, target, relative)
 
@@ -115,13 +118,21 @@ def sync_tools() -> None:
         "tool/scripts/audit/audit_arcane_river_fields.py",
         "tool/scripts/migration/migrate_arcane_river_fields.py",
         "tool/scripts/migration/migrate_arcane_river_quests.py",
+        "tool/scripts/migration/migrate_vanishing_journey_quests.py",
         "tool/scripts/migration/normalize_arcane_river_mob_eva.py",
         "tool/scripts/migration/repair_arcane_river_chewchew_swim.py",
         "tool/scripts/migration/repair_arcane_river_morass_town.py",
         "tool/scripts/migration/repair_arcane_river_extinction_asset.py",
         "tool/scripts/migration/repair_arcane_river_legacy_connect.py",
+        "tool/scripts/migration/test_arcane_river_450001014_contract.py",
+        "tool/scripts/migration/test_arcane_river_ballistic_attack_contract.py",
+        "tool/scripts/migration/test_arcane_river_cave_portal_contract.py",
+        "tool/scripts/migration/test_vanishing_journey_quest_contract.py",
         "tool/scripts/package/pack_img_wz.sh",
         "tool/scripts/package/sync_arcane_river_complete.py",
+        "tool/scripts/patch-client/repair_arcane_river_8641002_attack_gap.py",
+        "tool/scripts/patch-client/repair_arcane_river_ballistic_attacks.py",
+        "tool/scripts/patch-client/repair_arcane_river_cave_portals.py",
         "tool/wz-python/wzpy/properties.py",
         "tool/wz-python/wzpy/wz_file.py",
     ]

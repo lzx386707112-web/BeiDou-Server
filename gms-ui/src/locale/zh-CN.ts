@@ -12,6 +12,8 @@ import inventory from '@/views/game/inventory/locale/zh-CN';
 import autoban from '@/views/game/autoban/locale/zh-CN';
 import setItem from '@/views/game/setItem/locale/zh-CN';
 import equipmentCatalog from '@/views/game/equipmentCatalog/locale/zh-CN';
+import mapDetect from '@/views/game/mapDetect/locale/zh-CN';
+import questBrowse from '@/views/game/questBrowse/locale/zh-CN';
 import baseConfig from './zh-CN/base';
 
 export default {
@@ -69,4 +71,6 @@ export default {
   ...autoban,
   ...setItem,
   ...equipmentCatalog,
+  ...mapDetect,
+  ...questBrowse,
 };

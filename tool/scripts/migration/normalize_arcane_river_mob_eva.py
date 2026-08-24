@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Set the 83 installed Arcane River mobs to legacy-safe EVA 100."""
+"""Set the 84 installed Arcane River mobs to legacy-safe EVA 100."""
 
 from __future__ import annotations
 
@@ -59,8 +59,8 @@ def installed_mob_ids() -> set[int]:
             values = {child.get("name"): child.get("value") for child in entry}
             if values.get("type") == "m" and (values.get("id") or "").isdigit():
                 mob_ids.add(int(values["id"]))
-    if len(mob_ids) != 83:
-        raise RuntimeError(f"expected 83 installed Arcane River mobs, found {len(mob_ids)}")
+    if len(mob_ids) != 84:
+        raise RuntimeError(f"expected 84 installed Arcane River mobs, found {len(mob_ids)}")
     return mob_ids
 
 

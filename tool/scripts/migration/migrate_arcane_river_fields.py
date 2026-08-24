@@ -63,7 +63,7 @@ MAX_CANVAS_EDGE = 2048
 MAP_IDS = tuple(
     int(value)
     for value in """
-450001000,450001003,450001005,450001010,450001011,450001012,450001013,450001014,450001015,450001016,450001100,450001110,450001111,450001112,450001113,450001114,450001200,450001210,450001211,450001212,450001213,450001214,450001215,450001216,450001217,450001218,450001260,450001261,450001262,
+450001000,450001003,450001005,450001010,450001011,450001012,450001013,450001014,450001015,450001016,450001100,450001110,450001111,450001112,450001113,450001114,450001200,450001210,450001211,450001212,450001213,450001214,450001215,450001216,450001217,450001218,450001219,450001230,450001240,450001250,450001260,450001261,450001262,
 450002000,450002001,450002002,450002003,450002004,450002005,450002006,450002007,450002008,450002009,450002010,450002011,450002012,450002013,450002014,450002015,450002016,450002017,450002018,450002019,450002020,450002300,450002301,450002302,
 450003000,450003100,450003200,450003210,450003220,450003300,450003310,450003320,450003330,450003340,450003350,450003360,450003400,450003410,450003420,450003430,450003440,450003450,450003460,450003500,450003510,450003520,450003530,450003540,450003560,
 450005000,450005100,450005110,450005120,450005121,450005130,450005131,450005200,450005210,450005220,450005221,450005222,450005230,450005240,450005241,450005242,450005300,450005400,450005410,450005411,450005412,450005420,450005430,450005431,450005432,450005440,450005500,450005510,450005520,450005530,450005550,
@@ -117,6 +117,28 @@ PRESERVED_ARRIVAL_PORTALS = {
     450006240: {"east00", "center00"},
     450006400: {"east00"},
     450007030: {"pt01"},
+}
+LEGACY_CAVE_ROUTE_PORTALS = {
+    450001210: {"PS00": (450001215, "PV00")},
+    450001215: {"PS00": (450001218, "PV00")},
+    450001218: {"PS00": (450001219, "PV00")},
+    450001219: {
+        "PS00": (450001230, "PV00"),
+        "PS01": (450001240, "PV00"),
+    },
+    450001230: {
+        "PS00": (450001262, "PV00"),
+        "PH00": (450001230, "PH01"),
+        "PH01": (450001230, "PH00"),
+    },
+    450001240: {"PS00": (450001250, "PV00")},
+    450001262: {"PV00": (450001230, "PS00")},
+}
+LEGACY_CAVE_COLLISION_PORTALS = {
+    # Modern data gates this fall-through portal behind quest 34120 and sends
+    # players to the uninstalled story field 450002021. The legacy projection
+    # keeps the waterfall collision route and lands in the installed Chu Chu hub.
+    450001250: {"PCS00": (450002000, "sp")},
 }
 
 REMOVED_NPCS = {
@@ -172,6 +194,20 @@ OLD_MOB_FIELDS = {
     "MADamage": 0,
     "MDDamage": 0,
     "level": 1,
+}
+LEGACY_BALLISTIC_ATTACKS = {
+    8641002: (1, 300),
+    8642012: (2, 400),
+    8642013: (2, 400),
+    8642014: (2, 400),
+    8642015: (2, 400),
+    8642021: (2, 400),
+    8642022: (2, 400),
+    8644001: (1, 300),
+    8644005: (1, 300),
+    8644007: (2, 300),
+    8644008: (1, 300),
+    8644010: (1, 300),
 }
 
 
@@ -586,6 +622,47 @@ def clone_image(source_path: Path, sanitizer=None) -> tuple[WzImage, CanvasMater
     return image, materializer
 
 
+def fill_legacy_mob_animation_gap(image: WzImage, mob_id: int) -> int:
+    if mob_id != 8641002:
+        return 0
+    root = image.root
+    attack = root.child("attack1")
+    if not isinstance(attack, WzSubProperty):
+        raise RuntimeError("8641002: missing attack1")
+    attach = attack.get("info/hit/attach")
+    if not isinstance(attach, WzIntProperty):
+        raise RuntimeError("8641002: missing attack1/info/hit/attach")
+    attach._value = 1
+    names = [child.name for child in attack.children()]
+    expected_without10 = [
+        "info", *(str(index) for index in range(10)), *(str(index) for index in range(11, 16))
+    ]
+    if [name for name in names if name != "10"] != expected_without10:
+        raise RuntimeError(f"8641002: unexpected attack1 order {names}")
+    if "10" in names:
+        if names != ["info", *(str(index) for index in range(16))]:
+            raise RuntimeError(f"8641002: attack1/10 is not in sequence {names}")
+        return 0
+    frame9 = attack.child("9")
+    if not isinstance(frame9, WzCanvasProperty) or frame9._png_data is None:
+        raise RuntimeError("8641002: attack1/9 is not a materialized Canvas")
+    frame10 = WzCanvasProperty("10", attack)
+    frame10.width, frame10.height = int(frame9.width), int(frame9.height)
+    frame10.format, frame10.format2 = int(frame9.format), int(frame9.format2)
+    frame10._png_data = bytes(frame9._png_data)
+    frame10._png_length = len(frame10._png_data)
+    metadata_cloner = CanvasMaterializer()
+    for child in frame9.children():
+        frame10.add(clone_property(child, frame10, image, Path(), metadata_cloner))
+    reordered = {}
+    for name, child in attack._children.items():
+        reordered[name] = child
+        if name == "9":
+            reordered["10"] = frame10
+    attack._children = reordered
+    return 1
+
+
 def property_to_xml(prop, indent: int = 1) -> str:
     pad = "  " * indent
     name = f"name={quoteattr(prop.name)}"
@@ -708,7 +785,17 @@ def sanitize_map(root: WzSubProperty, map_id: int) -> None:
         script = str(child_value(entry, "script") or "")
         remove = False
         override = None
-        if portal_name in PRESERVED_ARRIVAL_PORTALS.get(map_id, set()):
+        cave_override = LEGACY_CAVE_ROUTE_PORTALS.get(map_id, {}).get(portal_name)
+        cave_collision = LEGACY_CAVE_COLLISION_PORTALS.get(map_id, {}).get(portal_name)
+        if cave_override is not None:
+            set_int(entry, "pt", 2)
+            set_int(entry, "tm", cave_override[0])
+            set_string(entry, "tn", cave_override[1])
+        elif cave_collision is not None:
+            set_int(entry, "pt", 3)
+            set_int(entry, "tm", cave_collision[0])
+            set_string(entry, "tn", cave_collision[1])
+        elif portal_name in PRESERVED_ARRIVAL_PORTALS.get(map_id, set()):
             set_int(entry, "pt", 0)
             set_int(entry, "tm", 999999999)
             set_string(entry, "tn", "")
@@ -717,8 +804,6 @@ def sanitize_map(root: WzSubProperty, map_id: int) -> None:
         elif map_id == 450001100 and portal_name == "PS00":
             override = (450001200, "PV01")
         elif map_id == 450002000 and portal_name in {"out02", "out05"}:
-            remove = True
-        elif map_id == 450001262 and portal_name == "PV00":
             remove = True
         elif isinstance(target, int) and target != 999999999 and target not in MAP_ID_SET:
             remove = True
@@ -735,10 +820,54 @@ def sanitize_map(root: WzSubProperty, map_id: int) -> None:
             remove_child(entry, name)
 
 
-def sanitize_mob(root: WzSubProperty) -> None:
+def project_legacy_mob_attack_info(root: WzSubProperty, mob_id: int) -> None:
+    contract = LEGACY_BALLISTIC_ATTACKS.get(mob_id)
+    if contract is None:
+        return
+    attack_number, bullet_speed = contract
+    modern = root.get(f"info/attack/{attack_number - 1}")
+    legacy = root.get(f"attack{attack_number}/info")
+    if not isinstance(modern, WzSubProperty) or not isinstance(legacy, WzSubProperty):
+        raise RuntimeError(f"{mob_id}: missing modern or legacy attack metadata")
+    if child_value(modern, "action") != attack_number:
+        raise RuntimeError(f"{mob_id}: modern ballistic attack action mismatch")
+    if not isinstance(legacy.child("ball"), WzSubProperty):
+        raise RuntimeError(f"{mob_id}: legacy ballistic attack has no ball node")
+    expected = {"type": 2, "bulletSpeed": bullet_speed}
+    for name, expected_value in expected.items():
+        value = child_value(modern, name)
+        if value != expected_value:
+            raise RuntimeError(
+                f"{mob_id}: unexpected info/attack/{attack_number - 1}/{name}={value}"
+            )
+        current = legacy.child(name)
+        if current is None:
+            legacy.add(WzIntProperty(name, expected_value, legacy))
+        elif not isinstance(current, WzIntProperty) or int(current.value) != expected_value:
+            raise RuntimeError(
+                f"{mob_id}: conflicting attack{attack_number}/info/{name}"
+            )
+
+    if legacy.child("attackAfter") is None:
+        raise RuntimeError(f"{mob_id}: ballistic attack has no attackAfter")
+    ordered = {}
+    for child in legacy.children():
+        if child.name in expected:
+            continue
+        if child.name == "attackAfter":
+            ordered["type"] = legacy._children["type"]
+            ordered["attackAfter"] = child
+            ordered["bulletSpeed"] = legacy._children["bulletSpeed"]
+        else:
+            ordered[child.name] = child
+    legacy._children = ordered
+
+
+def sanitize_mob(root: WzSubProperty, mob_id: int) -> None:
     info = root.child("info")
     if not isinstance(info, WzSubProperty):
         raise RuntimeError(f"{root.name}: missing mob info")
+    project_legacy_mob_attack_info(root, mob_id)
     for name in MOB_INFO_UNSUPPORTED:
         remove_child(info, name)
     for name, value in OLD_MOB_FIELDS.items():
@@ -995,7 +1124,8 @@ def extract_mob(mob_id: int) -> Path:
 
 def migrate_one_mob(mob_id: int) -> tuple[int, int, int]:
     source = extract_mob(mob_id)
-    image, materializer = clone_image(source, sanitize_mob)
+    image, materializer = clone_image(source, lambda root: sanitize_mob(root, mob_id))
+    fill_legacy_mob_animation_gap(image, mob_id)
     write_client_image(ROOT / f"clien/Data/Mob/{mob_id:07d}.img", image)
     write_server_image(
         ROOT / f"gms-server/wz/Mob.wz/{mob_id:07d}.img.xml", image, f"{mob_id:07d}.img"

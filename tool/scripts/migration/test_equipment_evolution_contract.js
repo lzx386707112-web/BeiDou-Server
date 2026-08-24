@@ -288,7 +288,7 @@ for (const questId of [600003, 600004, 600005, 600006, 600007]) {
 const questFiles = ["Check", "Act", "Say"].map((name) =>
     fs.readFileSync(path.join(root, `gms-server/wz/Quest.wz/${name}.img.xml`), "utf8")
 );
-for (const questId of [31180, 34102, 34103, 34104, 34105]) {
+for (const questId of [31180, -31434, -31433, -31432, -31431]) {
     for (const questXml of questFiles) {
         assert(questXml.includes(`<imgdir name="${questId}">`), `incomplete WZ quest ${questId}`);
     }

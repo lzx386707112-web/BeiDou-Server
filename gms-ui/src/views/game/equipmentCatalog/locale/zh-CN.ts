@@ -59,5 +59,8 @@ export default {
   'equipmentCatalog.stat.incMMPr': '最大MP',
   'equipmentCatalog.stat.tuc': '可升级次数',
   'equipmentCatalog.cash.all': '全部',
-  'equipmentCatalog.weaponType.placeholder': '全部武器类型',
+  'equipmentCatalog.equipKind.placeholder': '全部装备种类',
+  'equipmentCatalog.group.category': '按大类',
+  'equipmentCatalog.group.equipKind': '按种类',
+  'equipmentCatalog.equipKind.all': '全部种类',
 };

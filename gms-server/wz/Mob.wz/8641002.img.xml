@@ -192,7 +192,9 @@
         </canvas>
         <int name="attach" value="1"/>
       </imgdir>
+      <int name="type" value="2"/>
       <int name="attackAfter" value="1260"/>
+      <int name="bulletSpeed" value="300"/>
     </imgdir>
     <canvas name="0" width="127" height="186" format="1">
       <vector name="origin" x="66" y="186"/>
@@ -267,6 +269,14 @@
       <vector name="head" x="8" y="-186"/>
     </canvas>
     <canvas name="9" width="250" height="268" format="1">
+      <vector name="origin" x="80" y="217"/>
+      <int name="z" value="0"/>
+      <int name="delay" value="150"/>
+      <vector name="lt" x="-52" y="-186"/>
+      <vector name="rb" x="75" y="0"/>
+      <vector name="head" x="8" y="-186"/>
+    </canvas>
+    <canvas name="10" width="250" height="268" format="1">
       <vector name="origin" x="80" y="217"/>
       <int name="z" value="0"/>
       <int name="delay" value="150"/>
