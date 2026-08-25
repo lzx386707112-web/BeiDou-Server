@@ -102,17 +102,20 @@
           <label class="layer-toggle"><input id="showMobs" type="checkbox" checked><span>怪物</span></label>
           <label class="layer-toggle"><input id="showNpcs" type="checkbox" checked><span>NPC</span></label>
           <label class="layer-toggle"><input id="showPortals" type="checkbox" checked><span>传送门</span></label>
+          <label class="layer-toggle"><input id="showWaterAreas" type="checkbox" checked><span>游泳区</span></label>
+          <button id="waterSelectBtn" class="water-select-button" type="button">框选游泳区</button>
+          <output id="waterSelectionValue" class="water-selection-value" hidden></output>
         </div>
       </div>
       <div id="previewStage" class="preview-stage">
         <div id="mapCompareView" class="map-compare-view" hidden>
           <section class="map-preview-pane">
             <div class="map-pane-head"><span><b class="column-badge a">A</b>主文件</span><small id="leftMapMeta">未加载</small></div>
-            <div id="leftMapStage" class="map-stage"><canvas id="mapCanvas"></canvas></div>
+            <div id="leftMapStage" class="map-stage"><canvas id="mapCanvas"></canvas><div id="leftWaterSelection" class="water-selection" hidden></div><output id="leftMapCoordinate" class="map-coordinate" hidden></output></div>
           </section>
           <section class="map-preview-pane secondary">
             <div class="map-pane-head"><span><b class="column-badge b">B</b><span id="rightMapSourceLabel">对比文件</span></span><small id="rightMapMeta">未加载</small></div>
-            <div id="rightMapStage" class="map-stage"><canvas id="rightMapCanvas"></canvas></div>
+            <div id="rightMapStage" class="map-stage"><canvas id="rightMapCanvas"></canvas><div id="rightWaterSelection" class="water-selection" hidden></div><output id="rightMapCoordinate" class="map-coordinate" hidden></output></div>
           </section>
         </div>
         <div id="mobStage" class="mob-stage" hidden>
@@ -172,6 +175,15 @@
           <div class="empty-state compact">
             <strong>检查地图还是生命资源导致崩溃</strong>
             <span>解析地图、场景引用、怪物/NPC 动作和服务端同步状态。</span>
+            <label class="diagnostic-phase-label">崩溃发生阶段
+              <select id="crashPhase">
+                <option value="unknown">时机未知</option>
+                <option value="map_load">进图瞬间（尚未看到怪物）</option>
+                <option value="entity_appear">怪物/NPC 首次出现</option>
+                <option value="attack">怪物攻击时</option>
+                <option value="death">怪物死亡时</option>
+              </select>
+            </label>
             <button id="runDiagnosticBtn" class="primary-button" type="button">运行崩溃诊断</button>
           </div>
         </div>

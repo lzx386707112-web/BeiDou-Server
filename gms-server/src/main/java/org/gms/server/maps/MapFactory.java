@@ -36,6 +36,7 @@ import org.gms.util.NumberTool;
 import org.gms.util.StringUtil;
 
 import java.awt.*;
+import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -48,7 +49,12 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 
 public class MapFactory {
     private static final Data nameData = DataProviderFactory.getDataProvider(WZFiles.STRING).getData("Map.img");
+    private static final Path MAP_SOURCE_PATH = WZFiles.MAP.getFile().toAbsolutePath().normalize();
     private static final DataProvider mapSource = DataProviderFactory.getDataProvider(WZFiles.MAP);
+
+    private static Path getMapXmlPath(String mapName) {
+        return MAP_SOURCE_PATH.resolve(mapName + ".xml").normalize();
+    }
 
     private static void loadLifeFromWz(MapleMap map, Data mapData) {
         Data lifeData = mapData.getChildByPath("life");
@@ -152,14 +158,15 @@ public class MapFactory {
         MapleMap map;
 
         String mapName = getMapName(mapid);
+        String requestedMapName = mapName;
         Data mapData = mapSource.getData(mapName);    // source.getData issue with giving nulls in rare ocasions found thanks to MedicOP
         if (mapData == null) {
-            System.err.printf("MapFactory: missing map data mapId=%d path=%s%n", mapid, mapName);
+            System.err.printf("MapFactory: missing map data mapId=%d path=%s xml=%s%n", mapid, mapName, getMapXmlPath(mapName));
             return null;
         }
         Data infoData = mapData.getChildByPath("info");
         if (infoData == null) {
-            System.err.printf("MapFactory: missing map info mapId=%d path=%s%n", mapid, mapName);
+            System.err.printf("MapFactory: missing map info mapId=%d path=%s xml=%s%n", mapid, mapName, getMapXmlPath(mapName));
             return null;
         }
 
@@ -168,11 +175,11 @@ public class MapFactory {
             mapName = getMapName(Integer.parseInt(link));
             mapData = mapSource.getData(mapName);
             if (mapData == null) {
-                System.err.printf("MapFactory: missing linked map data mapId=%d link=%s path=%s%n", mapid, link, mapName);
+                System.err.printf("MapFactory: missing linked map data mapId=%d link=%s path=%s xml=%s%n", mapid, link, mapName, getMapXmlPath(mapName));
                 return null;
             }
             if (mapData.getChildByPath("info") == null) {
-                System.err.printf("MapFactory: missing linked map info mapId=%d link=%s path=%s%n", mapid, link, mapName);
+                System.err.printf("MapFactory: missing linked map info mapId=%d link=%s path=%s xml=%s%n", mapid, link, mapName, getMapXmlPath(mapName));
                 return null;
             }
         }
@@ -228,7 +235,14 @@ public class MapFactory {
         List<Foothold> allFootholds = new LinkedList<>();
         Point lBound = new Point();
         Point uBound = new Point();
-        for (Data footRoot : mapData.getChildByPath("foothold")) {
+        Data footholdData = mapData.getChildByPath("foothold");
+        if (footholdData == null) {
+            System.err.printf(
+                    "MapFactory: missing map foothold mapId=%d requestedPath=%s resolvedPath=%s link=%s xml=%s%n",
+                    mapid, requestedMapName, mapName, link.isEmpty() ? "<none>" : link, getMapXmlPath(mapName));
+            return null;
+        }
+        for (Data footRoot : footholdData) {
             for (Data footCat : footRoot) {
                 for (Data footHold : footCat) {
                     int x1 = DataTool.getInt(footHold.getChildByPath("x1"));

@@ -18,11 +18,19 @@
   <section id="open-panel" class="open-panel">
     <div class="path-field wide">
       <label for="img-path">IMG</label>
-      <input id="img-path" type="text" spellcheck="false" autocomplete="off">
+      <div class="file-input-row">
+        <input id="img-path" type="text" spellcheck="false" autocomplete="off">
+        <button id="pick-img" class="command-button pick-button" type="button"
+                aria-label="选择 IMG 文件">选择</button>
+      </div>
     </div>
     <div class="path-field wide">
       <label for="xml-path">IMG.XML</label>
-      <input id="xml-path" type="text" spellcheck="false" autocomplete="off">
+      <div class="file-input-row">
+        <input id="xml-path" type="text" spellcheck="false" autocomplete="off">
+        <button id="pick-xml" class="command-button pick-button" type="button"
+                aria-label="选择 IMG.XML 文件">选择</button>
+      </div>
     </div>
     <div class="path-field region-field">
       <label for="region">区域</label>

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<imgdir name="3004824.img">
+  <imgdir name="info">
+    <int name="hideName" value="1"/>
+    <int name="hide" value="1"/>
+  </imgdir>
+  <imgdir name="stand">
+    <canvas name="0" width="52" height="82" format="1">
+      <vector name="origin" x="26" y="82"/>
+      <int name="z" value="0"/>
+      <int name="delay" value="3000"/>
+    </canvas>
+  </imgdir>
+  <imgdir name="down">
+    <canvas name="0" width="53" height="70" format="1">
+      <vector name="origin" x="30" y="70"/>
+      <int name="z" value="0"/>
+      <int name="delay" value="3000"/>
+    </canvas>
+    <int name="special" value="1"/>
+  </imgdir>
+  <imgdir name="down2">
+    <int name="special" value="1"/>
+    <canvas name="0" width="57" height="64" format="1">
+      <vector name="origin" x="31" y="64"/>
+      <int name="z" value="0"/>
+    </canvas>
+  </imgdir>
+</imgdir>

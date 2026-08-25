@@ -17,6 +17,7 @@ import tempfile
 import threading
 import xml.etree.ElementTree as ET
 import xml.parsers.expat
+from collections import Counter
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
@@ -809,6 +810,27 @@ def map_portal_preview(root: WzSubProperty, source_path: Path) -> list[dict[str,
     return points
 
 
+def map_water_areas(root: WzSubProperty) -> list[dict[str, Any]]:
+    areas = []
+    for container_name in ("swimArea", "rapidStream"):
+        container = root.child(container_name)
+        if not isinstance(container, WzSubProperty):
+            continue
+        for area in container.children():
+            if not isinstance(area, WzSubProperty):
+                continue
+            values = {name: child_value(area, name) for name in ("x1", "y1", "x2", "y2")}
+            if not all(value is not None for value in values.values()):
+                continue
+            x1, x2 = sorted((int(values["x1"]), int(values["x2"])))
+            y1, y2 = sorted((int(values["y1"]), int(values["y2"])))
+            areas.append({
+                "path": property_path(area), "kind": container_name,
+                "x1": x1, "y1": y1, "x2": x2, "y2": y2,
+            })
+    return areas
+
+
 def map_preview(path: Path) -> dict[str, Any]:
     image = load_image(path)
     root = image.root
@@ -881,13 +903,15 @@ def map_preview(path: Path) -> dict[str, Any]:
     minimap = canvas_descriptor(path, "miniMap/canvas")
     life = map_life_preview(root, path)
     portals = map_portal_preview(root, path)
+    water_areas = map_water_areas(root)
     return {
         "kind": "map", "bounds": bounds, "elements": elements, "footholds": footholds,
-        "life": life, "portals": portals, "minimap": minimap,
+        "life": life, "portals": portals, "waterAreas": water_areas, "minimap": minimap,
         "summary": {
             "elements": len(elements), "footholds": len(footholds),
             "mobs": sum(point["kind"] == "mob" for point in life),
             "npcs": sum(point["kind"] == "npc" for point in life), "portals": len(portals),
+            "waterAreas": len(water_areas),
         },
     }
 
@@ -1001,6 +1025,129 @@ def audit_map_resources(left_path: Path, right_path: Path) -> list[dict[str, Any
     return sorted(grouped.values(), key=lambda item: (item["status"] == "ready", item["kind"], natural_key(item["name"])))
 
 
+_CRASH_PHASES = {
+    "unknown": "时机未知",
+    "map_load": "进图瞬间（尚未看到怪物）",
+    "entity_appear": "怪物/NPC 首次出现",
+    "attack": "怪物攻击时",
+    "death": "怪物死亡时",
+}
+
+
+def normalize_crash_phase(value: str) -> str:
+    phase = str(value or "unknown").strip()
+    return phase if phase in _CRASH_PHASES else "unknown"
+
+
+@lru_cache(maxsize=16)
+def _regional_scene_usage(bucket_text: str, map_prefix: str) -> dict[str, Any]:
+    bucket = Path(bucket_text)
+    usage: dict[tuple[str, str, str], list[str]] = {}
+    parsed = 0
+    errors = 0
+    files = sorted(bucket.glob(f"{map_prefix}*.img"), key=lambda item: natural_key(item.name))
+    for sibling in files:
+        try:
+            references = map_resource_references(load_image(sibling).root)
+        except Exception:
+            errors += 1
+            continue
+        parsed += 1
+        for reference in references:
+            if reference["kind"] not in {"back", "obj", "tile"}:
+                continue
+            key = (reference["kind"], reference["name"], reference["canvasPath"])
+            maps = usage.setdefault(key, [])
+            if sibling.stem not in maps:
+                maps.append(sibling.stem)
+    return {"mapCount": len(files), "parsedCount": parsed, "errors": errors, "usage": usage}
+
+
+def _canvas_link(node: WzProperty | None) -> tuple[str, str]:
+    if isinstance(node, WzUolProperty):
+        return "UOL", str(node.value)
+    if not isinstance(node, WzCanvasProperty):
+        return "", ""
+    for name, label in (("_outlink", "_outlink"), ("_inlink", "_inlink")):
+        link = node.child(name)
+        if isinstance(link, WzStringProperty):
+            return label, str(link.value).replace("\\", "/")
+    return "", ""
+
+
+def analyze_scene_resource_risks(path: Path, image: WzImage, phase: str = "unknown") -> dict[str, Any]:
+    """Collect read-only scene-reference evidence and rank concrete A/B candidates."""
+    phase = normalize_crash_phase(phase)
+    map_id = infer_id(path)
+    if not re.fullmatch(r"\d{9}", map_id):
+        return {"regionalMapCount": 0, "parsedMapCount": 0, "errors": [], "resources": [], "suspects": []}
+    bucket = _TMS_DATA / "Map" / "Map" / f"Map{map_id[0]}"
+    tms_map = bucket / f"{map_id}.img"
+    region = _regional_scene_usage(str(bucket), map_id[:6])
+    resources: list[dict[str, Any]] = []
+    errors: list[str] = []
+    folders = {"back": "Back", "obj": "Obj", "tile": "Tile"}
+    for reference in map_resource_references(image.root):
+        kind = reference["kind"]
+        if kind not in folders:
+            continue
+        client_file = find_resource(folders[kind], reference["name"], path)
+        source_file = find_resource(folders[kind], reference["name"], tms_map)
+        if client_file is None or source_file is None:
+            continue
+        try:
+            source_image = load_image(source_file)
+            source_node = source_image.root.get(reference["canvasPath"])
+            source_link_type, source_link_path = _canvas_link(source_node)
+            source_width = int(source_node.width) if isinstance(source_node, WzCanvasProperty) else 0
+            source_height = int(source_node.height) if isinstance(source_node, WzCanvasProperty) else 0
+            source_format = (
+                f"{int(source_node.format)}/{int(source_node.format2)}"
+                if isinstance(source_node, WzCanvasProperty) else ""
+            )
+            _, source_target, source_target_file = resolve_canvas_node(
+                source_image, reference["canvasPath"], source_file,
+            )
+            client_image = load_image(client_file)
+            _, client_target, client_target_file = resolve_canvas_node(
+                client_image, reference["canvasPath"], client_file,
+            )
+        except Exception as exc:
+            errors.append(
+                f"{reference['nodes'][0] if reference['nodes'] else reference['canvasPath']}: {exc}"
+            )
+            continue
+        key = (kind, reference["name"], reference["canvasPath"])
+        usage_maps = list(region["usage"].get(key, []))
+        source_pixels = max(1, source_width * source_height)
+        client_pixels = int(client_target.width) * int(client_target.height)
+        placeholder_link = source_width == 1 and source_height == 1 and bool(source_link_type)
+        exclusive = region["parsedCount"] > 1 and len(usage_maps) == 1
+        large_materialization = placeholder_link and client_pixels >= 250_000
+        risk = "high" if exclusive and large_materialization else ""
+        resources.append({
+            "kind": kind, "name": reference["name"], "canvasPath": reference["canvasPath"],
+            "mapPath": reference["nodes"][0] if reference["nodes"] else "",
+            "mapPaths": reference["nodes"], "regionalUsageCount": len(usage_maps),
+            "regionalMaps": usage_maps[:8], "sourcePath": relative_path(source_file),
+            "sourceWidth": source_width, "sourceHeight": source_height, "sourceFormat": source_format,
+            "sourceLinkType": source_link_type, "sourceLinkPath": source_link_path,
+            "sourceTargetPath": relative_path(source_target_file),
+            "sourceTargetWidth": int(source_target.width), "sourceTargetHeight": int(source_target.height),
+            "clientPath": relative_path(client_file), "clientTargetPath": relative_path(client_target_file),
+            "clientWidth": int(client_target.width), "clientHeight": int(client_target.height),
+            "clientFormat": f"{int(client_target.format)}/{int(client_target.format2)}",
+            "pixelExpansionRatio": round(client_pixels / source_pixels, 1),
+            "placeholderLink": placeholder_link, "exclusive": exclusive, "risk": risk,
+        })
+    resources.sort(key=lambda item: (item["risk"] != "high", item["kind"], natural_key(item["mapPath"])))
+    return {
+        "regionalMapCount": region["mapCount"], "parsedMapCount": region["parsedCount"],
+        "regionalPrefix": map_id[:6], "errors": errors, "resources": resources,
+        "suspects": [item for item in resources if item["risk"]], "phase": phase,
+    }
+
+
 def compatibility_analysis(
     left: dict[str, dict[str, Any]], right: dict[str, dict[str, Any]], left_path: Path, right_path: Path,
 ) -> dict[str, Any]:
@@ -1069,11 +1216,12 @@ def compatibility_analysis(
 def _diagnostic_finding(
     domain: str, severity: str, title: str, detail: str, action: str, *,
     confidence: str = "high", map_path: str = "", entity_kind: str = "", entity_id: str = "",
+    evidence: Iterable[str] = (),
 ) -> dict[str, Any]:
     return {
         "domain": domain, "severity": severity, "title": title, "detail": detail,
         "action": action, "confidence": confidence, "mapPath": map_path,
-        "entityKind": entity_kind, "entityId": entity_id,
+        "entityKind": entity_kind, "entityId": entity_id, "evidence": list(evidence),
     }
 
 
@@ -1085,6 +1233,17 @@ def _normalized_nodes(path: Path) -> list[dict[str, Any]]:
         parent_name = node_path.rsplit("/", 2)[-2] if "/" in node_path else ""
         output.append({**meta, "path": node_path, "name": name, "parent_name": parent_name})
     return output
+
+
+def _numeric_child_gaps(root: WzSubProperty, node_path: str) -> list[str]:
+    node = root.get(node_path)
+    if not isinstance(node, WzSubProperty):
+        return []
+    names = [child.name for child in node.children()]
+    if not names or any(not name.isdigit() for name in names):
+        return []
+    numbers = {int(name) for name in names}
+    return [str(number) for number in range(max(numbers) + 1) if number not in numbers]
 
 
 def _audit_canvas_payloads(path: Path) -> dict[str, Any]:
@@ -1116,6 +1275,175 @@ def _audit_canvas_payloads(path: Path) -> dict[str, Any]:
     return {"canvases": len(canvases), "visible": visible, "errors": errors}
 
 
+def _case_control_path(path: str) -> str:
+    parts = path.split("/")
+    if len(parts) > 1 and parts[0] in {"back", "life", "portal", "reactor", "ladderRope"} and parts[1].isdigit():
+        parts[1] = "*"
+    if len(parts) > 2 and parts[0].isdigit() and parts[1] in {"obj", "tile"} and parts[2].isdigit():
+        parts[2] = "*"
+    if len(parts) > 3 and parts[0] == "foothold":
+        parts[1:4] = ["*", "*", "*"]
+    return "/".join(parts)
+
+
+def _case_control_features(path: Path) -> dict[tuple[Any, ...], dict[str, Any]]:
+    image = load_image(path)
+    root = image.root
+    features: dict[tuple[Any, ...], dict[str, Any]] = {}
+
+    def add(key: tuple[Any, ...], category: str, title: str, map_path: str, detail: str) -> None:
+        item = features.setdefault(key, {
+            "category": category, "title": title, "mapPath": map_path,
+            "detail": detail, "paths": [],
+        })
+        if map_path and map_path not in item["paths"] and len(item["paths"]) < 8:
+            item["paths"].append(map_path)
+
+    containers = ["back", "life", "portal", "reactor", "ladderRope"]
+    containers.extend(f"{layer}/{kind}" for layer in range(8) for kind in ("obj", "tile"))
+    for node_path in containers:
+        node = root.get(node_path)
+        if not isinstance(node, WzSubProperty):
+            continue
+        names = [child.name for child in node.children()]
+        numeric = [int(name) for name in names if name.isdigit()]
+        dense = len(numeric) == len(names) and numeric == list(range(len(numeric)))
+        add(
+            ("container", node_path, len(names), dense), "structure",
+            f"{node_path} 子节点数量与连续性", node_path,
+            f"{len(names)} 个子节点，数字编号{'连续' if dense else '不连续'}。",
+        )
+        schemas = Counter(
+            tuple((child.name, child.type_name.lower()) for child in entry.children())
+            for entry in node.children() if isinstance(entry, WzSubProperty)
+        )
+        if schemas:
+            signature = tuple(sorted(schemas.items(), key=lambda item: (item[1], item[0])))
+            summary = "；".join(
+                f"{count} 条 × [{', '.join(name for name, _ in schema)}]"
+                for schema, count in signature
+            )
+            key = ("schema", node_path, signature)
+            add(key, "schema", f"{node_path} 字段顺序分布", node_path, summary)
+            rare_schemas = {schema for schema, count in signature if count == min(schemas.values())}
+            for entry in node.children():
+                if not isinstance(entry, WzSubProperty):
+                    continue
+                schema = tuple((child.name, child.type_name.lower()) for child in entry.children())
+                if schema in rare_schemas:
+                    add(key, "schema", f"{node_path} 字段顺序分布", property_path(entry), summary)
+
+    sensitive_fields = {
+        "forcedZPage", "forcedZMass", "piece", "spineAni", "dynamic", "move",
+        "ani", "front", "type", "pt", "zM", "r",
+    }
+    for node in iter_subtree(root):
+        node_path = property_path(node)
+        if isinstance(node, (WzSubProperty, WzCanvasProperty, WzVectorProperty)):
+            continue
+        leaf_name = node_path.rsplit("/", 1)[-1]
+        if not (node_path.startswith("info/") or node_path.startswith("miniMap/") or leaf_name in sensitive_fields):
+            continue
+        try:
+            value = node.value
+        except Exception:
+            continue
+        normalized = _case_control_path(node_path)
+        key = ("field", normalized, node.type_name.lower(), value)
+        add(key, "field", f"{normalized} = {value}", node_path, f"类型 {node.type_name.lower()}。")
+
+    for node in iter_subtree(root):
+        if not isinstance(node, WzCanvasProperty):
+            continue
+        node_path = property_path(node)
+        signature = (int(node.width), int(node.height), int(node.format), int(node.format2))
+        add(
+            ("canvas", node_path, *signature), "canvas",
+            f"{node_path} Canvas {signature[0]}x{signature[1]}", node_path,
+            f"格式 {signature[2]}/{signature[3]}，像素负载{'存在' if node.has_pixels() else '缺失'}。",
+        )
+
+    portal = root.child("portal")
+    if isinstance(portal, WzSubProperty):
+        topology = tuple(sorted(Counter(int(child_value(entry, "pt", -1)) for entry in portal.children()).items()))
+        add(("portal", topology), "portal", "Portal 类型分布", "portal", str(dict(topology)))
+
+    for reference in map_resource_references(root):
+        if reference["kind"] not in {"back", "obj", "tile"}:
+            continue
+        key = ("resource", reference["kind"], reference["name"], reference["canvasPath"])
+        add(
+            key, "resource",
+            f"{reference['kind']} {reference['name']}/{reference['canvasPath']}",
+            reference["nodes"][0] if reference["nodes"] else "", "场景资源分支。",
+        )
+    return features
+
+
+def analyze_regional_crash_cases(path: Path, peer_map_ids: Iterable[str]) -> dict[str, Any]:
+    map_id = infer_id(path)
+    peers = []
+    for raw in peer_map_ids:
+        peer = str(raw).strip()
+        if peer and peer != map_id and peer not in peers:
+            peers.append(peer)
+    if not peers:
+        return {"enabled": False, "caseMaps": [map_id], "controlMaps": [], "exclusive": [], "counterexamples": [], "errors": []}
+    if any(not re.fullmatch(r"\d{9}", peer) or peer[:6] != map_id[:6] for peer in peers):
+        raise ValueError("同样崩溃地图必须是当前地区的 9 位地图 ID")
+
+    case_maps = [map_id, *peers]
+    case_paths = {map_id: path}
+    for peer in peers:
+        peer_path = path.parent / f"{peer}.img"
+        if not peer_path.is_file():
+            raise ValueError(f"同样崩溃地图不存在: {relative_path(peer_path)}")
+        case_paths[peer] = peer_path
+    sibling_paths = {
+        sibling.stem: sibling for sibling in path.parent.glob(f"{map_id[:6]}*.img")
+        if sibling.stem not in case_maps
+    }
+
+    profiles: dict[str, dict[tuple[Any, ...], dict[str, Any]]] = {}
+    errors = []
+    for sibling_id, sibling_path in {**case_paths, **sibling_paths}.items():
+        try:
+            profiles[sibling_id] = _case_control_features(sibling_path)
+        except Exception as exc:
+            errors.append(f"{sibling_id}: {exc}")
+    if any(case_id not in profiles for case_id in case_maps):
+        raise ValueError("崩溃组地图无法完整解析，不能进行地区对照")
+
+    common = set.intersection(*(set(profiles[case_id]) for case_id in case_maps))
+    control_maps = sorted((set(profiles) - set(case_maps)), key=natural_key)
+    rows = []
+    for key in common:
+        control_users = [control for control in control_maps if key in profiles[control]]
+        source = profiles[map_id][key]
+        rows.append({
+            **{name: value for name, value in source.items() if name != "paths"},
+            "casePaths": {case_id: profiles[case_id][key]["paths"] for case_id in case_maps},
+            "controlCount": len(control_users), "controlMaps": control_users,
+        })
+    priority = {"schema": 0, "canvas": 1, "structure": 2, "portal": 3, "field": 4, "resource": 5}
+    rows.sort(key=lambda item: (item["controlCount"], priority.get(item["category"], 9), natural_key(item["title"])))
+    exclusive = [item for item in rows if item["controlCount"] == 0][:20]
+    counterexamples = [
+        item for item in rows
+        if item["controlCount"] and item["category"] == "field"
+        and any(name in item["title"] for name in ("forcedZPage", "forcedZMass", "piece"))
+    ][:12]
+    return {
+        "enabled": True, "caseMaps": case_maps, "controlMaps": control_maps,
+        "parsedControlCount": len(control_maps), "regionalMapCount": len(case_maps) + len(control_maps),
+        "exclusive": exclusive, "counterexamples": counterexamples, "errors": errors,
+        "conclusion": (
+            f"找到 {len(exclusive)} 个崩溃组独占特征；它们是定位候选，不是崩溃证明。"
+            if exclusive else "未找到崩溃组共有且对照图缺失的静态特征。"
+        ),
+    }
+
+
 def _scalar_sync_differences(client_path: Path, server_path: Path) -> list[str]:
     client, _ = flatten_source(client_path)
     server, _ = flatten_source(server_path)
@@ -1130,11 +1458,15 @@ def _scalar_sync_differences(client_path: Path, server_path: Path) -> list[str]:
     return differences
 
 
-def diagnose_map_crash(path: Path) -> dict[str, Any]:
+def diagnose_map_crash(
+    path: Path, phase: str = "unknown", peer_map_ids: Iterable[str] = (),
+) -> dict[str, Any]:
     require_repo_write(path)
     if not path.is_file() or "/clien/Data/Map/Map/" not in path.as_posix():
         raise ValueError("崩溃诊断只支持项目内客户端地图 IMG")
+    phase = normalize_crash_phase(phase)
     map_id = infer_id(path)
+    case_control = analyze_regional_crash_cases(path, peer_map_ids)
     findings: list[dict[str, Any]] = []
     verified: list[str] = []
     checked = 0
@@ -1193,6 +1525,16 @@ def diagnose_map_crash(path: Path) -> dict[str, Any]:
             confidence="high" if severity == "crash" else ("low" if status == "modern" else "medium"),
             map_path=paths[0] if paths else "",
         ))
+    back_gaps = _numeric_child_gaps(image.root, "back")
+    if back_gaps:
+        findings.append(_diagnostic_finding(
+            "map", "warn", "背景编号存在空洞，当前 A/B 结果无效",
+            f"back 子节点缺少 {', '.join(back_gaps)}，但后面仍有更大的数字节点。"
+            "旧端是否容忍该结构尚无运行证据；至少不能用这个实验版排除被删除的背景。",
+            "先把后继背景按原顺序改成连续编号，再复测同一个候选；不要同时改其他地图节点。",
+            confidence="high", map_path="back",
+            evidence=(f"当前 back 顺序：{', '.join(child.name for child in image.root.child('back').children())}",),
+        ))
     if not any(item["domain"] == "map" and item["severity"] == "crash" for item in findings):
         verified.append("地图节点未命中已知旧端必崩规则")
 
@@ -1218,6 +1560,45 @@ def diagnose_map_crash(path: Path) -> dict[str, Any]:
         ))
     if not broken_resources:
         verified.append(f"地图引用的 {len(resources)} 组 Back/Obj/Tile/生命资源路径均可解析")
+
+    checked += 1
+    scene_resources = analyze_scene_resource_risks(path, image, phase)
+    for item in scene_resources["suspects"]:
+        node_names = "、".join(item["mapPaths"])
+        confidence = "high" if phase == "map_load" else ("medium" if phase in {"unknown", "entity_appear"} else "low")
+        detail = (
+            f"地图节点 {node_names} 引用 {item['name']}/{item['canvasPath']}。"
+            f"TMS 主资源是 {item['sourceWidth']}x{item['sourceHeight']}、格式 {item['sourceFormat']} 的占位 Canvas，"
+            f"通过 {item['sourceLinkType']}={item['sourceLinkPath']} 指向 "
+            f"{item['sourceTargetWidth']}x{item['sourceTargetHeight']}；旧端客户端资源已实体化为 "
+            f"{item['clientWidth']}x{item['clientHeight']}（{item['pixelExpansionRatio']:,.1f} 倍像素）。"
+            f"同区域 {scene_resources['parsedMapCount']} 张已解析地图中只有 "
+            f"{item['regionalUsageCount']} 张使用该分支。"
+        )
+        if phase == "map_load":
+            detail += " 崩溃发生在进图瞬间，这条场景加载链与时机直接吻合。"
+        findings.append(_diagnostic_finding(
+            "resource", "warn", f"区域独占的大型场景分支：{item['name']}/{item['canvasPath']}",
+            detail,
+            f"在测试副本中只同步移除 {node_names}，重进 {map_id}；若不再崩溃，即可把范围收敛到这条资源链。",
+            confidence=confidence, map_path=item["mapPath"], evidence=(
+                f"地图节点：{node_names}",
+                f"TMS：{item['sourcePath']} → {item['sourceLinkPath']}",
+                f"旧端：{item['clientPath']} / {item['clientWidth']}x{item['clientHeight']} / 格式 {item['clientFormat']}",
+                f"区域用量：{item['regionalUsageCount']}/{scene_resources['parsedMapCount']} 张地图",
+            ),
+        ))
+    if scene_resources["errors"]:
+        findings.append(_diagnostic_finding(
+            "resource", "warn", "部分场景资源证据链无法展开",
+            "；".join(scene_resources["errors"][:5]),
+            "先修复列出的资源链接或缺失节点，再重新运行诊断。", confidence="medium",
+        ))
+    elif scene_resources["resources"]:
+        verified.append(
+            f"已追踪 {len(scene_resources['resources'])} 条 Back/Obj/Tile 源链接，并对比 "
+            f"{scene_resources['parsedMapCount']} 张同区域地图的使用频率"
+        )
 
     footholds = {
         node.name for node in iter_subtree(image.root.child("foothold"))
@@ -1322,12 +1703,28 @@ def diagnose_map_crash(path: Path) -> dict[str, Any]:
                 if is_mob_type:
                     detail += " 当前仓库还有 160 个服务端 Mob XML 使用字符串 1N，单凭该字段不能证明必崩。"
                     action = "优先做无怪物地图 A/B；若确认由该怪物触发，再与同类可工作的旧端怪物比较 mobType 和动作树。"
+                    if phase == "map_load":
+                        confidence = "low"
+                        detail += " 当前选择的是进图瞬间且尚未看到怪物，与攻击/死亡动作字段弱相关，因此不计入主要评分。"
                 findings.append(_diagnostic_finding(
                     "entity", severity, f"怪物 {entity_id} / {item['path'] or '/'}", detail, action,
                     confidence=confidence, map_path=spawns[0], entity_kind="mob", entity_id=entity_id,
                 ))
 
     scores = {"map": 0, "entity": 0, "server": 0, "resource": 0}
+    if case_control["enabled"]:
+        for counterexample in case_control["counterexamples"]:
+            field_name = counterexample["title"].split(" = ", 1)[0].rsplit("/", 1)[-1]
+            for finding in findings:
+                if not finding["mapPath"].endswith(f"/{field_name}"):
+                    continue
+                controls = counterexample["controlMaps"]
+                finding["detail"] += (
+                    f" 病例对照中另有 {len(controls)} 张可工作地图包含相同字段和值，"
+                    "因此它不是这两张崩溃图的独占原因。"
+                )
+                finding["action"] = "已有可工作反例，不要据此删除节点；等待运行时日志定位实际加载文件或异常地址。"
+                finding["evidence"].append(f"可工作反例：{', '.join(controls)}")
     for finding in findings:
         if finding["severity"] == "crash":
             weight = 5
@@ -1347,19 +1744,42 @@ def diagnose_map_crash(path: Path) -> dict[str, Any]:
     else:
         conclusion, confidence = "离线检查未发现明确崩溃点", "低"
 
-    findings.sort(key=lambda item: ({"crash": 0, "warn": 1}[item["severity"]], item["domain"], item["title"]))
+    findings.sort(key=lambda item: (
+        {"crash": 0, "warn": 1}[item["severity"]],
+        {"high": 0, "medium": 1, "low": 2}.get(item["confidence"], 3),
+        item["domain"], item["title"],
+    ))
     crash_count = sum(item["severity"] == "crash" for item in findings)
     warn_count = sum(item["severity"] == "warn" for item in findings)
     entity_ids = [item["id"] for item in entity_summaries if item["kind"] == "mob"]
+    isolation = []
+    if scene_resources["suspects"]:
+        for item in scene_resources["suspects"][:3]:
+            nodes = "、".join(item["mapPaths"])
+            isolation.append(
+                f"场景 A/B：在测试副本中只同步移除 {nodes}（{item['name']}/{item['canvasPath']}），重进 {map_id}。"
+            )
+    if phase != "map_load" or not isolation:
+        isolation.append(
+            f"生命 A/B：在测试副本中同步移除 life，重进 {map_id}。若不再崩溃，嫌疑收敛到 "
+            f"{'、'.join(entity_ids) if entity_ids else '生命资源'}。"
+        )
+    isolation.extend([
+        "若上述单节点候选均不能复现差异，再保留 portal/foothold/miniMap，按 back、0-7 层 obj/tile 分组二分；不要一次删除多个类别。",
+        f"按当前记录的崩溃阶段“{_CRASH_PHASES[phase]}”复测，并保持每轮只改变一个地图节点或一种生命资源。",
+    ])
+    if case_control["enabled"]:
+        isolation = [
+            f"分别进入 {'、'.join(case_control['caseMaps'])}，让直接崩溃生成 diagnostics/session-*.log 和 .dmp；若卡死，按住 Ctrl+F12 约 2 秒后等待 5 秒。",
+            "运行 tool/client-debug/wz_file_logger/analyze_client_diagnostics.py，把最后成功读取的 WZ/IMG 路径、异常线程和地址与两次会话交叉核对。",
+            "只有运行日志指向具体节点或资源后，才做单记录 A/B；当前两个静态独占特征没有旧端崩溃证据。",
+        ]
     return {
-        "mapId": map_id, "conclusion": conclusion, "confidence": confidence, "scores": scores,
+        "mapId": map_id, "phase": phase, "phaseLabel": _CRASH_PHASES[phase],
+        "conclusion": conclusion, "confidence": confidence, "scores": scores,
         "counts": {"checked": checked, "crash": crash_count, "warn": warn_count, "verified": len(verified)},
         "findings": findings[:80], "verified": verified[:24], "entities": entity_summaries,
-        "isolation": [
-            f"先在测试副本中同步移除 life，重进 {map_id}。若不再崩溃，嫌疑收敛到 {'、'.join(entity_ids) if entity_ids else '生命资源'}。",
-            "若无 life 仍崩，保留 portal/foothold/miniMap，分批关闭 back 和 0-7 层 obj/tile，定位具体场景资源。",
-            "记录崩溃发生在进图前、怪物首次出现、怪物攻击还是死亡阶段；不同时间点对应地图加载、stand/move、attack 或 die 动作。",
-        ],
+        "sceneResources": scene_resources, "caseControl": case_control, "isolation": isolation,
         "note": "离线诊断能证明文件结构、引用和像素是否有效，但不能替代旧客户端实际加载时序。",
     }
 
@@ -1686,12 +2106,79 @@ def patch_img_delete(path: Path, node_path: str, *, dry_run: bool, backup: bool)
     return {"path": node_path, "removedBytes": removed_bytes}
 
 
+def replace_img_scalar_record(
+    path: Path, node_path: str, value: Any, *, dry_run: bool, backup: bool,
+) -> dict[str, Any]:
+    if not node_path:
+        raise ValueError("不能替换 IMG 根节点")
+    parent_text, _, child_name = node_path.rpartition("/")
+    parent_parts = tuple(part for part in parent_text.split("/") if part)
+    original = path.read_bytes()
+    image = _verified_img_from_bytes(path, original)
+    source = image.root.get(node_path)
+    if source is None:
+        raise ValueError(f"节点不存在: {node_path}")
+    node_type = source.type_name.lower()
+    if node_type not in {"short", "int", "long", "float", "double", "string", "uol", "vector"}:
+        raise ValueError(f"{source.type_name} 不能安全替换属性记录")
+
+    size_offsets, _, _, names, spans, _ = locate_img_records(image, original, parent_parts)
+    if len(set(names)) != len(names):
+        raise ValueError("父节点存在重名子节点，拒绝替换属性记录")
+    if child_name not in names:
+        raise ValueError(f"节点不存在: {node_path}")
+    index = names.index(child_name)
+    start, end = spans[index]
+    raw_before = {
+        item: original[record_start:record_end]
+        for item, (record_start, record_end) in zip(names, spans) if item != child_name
+    }
+    replacement_node = build_img_node(child_name, node_type, value)
+    replacement = encode_img_record(replacement_node, image)
+    delta = len(replacement) - (end - start)
+    updated = bytearray(original[:start] + replacement + original[end:])
+    for size_offset in size_offsets:
+        old_size = struct.unpack_from("<I", original, size_offset)[0]
+        if old_size + delta < 0:
+            raise ValueError("父节点块长度无效")
+        struct.pack_into("<I", updated, size_offset, old_size + delta)
+    output = bytes(updated)
+
+    verified = _verified_img_from_bytes(path, output)
+    verified_node = verified.root.get(node_path)
+    if verified_node is None:
+        raise ValueError("替换后验证失败：目标节点丢失")
+    _, _, _, new_names, new_spans, _ = locate_img_records(verified, output, parent_parts)
+    raw_after = {
+        item: output[record_start:record_end]
+        for item, (record_start, record_end) in zip(new_names, new_spans)
+    }
+    if new_names != names:
+        raise ValueError("替换后兄弟节点顺序发生变化")
+    if any(raw_after.get(item) != raw for item, raw in raw_before.items()):
+        raise ValueError("检测到未修改的兄弟记录发生变化")
+    if not dry_run and output != original:
+        atomic_write(path, output, backup=backup)
+        _load_image_cached.cache_clear()
+    return {
+        "mode": "record-replacement", "path": node_path,
+        "oldRecordBytes": end - start, "newRecordBytes": len(replacement), "sizeDelta": delta,
+    }
+
+
 def patch_img(path: Path, node_path: str, value: Any, *, dry_run: bool, backup: bool) -> dict[str, Any]:
     image = load_image(path)
     node = image.root.get(node_path)
     if node is None:
         raise ValueError(f"节点不存在: {node_path}")
-    patches = encode_img_scalar(image, node, value)
+    try:
+        patches = encode_img_scalar(image, node, value)
+    except ValueError as exc:
+        if "长度" not in str(exc):
+            raise
+        return replace_img_scalar_record(
+            path, node_path, value, dry_run=dry_run, backup=backup,
+        )
     original = path.read_bytes()
     output = bytearray(original)
     for offset, encoded, _ in patches:
@@ -2222,7 +2709,13 @@ def api_preview():
 def api_diagnose_map():
     body = request.get_json(silent=True) or {}
     source = resolve_repo_path(str(body.get("sourcePath", "")))
-    return jsonify({"ok": True, **diagnose_map_crash(source)})
+    case_map_ids = body.get("caseMapIds") or []
+    if not isinstance(case_map_ids, list):
+        raise ValueError("同样崩溃地图必须是地图 ID 列表")
+    return jsonify({
+        "ok": True,
+        **diagnose_map_crash(source, str(body.get("phase", "unknown")), case_map_ids),
+    })
 
 
 @app.get("/api/canvas")

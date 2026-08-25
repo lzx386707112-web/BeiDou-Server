@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import importlib.util
 import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -159,6 +160,90 @@ class ImgPatchTests(unittest.TestCase):
             self.assertEqual(image.root.get("__swimArea_test__/swim01/y2").value, 474)
             workbench.patch_img_delete(path, "__swimArea_test__", dry_run=False, backup=False)
             self.assertEqual(path.read_bytes(), original)
+
+    def test_scalar_edit_replaces_record_when_compressed_length_changes(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "length-change.img"
+            path.write_bytes(workbench.empty_gms_img_bytes())
+            steps = (
+                ("", "swimArea", "imgdir", None),
+                ("swimArea", "swim01", "imgdir", None),
+                ("swimArea/swim01", "x1", "int", -819),
+                ("swimArea/swim01", "y1", "int", 206),
+                ("swimArea/swim01", "x2", "int", 5000),
+                ("swimArea/swim01", "y2", "int", 474),
+            )
+            for parent, name, node_type, value in steps:
+                workbench.patch_img_add(
+                    path, parent, name, node_type, value, dry_run=False, backup=False,
+                )
+            before = path.read_bytes()
+            before_image = workbench._verified_img_from_bytes(path, before)
+            _, _, _, names, spans, _ = workbench.locate_img_records(
+                before_image, before, ("swimArea", "swim01"),
+            )
+            sibling_records = {
+                name: before[start:end]
+                for name, (start, end) in zip(names, spans) if name != "x1"
+            }
+
+            result = workbench.patch_img(
+                path, "swimArea/swim01/x1", -1, dry_run=False, backup=False,
+            )
+
+            after = path.read_bytes()
+            after_image = workbench._verified_img_from_bytes(path, after)
+            self.assertEqual(after_image.root.get("swimArea/swim01/x1").value, -1)
+            _, _, _, new_names, new_spans, _ = workbench.locate_img_records(
+                after_image, after, ("swimArea", "swim01"),
+            )
+            self.assertEqual(new_names, names)
+            self.assertEqual(
+                {
+                    name: after[start:end]
+                    for name, (start, end) in zip(new_names, new_spans) if name != "x1"
+                },
+                sibling_records,
+            )
+            self.assertEqual(result["mode"], "record-replacement")
+            self.assertEqual(result["sizeDelta"], -4)
+
+    def test_length_changing_scalar_edit_syncs_client_and_server(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            client = Path(directory) / "length-change.img"
+            server = Path(directory) / "length-change.img.xml"
+            client.write_bytes(workbench.empty_gms_img_bytes())
+            for parent, name, node_type, value in (
+                ("", "swimArea", "imgdir", None),
+                ("swimArea", "swim01", "imgdir", None),
+                ("swimArea/swim01", "x1", "int", -819),
+            ):
+                workbench.patch_img_add(
+                    client, parent, name, node_type, value, dry_run=False, backup=False,
+                )
+            server.write_bytes(b'''<?xml version="1.0" encoding="UTF-8"?>
+<imgdir name="length-change.img">
+  <imgdir name="swimArea">
+    <imgdir name="swim01">
+      <int name="x1" value="-819"/>
+    </imgdir>
+  </imgdir>
+</imgdir>
+''')
+            original_resolver = workbench.server_xml_for_client
+            workbench.server_xml_for_client = lambda _path: server
+            try:
+                result = workbench.patch_with_server_sync(
+                    client, "swimArea/swim01/x1", -1, dry_run=False, backup=False,
+                )
+            finally:
+                workbench.server_xml_for_client = original_resolver
+
+            image = workbench._verified_img_from_bytes(client, client.read_bytes())
+            server_nodes, _ = workbench.flatten_xml(server)
+            self.assertEqual(image.root.get("swimArea/swim01/x1").value, -1)
+            self.assertEqual(server_nodes["swimArea/swim01/x1"]["value"], -1)
+            self.assertEqual(result["client"]["mode"], "record-replacement")
 
     def test_add_delete_server_sync_preflights_and_restores_both_files(self) -> None:
         client_source = workbench._ROOT / "clien/Data/Map/Map/Map4/450002011.img"
@@ -388,8 +473,93 @@ class MapPreviewTests(unittest.TestCase):
         self.assertIn("旧端已验证", annotated["migration"])
         self.assertEqual(annotated["compatibility"]["status"], "ok")
 
+    def test_map_preview_exposes_normalized_water_area_rectangles(self) -> None:
+        path = workbench._ROOT / "clien" / "Data" / "Map" / "Map" / "Map1" / "120000000.img"
+        if not path.is_file():
+            self.skipTest("Nautilus map sample is unavailable")
+        preview = workbench.map_preview(path)
+        area = next(item for item in preview["waterAreas"] if item["path"] == "swimArea/nt")
+        self.assertEqual(area, {
+            "path": "swimArea/nt", "kind": "swimArea",
+            "x1": -606, "y1": 207, "x2": 5318, "y2": 302,
+        })
+        self.assertEqual(preview["summary"]["waterAreas"], 1)
+
 
 class CrashDiagnosticTests(unittest.TestCase):
+    def test_arcana_two_case_control_reports_exclusive_nodes_and_working_counterexamples(self) -> None:
+        path = workbench._ROOT / "clien/Data/Map/Map/Map4/450005220.img"
+        peer = workbench._ROOT / "clien/Data/Map/Map/Map4/450005242.img"
+        if not path.is_file() or not peer.is_file():
+            self.skipTest("Arcana two-case regression data is unavailable")
+        report = workbench.diagnose_map_crash(path, "map_load", ["450005242"])
+        comparison = report["caseControl"]
+        self.assertTrue(comparison["enabled"])
+        self.assertEqual(comparison["caseMaps"], ["450005220", "450005242"])
+        self.assertEqual(comparison["parsedControlCount"], 29)
+        self.assertTrue(any(item["mapPath"] == "miniMap/canvas" for item in comparison["exclusive"]))
+        life_schema = next(
+            item for item in comparison["exclusive"]
+            if item["category"] == "schema" and item["mapPath"] == "life"
+        )
+        self.assertIn("life/31", life_schema["casePaths"]["450005220"])
+        self.assertIn("life/31", life_schema["casePaths"]["450005242"])
+        forced = next(item for item in comparison["counterexamples"] if "forcedZPage" in item["title"])
+        self.assertIn("450005240", forced["controlMaps"])
+        forced_finding = next(item for item in report["findings"] if item["mapPath"].endswith("/forcedZPage"))
+        self.assertIn("不要据此删除", forced_finding["action"])
+        self.assertIn("450005240", forced_finding["evidence"][0])
+        self.assertIn("session-*.log", report["isolation"][0])
+
+    def test_arcana_baseline_prioritizes_exclusive_materialized_background_on_map_load(self) -> None:
+        repository_path = workbench._ROOT / "clien/Data/Map/Map/Map4/450005220.img"
+        tms_map = workbench._TMS_DATA / "Map/Map/Map4/450005220.img"
+        if not repository_path.is_file() or not tms_map.is_file():
+            self.skipTest("Arcana crash regression data is unavailable")
+        try:
+            baseline = subprocess.check_output([
+                "git", "cat-file", "blob", "HEAD:clien/Data/Map/Map/Map4/450005220.img",
+            ], cwd=workbench._ROOT)
+        except subprocess.CalledProcessError:
+            self.skipTest("Arcana Git baseline is unavailable")
+        parent = workbench._ROOT / "clien/Data/Map/Map/Map4"
+        with tempfile.TemporaryDirectory(prefix=".crash-diagnostic-test-", dir=parent) as directory:
+            path = Path(directory) / "450005220.img"
+            path.write_bytes(baseline)
+            report = workbench.diagnose_map_crash(path, "map_load")
+        suspect = next(
+            item for item in report["sceneResources"]["suspects"]
+            if item["mapPath"] == "back/18"
+        )
+        self.assertEqual(suspect["name"], "arcana2")
+        self.assertEqual(suspect["canvasPath"], "back/74")
+        self.assertEqual((suspect["sourceWidth"], suspect["sourceHeight"]), (1, 1))
+        self.assertEqual(suspect["sourceLinkType"], "_outlink")
+        self.assertEqual(suspect["sourceLinkPath"], "Map/Back/_Canvas/arcana2.img/back/74")
+        self.assertEqual((suspect["clientWidth"], suspect["clientHeight"]), (970, 824))
+        self.assertEqual(suspect["regionalUsageCount"], 1)
+        self.assertTrue(suspect["exclusive"])
+        self.assertEqual(report["phase"], "map_load")
+        self.assertEqual(report["conclusion"], "更偏向地图结构或场景资源问题")
+        self.assertGreater(report["scores"]["resource"], report["scores"]["entity"])
+        finding = next(item for item in report["findings"] if item["mapPath"] == "back/18")
+        self.assertIn("1x1", finding["detail"])
+        self.assertIn("970x824", finding["detail"])
+        self.assertIn("只同步移除 back/18", finding["action"])
+        mob_type = next(item for item in report["findings"] if "info/mobType" in item["title"])
+        self.assertEqual(mob_type["confidence"], "low")
+
+        from wzpy.incremental_img import mutate_img
+
+        gapped = mutate_img(baseline, "remove", ("back", "18"), region="GMS").data
+        with tempfile.TemporaryDirectory(prefix=".crash-diagnostic-gap-test-", dir=parent) as directory:
+            path = Path(directory) / "450005220.img"
+            path.write_bytes(gapped)
+            gap_report = workbench.diagnose_map_crash(path, "map_load")
+        gap_finding = next(item for item in gap_report["findings"] if item["mapPath"] == "back")
+        self.assertIn("缺少 18", gap_finding["detail"])
+        self.assertIn("A/B 结果无效", gap_finding["title"])
+
     def test_yumyum_crash_diagnostic_separates_map_and_mob_evidence(self) -> None:
         path = workbench._ROOT / "clien/Data/Map/Map/Map4/450015030.img"
         if not path.is_file():
@@ -415,11 +585,12 @@ class CrashDiagnosticTests(unittest.TestCase):
             self.skipTest("YumYum crash sample is unavailable")
         before = path.read_bytes()
         response = workbench.app.test_client().post(
-            "/api/diagnose-map", json={"sourcePath": str(path)},
+            "/api/diagnose-map", json={"sourcePath": str(path), "phase": "entity_appear"},
         )
         self.assertEqual(response.status_code, 200)
         payload = response.get_json()
         self.assertTrue(payload["ok"])
+        self.assertEqual(payload["phase"], "entity_appear")
         self.assertGreaterEqual(len(payload["isolation"]), 3)
         self.assertEqual(path.read_bytes(), before)
 

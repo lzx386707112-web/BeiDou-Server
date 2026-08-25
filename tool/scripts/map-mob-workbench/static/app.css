@@ -179,7 +179,16 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent); box-sha
 .map-stage { position: relative; min-height: 0; overflow: auto; cursor: grab; touch-action: none; user-select: none; background-color: var(--canvas); background-image: linear-gradient(#1b201c 1px, transparent 1px), linear-gradient(90deg, #1b201c 1px, transparent 1px); background-size: 36px 36px; scrollbar-color: #4a514b transparent; }
 .map-stage.dragging { cursor: grabbing; }
 .map-stage.clickable:not(.dragging) { cursor: pointer; }
+.map-stage.water-selecting { cursor: crosshair; }
 .map-stage canvas { display: block; transform-origin: top left; }
+.map-coordinate { position: absolute; z-index: 4; padding: 5px 7px; border: 1px solid #648372; border-radius: 4px; color: #dcf2e5; background: rgba(21, 31, 25, .94); box-shadow: 0 4px 12px rgba(0, 0, 0, .28); font: 600 10px/15px ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .1px; pointer-events: none; white-space: pre; }
+.map-coordinate[hidden] { display: none; }
+.water-select-button { height: 28px; padding: 0 9px; border: 1px solid #476a76; border-radius: 4px; color: #b9dce5; background: #1d3036; cursor: pointer; font-size: 10px; }
+.water-select-button.active { border-color: #62b9d1; color: #e0f8ff; background: #28505b; }
+.water-selection-value { max-width: 250px; overflow: hidden; color: #bfeaf4; font: 10px/28px ui-monospace, SFMono-Regular, Menlo, monospace; text-overflow: ellipsis; white-space: nowrap; }
+.water-selection { position: absolute; z-index: 3; border: 2px solid #65d8ef; background: rgba(65, 190, 218, .18); box-shadow: inset 0 0 0 1px rgba(229, 251, 255, .35); pointer-events: none; }
+.water-selection::after { content: attr(data-coordinates); position: absolute; right: -2px; bottom: 100%; padding: 4px 6px; border: 1px solid #65d8ef; border-radius: 3px 3px 0 0; color: #e2faff; background: rgba(22, 48, 56, .96); font: 600 10px/1 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: nowrap; }
+.water-selection[hidden] { display: none; }
 .mob-stage { position: absolute; inset: 0; display: grid; place-items: center; overflow: hidden; }
 .mob-stage img { position: absolute; max-width: none; image-rendering: auto; transform-origin: center bottom; filter: drop-shadow(0 12px 18px rgba(0, 0, 0, .28)); }
 .mob-ground { position: absolute; top: 68%; left: 14%; right: 14%; height: 1px; background: #596159; }
@@ -227,6 +236,10 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent); box-sha
 .inspector { height: 100%; min-height: 0; overflow: auto; padding: 14px; scrollbar-color: #4a514b transparent; }
 .compatibility { height: 100%; overflow: auto; scrollbar-color: #4a514b transparent; }
 .crash-diagnostic { height: 100%; overflow: auto; scrollbar-color: #4a514b transparent; }
+.diagnostic-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 14px; border-bottom: 1px solid var(--line); background: #191d1a; }
+.diagnostic-toolbar label, .diagnostic-phase-label { display: grid; gap: 5px; color: var(--muted); font-size: 10px; text-align: left; }
+.diagnostic-toolbar select, .diagnostic-toolbar input, .diagnostic-phase-label select, .diagnostic-phase-label input { max-width: 240px; border: 1px solid var(--line); border-radius: 4px; padding: 6px 8px; background: #151916; color: var(--text-soft); font-size: 11px; }
+.diagnostic-toolbar button { border: 1px solid var(--line); border-radius: 4px; padding: 6px 9px; background: #273128; color: var(--text-soft); cursor: pointer; }
 .diagnostic-overview { padding: 15px 14px; border-bottom: 1px solid var(--line); background: #252620; }
 .diagnostic-overview > strong { display: block; color: var(--text); font-size: 15px; line-height: 21px; }
 .diagnostic-overview > span { display: block; margin-top: 4px; color: #e4c98f; font-size: 11px; }
@@ -246,7 +259,13 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent); box-sha
 .diagnostic-badge.crash { color: #f6aaa4; background: #3a2523; }
 .diagnostic-badge.warn { color: #efd094; background: #352e20; }
 .diagnostic-finding p { margin: 6px 0 0; color: var(--muted); font-size: 11px; line-height: 18px; }
+.diagnostic-evidence { margin: 7px 0 0; padding-left: 17px; color: #b7c8bd; font: 10px/17px ui-monospace, SFMono-Regular, Menlo, monospace; }
 .diagnostic-finding .diagnostic-action { color: #d8bd84; }
+.diagnostic-table-wrap { margin-top: 8px; overflow-x: auto; }
+.diagnostic-table { width: 100%; border-collapse: collapse; color: var(--muted); font-size: 10px; }
+.diagnostic-table th, .diagnostic-table td { padding: 6px; border: 1px solid var(--line-soft); text-align: left; vertical-align: top; }
+.diagnostic-table th { color: var(--text-soft); background: #191d1a; }
+.diagnostic-counterexamples { color: #d8bd84 !important; }
 .diagnostic-links { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 6px; }
 .diagnostic-links button { border: 0; padding: 0; background: transparent; color: #a9d3be; font-size: 10px; cursor: pointer; }
 .diagnostic-links button:hover { color: #d4f0e1; text-decoration: underline; }

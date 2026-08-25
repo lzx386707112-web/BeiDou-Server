@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<imgdir name="3003714.img">
+  <imgdir name="info">
+    <int name="hide" value="1"/>
+  </imgdir>
+  <imgdir name="stand">
+    <canvas name="0" width="64" height="98" format="1">
+      <vector name="origin" x="28" y="98"/>
+      <int name="delay" value="3000"/>
+    </canvas>
+  </imgdir>
+  <imgdir name="down">
+    <canvas name="0" width="93" height="54" format="1">
+      <vector name="origin" x="34" y="48"/>
+      <int name="delay" value="180"/>
+    </canvas>
+    <int name="special" value="1"/>
+  </imgdir>
+</imgdir>

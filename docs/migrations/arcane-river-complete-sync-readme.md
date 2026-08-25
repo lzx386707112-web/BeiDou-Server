@@ -45,12 +45,24 @@
 传送，并直接以平台上的既有 `out04(2482,-950)` 作为目标；原有 Portal、地形、
 对象及绳索记录均保持不变。
 
-莫拉斯城镇 `450006130` 已将现代 `info/fieldLimit=1048576` 降级为相邻旧端
-地图使用的 `0`，并移除 NPC `3003490` 上无作用的 `forcedZPage/forcedZMass`；
-同时移除 100 个只用于现代编辑器对象关联的 `foothold/piece` 字段。碰撞坐标、
-对象、背景、传送点、NPC 资源和小地图均未删减。该图独占引用的
-`Obj/morass.img/castle_Outside/stone/7/0/foothold` 已将断档编号
-`0,1,2,3,5` 修正为连续的 `0,1,2,3,4`，凸包坐标保持不变。
+莫拉斯城镇 `450006130` 以实机不崩版本为二进制兼容底座，从当前 TMS 源重新
+迁入 16 个已隔离验证的静态结构对象：11 个 `foothold_Bridge2`、4 个
+`foothold_Castle` 和 1 个 `stone/7`；加上原有 6 个旧端 `connect` 对象，共
+22 个对象。迁移只追加对象原始属性记录，其他 IMG 记录保持原字节；服务端 XML
+只修改 layer 2/4 的 `obj` 容器。对象上的 `move/dynamic/piece/tags` 等现代字段
+不会带入，已实测单个实例即可触发旧端黑屏高负载的 `foothold_Bridge`，以及组合
+测试失败的普通 `acc/bridge` 对象继续排除。`info/fieldLimit` 保持旧端安全值 `0`，
+背景、25 个有效 life、17 个兼容 Portal、foothold、绳索、小地图和 BGM 均保持
+稳定版本不变。维护入口为
+`tool/scripts/migration/migrate_morass_450006130.py`。
+
+其余对象的兼容研究使用独立生成器
+`tool/scripts/migration/build_morass_450006130_compat_experiment.py`，不会覆盖上述
+正式地图。实验把 TMS 对象指向地图专用 `morassTownLegacy.img`，Canvas 像素与
+ARGB4444 载荷保持不变，只保留旧端 `origin/z/delay` 元数据，并将每层 `zM`
+按原相对顺序稠密化。A 版先恢复除 14 个 `foothold_Bridge` 外的 72 个缺失对象；
+A 版实机正常后，B 版再补齐全部 14 个问题桥。该投影在通过真实旧客户端进图、
+反复切图和 CPU 负载验证前，不得替换正式 22 对象版本。
 
 ## 无名村稳定性说明
 

@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<imgdir name="3003706.img">
+  <imgdir name="info">
+    <int name="hide" value="1"/>
+  </imgdir>
+  <imgdir name="stand">
+    <canvas name="0" width="64" height="98" format="1">
+      <vector name="origin" x="28" y="98"/>
+      <int name="delay" value="3000"/>
+    </canvas>
+  </imgdir>
+  <imgdir name="smile">
+    <canvas name="0" width="64" height="98" format="1">
+      <vector name="origin" x="28" y="98"/>
+      <int name="delay" value="3000"/>
+    </canvas>
+    <int name="special" value="1"/>
+  </imgdir>
+  <imgdir name="attack">
+    <canvas name="0" width="64" height="98" format="1">
+      <vector name="origin" x="28" y="98"/>
+      <int name="delay" value="180"/>
+    </canvas>
+    <canvas name="1" width="64" height="98" format="1">
+      <vector name="origin" x="27" y="98"/>
+      <int name="delay" value="180"/>
+    </canvas>
+    <canvas name="2" width="175" height="92" format="1">
+      <vector name="origin" x="140" y="92"/>
+      <int name="delay" value="180"/>
+    </canvas>
+    <canvas name="3" width="177" height="92" format="1">
+      <vector name="origin" x="142" y="92"/>
+      <int name="delay" value="180"/>
+    </canvas>
+    <canvas name="4" width="171" height="92" format="1">
+      <vector name="origin" x="143" y="92"/>
+      <int name="delay" value="180"/>
+    </canvas>
+    <canvas name="5" width="171" height="92" format="1">
+      <vector name="origin" x="143" y="92"/>
+      <int name="delay" value="180"/>
+    </canvas>
+    <canvas name="6" width="67" height="92" format="1">
+      <vector name="origin" x="39" y="92"/>
+      <int name="delay" value="180"/>
+    </canvas>
+    <int name="special" value="1"/>
+  </imgdir>
+  <imgdir name="reveal">
+    <canvas name="0" width="64" height="98" format="1">
+      <vector name="origin" x="28" y="98"/>
+      <int name="delay" value="180"/>
+    </canvas>
+    <canvas name="1" width="64" height="98" format="1">
+      <vector name="origin" x="28" y="98"/>
+      <int name="delay" value="180"/>
+    </canvas>
+    <canvas name="2" width="64" height="98" format="1">
+      <vector name="origin" x="28" y="98"/>
+      <int name="delay" value="180"/>
+    </canvas>
+    <canvas name="3" width="64" height="98" format="1">
+      <vector name="origin" x="28" y="98"/>
+      <int name="delay" value="180"/>
+    </canvas>
+    <canvas name="4" width="64" height="98" format="1">
+      <vector name="origin" x="28" y="98"/>
+      <int name="delay" value="180"/>
+    </canvas>
+    <canvas name="5" width="64" height="98" format="1">
+      <vector name="origin" x="28" y="98"/>
+      <int name="delay" value="180"/>
+    </canvas>
+    <canvas name="6" width="64" height="98" format="1">
+      <vector name="origin" x="28" y="98"/>
+      <int name="delay" value="180"/>
+    </canvas>
+    <int name="special" value="1"/>
+  </imgdir>
+</imgdir>

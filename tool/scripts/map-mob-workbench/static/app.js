@@ -17,12 +17,15 @@ const state = {
   compatibility: null,
   diagnostic: null,
   diagnosticPath: "",
+  diagnosticPhase: "unknown",
+  diagnosticPeers: "",
   preview: null,
   rightPreview: null,
   zoom: 1,
+  waterSelectMode: false,
   mapViews: {
-    left: {preview: null, images: [], lifeImages: [], portalImages: [], hitRegions: [], canvasId: "mapCanvas", stageId: "leftMapStage"},
-    right: {preview: null, images: [], lifeImages: [], portalImages: [], hitRegions: [], canvasId: "rightMapCanvas", stageId: "rightMapStage"},
+    left: {preview: null, images: [], lifeImages: [], portalImages: [], hitRegions: [], canvasId: "mapCanvas", stageId: "leftMapStage", coordinateId: "leftMapCoordinate", selectionId: "leftWaterSelection"},
+    right: {preview: null, images: [], lifeImages: [], portalImages: [], hitRegions: [], canvasId: "rightMapCanvas", stageId: "rightMapStage", coordinateId: "rightMapCoordinate", selectionId: "rightWaterSelection"},
   },
   mobAction: null,
   mobFrame: 0,
@@ -118,6 +121,8 @@ function clearWorkspace() {
     view.lifeImages = [];
     view.portalImages = [];
     view.hitRegions = [];
+    $(view.coordinateId).hidden = true;
+    $(view.selectionId).hidden = true;
   }
   stopMobTimer();
   $("tree").innerHTML = "";
@@ -127,7 +132,10 @@ function clearWorkspace() {
   $("rightOnlyCount").textContent = "0";
   $("compatibilityCount").textContent = "0";
   $("diagnosticCount").textContent = "–";
-  $("crashDiagnostic").innerHTML = '<div class="empty-state compact"><strong>检查地图还是生命资源导致崩溃</strong><span>解析地图、场景引用、怪物/NPC 动作和服务端同步状态。</span><button id="runDiagnosticBtn" class="primary-button" type="button">运行崩溃诊断</button></div>';
+  state.waterSelectMode = false;
+  $("waterSelectBtn").classList.remove("active");
+  $("waterSelectionValue").hidden = true;
+  $("crashDiagnostic").innerHTML = diagnosticPromptMarkup();
   $("runDiagnosticBtn").addEventListener("click", runCrashDiagnostic);
   $("previewEmpty").hidden = false;
   $("mapCompareView").hidden = true;
@@ -432,6 +440,25 @@ function drawMap(side) {
     }
     context.stroke();
   }
+  if ($("showWaterAreas").checked) {
+    for (const area of view.preview.waterAreas || []) {
+      const x = area.x1 + ox;
+      const y = area.y1 + oy;
+      const width = area.x2 - area.x1;
+      const height = area.y2 - area.y1;
+      context.fillStyle = area.kind === "swimArea" ? "rgba(61, 194, 222, .22)" : "rgba(105, 128, 235, .18)";
+      context.strokeStyle = area.kind === "swimArea" ? "#63d7ee" : "#91a4ff";
+      context.lineWidth = 2;
+      context.fillRect(x, y, width, height);
+      context.strokeRect(x, y, width, height);
+      context.fillStyle = "#d9f8ff";
+      context.font = "bold 11px system-ui";
+      context.textAlign = "left";
+      context.textBaseline = "top";
+      context.fillText(`${area.kind} · ${area.path.split("/").pop()}`, x + 6, y + 5);
+      registerMapHitRect(view, area.path, x, y, width, height, area.kind);
+    }
+  }
   drawMapSprites(view, context, view.portalImages, ox, oy, $("showPortals").checked, "#70a7cf", "P");
   drawMapSprites(view, context, view.lifeImages.filter(({point}) => point.kind === "mob"), ox, oy, $("showMobs").checked, "#e26e67", "M");
   drawMapSprites(view, context, view.lifeImages.filter(({point}) => point.kind === "npc"), ox, oy, $("showNpcs").checked, "#e7bd6c", "N");
@@ -493,6 +520,56 @@ function mapHitAt(side, clientX, clientY) {
     }
   }
   return null;
+}
+
+function mapCoordinateAt(side, clientX, clientY) {
+  const view = state.mapViews[side];
+  if (state.kind !== "map" || !view.preview) return null;
+  const canvas = $(view.canvasId);
+  const rect = canvas.getBoundingClientRect();
+  if (!rect.width || clientX < rect.left || clientX > rect.right || clientY < rect.top || clientY > rect.bottom) return null;
+  const bounds = view.preview.bounds;
+  return {
+    x: Math.round(bounds.left + (clientX - rect.left) / rect.width * (bounds.right - bounds.left)),
+    y: Math.round(bounds.top + (clientY - rect.top) / rect.height * (bounds.bottom - bounds.top)),
+  };
+}
+
+function updateMapCoordinate(side, event) {
+  const view = state.mapViews[side];
+  const badge = $(view.coordinateId);
+  const point = mapCoordinateAt(side, event.clientX, event.clientY);
+  if (!point) {
+    badge.hidden = true;
+    return;
+  }
+  const stage = $(view.stageId);
+  const rect = stage.getBoundingClientRect();
+  const bounds = view.preview.bounds;
+  badge.textContent = `WZ 地图  X ${point.x}  Y ${point.y}\n范围  X ${bounds.left}…${bounds.right}  Y ${bounds.top}…${bounds.bottom}`;
+  badge.hidden = false;
+  const localX = event.clientX - rect.left;
+  const localY = event.clientY - rect.top;
+  const left = Math.max(6, Math.min(stage.clientWidth - badge.offsetWidth - 6, localX + 14));
+  const top = Math.max(6, Math.min(stage.clientHeight - badge.offsetHeight - 6, localY + 14));
+  badge.style.left = `${stage.scrollLeft + left}px`;
+  badge.style.top = `${stage.scrollTop + top}px`;
+}
+
+function positionWaterSelection(side, startEvent, currentEvent) {
+  const view = state.mapViews[side];
+  const stage = $(view.stageId);
+  const rect = stage.getBoundingClientRect();
+  const selection = $(view.selectionId);
+  const startX = startEvent.clientX - rect.left + stage.scrollLeft;
+  const startY = startEvent.clientY - rect.top + stage.scrollTop;
+  const currentX = currentEvent.clientX - rect.left + stage.scrollLeft;
+  const currentY = currentEvent.clientY - rect.top + stage.scrollTop;
+  selection.hidden = false;
+  selection.style.left = `${Math.min(startX, currentX)}px`;
+  selection.style.top = `${Math.min(startY, currentY)}px`;
+  selection.style.width = `${Math.abs(currentX - startX)}px`;
+  selection.style.height = `${Math.abs(currentY - startY)}px`;
 }
 
 function drawPoints(context, points, ox, oy, color, visible, label) {
@@ -670,12 +747,40 @@ function diagnosticConfidence(value) {
   return ({high: "高", medium: "中", low: "低"})[value] || value;
 }
 
+function diagnosticPhaseOptions(selected = state.diagnosticPhase) {
+  const options = [
+    ["unknown", "时机未知"],
+    ["map_load", "进图瞬间（尚未看到怪物）"],
+    ["entity_appear", "怪物/NPC 首次出现"],
+    ["attack", "怪物攻击时"],
+    ["death", "怪物死亡时"],
+  ];
+  return options.map(([value, label]) => `<option value="${value}"${value === selected ? " selected" : ""}>${label}</option>`).join("");
+}
+
+function diagnosticPromptMarkup(title = "检查地图还是生命资源导致崩溃", detail = "解析场景源链接、区域稀有度、实际 Canvas 和生命资源。", button = "运行崩溃诊断") {
+  return `<div class="empty-state compact"><strong>${escapeHtml(title)}</strong><span>${escapeHtml(detail)}</span><label class="diagnostic-phase-label">崩溃发生阶段<select id="crashPhase">${diagnosticPhaseOptions()}</select></label><label class="diagnostic-phase-label">同样崩溃地图<input id="crashPeerMaps" value="${escapeHtml(state.diagnosticPeers)}" placeholder="450005242" inputmode="numeric"></label><button id="runDiagnosticBtn" class="primary-button" type="button">${escapeHtml(button)}</button></div>`;
+}
+
+function renderCaseControl(report) {
+  const comparison = report.caseControl;
+  if (!comparison?.enabled) return "";
+  const exclusive = comparison.exclusive.length
+    ? comparison.exclusive.map((item) => `<tr><td>${escapeHtml(item.title)}</td><td>${escapeHtml(item.mapPath || "–")}</td><td>${escapeHtml(Object.entries(item.casePaths).map(([id, paths]) => `${id}: ${paths.join(", ") || "–"}`).join("；"))}</td><td>${item.controlCount}/${comparison.parsedControlCount}</td></tr>`).join("")
+    : '<tr><td colspan="4">没有崩溃组独占的静态特征。</td></tr>';
+  const counterexamples = comparison.counterexamples.length
+    ? `<p class="diagnostic-counterexamples">可工作反例：${comparison.counterexamples.map((item) => `${escapeHtml(item.title)} → ${escapeHtml(item.controlMaps.join(", "))}`).join("；")}</p>`
+    : "";
+  return `<section class="diagnostic-section"><h3>地区病例对照</h3><p>${escapeHtml(comparison.caseMaps.join(" + "))} 对比 ${comparison.parsedControlCount} 张同地区地图。${escapeHtml(comparison.conclusion)}</p><div class="diagnostic-table-wrap"><table class="diagnostic-table"><thead><tr><th>独占特征</th><th>节点</th><th>崩溃图路径</th><th>对照命中</th></tr></thead><tbody>${exclusive}</tbody></table></div>${counterexamples}</section>`;
+}
+
 function renderCrashDiagnostic(report) {
   const container = $("crashDiagnostic");
   const findings = report.findings.length ? report.findings.map((item) => `
     <div class="diagnostic-finding">
       <div class="diagnostic-finding-head"><strong>${escapeHtml(item.title)}</strong><span class="diagnostic-badge ${escapeHtml(item.severity)}">${item.severity === "crash" ? "高风险" : "嫌疑"} · ${escapeHtml(diagnosticConfidence(item.confidence))}置信</span></div>
       <p>${escapeHtml(item.detail)}</p>
+      ${item.evidence?.length ? `<ul class="diagnostic-evidence">${item.evidence.map((line) => `<li>${escapeHtml(line)}</li>`).join("")}</ul>` : ""}
       <p class="diagnostic-action">${escapeHtml(item.action)}</p>
       <div class="diagnostic-links">
         ${item.mapPath ? `<button type="button" data-diagnostic-path="${escapeHtml(item.mapPath)}">定位地图节点 ${escapeHtml(item.mapPath)}</button>` : ""}
@@ -686,9 +791,10 @@ function renderCrashDiagnostic(report) {
     ? report.entities.map((item) => `${item.kind === "mob" ? "怪物" : "NPC"} ${item.id} × ${item.spawns}${item.canvases !== undefined ? ` · ${item.visible}/${item.canvases} 可见 Canvas` : ""}`).join("<br>")
     : "无生命节点";
   container.innerHTML = `
+    <div class="diagnostic-toolbar"><label>崩溃阶段<select id="crashPhase">${diagnosticPhaseOptions(report.phase)}</select></label><label>同样崩溃地图<input id="crashPeerMaps" value="${escapeHtml(state.diagnosticPeers)}" placeholder="450005242" inputmode="numeric"></label><button id="runDiagnosticBtn" type="button">重新诊断</button></div>
     <div class="diagnostic-overview">
       <strong>${escapeHtml(report.conclusion)}</strong>
-      <span>${escapeHtml(report.confidence)}置信度 · 地图 ${report.scores.map + report.scores.resource} 分 · 生命资源 ${report.scores.entity} 分 · 服务端 ${report.scores.server} 分</span>
+      <span>${escapeHtml(report.confidence)}置信度 · ${escapeHtml(report.phaseLabel)} · 地图 ${report.scores.map + report.scores.resource} 分 · 生命资源 ${report.scores.entity} 分 · 服务端 ${report.scores.server} 分</span>
       <div class="diagnostic-counts">
         <span><b>${report.counts.checked}</b><small>检查组</small></span>
         <span><b>${report.counts.crash}</b><small>高风险</small></span>
@@ -697,27 +803,33 @@ function renderCrashDiagnostic(report) {
       </div>
       <p>${escapeHtml(report.note)}</p>
     </div>
+    <section class="diagnostic-section"><h3>场景证据链</h3><p>追踪 ${report.sceneResources.resources.length} 条 Back/Obj/Tile 引用；同区域 ${report.sceneResources.parsedMapCount}/${report.sceneResources.regionalMapCount} 张地图解析成功，发现 ${report.sceneResources.suspects.length} 条优先 A/B 候选。</p></section>
+    ${renderCaseControl(report)}
     <section class="diagnostic-section"><h3>地图生命资源</h3><p>${entities}</p></section>
     <section class="diagnostic-section"><h3>风险与嫌疑</h3>${findings}</section>
     <section class="diagnostic-section"><h3>已通过检查</h3><ul class="diagnostic-verified">${report.verified.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul></section>
     <section class="diagnostic-section"><h3>最小 A/B 隔离顺序</h3><ol class="diagnostic-isolation">${report.isolation.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ol></section>`;
   container.querySelectorAll("[data-diagnostic-path]").forEach((button) => button.addEventListener("click", () => revealNode(button.dataset.diagnosticPath)));
   container.querySelectorAll("[data-diagnostic-entity]").forEach((button) => button.addEventListener("click", () => openDiagnosticMob(button.dataset.diagnosticEntity)));
+  $("runDiagnosticBtn").addEventListener("click", runCrashDiagnostic);
 }
 
 async function runCrashDiagnostic() {
   if (state.kind !== "map" || !state.leftPath || state.leftInfo?.exists === false) return;
   const requestedPath = state.leftPath;
+  state.diagnosticPhase = $("crashPhase")?.value || state.diagnosticPhase;
+  state.diagnosticPeers = $("crashPeerMaps")?.value ?? state.diagnosticPeers;
+  const caseMapIds = state.diagnosticPeers.split(/[\s,，]+/).map((value) => value.trim()).filter(Boolean);
   $("crashDiagnostic").innerHTML = '<div class="empty-state compact"><strong>正在检查地图和生命资源</strong><span>会解码被引用实体的实际 Canvas 像素。</span></div>';
   try {
-    const report = await post("/api/diagnose-map", {sourcePath: requestedPath});
+    const report = await post("/api/diagnose-map", {sourcePath: requestedPath, phase: state.diagnosticPhase, caseMapIds});
     if (state.leftPath !== requestedPath) return;
     state.diagnostic = report;
     state.diagnosticPath = requestedPath;
     $("diagnosticCount").textContent = report.counts.crash + report.counts.warn;
     renderCrashDiagnostic(report);
   } catch (error) {
-    $("crashDiagnostic").innerHTML = `<div class="empty-state compact"><strong>诊断失败</strong><span>${escapeHtml(error.message)}</span><button id="runDiagnosticBtn" class="primary-button" type="button">重新诊断</button></div>`;
+    $("crashDiagnostic").innerHTML = diagnosticPromptMarkup("诊断失败", error.message, "重新诊断");
     $("runDiagnosticBtn").addEventListener("click", runCrashDiagnostic);
   }
 }
@@ -859,7 +971,7 @@ function editorMarkup(meta) {
     control = `<input id="editValue" type="number" step="${["float", "double"].includes(meta.type) ? "any" : "1"}" value="${escapeHtml(meta.value ?? 0)}">`;
   }
   const note = state.leftInfo?.format === "img"
-    ? `IMG 安全模式：编码长度必须保持不变${meta.byteLength !== undefined ? `，字符串槽位 ${meta.byteLength} 字节` : ""}。`
+    ? `IMG 安全模式：优先原位写入；编码长度变化时只替换当前属性记录，并校验其他兄弟记录不变${meta.byteLength !== undefined ? `（当前字符串槽位 ${meta.byteLength} 字节）` : ""}。`
     : "XML 写入只替换当前节点标签，不重排其他节点。";
   return `<div class="side-label">编辑主文件</div><div class="value-editor">${control}<span class="editor-note">${escapeHtml(note)}</span></div>`;
 }
@@ -1184,6 +1296,13 @@ $("showFootholds").addEventListener("change", drawMaps);
 $("showMobs").addEventListener("change", drawMaps);
 $("showNpcs").addEventListener("change", drawMaps);
 $("showPortals").addEventListener("change", drawMaps);
+$("showWaterAreas").addEventListener("change", drawMaps);
+$("waterSelectBtn").addEventListener("click", () => {
+  state.waterSelectMode = !state.waterSelectMode;
+  $("waterSelectBtn").classList.toggle("active", state.waterSelectMode);
+  $("waterSelectBtn").textContent = state.waterSelectMode ? "拖动框选水域" : "框选游泳区";
+  for (const view of Object.values(state.mapViews)) $(view.stageId).classList.toggle("water-selecting", state.waterSelectMode);
+});
 $("zoomRange").addEventListener("input", () => { state.zoom = Number($("zoomRange").value) / 100; applyZoom(); });
 $("fitBtn").addEventListener("click", fitPreview);
 $("actionSelect").addEventListener("change", () => {
@@ -1201,31 +1320,66 @@ function attachMapStageInteraction(side) {
   let dragStart = null;
   stage.addEventListener("pointerdown", (event) => {
     if (state.kind !== "map" || event.button !== 0) return;
-    dragStart = {x: event.clientX, y: event.clientY, left: stage.scrollLeft, top: stage.scrollTop, moved: false};
+    const point = mapCoordinateAt(side, event.clientX, event.clientY);
+    if (!point) return;
+    if (state.waterSelectMode) $(state.mapViews[side].selectionId).removeAttribute("data-coordinates");
+    dragStart = {x: event.clientX, y: event.clientY, left: stage.scrollLeft, top: stage.scrollTop, moved: false, selecting: state.waterSelectMode, point};
     stage.setPointerCapture(event.pointerId);
-    stage.classList.add("dragging");
+    stage.classList.add(state.waterSelectMode ? "water-selecting" : "dragging");
   });
   stage.addEventListener("pointermove", (event) => {
+    updateMapCoordinate(side, event);
     if (!dragStart) {
       stage.classList.toggle("clickable", Boolean(mapHitAt(side, event.clientX, event.clientY)));
       return;
     }
     if (Math.hypot(event.clientX - dragStart.x, event.clientY - dragStart.y) > 4) dragStart.moved = true;
+    if (dragStart.selecting) {
+      positionWaterSelection(side, dragStart, event);
+      return;
+    }
     stage.scrollLeft = dragStart.left - (event.clientX - dragStart.x);
     stage.scrollTop = dragStart.top - (event.clientY - dragStart.y);
   });
   const stopDragging = (event, allowSelection) => {
     if (!dragStart) return;
     const moved = dragStart.moved;
+    const selecting = dragStart.selecting;
+    const startPoint = dragStart.point;
     dragStart = null;
     if (stage.hasPointerCapture(event.pointerId)) stage.releasePointerCapture(event.pointerId);
     stage.classList.remove("dragging");
+    if (selecting) {
+      const endPoint = mapCoordinateAt(side, event.clientX, event.clientY);
+      if (allowSelection && moved && endPoint) {
+        const area = {
+          x1: Math.min(startPoint.x, endPoint.x), y1: Math.min(startPoint.y, endPoint.y),
+          x2: Math.max(startPoint.x, endPoint.x), y2: Math.max(startPoint.y, endPoint.y),
+        };
+        const text = `x1=${area.x1}  y1=${area.y1}  x2=${area.x2}  y2=${area.y2}`;
+        const output = $("waterSelectionValue");
+        const selection = $(state.mapViews[side].selectionId);
+        output.textContent = text;
+        output.title = text;
+        output.hidden = false;
+        selection.dataset.coordinates = text;
+        const badge = $(state.mapViews[side].coordinateId);
+        badge.textContent = `框选结果\n${text}`;
+        badge.hidden = false;
+      } else {
+        $(state.mapViews[side].selectionId).hidden = true;
+      }
+      return;
+    }
     const hit = allowSelection && !moved ? mapHitAt(side, event.clientX, event.clientY) : null;
     if (hit) revealNode(hit.path);
   };
   stage.addEventListener("pointerup", (event) => stopDragging(event, true));
   stage.addEventListener("pointercancel", (event) => stopDragging(event, false));
-  stage.addEventListener("pointerleave", () => { if (!dragStart) stage.classList.remove("clickable"); });
+  stage.addEventListener("pointerleave", () => {
+    $(state.mapViews[side].coordinateId).hidden = true;
+    if (!dragStart) stage.classList.remove("clickable");
+  });
 }
 attachMapStageInteraction("left");
 attachMapStageInteraction("right");

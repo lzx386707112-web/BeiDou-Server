@@ -88,14 +88,33 @@ async function openFiles() {
   }
 }
 
-async function suggestXml() {
+async function suggestXml(force = false) {
   const imgPath = $("#img-path").value.trim();
-  if (!imgPath || $("#xml-path").value.trim()) return;
+  if (!imgPath || (!force && $("#xml-path").value.trim())) return;
   try {
     const payload = await api("/api/suggest-xml", { img_path: imgPath });
-    if (payload.xml_path) $("#xml-path").value = payload.xml_path;
+    if (force || payload.xml_path) $("#xml-path").value = payload.xml_path;
   } catch (_) {
     // A missing suggestion is normal for files outside this repository.
+  }
+}
+
+async function pickFile(kind) {
+  const input = kind === "img" ? $("#img-path") : $("#xml-path");
+  const button = kind === "img" ? $("#pick-img") : $("#pick-xml");
+  button.disabled = true;
+  try {
+    const payload = await api("/api/pick-file", {
+      kind,
+      current: input.value.trim(),
+    });
+    if (!payload.path) return;
+    input.value = payload.path;
+    if (kind === "img") await suggestXml(true);
+  } catch (error) {
+    toast(error.message, true);
+  } finally {
+    button.disabled = false;
   }
 }
 
@@ -435,6 +454,8 @@ async function search() {
 $("#open-toggle").addEventListener("click", () => setOpenPanel($("#open-panel").hidden));
 $("#open-button").addEventListener("click", openFiles);
 $("#img-path").addEventListener("blur", suggestXml);
+$("#pick-img").addEventListener("click", () => pickFile("img"));
+$("#pick-xml").addEventListener("click", () => pickFile("xml"));
 $("#add-root").addEventListener("click", () => openAddDialog([]));
 $("#add-kind").addEventListener("change", addValueFields);
 $("#add-form").addEventListener("submit", submitAdd);

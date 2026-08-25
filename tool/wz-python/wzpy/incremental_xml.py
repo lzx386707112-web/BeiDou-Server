@@ -20,6 +20,11 @@ TAG_BY_TYPE = {
     "String": "string",
     "Vector": "vector",
     "UOL": "uol",
+    "Canvas": "canvas",
+    "Sound": "sound",
+    "Convex": "extended",
+    "Video": "canvas",
+    "RawData": "extended",
 }
 
 _TOKEN_RE = re.compile(r"<!--.*?-->|<\?.*?\?>|<![^>]*>|</?[^>]+>", re.DOTALL)
@@ -181,6 +186,11 @@ def mutate_xml(
             result = text[:insert_at] + insertion + text[insert_at:]
     else:
         node = _find_node(root, path)
+        expected_tag = TAG_BY_TYPE.get(kind) if kind else None
+        if expected_tag and node.tag != expected_tag:
+            raise ValueError(
+                f"XML node type {node.tag!r} does not match IMG type {kind!r}"
+            )
         if operation == "remove":
             start, end = _remove_span_with_indent(text, node)
             result = text[:start] + text[end:]

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+import subprocess
 import sys
 import tempfile
 import threading
@@ -48,6 +49,7 @@ def _write_temp(path: Path, payload: bytes) -> Path:
     fd, raw_path = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=path.parent)
     temp_path = Path(raw_path)
     try:
+        os.fchmod(fd, path.stat().st_mode & 0o777)
         with os.fdopen(fd, "wb") as handle:
             handle.write(payload)
             handle.flush()
@@ -86,6 +88,47 @@ def _suggest_xml_path(img_path: Path) -> Optional[Path]:
     wz_name = relative.parts[0]
     remainder = Path(*relative.parts[1:])
     return REPO_ROOT / "gms-server" / "wz" / f"{wz_name}.wz" / Path(str(remainder) + ".xml")
+
+
+def _pick_file(kind: str, current: str = "") -> str:
+    if kind not in ("img", "xml"):
+        raise ValueError("kind must be img or xml")
+    current_path = Path(current).expanduser() if current else None
+    if current_path and current_path.is_file():
+        initial_dir = current_path.parent
+    elif current_path and current_path.is_dir():
+        initial_dir = current_path
+    elif current_path and current_path.parent.is_dir():
+        initial_dir = current_path.parent
+    else:
+        initial_dir = REPO_ROOT
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "img_editor._file_picker",
+            kind,
+            str(initial_dir),
+        ],
+        cwd=WZPY_ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        message = result.stderr.strip() or "native file picker failed"
+        raise RuntimeError(message)
+    selected = result.stdout.strip()
+    if not selected:
+        return ""
+    path = Path(selected).expanduser().resolve()
+    if not path.is_file():
+        raise FileNotFoundError(f"selected file does not exist: {path}")
+    if kind == "img" and path.suffix.lower() != ".img":
+        raise ValueError("selected file must end with .img")
+    if kind == "xml" and not path.name.lower().endswith(".img.xml"):
+        raise ValueError("selected file must end with .img.xml")
+    return str(path)
 
 
 def _property_value(prop: WzProperty) -> Any:
@@ -146,7 +189,11 @@ class EditorState:
         img_bytes = img_path.read_bytes()
         layout = scan_img(img_bytes, region=region)
         xml_text = _read_text(xml_path)
-        scan_xml(xml_text)
+        xml_root = scan_xml(xml_text)
+        if xml_root.tag != "imgdir" or xml_root.name != img_path.name:
+            raise ValueError(
+                f"XML root must be <imgdir name={img_path.name!r}>"
+            )
         image = WzImage.from_bytes(
             img_bytes,
             key=WzKey.for_region(layout.region),
@@ -219,6 +266,18 @@ def create_app() -> Flask:
             "ok": True,
             "xml_path": str(suggestion) if suggestion and suggestion.exists() else "",
         })
+
+    @app.post("/api/pick-file")
+    def api_pick_file():
+        body = request.get_json(silent=True) or {}
+        kind = body.get("kind")
+        current = body.get("current", "")
+        if not isinstance(kind, str) or not isinstance(current, str):
+            return error_response(ValueError("kind and current must be strings"))
+        try:
+            return jsonify({"ok": True, "path": _pick_file(kind, current)})
+        except (OSError, RuntimeError, ValueError) as exc:
+            return error_response(exc)
 
     @app.post("/api/open")
     def api_open():
@@ -325,7 +384,7 @@ def create_app() -> Flask:
                     raise RuntimeError("files changed outside the editor; reopen them before saving")
 
                 effective_kind = kind
-                if operation == "edit":
+                if operation != "add":
                     effective_kind = state.resolve(path).type_name
                 if operation in ("add", "edit"):
                     if not effective_kind:

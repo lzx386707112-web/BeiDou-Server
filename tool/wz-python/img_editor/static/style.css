@@ -61,6 +61,8 @@ button { letter-spacing: 0; }
 .open-panel[hidden] { display: none; }
 .path-field { display: grid; gap: 4px; min-width: 0; }
 .path-field label, dialog label { color: var(--muted); font-size: 11px; }
+.file-input-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; }
+.pick-button { min-width: 54px; }
 
 input, select {
   min-width: 0;
