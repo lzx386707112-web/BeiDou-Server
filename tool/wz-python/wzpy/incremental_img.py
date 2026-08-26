@@ -429,6 +429,49 @@ def normalized_values(kind: str, values: dict) -> dict:
     return {"value": prop.value}
 
 
+def replace_img_record(
+    data: bytes,
+    path: Sequence[str],
+    prop: Any,
+    *,
+    region: Optional[str] = None,
+) -> MutationResult:
+    """Replace one property record while preserving every sibling record."""
+    layout = scan_img(data, region=region)
+    reader = WzBinaryReader(io.BytesIO(data), WzKey.for_region(layout.region))
+    path_tuple = tuple(path)
+    _parent, record, ancestors = _find_record(layout.root, path_tuple)
+    if prop.name != record.name:
+        raise ValueError("replacement property name must match the existing record")
+
+    encoded = _record_bytes(prop, reader)
+    encoded_name_end = len(encode_string_block(reader, prop.name))
+    replacement = data[record.start:record.tag_offset] + encoded[encoded_name_end:]
+    delta = len(replacement) - (record.end - record.start)
+    edits: List[Tuple[int, int, bytes]] = [(record.start, record.end, replacement)]
+    edits.extend(_size_edits(ancestors, delta))
+    edits.extend(_reference_edits(layout, edits))
+    patched = _apply_edits(data, edits)
+
+    verified = scan_img(patched, region=layout.region)
+    image = WzImage.from_bytes(patched, key=WzKey.for_region(layout.region))
+    image.parse()
+    if image.truncated or image.parse_warnings:
+        raise ValueError(
+            "patched IMG failed verification: " + "; ".join(image.parse_warnings or ["truncated"])
+        )
+    if verified.root.count != len(verified.root.records):
+        raise ValueError("patched IMG property count mismatch")
+    return MutationResult(
+        data=patched,
+        region=layout.region,
+        operation="replace-record",
+        path_before=path_tuple,
+        path_after=path_tuple,
+        byte_delta=len(patched) - len(data),
+    )
+
+
 def mutate_img(
     data: bytes,
     operation: str,

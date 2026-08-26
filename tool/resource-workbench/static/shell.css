@@ -1,0 +1,132 @@
+.suite-nav {
+  position: fixed;
+  inset: 0 0 auto 0;
+  z-index: 1000;
+  height: 46px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 0 16px;
+  border-bottom: 1px solid #32383d;
+  background: #15191c;
+  color: #e8ece9;
+  font: 12px/1.4 Inter, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+}
+
+.suite-brand {
+  min-width: 210px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: #f1f4f2;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.suite-brand-mark {
+  width: 25px;
+  height: 25px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #4b725e;
+  border-radius: 5px;
+  background: #24382d;
+  color: #8ed1aa;
+  font: 700 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.suite-links {
+  align-self: stretch;
+  display: flex;
+  align-items: stretch;
+  gap: 3px;
+}
+
+.suite-link {
+  min-width: 112px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 12px;
+  border-bottom: 2px solid transparent;
+  color: #aeb6b1;
+  text-decoration: none;
+}
+
+.suite-link:hover {
+  background: #20262a;
+  color: #f1f4f2;
+}
+
+.suite-link.active {
+  border-bottom-color: #70bf94;
+  background: #202b25;
+  color: #bce4cd;
+}
+
+.suite-link-icon {
+  width: 21px;
+  height: 21px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #434b50;
+  border-radius: 4px;
+  color: #c8ceca;
+  font: 700 9px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.suite-context {
+  margin-left: auto;
+  color: #7f8983;
+  font-size: 10px;
+}
+
+body.suite-integrated {
+  padding-top: 46px;
+}
+
+body.suite-map-mob .workspace {
+  height: calc(100vh - 178px);
+}
+
+body.suite-img-editor .workspace {
+  height: calc(100vh - 127px);
+}
+
+body.suite-img-editor.open-visible .workspace {
+  height: calc(100vh - 200px);
+}
+
+body.suite-host-page {
+  margin: 0;
+  min-width: 900px;
+  overflow: hidden;
+  background: #141716;
+}
+
+.suite-host {
+  height: calc(100vh - 46px);
+  margin-top: 46px;
+}
+
+.suite-module,
+.suite-module iframe {
+  width: 100%;
+  height: 100%;
+}
+
+.suite-module iframe {
+  display: block;
+  border: 0;
+  background: #141716;
+}
+
+@media (max-width: 720px) {
+  .suite-nav { gap: 6px; padding: 0 8px; }
+  .suite-brand { min-width: 31px; width: 31px; }
+  .suite-brand > span:last-child, .suite-context { display: none; }
+  .suite-links { flex: 1; }
+  .suite-link { min-width: 0; flex: 1; padding: 0 6px; }
+}

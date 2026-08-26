@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>IMG Node Editor</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  {% set embedded = request.args.get('embedded') == '1' %}
+  {% if request.script_root and not embedded %}<link rel="stylesheet" href="/workbench-static/shell.css">{% endif %}
+</head>
+<body class="{% if request.script_root and not embedded %}suite-integrated suite-img-editor{% elif embedded %}module-embedded{% endif %}"
+      data-api-base="{{ request.script_root }}">
+  {% if request.script_root and not embedded %}
+  <nav class="suite-nav" aria-label="资源工作台模块">
+    <a class="suite-brand" href="/">
+      <span class="suite-brand-mark" aria-hidden="true">BD</span>
+      <span>BeiDou 资源工作台</span>
+    </a>
+    <div class="suite-links">
+      <a class="suite-link" href="/?module=map-mob"><span class="suite-link-icon" aria-hidden="true">MM</span>地图与怪物</a>
+      <a class="suite-link active" href="/?module=img-editor" aria-current="page"><span class="suite-link-icon" aria-hidden="true">IMG</span>IMG 节点</a>
+      <a class="suite-link" href="/?module=quests"><span class="suite-link-icon" aria-hidden="true">Q</span>任务管理</a>
+    </div>
+    <span class="suite-context">本地资源管理</span>
+  </nav>
+  {% endif %}
+  <header class="app-header">
+    <div class="brand">
+      <strong>IMG Node Editor</strong>
+      <span id="region-badge" class="badge">未打开</span>
+    </div>
+    <button id="open-toggle" class="command-button" type="button">打开文件</button>
+  </header>
+
+  <section id="open-panel" class="open-panel">
+    <div class="path-field wide">
+      <label for="img-path">IMG</label>
+      <div class="file-input-row">
+        <input id="img-path" type="text" spellcheck="false" autocomplete="off">
+        <button id="pick-img" class="command-button pick-button" type="button"
+                aria-label="选择 IMG 文件">选择</button>
+      </div>
+    </div>
+    <div class="path-field wide">
+      <label for="xml-path">IMG.XML</label>
+      <div class="file-input-row">
+        <input id="xml-path" type="text" spellcheck="false" autocomplete="off">
+        <button id="pick-xml" class="command-button pick-button" type="button"
+                aria-label="选择 IMG.XML 文件">选择</button>
+      </div>
+    </div>
+    <div class="path-field region-field">
+      <label for="region">区域</label>
+      <select id="region">
+        <option value="auto">自动</option>
+        <option value="GMS">GMS</option>
+        <option value="KMS">KMS</option>
+      </select>
+    </div>
+    <button id="open-button" class="primary-button" type="button">打开</button>
+  </section>
+
+  <div id="file-strip" class="file-strip" hidden>
+    <span id="img-label"></span>
+    <span class="sync-mark">+</span>
+    <span id="xml-label"></span>
+    <span id="size-label" class="muted"></span>
+  </div>
+
+  <main class="workspace">
+    <aside class="tree-pane">
+      <div class="tree-toolbar">
+        <input id="search-input" type="search" placeholder="搜索节点或值" autocomplete="off">
+        <button id="add-root" class="icon-button" type="button" title="新增根节点" aria-label="新增根节点">+</button>
+      </div>
+      <div id="search-results" class="search-results" hidden></div>
+      <div id="tree" class="tree" role="tree"></div>
+      <div id="empty-tree" class="empty-state">未打开 IMG</div>
+    </aside>
+
+    <section class="detail-pane">
+      <div id="breadcrumbs" class="breadcrumbs"></div>
+      <div id="detail" class="detail-empty">选择一个节点</div>
+    </section>
+  </main>
+
+  <div id="toast" class="toast" hidden></div>
+
+  <dialog id="add-dialog">
+    <form id="add-form" method="dialog">
+      <div class="dialog-header">
+        <strong>新增节点</strong>
+        <button id="add-close" class="icon-button" type="button" title="关闭" aria-label="关闭">×</button>
+      </div>
+      <label>父节点<input id="add-parent" type="text" readonly></label>
+      <label>名称<input id="add-name" type="text" required autocomplete="off"></label>
+      <label>类型<select id="add-kind"></select></label>
+      <div id="add-value-fields"></div>
+      <div class="dialog-actions">
+        <button id="add-cancel" type="button" class="command-button">取消</button>
+        <button id="add-submit" type="submit" class="primary-button">新增并同步</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

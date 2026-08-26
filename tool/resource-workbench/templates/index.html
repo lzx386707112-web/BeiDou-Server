@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BeiDou 资源工作台</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='shell.css') }}">
+</head>
+<body class="suite-host-page" data-initial-module="{{ initial_module }}">
+  <nav class="suite-nav" aria-label="资源工作台模块">
+    <a class="suite-brand" href="/" data-module="map-mob"><span class="suite-brand-mark" aria-hidden="true">BD</span><span>BeiDou 资源工作台</span></a>
+    <div class="suite-links">
+      <a class="suite-link" href="/?module=map-mob" data-module="map-mob"><span class="suite-link-icon" aria-hidden="true">MM</span>地图与怪物</a>
+      <a class="suite-link" href="/?module=img-editor" data-module="img-editor"><span class="suite-link-icon" aria-hidden="true">IMG</span>IMG 节点</a>
+      <a class="suite-link" href="/?module=quests" data-module="quests"><span class="suite-link-icon" aria-hidden="true">Q</span>任务管理</a>
+    </div>
+    <span class="suite-context">本地资源管理</span>
+  </nav>
+  <main class="suite-host" aria-live="polite">
+    <section class="suite-module" data-module-panel="map-mob" hidden>
+      <iframe title="地图与怪物" data-src="/map-mob/?embedded=1"></iframe>
+    </section>
+    <section class="suite-module" data-module-panel="img-editor" hidden>
+      <iframe title="IMG 节点" data-src="/img-editor/?embedded=1"></iframe>
+    </section>
+    <section class="suite-module" data-module-panel="quests" hidden>
+      <iframe title="任务管理" data-src="/quests/?embedded=1"></iframe>
+    </section>
+  </main>
+  <script src="{{ url_for('static', filename='shell.js') }}"></script>
+</body>
+</html>

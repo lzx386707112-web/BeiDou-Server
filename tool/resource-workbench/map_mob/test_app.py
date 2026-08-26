@@ -1,0 +1,604 @@
+#!/usr/bin/env python3
+"""Focused safety tests for Map & Mob Workbench."""
+
+from __future__ import annotations
+
+import shutil
+import subprocess
+import tempfile
+import unittest
+from pathlib import Path
+
+from map_mob import app as workbench
+
+
+class XmlPatchTests(unittest.TestCase):
+    SOURCE = b'''<?xml version="1.0" encoding="UTF-8"?>
+<imgdir name="1.img">
+  <imgdir name="info">
+    <int name="level" value="10"/>
+    <vector name="pos" x="1" y="2"/>
+  </imgdir>
+</imgdir>
+'''
+
+    def test_edit_add_delete_preserve_surrounding_layout(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "1.img.xml"
+            path.write_bytes(self.SOURCE)
+            workbench.patch_xml_value(path, "info/level", 12, dry_run=False, backup=False)
+            workbench.xml_add_node(path, "info", "speed", "int", -5, dry_run=False, backup=False)
+            workbench.xml_delete_node(path, "info/pos", dry_run=False, backup=False)
+            self.assertEqual(
+                path.read_bytes(),
+                self.SOURCE.replace(b'value="10"', b'value="12"').replace(
+                    b'    <vector name="pos" x="1" y="2"/>\n',
+                    b'    <int name="speed" value="-5"/>\n',
+                ),
+            )
+
+    def test_dry_run_does_not_write(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "1.img.xml"
+            path.write_bytes(self.SOURCE)
+            workbench.patch_xml_value(path, "info/level", 99, dry_run=True, backup=False)
+            self.assertEqual(path.read_bytes(), self.SOURCE)
+
+
+class ImgPatchTests(unittest.TestCase):
+    def test_empty_gms_img_is_parseable_and_has_no_nodes(self) -> None:
+        data = workbench.empty_gms_img_bytes()
+        image = workbench._verified_img_from_bytes(Path("empty.img"), data)
+        self.assertEqual(image.root.children(), [])
+        self.assertEqual(data, workbench.empty_gms_img_bytes())
+
+    def test_missing_main_source_is_reported_without_flatten_failure(self) -> None:
+        missing = workbench._ROOT / "clien/Data/Map/Map/Map9/__missing_workbench_test__.img"
+        self.assertFalse(missing.exists())
+        nodes, info = workbench.flatten_optional_source(missing)
+        self.assertEqual(nodes, {})
+        self.assertEqual(info["format"], "img")
+        self.assertFalse(info["exists"])
+
+    def test_mob_default_path_prefers_tms_canvas_file(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            original_tms_data = workbench._TMS_DATA
+            workbench._TMS_DATA = Path(directory)
+            canvas = workbench._TMS_DATA / "Mob/_Canvas/8642050.img"
+            canvas.parent.mkdir(parents=True)
+            canvas.write_bytes(b"test")
+            try:
+                _, right = workbench.default_paths("mob", "8642050")
+            finally:
+                workbench._TMS_DATA = original_tms_data
+            self.assertEqual(right, canvas)
+
+    def test_create_empty_main_creates_parseable_client_and_server_pair(self) -> None:
+        with tempfile.TemporaryDirectory(prefix=".map-mob-create-test-", dir=workbench._HERE) as directory:
+            client = Path(directory) / "999999999.img"
+            server = Path(directory) / "999999999.img.xml"
+            original_resolver = workbench.server_xml_for_client
+            workbench.server_xml_for_client = lambda _path: server
+            try:
+                result = workbench.create_empty_main_files(client)
+            finally:
+                workbench.server_xml_for_client = original_resolver
+            image = workbench._verified_img_from_bytes(client, client.read_bytes())
+            self.assertEqual(image.root.children(), [])
+            server_nodes, _ = workbench.flatten_xml(server)
+            self.assertEqual(set(server_nodes), {""})
+            self.assertTrue(result["createdClient"])
+            self.assertTrue(result["createdServer"])
+
+    def test_client_paths_resolve_to_primary_server_xml(self) -> None:
+        map_client = workbench._ROOT / "clien/Data/Map/Map/Map4/450002011.img"
+        mob_client = workbench._ROOT / "clien/Data/Mob/8641002.img"
+        self.assertEqual(
+            workbench.server_xml_for_client(map_client),
+            workbench._ROOT / "gms-server/wz/Map.wz/Map/Map4/450002011.img.xml",
+        )
+        self.assertEqual(
+            workbench.server_xml_for_client(mob_client),
+            workbench._ROOT / "gms-server/wz/Mob.wz/8641002.img.xml",
+        )
+
+    def test_map_scalar_sync_dry_run_preflights_client_and_server_without_writes(self) -> None:
+        client = workbench._ROOT / "clien/Data/Map/Map/Map4/450002011.img"
+        server = workbench._ROOT / "gms-server/wz/Map.wz/Map/Map4/450002011.img.xml"
+        if not client.is_file() or not server.is_file():
+            self.skipTest("repository map sync samples are unavailable")
+        client_before = client.read_bytes()
+        server_before = server.read_bytes()
+        result = workbench.patch_with_server_sync(client, "info/swim", 0, dry_run=True, backup=False)
+        self.assertEqual(client.read_bytes(), client_before)
+        self.assertEqual(server.read_bytes(), server_before)
+        self.assertEqual(result["clientPath"], "clien/Data/Map/Map/Map4/450002011.img")
+        self.assertEqual(result["serverPath"], "gms-server/wz/Map.wz/Map/Map4/450002011.img.xml")
+        self.assertIn("client", result)
+        self.assertIn("server", result)
+
+    def test_real_mob_scalar_dry_run_is_bounded(self) -> None:
+        path = workbench._ROOT / "clien" / "Data" / "Mob" / "8641002.img"
+        if not path.is_file():
+            self.skipTest("repository sample Mob IMG is unavailable")
+        before = path.read_bytes()
+        result = workbench.patch_img(path, "info/level", 202, dry_run=True, backup=False)
+        self.assertEqual(path.read_bytes(), before)
+        self.assertEqual(result["slots"][0]["length"], 5)
+
+    def test_raw_record_add_delete_builds_swim_area_and_exactly_restores_img(self) -> None:
+        source = workbench._ROOT / "clien/Data/Map/Map/Map4/450002011.img"
+        if not source.is_file():
+            self.skipTest("repository map IMG sample is unavailable")
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / source.name
+            shutil.copy2(source, path)
+            original = path.read_bytes()
+            steps = (
+                ("", "__swimArea_test__", "imgdir", None),
+                ("__swimArea_test__", "swim01", "imgdir", None),
+                ("__swimArea_test__/swim01", "x1", "int", -819),
+                ("__swimArea_test__/swim01", "y1", "int", 206),
+                ("__swimArea_test__/swim01", "x2", "int", 5000),
+                ("__swimArea_test__/swim01", "y2", "int", 474),
+            )
+            for parent, name, node_type, value in steps:
+                workbench.patch_img_add(
+                    path, parent, name, node_type, value, dry_run=False, backup=False,
+                )
+            image = workbench._verified_img_from_bytes(path, path.read_bytes())
+            self.assertEqual(image.root.get("__swimArea_test__/swim01/x1").value, -819)
+            self.assertEqual(image.root.get("__swimArea_test__/swim01/y1").value, 206)
+            self.assertEqual(image.root.get("__swimArea_test__/swim01/x2").value, 5000)
+            self.assertEqual(image.root.get("__swimArea_test__/swim01/y2").value, 474)
+            workbench.patch_img_delete(path, "__swimArea_test__", dry_run=False, backup=False)
+            self.assertEqual(path.read_bytes(), original)
+
+    def test_scalar_edit_replaces_record_when_compressed_length_changes(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "length-change.img"
+            path.write_bytes(workbench.empty_gms_img_bytes())
+            steps = (
+                ("", "swimArea", "imgdir", None),
+                ("swimArea", "swim01", "imgdir", None),
+                ("swimArea/swim01", "x1", "int", -819),
+                ("swimArea/swim01", "y1", "int", 206),
+                ("swimArea/swim01", "x2", "int", 5000),
+                ("swimArea/swim01", "y2", "int", 474),
+            )
+            for parent, name, node_type, value in steps:
+                workbench.patch_img_add(
+                    path, parent, name, node_type, value, dry_run=False, backup=False,
+                )
+            before = path.read_bytes()
+            before_image = workbench._verified_img_from_bytes(path, before)
+            _, _, _, names, spans, _ = workbench.locate_img_records(
+                before_image, before, ("swimArea", "swim01"),
+            )
+            sibling_records = {
+                name: before[start:end]
+                for name, (start, end) in zip(names, spans) if name != "x1"
+            }
+
+            result = workbench.patch_img(
+                path, "swimArea/swim01/x1", -1, dry_run=False, backup=False,
+            )
+
+            after = path.read_bytes()
+            after_image = workbench._verified_img_from_bytes(path, after)
+            self.assertEqual(after_image.root.get("swimArea/swim01/x1").value, -1)
+            _, _, _, new_names, new_spans, _ = workbench.locate_img_records(
+                after_image, after, ("swimArea", "swim01"),
+            )
+            self.assertEqual(new_names, names)
+            self.assertEqual(
+                {
+                    name: after[start:end]
+                    for name, (start, end) in zip(new_names, new_spans) if name != "x1"
+                },
+                sibling_records,
+            )
+            self.assertEqual(result["mode"], "record-replacement")
+            self.assertEqual(result["sizeDelta"], -4)
+
+    def test_length_changing_scalar_edit_syncs_client_and_server(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            client = Path(directory) / "length-change.img"
+            server = Path(directory) / "length-change.img.xml"
+            client.write_bytes(workbench.empty_gms_img_bytes())
+            for parent, name, node_type, value in (
+                ("", "swimArea", "imgdir", None),
+                ("swimArea", "swim01", "imgdir", None),
+                ("swimArea/swim01", "x1", "int", -819),
+            ):
+                workbench.patch_img_add(
+                    client, parent, name, node_type, value, dry_run=False, backup=False,
+                )
+            server.write_bytes(b'''<?xml version="1.0" encoding="UTF-8"?>
+<imgdir name="length-change.img">
+  <imgdir name="swimArea">
+    <imgdir name="swim01">
+      <int name="x1" value="-819"/>
+    </imgdir>
+  </imgdir>
+</imgdir>
+''')
+            original_resolver = workbench.server_xml_for_client
+            workbench.server_xml_for_client = lambda _path: server
+            try:
+                result = workbench.patch_with_server_sync(
+                    client, "swimArea/swim01/x1", -1, dry_run=False, backup=False,
+                )
+            finally:
+                workbench.server_xml_for_client = original_resolver
+
+            image = workbench._verified_img_from_bytes(client, client.read_bytes())
+            server_nodes, _ = workbench.flatten_xml(server)
+            self.assertEqual(image.root.get("swimArea/swim01/x1").value, -1)
+            self.assertEqual(server_nodes["swimArea/swim01/x1"]["value"], -1)
+            self.assertEqual(result["client"]["mode"], "record-replacement")
+
+    def test_add_delete_server_sync_preflights_and_restores_both_files(self) -> None:
+        client_source = workbench._ROOT / "clien/Data/Map/Map/Map4/450002011.img"
+        server_source = workbench._ROOT / "gms-server/wz/Map.wz/Map/Map4/450002011.img.xml"
+        if not client_source.is_file() or not server_source.is_file():
+            self.skipTest("repository map sync samples are unavailable")
+        with tempfile.TemporaryDirectory() as directory:
+            client = Path(directory) / client_source.name
+            server = Path(directory) / server_source.name
+            shutil.copy2(client_source, client)
+            shutil.copy2(server_source, server)
+            client_original = client.read_bytes()
+            server_original = server.read_bytes()
+            original_resolver = workbench.server_xml_for_client
+            workbench.server_xml_for_client = lambda _path: server
+            try:
+                add_result = workbench.add_with_server_sync(
+                    client, "", "__swimArea_sync_test__", "imgdir", None, dry_run=True, backup=False,
+                )
+                self.assertIn("client", add_result)
+                self.assertIn("server", add_result)
+                self.assertEqual(client.read_bytes(), client_original)
+                self.assertEqual(server.read_bytes(), server_original)
+                workbench.add_with_server_sync(
+                    client, "", "__swimArea_sync_test__", "imgdir", None, dry_run=False, backup=False,
+                )
+                workbench.delete_with_server_sync(
+                    client, "__swimArea_sync_test__", dry_run=False, backup=False,
+                )
+                self.assertEqual(client.read_bytes(), client_original)
+                self.assertEqual(server.read_bytes(), server_original)
+            finally:
+                workbench.server_xml_for_client = original_resolver
+
+    def test_copy_tms_subtree_adds_same_client_and_server_nodes(self) -> None:
+        client_source = workbench._ROOT / "clien/Data/Map/Map/Map1/100040000.img"
+        server_source = workbench._ROOT / "gms-server/wz/Map.wz/Map/Map1/100040000.img.xml"
+        tms_source = workbench._TMS_DATA / "Map/Map/Map1/100040000.img"
+        if not all(path.is_file() for path in (client_source, server_source, tms_source)):
+            self.skipTest("repository and TMS map samples are unavailable")
+        with tempfile.TemporaryDirectory(prefix=".map-mob-copy-test-", dir=workbench._HERE) as directory:
+            client = Path(directory) / client_source.name
+            server = Path(directory) / server_source.name
+            shutil.copy2(client_source, client)
+            shutil.copy2(server_source, server)
+            original_resolver = workbench.server_xml_for_client
+            original_atomic_write = workbench.atomic_write
+            workbench.server_xml_for_client = lambda _path: server
+            workbench.atomic_write = lambda path, data, *, backup=True: original_atomic_write(path, data, backup=False)
+            try:
+                result = workbench.copy_tms_node_with_server_sync(client, tms_source, "0/info/tS")
+            finally:
+                workbench.server_xml_for_client = original_resolver
+                workbench.atomic_write = original_atomic_write
+            image = workbench._verified_img_from_bytes(client, client.read_bytes())
+            self.assertEqual(image.root.get("0/info/tS").value, "grassySoil")
+            server_nodes, _ = workbench.flatten_xml(server)
+            self.assertEqual(server_nodes["0/info/tS"]["value"], "grassySoil")
+            self.assertEqual(result["path"], "0/info/tS")
+
+    def test_copy_rejects_known_modern_map_node(self) -> None:
+        client = workbench._ROOT / "clien/Data/Map/Map/Map4/450002011.img"
+        tms_source = workbench._TMS_DATA / "Map/Map/Map4/450002011.img"
+        if not client.is_file() or not tms_source.is_file():
+            self.skipTest("repository and TMS map samples are unavailable")
+        with self.assertRaisesRegex(ValueError, "不能直接复制到旧端"):
+            workbench.copy_tms_node_with_server_sync(client, tms_source, "rapidStream")
+        with self.assertRaisesRegex(ValueError, r"4/obj/0/(?:dynamic|move)"):
+            workbench.copy_tms_node_with_server_sync(client, tms_source, "4")
+
+    def test_copy_rejects_canvas_subtree(self) -> None:
+        root = workbench.WzSubProperty("modern")
+        root.add(workbench.WzCanvasProperty("0"))
+        with self.assertRaisesRegex(ValueError, "Canvas"):
+            workbench.clone_supported_node(root)
+
+    def test_compare_api_loads_tms_nodes_when_main_file_is_missing(self) -> None:
+        tms_source = workbench._TMS_DATA / "Map/Map/Map4/450002011.img"
+        if not tms_source.is_file():
+            self.skipTest("TMS map sample is unavailable")
+        missing = "clien/Data/Map/Map/Map9/__missing_workbench_api_test__.img"
+        response = workbench.app.test_client().post("/api/compare", json={
+            "kind": "map", "leftPath": missing, "rightPath": str(tms_source),
+        })
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertTrue(payload["ok"])
+        self.assertFalse(payload["leftInfo"]["exists"])
+        self.assertTrue(payload["nodes"])
+        self.assertTrue(all(row["status"] == "rightOnly" for row in payload["nodes"]))
+        self.assertGreater(payload["compatibility"]["addedRootCount"], 0)
+
+    def test_compare_api_keeps_mob_main_loaded_when_tms_file_is_missing(self) -> None:
+        left = "clien/Data/Mob/8642050.img"
+        missing = str(workbench._TMS_DATA / "Mob/_Canvas/__missing_workbench_test__.img")
+        if not (workbench._ROOT / left).is_file():
+            self.skipTest("repository mob sample is unavailable")
+        response = workbench.app.test_client().post("/api/compare", json={
+            "kind": "mob", "leftPath": left, "rightPath": missing,
+        })
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertTrue(payload["leftInfo"]["exists"])
+        self.assertFalse(payload["rightInfo"]["exists"])
+        self.assertGreater(len(payload["nodes"]), 0)
+
+    def test_export_preserves_repo_paths_and_hashes_client_and_server(self) -> None:
+        client = workbench._ROOT / "clien/Data/Map/Map/Map4/450002011.img"
+        server = workbench._ROOT / "gms-server/wz/Map.wz/Map/Map4/450002011.img.xml"
+        downloads = Path.home() / "Downloads"
+        if not client.is_file() or not server.is_file() or not downloads.is_dir():
+            self.skipTest("repository export samples or Downloads directory are unavailable")
+        with tempfile.TemporaryDirectory(prefix=".map-mob-export-test-", dir=downloads) as directory:
+            destination = Path(directory)
+            result = workbench.export_current_files(client, str(destination), include_server=True)
+            client_target = destination / client.relative_to(workbench._ROOT)
+            server_target = destination / server.relative_to(workbench._ROOT)
+            self.assertEqual(client_target.read_bytes(), client.read_bytes())
+            self.assertEqual(server_target.read_bytes(), server.read_bytes())
+            self.assertEqual(len(result["files"]), 2)
+            self.assertTrue(all(len(item["sha256"]) == 64 for item in result["files"]))
+
+    def test_export_rejects_destination_outside_downloads(self) -> None:
+        client = workbench._ROOT / "clien/Data/Map/Map/Map4/450002011.img"
+        if not client.is_file():
+            self.skipTest("repository map IMG sample is unavailable")
+        with self.assertRaisesRegex(ValueError, "Downloads"):
+            workbench.export_current_files(client, "/tmp/map-mob-export", include_server=False)
+
+
+class MapPreviewTests(unittest.TestCase):
+    def test_map_preview_distinguishes_mobs_npcs_and_portals(self) -> None:
+        path = workbench._ROOT / "clien" / "Data" / "Map" / "Map" / "Map1" / "100040000.img"
+        if not path.is_file():
+            self.skipTest("repository sample Map IMG is unavailable")
+        preview = workbench.map_preview(path)
+        mobs = [point for point in preview["life"] if point["kind"] == "mob"]
+        npcs = [point for point in preview["life"] if point["kind"] == "npc"]
+        self.assertTrue(mobs)
+        self.assertTrue(npcs)
+        self.assertTrue(preview["portals"])
+        self.assertTrue(all("sprite" in point for point in mobs + npcs + preview["portals"]))
+        self.assertTrue(all(point["path"].startswith("life/") for point in mobs + npcs))
+        self.assertTrue(all(point["path"].startswith("portal/") for point in preview["portals"]))
+        self.assertTrue(all(element["path"] for element in preview["elements"]))
+        self.assertTrue(all(line["path"].startswith("foothold/") for line in preview["footholds"]))
+
+    def test_tms_map_is_default_comparison_and_resolves_split_canvas(self) -> None:
+        map_path = workbench._TMS_DATA / "Map" / "Map" / "Map1" / "100040000.img"
+        tile_path = workbench._TMS_DATA / "Map" / "Tile" / "grassySoil.img"
+        if not map_path.is_file() or not tile_path.is_file():
+            self.skipTest("TMS IMG dataset is unavailable")
+        self.assertEqual(workbench.default_paths("map", "100040000")[1], map_path)
+        flattened, info = workbench.flatten_source(map_path)
+        self.assertEqual(info["format"], "img")
+        self.assertIn("life/0/id", flattened)
+        preview = workbench.map_preview(map_path)
+        mobs = [point for point in preview["life"] if point["kind"] == "mob"]
+        self.assertTrue(mobs)
+        self.assertTrue(all("sprite" in point for point in mobs))
+        image = workbench.load_image(tile_path)
+        _, canvas, resolved_path = workbench.resolve_canvas_node(image, "slRU/0", tile_path)
+        self.assertIn("_Canvas", resolved_path.parts)
+        self.assertGreater(canvas.width, 1)
+        descriptor = workbench.canvas_descriptor(tile_path, "slRU/0")
+        self.assertEqual(descriptor["origin"], {"x": 0, "y": 96})
+        stat = resolved_path.stat()
+        decoded = workbench.decode_canvas(
+            canvas,
+            region=workbench.canvas_region(str(resolved_path), stat.st_mtime_ns, stat.st_size),
+        )
+        self.assertEqual(decoded.size, (canvas.width, canvas.height))
+
+    def test_tms_compatibility_report_identifies_added_nodes_and_resources(self) -> None:
+        left_path = workbench._ROOT / "clien" / "Data" / "Map" / "Map" / "Map1" / "100040000.img"
+        right_path = workbench._TMS_DATA / "Map" / "Map" / "Map1" / "100040000.img"
+        if not left_path.is_file() or not right_path.is_file():
+            self.skipTest("map comparison samples are unavailable")
+        left, _ = workbench.flatten_source(left_path)
+        right, _ = workbench.flatten_source(right_path)
+        report = workbench.compatibility_analysis(left, right, left_path, right_path)
+        self.assertGreater(report["rightOnlyCount"], 0)
+        self.assertTrue(report["addedRoots"])
+        self.assertTrue(report["categories"])
+        self.assertTrue(report["resources"])
+        self.assertTrue(all(item["status"] in {"ready", "missingFile", "missingCanvas"} for item in report["resources"]))
+
+    def test_chew_chew_swim_nodes_explain_legacy_local_area_projection(self) -> None:
+        left_path = workbench._ROOT / "clien" / "Data" / "Map" / "Map" / "Map4" / "450002011.img"
+        right_path = workbench._TMS_DATA / "Map" / "Map" / "Map4" / "450002011.img"
+        if not left_path.is_file() or not right_path.is_file():
+            self.skipTest("Chew Chew map samples are unavailable")
+        left, _ = workbench.flatten_source(left_path)
+        right, _ = workbench.flatten_source(right_path)
+        rows, _ = workbench.merge_sources(left, right)
+        workbench.annotate_rows(rows, "map", "450002011")
+        swim = next(row for row in rows if row["path"] == "info/swim")
+        self.assertEqual(swim["left"]["value"], 0)
+        self.assertEqual(swim["right"]["value"], 0)
+        self.assertIn("是否可游泳", swim["left"]["meaning"])
+        self.assertIn("整张地图", swim["left"]["scope"])
+        self.assertIn("swimArea/swim01", swim["left"]["migration"])
+        self.assertIn("info/swim=0", swim["left"]["migration"])
+        self.assertIn("根节点", swim["left"]["placement"])
+        self.assertIn("└─ swimArea", swim["left"]["structure"])
+        self.assertIn("y1 = 206", swim["left"]["structure"])
+        self.assertEqual(swim["left"]["compatibility"]["status"], "ok")
+        self.assertEqual(swim["right"]["compatibility"]["status"], "ok")
+        rapid_y1 = next(row for row in rows if row["path"] == "rapidStream/swim01/y1")
+        self.assertIn("水面高度", rapid_y1["right"]["meaning"])
+        self.assertIn("x=-819..5000", rapid_y1["right"]["migration"])
+        self.assertIn("根节点新建 swimArea", rapid_y1["right"]["placement"])
+        self.assertEqual(rapid_y1["right"]["compatibility"]["status"], "modern")
+        area_force = next(row for row in rows if row["path"] == "areaCtrl/swim01/forceX")
+        self.assertIn("水平基础作用力", area_force["right"]["meaning"])
+        self.assertIn("不决定矩形边界", area_force["right"]["scope"])
+
+    def test_nautilus_swim_area_is_a_proven_legacy_local_water_contract(self) -> None:
+        path = workbench._ROOT / "clien" / "Data" / "Map" / "Map" / "Map1" / "120000000.img"
+        if not path.is_file():
+            self.skipTest("Nautilus map sample is unavailable")
+        nodes, _ = workbench.flatten_source(path)
+        self.assertEqual(nodes["info/swim"]["value"], 0)
+        self.assertEqual(nodes["swimArea/nt/x1"]["value"], -606)
+        annotated = workbench.annotate_meta("swimArea/nt/y1", nodes["swimArea/nt/y1"], "map", "120000000")
+        self.assertIn("水面高度", annotated["meaning"])
+        self.assertIn("旧端已验证", annotated["migration"])
+        self.assertEqual(annotated["compatibility"]["status"], "ok")
+
+    def test_map_preview_exposes_normalized_water_area_rectangles(self) -> None:
+        path = workbench._ROOT / "clien" / "Data" / "Map" / "Map" / "Map1" / "120000000.img"
+        if not path.is_file():
+            self.skipTest("Nautilus map sample is unavailable")
+        preview = workbench.map_preview(path)
+        area = next(item for item in preview["waterAreas"] if item["path"] == "swimArea/nt")
+        self.assertEqual(area, {
+            "path": "swimArea/nt", "kind": "swimArea",
+            "x1": -606, "y1": 207, "x2": 5318, "y2": 302,
+        })
+        self.assertEqual(preview["summary"]["waterAreas"], 1)
+
+
+class CrashDiagnosticTests(unittest.TestCase):
+    def test_arcana_two_case_control_reports_exclusive_nodes_and_working_counterexamples(self) -> None:
+        path = workbench._ROOT / "clien/Data/Map/Map/Map4/450005220.img"
+        peer = workbench._ROOT / "clien/Data/Map/Map/Map4/450005242.img"
+        if not path.is_file() or not peer.is_file():
+            self.skipTest("Arcana two-case regression data is unavailable")
+        report = workbench.diagnose_map_crash(path, "map_load", ["450005242"])
+        comparison = report["caseControl"]
+        self.assertTrue(comparison["enabled"])
+        self.assertEqual(comparison["caseMaps"], ["450005220", "450005242"])
+        self.assertEqual(comparison["parsedControlCount"], 29)
+        self.assertTrue(any(item["mapPath"] == "miniMap/canvas" for item in comparison["exclusive"]))
+        life_schema = next(
+            item for item in comparison["exclusive"]
+            if item["category"] == "schema" and item["mapPath"] == "life"
+        )
+        self.assertIn("life/31", life_schema["casePaths"]["450005220"])
+        self.assertIn("life/31", life_schema["casePaths"]["450005242"])
+        forced = next(item for item in comparison["counterexamples"] if "forcedZPage" in item["title"])
+        self.assertIn("450005240", forced["controlMaps"])
+        forced_finding = next(item for item in report["findings"] if item["mapPath"].endswith("/forcedZPage"))
+        self.assertIn("不要据此删除", forced_finding["action"])
+        self.assertIn("450005240", forced_finding["evidence"][0])
+        self.assertIn("session-*.log", report["isolation"][0])
+
+    def test_arcana_baseline_prioritizes_exclusive_materialized_background_on_map_load(self) -> None:
+        repository_path = workbench._ROOT / "clien/Data/Map/Map/Map4/450005220.img"
+        tms_map = workbench._TMS_DATA / "Map/Map/Map4/450005220.img"
+        if not repository_path.is_file() or not tms_map.is_file():
+            self.skipTest("Arcana crash regression data is unavailable")
+        try:
+            baseline = subprocess.check_output([
+                "git", "cat-file", "blob", "HEAD:clien/Data/Map/Map/Map4/450005220.img",
+            ], cwd=workbench._ROOT)
+        except subprocess.CalledProcessError:
+            self.skipTest("Arcana Git baseline is unavailable")
+        parent = workbench._ROOT / "clien/Data/Map/Map/Map4"
+        with tempfile.TemporaryDirectory(prefix=".crash-diagnostic-test-", dir=parent) as directory:
+            path = Path(directory) / "450005220.img"
+            path.write_bytes(baseline)
+            report = workbench.diagnose_map_crash(path, "map_load")
+        suspect = next(
+            item for item in report["sceneResources"]["suspects"]
+            if item["mapPath"] == "back/18"
+        )
+        self.assertEqual(suspect["name"], "arcana2")
+        self.assertEqual(suspect["canvasPath"], "back/74")
+        self.assertEqual((suspect["sourceWidth"], suspect["sourceHeight"]), (1, 1))
+        self.assertEqual(suspect["sourceLinkType"], "_outlink")
+        self.assertEqual(suspect["sourceLinkPath"], "Map/Back/_Canvas/arcana2.img/back/74")
+        self.assertEqual((suspect["clientWidth"], suspect["clientHeight"]), (970, 824))
+        self.assertEqual(suspect["regionalUsageCount"], 1)
+        self.assertTrue(suspect["exclusive"])
+        self.assertEqual(report["phase"], "map_load")
+        self.assertEqual(report["conclusion"], "更偏向地图结构或场景资源问题")
+        self.assertGreater(report["scores"]["resource"], report["scores"]["entity"])
+        finding = next(item for item in report["findings"] if item["mapPath"] == "back/18")
+        self.assertIn("1x1", finding["detail"])
+        self.assertIn("970x824", finding["detail"])
+        self.assertIn("只同步移除 back/18", finding["action"])
+        mob_type = next(item for item in report["findings"] if "info/mobType" in item["title"])
+        self.assertEqual(mob_type["confidence"], "low")
+
+        from wzpy.incremental_img import mutate_img
+
+        gapped = mutate_img(baseline, "remove", ("back", "18"), region="GMS").data
+        with tempfile.TemporaryDirectory(prefix=".crash-diagnostic-gap-test-", dir=parent) as directory:
+            path = Path(directory) / "450005220.img"
+            path.write_bytes(gapped)
+            gap_report = workbench.diagnose_map_crash(path, "map_load")
+        gap_finding = next(item for item in gap_report["findings"] if item["mapPath"] == "back")
+        self.assertIn("缺少 18", gap_finding["detail"])
+        self.assertIn("A/B 结果无效", gap_finding["title"])
+
+    def test_yumyum_crash_diagnostic_separates_map_and_mob_evidence(self) -> None:
+        path = workbench._ROOT / "clien/Data/Map/Map/Map4/450015030.img"
+        if not path.is_file():
+            self.skipTest("YumYum crash sample is unavailable")
+        report = workbench.diagnose_map_crash(path)
+        self.assertEqual(report["mapId"], "450015030")
+        self.assertEqual(report["conclusion"], "更偏向怪物/NPC 资源问题")
+        self.assertEqual(report["confidence"], "中")
+        mob = next(item for item in report["entities"] if item["id"] == "8642050")
+        self.assertEqual(mob["spawns"], 27)
+        self.assertGreater(mob["canvases"], 0)
+        self.assertEqual(mob["canvases"], mob["visible"])
+        mob_type = next(item for item in report["findings"] if "info/mobType" in item["title"])
+        self.assertEqual(mob_type["domain"], "entity")
+        self.assertEqual(mob_type["severity"], "warn")
+        self.assertEqual(mob_type["confidence"], "medium")
+        self.assertIn("单凭该字段不能证明必崩", mob_type["detail"])
+        self.assertTrue(any("地图 IMG 可完整解析" in item for item in report["verified"]))
+
+    def test_diagnose_map_api_is_read_only_and_returns_isolation_steps(self) -> None:
+        path = workbench._ROOT / "clien/Data/Map/Map/Map4/450015030.img"
+        if not path.is_file():
+            self.skipTest("YumYum crash sample is unavailable")
+        before = path.read_bytes()
+        response = workbench.app.test_client().post(
+            "/api/diagnose-map", json={"sourcePath": str(path), "phase": "entity_appear"},
+        )
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertTrue(payload["ok"])
+        self.assertEqual(payload["phase"], "entity_appear")
+        self.assertGreaterEqual(len(payload["isolation"]), 3)
+        self.assertEqual(path.read_bytes(), before)
+
+
+class FileBrowserTests(unittest.TestCase):
+    def test_lists_supported_files_and_directories(self) -> None:
+        result = workbench.browse_directory("gms-server/wz/Map.wz/Map/Map1")
+        names = {item["name"] for item in result["items"]}
+        self.assertIn("100000000.img.xml", names)
+        self.assertTrue(all(item["type"] == "directory" or item["name"].lower().endswith(workbench._ALLOWED_SUFFIXES) for item in result["items"]))
+
+    def test_rejects_directory_outside_home(self) -> None:
+        with self.assertRaisesRegex(ValueError, "用户目录"):
+            workbench.browse_directory("/tmp")
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -15,7 +15,17 @@
 
 | 分类 | 目录 | 处理原则 |
 | --- | --- | --- |
-| 长期基础工具 | `orange-wz/`、`wz-python/`、`scripts/package/`、`scripts/runtime/`、`scripts/wz/`、`scripts/png2canvas/` | 保留源码；删除本机构建目录和缓存 |
+| 长期基础工具 | `resource-workbench/`、`orange-wz/`、`wz-python/`、`scripts/package/`、`scripts/runtime/`、`scripts/wz/`、`scripts/png2canvas/` | 保留源码；删除本机构建目录和缓存 |
+
+## 统一资源工作台
+
+地图/怪物资源、IMG 节点编辑器和任务管理可以通过一个入口启动：
+
+```sh
+rtk tool/resource-workbench/start-resource-workbench.sh
+```
+
+默认地址为 `http://127.0.0.1:8790`，页面顶部切换模块时会保留各模块当前状态。
 | 可重复生成与校验 | `scripts/migration/`、`scripts/audit/`、各目录的 `test_*_contract.*` | 即使迁移已经执行也保留，用于重建、幂等校验和兼容性审计 |
 | 产品补丁 | `scripts/patch-*`、`client-debug/`、`client-video/` | 只保留当前补丁、回滚工具和有运行证据的诊断工具 |
 | 历史单变量实验 | 神秘河 A/B、`no_*` 等旧排障脚本 | 完成根因定位且正式生成/审计链路接管后删除；设计记录和源码仍可从文档及 Git 历史追溯 |

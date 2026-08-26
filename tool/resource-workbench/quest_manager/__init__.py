@@ -1,0 +1,1 @@
+"""Quest resource management module."""

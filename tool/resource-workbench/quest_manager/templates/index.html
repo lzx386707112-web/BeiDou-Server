@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>任务管理 · BeiDou 资源工作台</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  {% set embedded = request.args.get('embedded') == '1' %}
+  {% if request.script_root and not embedded %}<link rel="stylesheet" href="/workbench-static/shell.css">{% endif %}
+</head>
+<body class="{% if request.script_root and not embedded %}suite-integrated suite-quest-manager{% elif embedded %}module-embedded{% endif %}" data-api-base="{{ request.script_root }}">
+  {% if request.script_root and not embedded %}
+  <nav class="suite-nav" aria-label="资源工作台模块">
+    <a class="suite-brand" href="/"><span class="suite-brand-mark" aria-hidden="true">BD</span><span>BeiDou 资源工作台</span></a>
+    <div class="suite-links">
+      <a class="suite-link" href="/?module=map-mob"><span class="suite-link-icon">MM</span>地图与怪物</a>
+      <a class="suite-link" href="/?module=img-editor"><span class="suite-link-icon">IMG</span>IMG 节点</a>
+      <a class="suite-link active" href="/?module=quests" aria-current="page"><span class="suite-link-icon">Q</span>任务管理</a>
+    </div>
+    <span class="suite-context">本地资源管理</span>
+  </nav>
+  {% endif %}
+
+  <header class="module-header">
+    <div><h1>任务管理</h1><p>Quest IMG / XML / Script Workspace</p></div>
+    <div class="header-actions"><span id="saveState" class="state">就绪</span><button id="createBtn" class="primary" type="button">＋ 新建任务</button></div>
+  </header>
+
+  <main class="quest-workspace">
+    <aside class="quest-browser">
+      <div class="filters">
+        <label>地区<select id="regionFilter"><option value="">全部地区</option></select></label>
+        <label>NPC<select id="npcFilter"><option value="">全部 NPC</option></select></label>
+        <label class="search-field">搜索<input id="questSearch" type="search" placeholder="任务名称或 ID" autocomplete="off"></label>
+      </div>
+      <div class="list-summary"><strong id="questCount">0</strong><span>个任务</span></div>
+      <div id="questList" class="quest-list"></div>
+      <div id="listEmpty" class="empty">没有匹配的任务</div>
+    </aside>
+
+    <section class="quest-editor">
+      <div id="editorEmpty" class="editor-empty"><strong>选择一个任务</strong><span>任务记录、脚本与相关物品会显示在这里。</span></div>
+      <div id="editor" hidden>
+        <div class="editor-titlebar">
+          <div><span id="questIdBadge" class="id-badge"></span><h2 id="questTitle"></h2><p id="questMeta"></p></div>
+          <div class="editor-actions"><button id="reloadBtn" class="icon-command" type="button" title="重新载入" aria-label="重新载入">↻</button><button id="deleteBtn" class="danger" type="button">删除任务</button><button id="saveBtn" class="primary" type="button">保存并同步</button></div>
+        </div>
+        <nav class="editor-tabs" aria-label="任务编辑视图">
+          <button class="active" type="button" data-tab="basic">基本信息</button>
+          <button type="button" data-tab="content">内容与对话</button>
+          <button type="button" data-tab="items">任务物品</button>
+          <button type="button" data-tab="mobs">击杀怪物</button>
+          <button type="button" data-tab="raw">原始记录</button>
+          <button type="button" data-tab="scripts">脚本</button>
+        </nav>
+
+        <div class="tab-content active" data-panel="basic">
+          <div class="form-grid">
+            <label>任务名称<input id="name" type="text"></label>
+            <label title="QuestInfo/area 的任务界面分类编号，不是地图 ID">任务分类 ID<input id="area" type="number"></label>
+            <label>实际地区<input id="locationLabel" type="text" readonly></label>
+            <label>起始 NPC<div class="picker-input"><input id="startNpc" type="number"><button type="button" data-pick-npc="startNpc">选择</button></div></label>
+            <label>结束 NPC<div class="picker-input"><input id="endNpc" type="number"><button type="button" data-pick-npc="endNpc">选择</button></div></label>
+            <label>最低等级<input id="levelMin" type="number"></label>
+            <label>最高等级<input id="levelMax" type="number"></label>
+            <label>任务链名称<input id="parent" type="text"></label>
+            <label>链内序号<input id="order" type="number"></label>
+            <label>后继任务 ID<input id="nextQuest" type="number"></label>
+            <label>完成经验<input id="rewardExp" type="number"></label>
+            <label>完成金币<input id="rewardMeso" type="number"></label>
+          </div>
+          <section class="requirement-editor">
+            <div class="requirement-head"><strong>前置任务条件</strong><button id="addRequirementBtn" type="button">＋ 添加条件</button></div>
+            <div id="requirementList" class="requirement-list"></div>
+          </section>
+          <div class="linked-npcs">
+            <div class="linked-npc"><img id="startNpcPreview" data-npc-preview alt=""><div><span>起始 NPC</span><strong id="startNpcLabel">-</strong><div id="startNpcMaps" class="npc-maps"></div></div></div>
+            <div class="linked-npc"><img id="endNpcPreview" data-npc-preview alt=""><div><span>结束 NPC</span><strong id="endNpcLabel">-</strong><div id="endNpcMaps" class="npc-maps"></div></div></div>
+          </div>
+          <section id="questChain" class="quest-chain" hidden>
+            <div class="quest-chain-head"><span>任务链</span><strong id="questChainName"></strong></div>
+            <div id="questChainList" class="quest-chain-list"></div>
+          </section>
+        </div>
+
+        <div class="tab-content" data-panel="content">
+          <div class="text-editor-grid">
+            <label>接取前说明<textarea id="contentStart"></textarea></label>
+            <label>进行中说明<textarea id="contentProgress"></textarea></label>
+            <label>完成后说明<textarea id="contentComplete"></textarea></label>
+            <label>接取对话首句<textarea id="dialogStart"></textarea></label>
+            <label>完成对话首句<textarea id="dialogComplete"></textarea></label>
+          </div>
+        </div>
+
+        <div class="tab-content" data-panel="items">
+          <div id="itemGroups" class="item-groups"></div>
+        </div>
+
+        <div class="tab-content" data-panel="mobs">
+          <div id="mobGroups" class="mob-groups"></div>
+        </div>
+
+        <div class="tab-content" data-panel="raw">
+          <div class="raw-warning">高级编辑会替换当前任务的单条顶层记录，但不会重写整个 IMG。四段 XML 必须保持相同任务 ID。</div>
+          <div class="raw-grid">
+            <label>QuestInfo<textarea id="rawQuestInfo" spellcheck="false"></textarea></label>
+            <label>Check<textarea id="rawCheck" spellcheck="false"></textarea></label>
+            <label>Act<textarea id="rawAct" spellcheck="false"></textarea></label>
+            <label>Say<textarea id="rawSay" spellcheck="false"></textarea></label>
+          </div>
+          <div class="raw-actions"><button id="saveRawBtn" class="primary" type="button">验证并保存四条记录</button></div>
+        </div>
+
+        <div class="tab-content" data-panel="scripts">
+          <div class="script-toolbar">
+            <label>关联脚本<select id="scriptTarget"></select></label>
+            <label>目录<select id="scriptLocale"><option value="main">主目录</option><option value="zh">中文目录</option></select></label>
+            <span id="scriptPath" class="script-path"></span>
+            <button id="deleteScriptBtn" class="danger" type="button">删除脚本</button>
+            <button id="saveScriptBtn" class="primary" type="button">保存脚本</button>
+          </div>
+          <textarea id="scriptEditor" class="script-editor" spellcheck="false"></textarea>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="createDialog">
+    <form id="createForm" method="dialog">
+      <div class="dialog-head"><strong>新建任务</strong><button type="button" data-close-dialog="createDialog">×</button></div>
+      <label>任务 ID<input id="newQuestId" inputmode="numeric" required></label>
+      <label>任务名称<input id="newQuestName" required></label>
+      <label>起始 NPC<input id="newStartNpc" inputmode="numeric"></label>
+      <label>结束 NPC<input id="newEndNpc" inputmode="numeric"></label>
+      <div class="dialog-actions"><button type="button" data-close-dialog="createDialog">取消</button><button class="primary" type="submit">创建四件套</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="pickerDialog" class="picker-dialog">
+    <div class="dialog-head"><strong id="pickerTitle">选择</strong><button type="button" data-close-dialog="pickerDialog">×</button></div>
+    <input id="pickerSearch" type="search" placeholder="输入名称或 ID" autocomplete="off">
+    <div id="pickerResults" class="picker-results"></div>
+  </dialog>
+
+  <div id="toast" class="toast" hidden></div>
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
