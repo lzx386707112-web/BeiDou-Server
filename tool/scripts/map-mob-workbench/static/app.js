@@ -462,6 +462,7 @@ function drawMap(side) {
   drawMapSprites(view, context, view.portalImages, ox, oy, $("showPortals").checked, "#70a7cf", "P");
   drawMapSprites(view, context, view.lifeImages.filter(({point}) => point.kind === "mob"), ox, oy, $("showMobs").checked, "#e26e67", "M");
   drawMapSprites(view, context, view.lifeImages.filter(({point}) => point.kind === "npc"), ox, oy, $("showNpcs").checked, "#e7bd6c", "N");
+  drawMapSelection(context, selectedMapRegions(view));
 }
 
 function drawMapSprites(view, context, entries, ox, oy, visible, color, label) {
@@ -492,6 +493,85 @@ function drawMapSprites(view, context, entries, ox, oy, visible, color, label) {
 
 function registerMapHitRect(view, path, x, y, width, height, label) {
   if (path) view.hitRegions.push({type: "rect", path, x, y, width, height, label});
+}
+
+function mapPathsRelated(first, second) {
+  return first === second || first.startsWith(`${second}/`) || second.startsWith(`${first}/`);
+}
+
+function selectedMapRegions(view) {
+  if (!state.selectedPath) return [];
+  return view.hitRegions.filter((region) => mapPathsRelated(state.selectedPath, region.path));
+}
+
+function drawMapSelection(context, regions) {
+  if (!regions.length) return;
+  const lineWidth = Math.max(3, 3 / Math.max(state.zoom, .1));
+  context.save();
+  context.lineJoin = "round";
+  context.lineCap = "round";
+  context.setLineDash([Math.max(7, 7 / Math.max(state.zoom, .1)), Math.max(4, 4 / Math.max(state.zoom, .1))]);
+  for (const region of regions) {
+    context.beginPath();
+    if (region.type === "line") {
+      context.moveTo(region.x1, region.y1);
+      context.lineTo(region.x2, region.y2);
+    } else {
+      context.rect(region.x - lineWidth, region.y - lineWidth, region.width + lineWidth * 2, region.height + lineWidth * 2);
+    }
+    context.strokeStyle = "rgba(12, 16, 14, .9)";
+    context.lineWidth = lineWidth * 2.6;
+    context.stroke();
+    context.strokeStyle = "#ffd166";
+    context.lineWidth = lineWidth;
+    context.stroke();
+  }
+  context.restore();
+}
+
+function mapRegionBounds(regions) {
+  if (!regions.length) return null;
+  const edges = regions.map((region) => region.type === "line"
+    ? {left: Math.min(region.x1, region.x2), top: Math.min(region.y1, region.y2), right: Math.max(region.x1, region.x2), bottom: Math.max(region.y1, region.y2)}
+    : {left: region.x, top: region.y, right: region.x + region.width, bottom: region.y + region.height});
+  return {
+    left: Math.min(...edges.map((edge) => edge.left)),
+    top: Math.min(...edges.map((edge) => edge.top)),
+    right: Math.max(...edges.map((edge) => edge.right)),
+    bottom: Math.max(...edges.map((edge) => edge.bottom)),
+  };
+}
+
+function revealSelectedMapContent() {
+  if (state.kind !== "map" || !state.selectedPath) return;
+  const path = state.selectedPath;
+  if (mapPathsRelated(path, "foothold")) $("showFootholds").checked = true;
+  if (mapPathsRelated(path, "portal")) $("showPortals").checked = true;
+  if (mapPathsRelated(path, "swimArea") || mapPathsRelated(path, "rapidStream")) $("showWaterAreas").checked = true;
+  if (mapPathsRelated(path, "life")) {
+    const points = Object.values(state.mapViews).flatMap((view) => view.preview?.life || [])
+      .filter((point) => mapPathsRelated(path, point.path));
+    if (!points.length || points.some((point) => point.kind === "mob")) $("showMobs").checked = true;
+    if (!points.length || points.some((point) => point.kind === "npc")) $("showNpcs").checked = true;
+  }
+  drawMaps();
+  requestAnimationFrame(() => {
+    for (const view of Object.values(state.mapViews)) {
+      const bounds = mapRegionBounds(selectedMapRegions(view));
+      if (!bounds) continue;
+      const canvas = $(view.canvasId);
+      const stage = $(view.stageId);
+      const marginLeft = Number.parseFloat(canvas.style.marginLeft) || 0;
+      const marginTop = Number.parseFloat(canvas.style.marginTop) || 0;
+      const centerX = (bounds.left + bounds.right) / 2 * state.zoom + marginLeft;
+      const centerY = (bounds.top + bounds.bottom) / 2 * state.zoom + marginTop;
+      stage.scrollTo({
+        left: Math.max(0, centerX - stage.clientWidth / 2),
+        top: Math.max(0, centerY - stage.clientHeight / 2),
+        behavior: "smooth",
+      });
+    }
+  });
 }
 
 function distanceToSegment(px, py, line) {
@@ -684,6 +764,7 @@ function selectNode(path) {
   $("selectedPath").title = path || "/";
   setInspectorMode("node");
   renderInspector(row);
+  revealSelectedMapContent();
 }
 
 function updateNodeActions() {
