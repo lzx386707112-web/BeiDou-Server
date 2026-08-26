@@ -84,7 +84,7 @@ async function openQuest(questId) {
     state.requirements = structuredClone(payload.quest.requirements || []);
     state.dropAudit = {available: true, reason: "", items: {}}; state.dropLookup.clear();
     buildScriptMap(payload.quest);
-    fillForm(payload.quest); renderRequirements(); renderItems(); renderMobs(); renderScripts(); renderQuestList();
+    fillForm(payload.quest); renderRequirements(); renderItems(); renderMobs(); renderScripts(true); renderQuestList();
     $("editorEmpty").hidden = true; $("editor").hidden = false;
     setReady("已载入");
   } catch (error) { setError(); toast(error.message, true); }
@@ -321,16 +321,28 @@ function buildScriptMap(quest) {
   state.scripts.set(`quest:${quest.questId}`, quest.questScript);
   quest.npcScripts.forEach((script) => state.scripts.set(`npc:${script.id}`, script));
 }
-function renderScripts() {
-  const select = $("scriptTarget"); const current = select.value;
-  select.innerHTML = [...state.scripts.entries()].map(([key, script]) => `<option value="${key}">${script.kind === "quest" ? "任务" : "NPC"} ${script.id}</option>`).join("");
-  if (state.scripts.has(current)) select.value = current;
+function renderScripts(resetSelection = false) {
+  const select = $("scriptTarget"); const current = select.value; const entries = [...state.scripts.entries()];
+  select.innerHTML = entries.map(([key, script]) => `<option value="${key}">${script.kind === "quest" ? "任务" : "NPC"} ${script.id}</option>`).join("");
+  if (resetSelection) {
+    const locale = value("scriptLocale");
+    const preferred = entries.find(([, script]) => script[locale].exists) ||
+      entries.find(([, script]) => script.main.exists || script.zh.exists) || entries[0];
+    if (preferred) {
+      select.value = preferred[0];
+      const existingLocale = preferred[1].main.exists ? "main" : (preferred[1].zh.exists ? "zh" : "");
+      if (!preferred[1][locale].exists && existingLocale) setValue("scriptLocale", existingLocale);
+    }
+  } else if (state.scripts.has(current)) select.value = current;
   showScript();
 }
 function showScript() {
   const script = state.scripts.get(value("scriptTarget")); if (!script) return;
   const locale = value("scriptLocale"); const selected = script[locale];
-  $("scriptEditor").value = selected.content || ""; $("scriptPath").textContent = `${locale === "main" ? "scripts" : "scripts-zh-CN"}/${script.kind}/${script.id}.js${selected.exists ? "" : " · 新文件"}`;
+  $("scriptEditor").value = selected.content || "";
+  $("scriptEditor").placeholder = selected.exists ? "" : "这个脚本文件尚未创建，可直接在这里输入内容并保存";
+  $("deleteScriptBtn").disabled = !selected.exists;
+  $("scriptPath").textContent = `${locale === "main" ? "scripts" : "scripts-zh-CN"}/${script.kind}/${script.id}.js${selected.exists ? "" : " · 尚未创建"}`;
 }
 async function saveScript(remove = false) {
   const script = state.scripts.get(value("scriptTarget")); if (!script) return;

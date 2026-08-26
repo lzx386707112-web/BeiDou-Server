@@ -48,8 +48,6 @@
         <nav class="editor-tabs" aria-label="任务编辑视图">
           <button class="active" type="button" data-tab="basic">基本信息</button>
           <button type="button" data-tab="content">内容与对话</button>
-          <button type="button" data-tab="items">任务物品</button>
-          <button type="button" data-tab="mobs">击杀怪物</button>
           <button type="button" data-tab="raw">原始记录</button>
           <button type="button" data-tab="scripts">脚本</button>
         </nav>
@@ -69,6 +67,14 @@
             <label>完成经验<input id="rewardExp" type="number"></label>
             <label>完成金币<input id="rewardMeso" type="number"></label>
           </div>
+          <section class="basic-resource-section">
+            <h3>任务物品</h3>
+            <div id="itemGroups" class="item-groups"></div>
+          </section>
+          <section class="basic-resource-section">
+            <h3>击杀怪物</h3>
+            <div id="mobGroups" class="mob-groups"></div>
+          </section>
           <section class="requirement-editor">
             <div class="requirement-head"><strong>前置任务条件</strong><button id="addRequirementBtn" type="button">＋ 添加条件</button></div>
             <div id="requirementList" class="requirement-list"></div>
@@ -91,14 +97,6 @@
             <label>接取对话首句<textarea id="dialogStart"></textarea></label>
             <label>完成对话首句<textarea id="dialogComplete"></textarea></label>
           </div>
-        </div>
-
-        <div class="tab-content" data-panel="items">
-          <div id="itemGroups" class="item-groups"></div>
-        </div>
-
-        <div class="tab-content" data-panel="mobs">
-          <div id="mobGroups" class="mob-groups"></div>
         </div>
 
         <div class="tab-content" data-panel="raw">
