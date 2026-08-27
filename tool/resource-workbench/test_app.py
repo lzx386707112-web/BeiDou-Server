@@ -26,7 +26,7 @@ class ResourceWorkbenchTests(unittest.TestCase):
 
     def test_health_lists_mounted_modules(self):
         payload = self.client.get("/api/health").get_json()
-        self.assertEqual(payload["modules"], ["map-mob", "img-editor", "quests"])
+        self.assertEqual(payload["modules"], ["map-mob", "img-editor", "quests", "items"])
 
     def test_map_mob_page_uses_integrated_navigation(self):
         response = self.client.get("/map-mob/")

@@ -250,13 +250,32 @@ def _replace_xml_record(data: bytes, quest_id: str, node: ET.Element | None) -> 
     return data[:closing] + prefix + indented + b"\n" + data[closing:]
 
 
+def _client_quest_record_names(quest_id: str) -> tuple[str, str | None]:
+    value = int(quest_id)
+    if -32768 <= value < 0:
+        return str(value + 65536), str(value)
+    if 32768 <= value <= 65535:
+        return str(value), str(value - 65536)
+    return quest_id, None
+
+
 def _replace_img_record(data: bytes, quest_id: str, node: ET.Element | None) -> bytes:
-    exists = any(record.name == quest_id for record in scan_img(data, region="GMS").root.records)
+    client_id, signed_alias = _client_quest_record_names(quest_id)
+    record_names = {record.name for record in scan_img(data, region="GMS").root.records}
+    if signed_alias is not None and client_id in record_names and signed_alias in record_names:
+        raise ValueError(f"客户端任务 ID 冲突: {signed_alias} 与 {client_id} 同时存在")
+
+    alias_exists = signed_alias is not None and signed_alias in record_names
+    if alias_exists:
+        data = mutate_img(data, "remove", (signed_alias,), region="GMS").data
+    exists = client_id in record_names
     if node is None:
-        return mutate_img(data, "remove", (quest_id,), region="GMS").data if exists else data
+        return mutate_img(data, "remove", (client_id,), region="GMS").data if exists else data
     if not exists:
-        data = mutate_img(data, "add", (), name=quest_id, kind="SubProperty", region="GMS").data
-    return replace_img_record(data, (quest_id,), _property_from_xml(node), region="GMS").data
+        data = mutate_img(data, "add", (), name=client_id, kind="SubProperty", region="GMS").data
+    client_node = copy.deepcopy(node)
+    client_node.set("name", client_id)
+    return replace_img_record(data, (client_id,), _property_from_xml(client_node), region="GMS").data
 
 
 def _validated_payloads(quest_id: str, nodes: dict[str, ET.Element | None]) -> dict[Path, bytes]:

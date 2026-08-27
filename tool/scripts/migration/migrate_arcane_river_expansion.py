@@ -1174,6 +1174,47 @@ def verify_raw_record_scope(
             raise RuntimeError(f"incremental IMG patch changed protected record: {path}")
 
 
+def verify_raw_record_insert_scope(
+    before: bytes,
+    after: bytes,
+    approved_roots: set[tuple[str, ...]],
+) -> None:
+    """Verify additions inserted among siblings without changing legacy records."""
+    before_records, before_orders = raw_record_state(before)
+    after_records, after_orders = raw_record_state(after)
+    removed = set(before_records) - set(after_records)
+    added = set(after_records) - set(before_records)
+    if removed:
+        raise RuntimeError(f"incremental IMG insert removed records: {sorted(removed)}")
+    if any(
+        not any(path[:len(root)] == root for root in approved_roots)
+        for path in added
+    ):
+        raise RuntimeError(f"incremental IMG insert added unapproved records: {sorted(added)}")
+
+    for parent, names in before_orders.items():
+        current = after_orders.get(parent)
+        if current is None:
+            raise RuntimeError(f"incremental IMG insert removed container: {parent}")
+        added_children = {
+            root[len(parent)]
+            for root in approved_roots
+            if len(root) == len(parent) + 1 and root[:len(parent)] == parent
+            and root not in before_records
+        }
+        protected_order = tuple(name for name in current if name not in added_children)
+        if protected_order != names:
+            raise RuntimeError(f"incremental IMG insert reordered siblings at {parent}")
+
+    for path, raw in before_records.items():
+        affected = any(
+            path[:len(root)] == root or root[:len(path)] == path
+            for root in approved_roots
+        )
+        if not affected and after_records[path] != raw:
+            raise RuntimeError(f"incremental IMG insert changed protected record: {path}")
+
+
 def append_property_record(data: bytes, parent_path: tuple[str, ...], prop) -> bytes:
     """Append one complete property without reserializing any existing sibling."""
     layout = scan_img(data, region="GMS")
@@ -1195,6 +1236,40 @@ def append_property_record(data: bytes, parent_path: tuple[str, ...], prop) -> b
     verify_raw_record_scope(
         data, result, {(*parent_path, prop.name)}, allow_additions=True
     )
+    return result
+
+
+def insert_property_record_before(
+    data: bytes,
+    parent_path: tuple[str, ...],
+    prop,
+    before_name: str,
+) -> bytes:
+    """Insert one property before a sibling while preserving every old record."""
+    layout = scan_img(data, region="GMS")
+    prop_list, ancestors = _find_list(layout.root, parent_path)
+    if any(record.name == prop.name for record in prop_list.records):
+        raise FileExistsError("/".join((*parent_path, prop.name)))
+    before = next(
+        (record for record in prop_list.records if record.name == before_name),
+        None,
+    )
+    if before is None:
+        raise KeyError("/".join((*parent_path, before_name)))
+
+    reader = WzBinaryReader(io.BytesIO(data), GMS_KEY)
+    record = _record_bytes(prop, reader)
+    count_edit = _count_edit(prop_list, prop_list.count + 1)
+    count_delta = len(count_edit[2]) - (count_edit[1] - count_edit[0])
+    delta = len(record) + count_delta
+    edits = [
+        (before.start, before.start, record),
+        count_edit,
+        *_size_edits(ancestors, delta),
+    ]
+    edits.extend(_reference_edits(layout, edits))
+    result = verified_image_bytes(_apply_edits(data, edits), prop.name)
+    verify_raw_record_insert_scope(data, result, {(*parent_path, prop.name)})
     return result
 
 

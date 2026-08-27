@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>物品管理 · BeiDou 资源工作台</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  {% set embedded = request.args.get('embedded') == '1' %}
+  {% if request.script_root and not embedded %}<link rel="stylesheet" href="/workbench-static/shell.css">{% endif %}
+</head>
+<body class="{% if request.script_root and not embedded %}suite-integrated{% elif embedded %}module-embedded{% endif %}" data-api-base="{{ request.script_root }}">
+  {% if request.script_root and not embedded %}
+  <nav class="suite-nav" aria-label="资源工作台模块">
+    <a class="suite-brand" href="/"><span class="suite-brand-mark">BD</span><span>BeiDou 资源工作台</span></a>
+    <div class="suite-links">
+      <a class="suite-link" href="/?module=map-mob"><span class="suite-link-icon">MM</span>地图与怪物</a>
+      <a class="suite-link" href="/?module=img-editor"><span class="suite-link-icon">IMG</span>IMG 节点</a>
+      <a class="suite-link" href="/?module=quests"><span class="suite-link-icon">Q</span>任务管理</a>
+      <a class="suite-link active" href="/?module=items"><span class="suite-link-icon">IT</span>物品管理</a>
+    </div>
+    <span class="suite-context">本地资源管理</span>
+  </nav>
+  {% endif %}
+
+  <header class="module-header">
+    <div><h1>物品管理</h1><p>Legacy Item / TMS Compare / Compatibility Workspace</p></div>
+    <div class="header-state"><span id="stateText">就绪</span></div>
+  </header>
+
+  <main class="workspace">
+    <aside class="browser-pane">
+      <div class="scope-tabs" role="group" aria-label="物品迁移状态">
+        <button class="active" type="button" data-availability="missing">仅 TMS · 待迁移</button>
+        <button type="button" data-availability="both">两边都有</button>
+        <button type="button" data-availability="all">全部物品</button>
+        <button type="button" data-availability="local">仅本地</button>
+      </div>
+      <div class="filters">
+        <label>物品分类<select id="category"></select></label>
+        <label>搜索<input id="search" type="search" placeholder="名称或 7 位物品 ID" autocomplete="off"></label>
+      </div>
+      <div class="summary"><strong id="total">0</strong><span>个物品</span><small id="scopeLabel">待迁移</small></div>
+      <div id="itemList" class="item-list"></div>
+      <div id="listEmpty" class="empty">没有匹配的物品</div>
+    </aside>
+
+    <section class="detail-pane">
+      <div id="detailEmpty" class="detail-empty"><strong>选择一个物品</strong><span>同屏查看本地、TMS 与旧端迁移投影，并可在迁移前调整节点。</span></div>
+      <div id="detail" hidden>
+        <div class="detail-head">
+          <img id="itemIcon" alt="">
+          <div class="identity"><div><code id="itemId"></code><span id="categoryLabel"></span><span id="availability"></span></div><h2 id="itemName"></h2><p id="itemFile"></p></div>
+          <div class="detail-actions"><button id="reloadBtn" type="button">重新载入</button><button id="deleteBtn" class="danger" type="button">删除本地物品</button><button id="copyBtn" class="primary" type="button">新增到当前项目</button></div>
+        </div>
+
+        <div class="detail-scroll">
+          <section class="metadata-card">
+            <div class="section-head"><div><h3>物品文本</h3><p id="metadataHint">迁移时同步客户端 String IMG 与主/中文服务端 XML</p></div><button id="saveMetadataBtn" type="button">直接保存本地文本</button></div>
+            <div class="metadata-grid"><label>名称<input id="nameInput"></label><label>描述<textarea id="descInput"></textarea></label></div>
+          </section>
+          <section class="compat-card">
+            <div class="section-head"><div><h3>TMS → 旧端兼容检查</h3><p id="compatSummary"></p></div><span id="compatBadge"></span></div>
+            <div id="compatIssues" class="issue-list"></div>
+          </section>
+          <section class="diff-summary-card">
+            <div class="section-head"><div><h3>本地 ↔ 旧端迁移投影</h3><p>这里直接比较最终会写入旧客户端的节点；右侧节点可在迁移前调整</p></div><div class="projection-actions"><span id="stagedCount">未调整</span><button id="resetProjectionBtn" type="button">撤销调整</button><button id="addProjectionNodeBtn" type="button">＋ 添加迁移节点</button></div></div>
+            <div id="diffSummary" class="diff-summary"></div>
+            <div class="table-toolbar"><span>同一页面对比，不再切换来源</span><select id="diffFilter"><option value="">全部节点</option><option value="changed">值变化</option><option value="tmsOnly">仅迁移投影</option><option value="localOnly">仅本地</option><option value="same">相同</option></select></div>
+            <div id="diffTable" class="node-table diff-table"></div>
+          </section>
+          <section class="local-card">
+            <div class="section-head"><div><h3>当前项目本地节点</h3><p>已有物品可在这里直接增删改；待迁移物品会显示为空</p></div><button id="addLocalNodeBtn" type="button">＋ 添加本地节点</button></div>
+            <div id="localNodeTable" class="node-table"></div>
+          </section>
+          <details class="raw-card">
+            <summary>TMS 原始节点（只读，用于核对迁移投影）</summary>
+            <div id="tmsNodeTable" class="node-table"></div>
+          </details>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="nodeDialog">
+    <form id="nodeForm" method="dialog">
+      <div class="dialog-head"><strong id="nodeDialogTitle">添加物品节点</strong><button type="button" data-close="nodeDialog">×</button></div>
+      <label>父节点路径<input id="nodeParent" placeholder="例如 info 或 spec"></label>
+      <label>节点名称<input id="nodeName" required></label>
+      <label>节点类型<select id="nodeType"><option>Int</option><option>String</option><option>Short</option><option>Long</option><option>Float</option><option>Double</option><option>Vector</option><option>UOL</option><option>SubProperty</option><option>Null</option></select></label>
+      <label id="nodeValueLabel">值<input id="nodeValue"></label>
+      <div id="vectorInputs" class="vector-inputs" hidden><label>X<input id="nodeX" type="number"></label><label>Y<input id="nodeY" type="number"></label></div>
+      <div class="dialog-actions"><button type="button" data-close="nodeDialog">取消</button><button class="primary" type="submit">添加</button></div>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" hidden></div>
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

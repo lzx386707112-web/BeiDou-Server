@@ -15,6 +15,11 @@ public class MobId {
     public static final int SMIRKING_GHOST_STUMP = 1140130;
     public static final int GHOST_STUMP_QUEST = 9101002;
 
+    public static final int JOYFUL_ERDA = 8641003;
+    public static final int JOYFUL_ERDA_QUEST = 9101085;
+    public static final int RAGING_ERDA = 8641006;
+    public static final int RAGING_ERDA_QUEST = 9101086;
+
     public static final int PAPULATUS_CLOCK = 8500001;
     public static final int HIGH_DARKSTAR = 8500003;
     public static final int LOW_DARKSTAR = 8500004;

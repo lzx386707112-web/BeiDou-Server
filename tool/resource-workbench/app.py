@@ -23,6 +23,7 @@ def create_app():
     from map_mob.app import app as map_mob_app
     from img_editor.app import create_app as create_img_editor
     from quest_manager.app import app as quest_manager_app
+    from item_manager.app import app as item_manager_app
 
     shell = Flask(
         __name__,
@@ -34,7 +35,7 @@ def create_app():
     @shell.get("/")
     def index():
         module = request.args.get("module", "map-mob")
-        if module not in ("map-mob", "img-editor", "quests"):
+        if module not in ("map-mob", "img-editor", "quests", "items"):
             module = "map-mob"
         return render_template("index.html", initial_module=module)
 
@@ -43,13 +44,14 @@ def create_app():
         return jsonify({
             "ok": True,
             "name": "BeiDou Resource Workbench",
-            "modules": ["map-mob", "img-editor", "quests"],
+            "modules": ["map-mob", "img-editor", "quests", "items"],
         })
 
     return DispatcherMiddleware(shell, {
         "/map-mob": map_mob_app,
         "/img-editor": create_img_editor(),
         "/quests": quest_manager_app,
+        "/items": item_manager_app,
     })
 
 

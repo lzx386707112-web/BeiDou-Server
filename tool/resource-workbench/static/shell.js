@@ -1,7 +1,7 @@
 "use strict";
 
-const moduleNames = new Set(["map-mob", "img-editor", "quests"]);
-const moduleTitles = {"map-mob": "地图与怪物", "img-editor": "IMG 节点", quests: "任务管理"};
+const moduleNames = new Set(["map-mob", "img-editor", "quests", "items"]);
+const moduleTitles = {"map-mob": "地图与怪物", "img-editor": "IMG 节点", quests: "任务管理", items: "物品管理"};
 
 function moduleFromUrl() {
   const selected = new URLSearchParams(location.search).get("module");

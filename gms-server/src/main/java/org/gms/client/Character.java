@@ -7067,6 +7067,10 @@ public class Character extends AbstractCharacterObject {
             raiseQuestMobCount(MobId.ZOMBIE_MUSHROOM_QUEST);
         } else if (id == MobId.GHOST_STUMP || id == MobId.SMIRKING_GHOST_STUMP) {
             raiseQuestMobCount(MobId.GHOST_STUMP_QUEST);
+        } else if (id == MobId.JOYFUL_ERDA) {
+            raiseQuestMobCount(MobId.JOYFUL_ERDA_QUEST);
+        } else if (id == MobId.RAGING_ERDA) {
+            raiseQuestMobCount(MobId.RAGING_ERDA_QUEST);
         }
 
         int lastQuestProcessed = 0;

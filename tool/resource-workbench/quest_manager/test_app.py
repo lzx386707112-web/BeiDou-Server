@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import io
 import importlib
 import tempfile
@@ -10,7 +11,7 @@ from unittest import mock
 
 from quest_manager.app import _basic_payload, _item_drop_audit, _item_icon, _mob_preview, _npc_map_details, _npc_preview, _property_from_xml, _replace_xml_record, _validate_id
 from wzpy.crypto import WzKey
-from wzpy.incremental_img import replace_img_record, scan_img
+from wzpy.incremental_img import mutate_img, replace_img_record, scan_img
 from wzpy.properties import WzIntProperty, WzStringProperty, WzSubProperty
 from wzpy.reader import WzBinaryReader
 from wzpy.writer import _encode_property_list, encode_image_type_string
@@ -87,6 +88,27 @@ class TemporaryQuestWorkspace:
             yield self.server / f"{name}.img.xml"
             yield self.zh / f"{name}.img.xml"
 
+    def install_signed_quest(self, quest_id: str) -> str:
+        client_id = str(int(quest_id) + 65536)
+        for name in quest_module.QUEST_FILES:
+            source = ET.parse(self.server / f"{name}.img.xml").getroot().find("./imgdir[@name='1000']")
+            self.assert_source(source, name)
+            server_node = copy.deepcopy(source)
+            server_node.set("name", quest_id)
+            for base in (self.server, self.zh):
+                path = base / f"{name}.img.xml"
+                path.write_bytes(quest_module._replace_xml_record(path.read_bytes(), quest_id, server_node))
+            client_node = copy.deepcopy(source)
+            client_node.set("name", client_id)
+            path = self.client / f"{name}.img"
+            path.write_bytes(quest_module._replace_img_record(path.read_bytes(), client_id, client_node))
+        return client_id
+
+    @staticmethod
+    def assert_source(source, name: str) -> None:
+        if source is None:
+            raise AssertionError(f"missing source quest node for {name}")
+
 
 class QuestManagerTests(unittest.TestCase):
     def test_negative_quest_id_is_valid(self):
@@ -161,6 +183,76 @@ class QuestManagerTests(unittest.TestCase):
         changed = replace_img_record(original, ("1000",), _property_from_xml(node), region="GMS").data
         new_tail = record(changed, "2000")
         self.assertEqual(tail_bytes, changed[new_tail.start:new_tail.end])
+
+    def test_signed_quest_save_and_delete_use_unsigned_client_record(self):
+        with TemporaryQuestWorkspace() as workspace:
+            quest_id = "-27835"
+            client_id = workspace.install_signed_quest(quest_id)
+            client = quest_module.app.test_client()
+            unchanged_records = {}
+            for path in workspace.client.glob("*.img"):
+                data = path.read_bytes()
+                unchanged_records[path] = {
+                    name: data[record(data, name).start:record(data, name).end]
+                    for name in ("1000", "2000")
+                }
+            body = {
+                "questId": quest_id, "name": "signed update", "startNpc": 2101,
+                "endNpc": 2100, "items": {},
+            }
+            saved = client.post("/api/quest/save", json=body)
+            self.assertEqual(saved.status_code, 200, saved.get_json())
+            self.assertEqual(saved.get_json()["quest"]["name"], "signed update")
+            first_save = {path: path.read_bytes() for path in workspace.runtime_paths()}
+            saved_again = client.post("/api/quest/save", json=body)
+            self.assertEqual(saved_again.status_code, 200, saved_again.get_json())
+            self.assertEqual(first_save, {path: path.read_bytes() for path in workspace.runtime_paths()})
+            for name in quest_module.QUEST_FILES:
+                path = workspace.client / f"{name}.img"
+                data = path.read_bytes()
+                names = {row.name for row in scan_img(data, region="GMS").root.records}
+                self.assertIn(client_id, names)
+                self.assertNotIn(quest_id, names)
+                for unchanged_name, unchanged_bytes in unchanged_records[path].items():
+                    current = record(data, unchanged_name)
+                    self.assertEqual(unchanged_bytes, data[current.start:current.end])
+
+            deleted = client.post("/api/quest/delete", json={"questId": quest_id, "confirm": quest_id})
+            self.assertEqual(deleted.status_code, 200, deleted.get_json())
+            for name in quest_module.QUEST_FILES:
+                path = workspace.client / f"{name}.img"
+                data = path.read_bytes()
+                names = {row.name for row in scan_img(data, region="GMS").root.records}
+                self.assertNotIn(client_id, names)
+                self.assertIsNone(ET.parse(workspace.server / f"{name}.img.xml").getroot().find(f"./imgdir[@name='{quest_id}']"))
+                for unchanged_name, unchanged_bytes in unchanged_records[path].items():
+                    current = record(data, unchanged_name)
+                    self.assertEqual(unchanged_bytes, data[current.start:current.end])
+
+    def test_signed_quest_create_uses_unsigned_client_record(self):
+        with TemporaryQuestWorkspace() as workspace:
+            quest_id = "-27835"
+            client_id = "37701"
+            client = quest_module.app.test_client()
+            created = client.post("/api/quest/create", json={
+                "questId": quest_id, "name": "signed quest", "startNpc": 2101,
+                "endNpc": 2100, "items": {},
+            })
+            self.assertEqual(created.status_code, 200, created.get_json())
+            for name in quest_module.QUEST_FILES:
+                names = {row.name for row in scan_img((workspace.client / f"{name}.img").read_bytes(), region="GMS").root.records}
+                self.assertIn(client_id, names)
+                self.assertNotIn(quest_id, names)
+                self.assertIsNotNone(ET.parse(workspace.server / f"{name}.img.xml").getroot().find(f"./imgdir[@name='{quest_id}']"))
+
+    def test_signed_and_unsigned_client_records_are_rejected_as_collision(self):
+        quest_id = "-27835"
+        node = ET.fromstring(f'<imgdir name="{quest_id}"><string name="name" value="collision" /></imgdir>')
+        data = quest_module._replace_img_record(sample_img(), quest_id, node)
+        data = mutate_img(data, "add", (), name=quest_id, kind="SubProperty", region="GMS").data
+        data = replace_img_record(data, (quest_id,), _property_from_xml(node), region="GMS").data
+        with self.assertRaisesRegex(ValueError, "客户端任务 ID 冲突"):
+            quest_module._replace_img_record(data, quest_id, node)
 
     def test_basic_save_keeps_unknown_fields(self):
         nodes = {
