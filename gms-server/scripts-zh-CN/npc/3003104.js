@@ -52,9 +52,8 @@ function action(mode, type, selection) {
             return;
         }
         if (cm.getQuestStatus(-31408) == 1) {
-            cm.completeQuest(-31408);
             cm.sendOk("謝謝你。整理好每日調查內容後，我會再告訴你。");
-            cm.dispose();
+            status = 299;
             return;
         }
         if (cm.getQuestStatus(-31408) == 2 && cm.getQuestStatus(-31407) == 0) {
@@ -97,6 +96,11 @@ function action(mode, type, selection) {
         return;
     }
 
+    if (status == 300) {
+        cm.completeQuest(-31408);
+        cm.dispose();
+        return;
+    }
     if (status == 101) {
         cm.startQuest(-31408);
         cm.sendOk("謝謝你。往後請協助我們完成每日調查。");
