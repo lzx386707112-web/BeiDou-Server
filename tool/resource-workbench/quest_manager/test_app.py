@@ -111,6 +111,17 @@ class TemporaryQuestWorkspace:
 
 
 class QuestManagerTests(unittest.TestCase):
+    def test_task_equipment_name_and_tms_icon_are_available(self):
+        quest_module._item_catalog.cache_clear()
+        item = next((row for row in quest_module._item_catalog() if row["id"] == "1712001"), None)
+        self.assertIsNotNone(item)
+        self.assertEqual("QuestEquip", item["category"])
+        self.assertIn("符文", item["name"])
+        icon = _item_icon(1712001)
+        self.assertIsNotNone(icon)
+        self.assertGreater(icon.width * icon.height, 1)
+        self.assertIsNotNone(icon.getbbox())
+
     def test_negative_quest_id_is_valid(self):
         self.assertEqual(_validate_id("-31436", "任务 ID"), "-31436")
 

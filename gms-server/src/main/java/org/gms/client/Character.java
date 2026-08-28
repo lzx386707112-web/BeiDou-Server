@@ -3207,13 +3207,15 @@ public class Character extends AbstractCharacterObject {
     private synchronized void gainExpInternal(long gain, int equip, int party, boolean show, boolean inChat, boolean white) {
         long total = Math.max(gain + equip + party, -exp.get());
 
-        // 允许满级后继续获得经验，但不会升级
+        // 满级经验保留在 99%，避免旧客户端绘制终止经验值时崩溃。
         if (level <= getMaxLevel() && (allowExpGain || this.getEventInstance() != null)) {
             long leftover = 0;
             long nextExp = exp.get() + total;
-            int needExp = ExpTable.getExpNeededForLevel(level, getRebornsCount());
-            if (nextExp > needExp && level >= getMaxLevel()) {
-                nextExp = needExp;
+            if (level >= getMaxLevel()) {
+                int maxLevelExpLimit = level >= 255
+                        ? ExpTable.getMaxLevelExpLimit(level, getRebornsCount())
+                        : ExpTable.getExpNeededForLevel(level, getRebornsCount());
+                nextExp = Math.min(nextExp, maxLevelExpLimit);
                 total = nextExp - exp.get();
                 if (total <= 0) {
                     total = 0;
@@ -6637,7 +6639,11 @@ public class Character extends AbstractCharacterObject {
             ret.setMaxMp(rs.getInt("maxmp"));
             ret.remainingAp = rs.getInt("ap");
             ret.loadCharSkillPoints(rs.getString("sp").split(","));
-            ret.exp.set(rs.getInt("exp"));
+            int loadedExp = rs.getInt("exp");
+            if (ret.level >= 255) {
+                loadedExp = Math.min(loadedExp, ExpTable.getMaxLevelExpLimit(ret.level, 0));
+            }
+            ret.exp.set(loadedExp);
             ret.fame = rs.getInt("fame");
             ret.gachaExp.set(rs.getInt("gachaexp"));
             ret.mapId = rs.getInt("map");
@@ -6735,7 +6741,6 @@ public class Character extends AbstractCharacterObject {
         chr.setDex(charactersDO.getAttrDex());
         chr.setInt(charactersDO.getAttrInt());
         chr.setLuk(charactersDO.getAttrLuk());
-        chr.setExp(charactersDO.getExp());
         chr.setGachaExp(charactersDO.getGachaexp());
         chr.setHp(charactersDO.getHp());
         chr.setMaxHp(charactersDO.getMaxhp());
@@ -6761,6 +6766,12 @@ public class Character extends AbstractCharacterObject {
         chr.setSkinColor(SkinColor.getById(charactersDO.getSkincolor()));
         chr.setGender(charactersDO.getGender());
         chr.setJob(Job.getById(charactersDO.getJob()));
+        int loadedExp = charactersDO.getExp();
+        if (chr.getLevel() >= 255) {
+            int rebornsCount = Optional.ofNullable(charactersDO.getReborns()).orElse(0);
+            loadedExp = Math.min(loadedExp, ExpTable.getMaxLevelExpLimit(chr.getLevel(), rebornsCount));
+        }
+        chr.setExp(loadedExp);
         chr.setFinishedDojoTutorial(charactersDO.getFinishedDojoTutorial() == 1);
         chr.setVanquisherKills(charactersDO.getVanquisherKills());
         chr.setOmokwins(charactersDO.getOmokwins());

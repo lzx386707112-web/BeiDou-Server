@@ -9,6 +9,7 @@ const state = {
 const categoryLabels = new Map();
 const nodeTypeLabels = {Short:"短整数",Int:"整数",Long:"长整数",Float:"浮点",Double:"双精度",String:"字符串",Vector:"坐标",UOL:"链接",SubProperty:"目录",Null:"空值",Canvas:"画布"};
 const availabilityLabels = {missing:"仅 TMS · 待迁移",both:"两边都有",all:"全部",local:"仅本地"};
+const issueLabels = {blocker:"阻断",convert:"自动转换",drop:"自动移除"};
 
 function url(path) { return `${apiBase}${path}`; }
 function escapeHtml(value) { return String(value ?? "").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;"); }
@@ -40,7 +41,7 @@ function renderCatalog(){
   $("listEmpty").hidden=state.catalog.length>0;
   $("itemList").innerHTML=state.catalog.map((item)=>{
     const icon=item.iconScope?`<img data-src="${url(`/api/item/${item.iconScope}/${state.category}/${item.id}/icon`)}" alt="">`:"<span></span>";
-    const badge=item.status==="missing"?'<em class="missing">待迁移</em>':item.status==="both"?'<em class="both">本地＋TMS</em>':item.status==="local"?'<em>仅本地</em>':'<em>缺少资源</em>';
+    const badge=item.status==="missing"?(state.category==="quest_equip"?'<em class="missing">需适配</em>':'<em class="missing">待迁移</em>'):item.status==="both"?'<em class="both">本地＋TMS</em>':item.status==="local"?'<em>仅本地</em>':'<em>缺少资源</em>';
     return `<button class="item-row${item.id===state.selectedId?" active":""}" type="button" data-item-id="${item.id}">${icon}<strong>${escapeHtml(item.name||`物品 ${item.id}`)}</strong><small>${item.id}${badge}</small></button>`;
   }).join("");
   document.querySelectorAll("[data-item-id]").forEach((button)=>button.addEventListener("click",()=>openItem(button.dataset.itemId)));
@@ -70,8 +71,11 @@ function fillDetail(){
   const textEditable=state.category!=="special"&&Boolean(local||tms);$("nameInput").disabled=!textEditable;$("descInput").disabled=!textEditable;
   $("saveMetadataBtn").hidden=!local;$("saveMetadataBtn").disabled=state.category==="special";
   $("metadataHint").textContent=local?"可直接保存本地文本；执行迁移时也会采用当前输入值":"当前输入值会随新物品一起迁移到客户端与服务端 String 资源";
-  $("copyBtn").hidden=!tms;$("copyBtn").textContent=local?"按迁移投影更新本地":"新增到当前项目";$("copyBtn").disabled=!payload.projection||state.category==="pet";
-  $("deleteBtn").hidden=!local;$("deleteBtn").disabled=state.category==="pet";
+  $("copyBtn").hidden=!tms;
+  const questEquip=state.category==="quest_equip",safe=Boolean(payload.compatibility?.safe);
+  $("copyBtn").textContent=questEquip?(local?"已完成兼容迁移":"一键兼容迁移"):local?"按迁移投影更新本地":"新增到当前项目";
+  $("copyBtn").disabled=!payload.projection||state.category==="pet"||!safe||(questEquip&&Boolean(local));
+  $("deleteBtn").hidden=!local;$("deleteBtn").disabled=["pet","quest_equip"].includes(state.category);
   $("addProjectionNodeBtn").disabled=!payload.projection?.mutable;$("resetProjectionBtn").disabled=!state.changes.length;
   $("addLocalNodeBtn").disabled=!local?.mutable;
   renderCompatibility();renderComparison();renderLocalNodes();renderRawTmsNodes();renderStagedCount();
@@ -79,9 +83,9 @@ function fillDetail(){
 
 function renderCompatibility(){
   const check=state.detail.compatibility||{safe:false,issues:[],counts:{}},counts=check.counts||{};
-  $("compatBadge").textContent=state.detail.tms?(check.safe?"可兼容迁移":"存在阻断项"):"TMS 无对应物品";$("compatBadge").classList.toggle("blocked",!check.safe);
-  $("compatSummary").textContent=`阻断 ${counts.blocker||0} · 转换 ${counts.convert||0} · 移除 ${counts.drop||0}`;
-  $("compatIssues").innerHTML=check.issues?.length?check.issues.map((issue)=>`<div class="issue ${issue.level}"><b>${issue.level}</b><code>${escapeHtml(issue.path||"记录")}</code><span>${escapeHtml(issue.message)}</span></div>`).join(""):'<div class="empty compact">没有发现兼容问题</div>';
+  $("compatBadge").textContent=state.detail.tms?(check.safe?"可一键兼容迁移":"必须先处理阻断项"):"TMS 无对应物品";$("compatBadge").classList.toggle("blocked",!check.safe);
+  $("compatSummary").textContent=`阻断 ${counts.blocker||0} · 自动转换 ${counts.convert||0} · 自动移除 ${counts.drop||0}`;
+  $("compatIssues").innerHTML=check.issues?.length?check.issues.map((issue)=>`<article class="issue ${issue.level}"><div class="issue-title"><b>${issueLabels[issue.level]||escapeHtml(issue.level)}</b><code>${escapeHtml(issue.path||"资源记录")}</code><strong>${escapeHtml(issue.title||issue.message||"")}</strong></div><div class="issue-detail"><span>为什么</span><p>${escapeHtml(issue.reason||issue.message||"")}</p><span>怎么处理</span><p>${escapeHtml(issue.resolution||"")}</p></div></article>`).join(""):'<div class="empty compact">没有发现兼容问题</div>';
 }
 
 function nodeMap(rows){return new Map(rows.map((row)=>[row.path,row]));}
@@ -114,7 +118,9 @@ function renderLocalNodes(){
 }
 function renderRawTmsNodes(){
   const detail=state.detail.tms;
-  $("tmsNodeTable").innerHTML=!detail?'<div class="empty compact">TMS 没有对应物品</div>':'<div class="node-head"><span>节点路径</span><span>类型</span><span>值</span><span>说明</span></div>'+detail.nodes.map((row)=>`<div class="node-line"><code>${escapeHtml(row.path)}</code><span>${escapeHtml(nodeTypeLabels[row.type]||row.type)}</span><span class="value">${escapeHtml(pretty(row.value))}</span><span>只读</span></div>`).join("");
+  const issues=state.detail.compatibility?.issues||[];
+  const issueFor=(path)=>issues.filter((issue)=>issue.path&&issue.path!=="资源分类"&&(path===issue.path||path.startsWith(`${issue.path}/`))).sort((a,b)=>b.path.length-a.path.length)[0];
+  $("tmsNodeTable").innerHTML=!detail?'<div class="empty compact">TMS 没有对应物品</div>':'<div class="node-head"><span>节点路径</span><span>类型</span><span>值</span><span>兼容结论</span></div>'+detail.nodes.map((row)=>{const issue=issueFor(row.path),label=issue?`${issueLabels[issue.level]||issue.level} · ${issue.title||""}`:"兼容保留";return `<div class="node-line raw-${issue?.level||"safe"}"><code>${escapeHtml(row.path)}</code><span>${escapeHtml(nodeTypeLabels[row.type]||row.type)}</span><span class="value">${escapeHtml(pretty(row.value))}</span><span class="raw-status">${escapeHtml(label)}</span></div>`;}).join("");
 }
 function renderStagedCount(){$("stagedCount").textContent=state.changes.length?`${state.changes.length} 项迁移调整待提交`:"未调整，将按兼容投影迁移";$("resetProjectionBtn").disabled=!state.changes.length;}
 
@@ -142,7 +148,7 @@ function stageAddedNode(parent,name,kind,values){
 
 async function saveMetadata(){busy("保存本地文本");try{await post("/api/item/metadata",{category:state.category,id:state.selectedId,name:$("nameInput").value,desc:$("descInput").value});await loadCatalog();await openItem(state.selectedId);toast("物品名称与描述已同步");}catch(error){toast(error.message,true);ready("保存失败");}}
 async function copyItem(){
-  const exists=Boolean(state.detail.local),message=exists?`按当前迁移投影更新本地物品 ${state.selectedId} 吗？`:`把 TMS 物品 ${state.selectedId} 新增到当前项目吗？`;
+  const exists=Boolean(state.detail.local),message=state.category==="quest_equip"?`将 ${state.selectedId} 映射到旧端 Weapon 路径吗？图标会自动转换，标记为“自动移除”的现代节点不会写入。`:exists?`按当前迁移投影更新本地物品 ${state.selectedId} 吗？`:`把 TMS 物品 ${state.selectedId} 新增到当前项目吗？`;
   if(!confirm(message))return;busy(exists?"应用迁移投影":"迁移新物品");
   try{await post("/api/item/copy",{category:state.category,id:state.selectedId,overwrite:exists,confirm:exists?state.selectedId:"",changes:state.changes,metadata:{name:$("nameInput").value,desc:$("descInput").value}});setAvailability("both");await loadCatalog();await openItem(state.selectedId);toast(exists?"本地物品已按迁移投影更新":"TMS 物品已新增到当前项目");}catch(error){toast(error.message,true);ready("迁移失败");}
 }
@@ -150,7 +156,15 @@ async function deleteItem(){if(!confirm(`确定删除本地物品 ${state.select
 
 document.querySelectorAll("[data-availability]").forEach((button)=>button.addEventListener("click",()=>{setAvailability(button.dataset.availability);state.selectedId="";loadCatalog();}));
 document.querySelectorAll("[data-close]").forEach((button)=>button.addEventListener("click",()=>$(button.dataset.close).close()));
-$("category").addEventListener("change",()=>{state.category=$("category").value;state.selectedId="";loadCatalog();});$("search").addEventListener("input",debounce(loadCatalog,220));$("diffFilter").addEventListener("change",renderComparison);
+$("category").addEventListener("change",()=>{state.category=$("category").value;state.selectedId="";loadCatalog();});
+$("search").addEventListener("input",debounce(()=>{
+  const query=$("search").value.trim();
+  if(/^1\d{6}$/.test(query)&&state.category!=="quest_equip"){
+    state.category="quest_equip";$("category").value=state.category;state.selectedId="";
+  }
+  loadCatalog();
+},220));
+$("diffFilter").addEventListener("change",renderComparison);
 $("reloadBtn").addEventListener("click",()=>openItem(state.selectedId));$("copyBtn").addEventListener("click",copyItem);$("deleteBtn").addEventListener("click",deleteItem);$("saveMetadataBtn").addEventListener("click",saveMetadata);
 $("itemIcon").addEventListener("error",()=>$("itemIcon").style.visibility="hidden");$("resetProjectionBtn").addEventListener("click",resetProjection);$("addProjectionNodeBtn").addEventListener("click",()=>openNodeDialog("projection"));$("addLocalNodeBtn").addEventListener("click",()=>openNodeDialog("local"));
 $("nodeType").addEventListener("change",()=>{const vector=$("nodeType").value==="Vector";$("vectorInputs").hidden=!vector;$("nodeValueLabel").hidden=vector||["SubProperty","Null"].includes($("nodeType").value);});

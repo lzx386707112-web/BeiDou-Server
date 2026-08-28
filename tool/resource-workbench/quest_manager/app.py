@@ -21,8 +21,10 @@ from typing import Any
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[2]
 WZPY_ROOT = ROOT / "tool" / "wz-python"
-if str(WZPY_ROOT) not in sys.path:
-    sys.path.insert(0, str(WZPY_ROOT))
+MIGRATION_ROOT = ROOT / "tool" / "scripts" / "migration"
+for dependency in (WZPY_ROOT, MIGRATION_ROOT):
+    if str(dependency) not in sys.path:
+        sys.path.insert(0, str(dependency))
 
 from flask import Flask, jsonify, render_template, request, send_file
 from PIL import Image
@@ -41,6 +43,7 @@ from wzpy.properties import (
     WzUolProperty,
     WzVectorProperty,
 )
+import migrate_arcane_river_expansion as arc
 
 QUEST_FILES = ("QuestInfo", "Check", "Act", "Say")
 CLIENT_QUEST = ROOT / "clien" / "Data" / "Quest"
@@ -53,6 +56,7 @@ SCRIPT_ROOTS = {
 BACKUP_ROOT = ROOT / ".workbuddy" / "resource-workbench-backups" / "quests"
 ITEM_STRINGS = ROOT / "gms-server" / "wz-zh-CN" / "String.wz"
 EQUIPMENT_CATALOG = ROOT / "gms-server" / "src" / "main" / "resources" / "equipment-catalog"
+TMS_DATA = Path("/Users/lizixian/Documents/mxd/TMS/MapleStory-IMG/Data")
 APPLICATION_CONFIG = ROOT / "gms-server" / "src" / "main" / "resources" / "application.yml"
 
 REGION_NAMES = {
@@ -623,6 +627,16 @@ def _item_catalog() -> list[dict[str, str]]:
             name = _value(node, "name")
             if item_id.isdigit() and name:
                 result[item_id] = {"id": item_id, "name": str(name), "category": file_name}
+    tms_eqp = TMS_DATA / "String" / "Eqp.img"
+    if tms_eqp.is_file():
+        image = WzImage.from_bytes(tms_eqp.read_bytes(), key=WzKey.for_region("BMS"), name=tms_eqp.name)
+        image.parse()
+        parent = image.root.get("Eqp/ArcaneForce")
+        if parent is not None:
+            for node in parent.children():
+                name = getattr(node.child("name"), "value", "")
+                if node.name.isdigit() and name and node.name not in result:
+                    result[node.name] = {"id": node.name, "name": str(name), "category": "QuestEquip"}
     return sorted(result.values(), key=lambda item: int(item["id"]))
 
 
@@ -734,6 +748,17 @@ def _item_icon(item_id: int) -> Image.Image | None:
         atlas = Image.open(EQUIPMENT_CATALOG / "atlases" / f"{equipment['category']}.png")
         size = equipment["cellSize"]
         return atlas.crop((equipment["x"], equipment["y"], equipment["x"] + size, equipment["y"] + size)).convert("RGBA")
+    if str(item_id).startswith("1"):
+        path = TMS_DATA / "Character" / "ArcaneForce" / f"{item_id:08d}.img"
+        if not path.is_file():
+            return None
+        image = WzImage.from_bytes(path.read_bytes(), key=WzKey.for_region("BMS"), name=path.name)
+        image.parse()
+        canvas = image.root.get("info/icon") or image.root.get("info/iconRaw")
+        if canvas is None:
+            return None
+        resolved, _image, _path, _property = arc.CanvasMaterializer().resolve_canvas(canvas, image, path, set())
+        return arc.decode_source_canvas(resolved)
     padded = f"{item_id:08d}"
     first = str(item_id)[0]
     category = {"2": "Consume", "3": "Install", "4": "Etc"}.get(first)

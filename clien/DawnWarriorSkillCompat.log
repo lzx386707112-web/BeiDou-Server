@@ -1,0 +1,15 @@
+LOAD: Cygnus/Explorer V-VI Attack Skill Compat v69
+OK: set item compatibility loaded
+OK: client diagnostics loaded
+OK: unified skill compat v67 hooks installed
+EQUIP SLOT OK: 115=20, 134/135=51, 167=54, 118=55, 119=56; extended accessories use Accessory data path
+EQUIP DIAGNOSTIC OK: 7 requirement calls and body-part logging enabled
+RANGED RANGE OK: Night Walker skill lt/rb hook installed
+RANGED TARGET OK: Shadow Bite uses native multi-target selection
+RANGED TARGET OK: Night Walker target limits override installed
+RANGED PROJECTILE OK: native per-target destination hook installed
+PROJECTILE OK: Night Walker-only Bezier trajectory hook installed
+RAPID THROW HIT OK: arrival-synced impact creator enabled
+VIDEO OK: Gr2D_DX8 hook installed
+VIDEO OK: real Direct3DCreate8 intercepted
+VIDEO OK: D3D8 device attached without a proxy DLL

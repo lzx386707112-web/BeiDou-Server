@@ -45,7 +45,9 @@ import migrate_arcane_river_expansion as arc  # noqa: E402
 
 TMS_DATA = Path("/Users/lizixian/Documents/mxd/TMS/MapleStory-IMG/Data")
 CLIENT_ITEM = ROOT / "clien" / "Data" / "Item"
+CLIENT_CHARACTER = ROOT / "clien" / "Data" / "Character"
 SERVER_ITEM = ROOT / "gms-server" / "wz" / "Item.wz"
+SERVER_CHARACTER = ROOT / "gms-server" / "wz" / "Character.wz"
 CLIENT_STRING = ROOT / "clien" / "Data" / "String"
 SERVER_STRING = ROOT / "gms-server" / "wz" / "String.wz"
 ZH_STRING = ROOT / "gms-server" / "wz-zh-CN" / "String.wz"
@@ -62,6 +64,12 @@ class Category:
     string_file: str | None
     string_parent: tuple[str, ...] = ()
     standalone: bool = False
+    family: str = "item"
+    migratable: bool = True
+    target_directory: str | None = None
+    target_string_parent: tuple[str, ...] | None = None
+    id_prefixes: tuple[str, ...] = ()
+    legacy_analogues: tuple[str, ...] = ()
 
 
 CATEGORIES = {
@@ -72,6 +80,12 @@ CATEGORIES = {
         Category("cash", "现金物品", "Cash", "Cash.img"),
         Category("pet", "宠物", "Pet", "Pet.img", standalone=True),
         Category("special", "特殊物品", "Special", None),
+        Category(
+            "quest_equip", "任务引用装备（兼容迁移）", "ArcaneForce", "Eqp.img",
+            ("Eqp", "ArcaneForce"), standalone=True, family="character",
+            target_directory="Weapon", target_string_parent=("Eqp", "Weapon"), id_prefixes=("1712",),
+            legacy_analogues=("01302000.img", "01332111.img", "01702022.img"),
+        ),
     )
 }
 EDITABLE_TYPES = {"Short", "Int", "Long", "Float", "Double", "String", "Vector", "UOL"}
@@ -100,23 +114,41 @@ def _category(raw: Any) -> Category:
 
 def _item_id(raw: Any) -> int:
     value = str(raw or "").strip()
-    if not re.fullmatch(r"\d{7}", value) or value.startswith("1"):
-        raise ValueError("非装备物品 ID 必须是 7 位数字且不能以 1 开头")
+    if not re.fullmatch(r"\d{7}", value):
+        raise ValueError("物品 ID 必须是 7 位数字")
     return int(value)
 
 
 def _expected_category(item_id: int) -> str | None:
-    return {2: "consume", 3: "install", 4: "etc", 5: "cash", 9: "special"}.get(item_id // 1_000_000)
+    return {1: "quest_equip", 2: "consume", 3: "install", 4: "etc", 5: "cash", 9: "special"}.get(item_id // 1_000_000)
 
 
 def _validate_category_id(category: Category, item_id: int) -> None:
-    if category.standalone:
+    if category.key == "pet":
         if not str(item_id).startswith("500"):
             raise ValueError("宠物 ID 必须以 500 开头")
         return
     expected = _expected_category(item_id)
     if expected != category.key:
         raise ValueError(f"物品 ID {item_id} 不属于{category.label}")
+    if category.id_prefixes and not str(item_id).startswith(category.id_prefixes):
+        raise ValueError(f"物品 ID {item_id} 不属于当前兼容迁移范围")
+
+
+def _category_directory(category: Category, scope: str) -> str:
+    if scope == "local" and category.target_directory:
+        return category.target_directory
+    return category.directory
+
+
+def _category_string_parent(category: Category, scope: str) -> tuple[str, ...]:
+    if scope == "local" and category.target_string_parent is not None:
+        return category.target_string_parent
+    return category.string_parent
+
+
+def _category_accepts_id(category: Category, item_id: str) -> bool:
+    return not category.id_prefixes or item_id.startswith(category.id_prefixes)
 
 
 def _record_candidates(item_id: int) -> tuple[str, ...]:
@@ -124,9 +156,14 @@ def _record_candidates(item_id: int) -> tuple[str, ...]:
 
 
 def _group_file(category: Category, item_id: int, scope: str) -> Path:
-    base = TMS_DATA / "Item" / category.directory if scope == "tms" else CLIENT_ITEM / category.directory
+    directory = _category_directory(category, scope)
+    if category.family == "character":
+        base = (TMS_DATA / "Character" if scope == "tms" else CLIENT_CHARACTER) / directory
+    else:
+        base = TMS_DATA / "Item" / directory if scope == "tms" else CLIENT_ITEM / directory
     if category.standalone:
-        return base / f"{item_id}.img"
+        name = f"{item_id:08d}" if category.family == "character" else str(item_id)
+        return base / f"{name}.img"
     padded = f"0{item_id}"
     if scope == "local":
         return base / f"{padded[:4]}.img"
@@ -138,7 +175,9 @@ def _group_file(category: Category, item_id: int, scope: str) -> Path:
 
 def _server_item_path(category: Category, item_id: int) -> Path:
     client = _group_file(category, item_id, "local")
-    return SERVER_ITEM / category.directory / f"{client.name}.xml"
+    if category.family == "character":
+        return SERVER_CHARACTER / _category_directory(category, "local") / f"{client.name}.xml"
+    return SERVER_ITEM / _category_directory(category, "local") / f"{client.name}.xml"
 
 
 def _load_image(path: Path, scope: str) -> WzImage:
@@ -190,11 +229,19 @@ def _item_exists(category: Category, item_id: int, scope: str) -> bool:
 
 
 def _resource_ids(category: Category, scope: str) -> frozenset[str]:
-    base = (TMS_DATA / "Item" if scope == "tms" else CLIENT_ITEM) / category.directory
+    directory = _category_directory(category, scope)
+    if category.family == "character":
+        base = (TMS_DATA / "Character" if scope == "tms" else CLIENT_CHARACTER) / directory
+    else:
+        base = (TMS_DATA / "Item" if scope == "tms" else CLIENT_ITEM) / directory
     if not base.is_dir():
         return frozenset()
     if category.standalone:
-        return frozenset(path.stem for path in base.glob("*.img") if re.fullmatch(r"\d{7}", path.stem))
+        return frozenset(
+            item_id for path in base.glob("*.img")
+            if re.fullmatch(r"\d{7,8}", path.stem)
+            and _category_accepts_id(category, item_id := str(int(path.stem)))
+        )
     region = "BMS" if scope == "tms" else "GMS"
     result: set[str] = set()
     for path in base.glob("*.img"):
@@ -253,7 +300,19 @@ def _normalize_path(path: str) -> str:
 @lru_cache(maxsize=128)
 def _legacy_schema(category_key: str, file_name: str) -> frozenset[tuple[str, str]]:
     category = CATEGORIES[category_key]
-    path = CLIENT_ITEM / category.directory / file_name
+    if category.legacy_analogues:
+        base = CLIENT_CHARACTER / _category_directory(category, "local")
+        schema: set[tuple[str, str]] = set()
+        for analogue in category.legacy_analogues:
+            path = base / analogue
+            if not path.is_file():
+                continue
+            image = _load_image(path, "local")
+            for row in _walk_nodes(image.root):
+                schema.add((_normalize_path(row["path"]), row["type"]))
+        return frozenset(schema)
+    base = CLIENT_CHARACTER if category.family == "character" else CLIENT_ITEM
+    path = base / _category_directory(category, "local") / file_name
     if not path.is_file() or category.standalone:
         return frozenset()
     image = _load_image(path, "local")
@@ -267,28 +326,78 @@ def _legacy_schema(category_key: str, file_name: str) -> frozenset[tuple[str, st
 def _compatibility(source_image: WzImage, source_node, source_path: Path, category: Category, item_id: int) -> dict[str, Any]:
     target = _group_file(category, item_id, "local")
     schema = _legacy_schema(category.key, target.name)
-    issues: list[dict[str, str]] = []
+    issues: list[dict[str, Any]] = []
+    if category.key == "quest_equip":
+        issues.append({
+            "level": "convert", "path": "资源分类", "title": "映射到旧端 Weapon 分类",
+            "reason": "当前服务端按物品 ID 将 1712xxx 读取为 Weapon，旧客户端也没有 ArcaneForce 分类。",
+            "resolution": "迁移时写入 Character/Weapon 与 Eqp/Weapon；保留任务奖励、名称和图标，不启用 ARC 属性或装备槽。",
+            "automatic": True,
+        })
     materializer = arc.CanvasMaterializer()
     for row in _walk_nodes(source_node):
         node = source_node.get(row["path"])
         path = row["path"]
         if isinstance(node, BLOCKED_TYPES):
-            issues.append({"level": "blocker", "path": path, "message": f"旧客户端不支持 {row['type']} 节点"})
+            issues.append({
+                "level": "blocker", "path": path, "title": f"旧端不支持 {row['type']} 节点",
+                "reason": "该节点类型没有已验证的旧客户端解析契约，直接写入可能导致资源读取失败。",
+                "resolution": "从迁移投影移除该节点，或先提供可工作的旧端同类节点作为兼容基线。",
+                "automatic": False,
+            })
             continue
         if isinstance(node, WzCanvasProperty):
             try:
                 resolved, _image, _path, _property = materializer.resolve_canvas(node, source_image, source_path, set())
                 arc.decode_source_canvas(resolved)
             except Exception as exc:
-                issues.append({"level": "blocker", "path": path, "message": f"Canvas 无法解析: {exc}"})
+                issues.append({
+                    "level": "blocker", "path": path, "title": "图像无法解码",
+                    "reason": f"TMS Canvas 或其链接解析失败：{exc}",
+                    "resolution": "修复资源链接或替换为可解码图像后才能迁移。", "automatic": False,
+                })
                 continue
             if (int(node.format), int(node.format2)) != (1, 0) or node.child("_outlink") or node.child("_inlink"):
-                issues.append({"level": "convert", "path": path, "message": "复制时会解析链接并转换为 GMS ARGB4444"})
+                issues.append({
+                    "level": "convert", "path": path, "title": "图像链接与像素格式转换",
+                    "reason": "TMS 图像使用链接或不是旧端要求的内嵌 GMS ARGB4444。",
+                    "resolution": "一键迁移会解析真实图像、移除链接节点并转换为 format=1、format2=0。",
+                    "automatic": True,
+                })
         normalized = (_normalize_path(path), row["type"])
-        if schema and normalized not in schema and row["type"] not in ("Canvas", "SubProperty"):
-            issues.append({"level": "drop", "path": path, "message": "旧端同分片未出现该节点，兼容复制时将移除"})
+        canvas_link = row["name"] in ("_outlink", "_inlink") and isinstance(source_node.get(path.rsplit("/", 1)[0]), WzCanvasProperty)
+        if schema and not canvas_link and normalized not in schema and row["type"] not in ("Canvas", "SubProperty"):
+            guidance = {
+                "info/incARC": (
+                    "神秘力量属性", "旧客户端没有神秘力量（ARC）属性读取与显示逻辑。",
+                    "迁移时自动移除；物品仍可作为任务奖励显示，但不会提供神秘力量。",
+                ),
+                "info/reqQuestOnProgress": (
+                    "现代任务装备限制", "旧端装备记录中没有该任务状态限制节点。",
+                    "迁移时自动移除，任务发放条件继续由 Quest 数据控制。",
+                ),
+                "info/MDUReward": (
+                    "现代奖励标记", "旧端装备记录中没有 MDUReward 契约。",
+                    "迁移时自动移除，不影响当前任务直接发放物品。",
+                ),
+                "info/CatalystReqQuest": (
+                    "催化剂任务限制", "旧端没有 ArcaneForce 催化剂与对应任务逻辑。",
+                    "迁移时自动移除；旧端不提供催化剂功能。",
+                ),
+            }.get(path, (
+                "旧端未定义节点", "选定的旧端同类装备基线中没有这个节点。",
+                "迁移时自动移除；如需保留，必须先提供旧端可工作的同类节点证据。",
+            ))
+            issues.append({
+                "level": "drop", "path": path, "title": guidance[0],
+                "reason": guidance[1], "resolution": guidance[2], "automatic": True,
+            })
     if not schema and not category.standalone:
-        issues.append({"level": "blocker", "path": "", "message": f"缺少旧端目标分片 {target.name}，无法建立兼容节点白名单"})
+        issues.append({
+            "level": "blocker", "path": "资源记录", "title": "缺少旧端兼容基线",
+            "reason": f"找不到旧端目标分片 {target.name}，无法判断哪些节点可被旧客户端读取。",
+            "resolution": "补充同分类旧端记录作为白名单基线后再迁移。", "automatic": False,
+        })
     return {
         "safe": not any(issue["level"] == "blocker" for issue in issues),
         "issues": issues,
@@ -399,7 +508,7 @@ def _string_node(scope: str, category: Category, item_id: int):
         return None
     image = _load_image(path, scope)
     parent = image.root
-    for part in category.string_parent:
+    for part in _category_string_parent(category, scope):
         parent = parent.child(part)
         if parent is None:
             return None
@@ -424,12 +533,14 @@ def _local_catalog(category_key: str) -> tuple[dict[str, str], ...]:
             path = SERVER_STRING / f"{category.string_file}.xml"
         root = ET.parse(path).getroot()
         parent = root
-        for part in category.string_parent:
-            parent = next((child for child in parent if child.get("name") == part), parent)
+        for part in _category_string_parent(category, "local"):
+            parent = next((child for child in parent if child.get("name") == part), None)
+            if parent is None:
+                return ()
         rows = []
         for node in parent:
             item_id = node.get("name", "")
-            if item_id.isdigit() and len(item_id) == 7:
+            if item_id.isdigit() and len(item_id) == 7 and _category_accepts_id(category, item_id):
                 values = {child.get("name"): child.get("value", "") for child in node}
                 rows.append({"id": item_id, "name": values.get("name", ""), "desc": values.get("desc", "")})
         return tuple(rows)
@@ -446,20 +557,24 @@ def _tms_catalog(category_key: str) -> tuple[dict[str, str], ...]:
         return ()
     image = _load_image(path, "tms")
     parent = image.root
-    for part in category.string_parent:
+    for part in _category_string_parent(category, "tms"):
         parent = parent.child(part)
         if parent is None:
             return ()
     rows = []
     for node in parent.children():
-        if node.name.isdigit() and len(str(int(node.name))) == 7:
+        if node.name.isdigit() and len(str(int(node.name))) == 7 and _category_accepts_id(category, str(int(node.name))):
             values = _string_values(node)
             rows.append({"id": str(int(node.name)), **values})
     return tuple(rows)
 
 
 def _special_catalog(scope: str, category: Category) -> list[dict[str, str]]:
-    base = (TMS_DATA / "Item" if scope == "tms" else CLIENT_ITEM) / category.directory
+    directory = _category_directory(category, scope)
+    if category.family == "character":
+        base = (TMS_DATA / "Character" if scope == "tms" else CLIENT_CHARACTER) / directory
+    else:
+        base = (TMS_DATA / "Item" if scope == "tms" else CLIENT_ITEM) / directory
     rows: dict[str, dict[str, str]] = {}
     for path in base.glob("*.img"):
         try:
@@ -588,6 +703,16 @@ def _new_img(node) -> bytes:
     return encode_image_type_string(reader, "Property") + b"\x00\x00" + _encode_property_list((node,), reader)
 
 
+def _new_standalone_img(node) -> bytes:
+    reader = WzBinaryReader(io.BytesIO(), GMS_KEY)
+    return encode_image_type_string(reader, "Property") + b"\x00\x00" + _encode_property_list(tuple(node.children()), reader)
+
+
+def _standalone_xml(file_name: str, node) -> bytes:
+    children = "\n".join(arc.property_to_xml(child, 0).strip() for child in node.children())
+    return _new_xml(file_name, children)
+
+
 def _new_xml(file_name: str, node_xml: str) -> bytes:
     indented = "  " + node_xml.replace("\n", "\n  ")
     return (
@@ -683,7 +808,9 @@ def _copy_from_tms(
     changes: list[dict[str, Any]] | None = None,
     metadata: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    if category.standalone:
+    if not category.migratable:
+        raise ValueError("旧客户端尚无已验证的 ArcaneForce 装备契约，禁止直接迁移")
+    if category.key == "pet":
         raise ValueError("宠物是一物品一 IMG，当前仅支持查看、搜索和对比，暂不允许覆盖复制")
     source_path = _group_file(category, item_id, "tms")
     source_image = _load_image(source_path, "tms")
@@ -700,17 +827,25 @@ def _copy_from_tms(
     if cloned is None:
         raise ValueError("存在阻断兼容问题，不能复制")
     cloned = _apply_projection_changes(category, item_id, cloned, list(changes or []))
-    item_xml = arc.property_to_xml(cloned, 0).strip()
-    if target_path.exists():
-        item_data = _upsert_img_record(target_path.read_bytes(), cloned, record_name)
+    server_path = _server_item_path(category, item_id)
+    if category.standalone:
+        item_data = _new_standalone_img(cloned)
+        server_data = _standalone_xml(target_path.name, cloned)
+        if target_path.exists() and target_path.read_bytes() != item_data:
+            raise ValueError("本地独立装备 IMG 已存在且内容不同；为保护二进制布局，请先在节点对比中确认差异")
+        if server_path.exists() and server_path.read_bytes() != server_data:
+            raise ValueError("服务端独立装备 XML 已存在且内容不同；请先确认差异")
     else:
-        item_data = _new_img(cloned)
+        item_xml = arc.property_to_xml(cloned, 0).strip()
+        if target_path.exists():
+            item_data = _upsert_img_record(target_path.read_bytes(), cloned, record_name)
+        else:
+            item_data = _new_img(cloned)
+        server_data = _replace_xml_record(server_path.read_bytes(), record_name, item_xml) if server_path.exists() else _new_xml(target_path.name, item_xml)
     verified = WzImage.from_bytes(item_data, key=GMS_KEY, name=target_path.name)
     verified.parse()
     if verified.truncated or verified.parse_warnings:
         raise ValueError("复制后的客户端物品 IMG 解析失败")
-    server_path = _server_item_path(category, item_id)
-    server_data = _replace_xml_record(server_path.read_bytes(), record_name, item_xml) if server_path.exists() else _new_xml(target_path.name, item_xml)
     ET.fromstring(server_data)
     payloads = {target_path: item_data, server_path: server_data}
 
@@ -730,24 +865,27 @@ def _copy_from_tms(
             str(metadata.get("desc", text_values["desc"])),
         )
         string_data = string_path.read_bytes()
-        if category.string_parent:
+        target_parent = _category_string_parent(category, "local")
+        if target_parent:
             exists_string = _string_node("local", category, item_id) is not None
             if not exists_string:
-                string_data = mutate_img(string_data, "add", category.string_parent, name=str(item_id), kind="SubProperty", region="GMS").data
-            string_data = replace_img_record(string_data, (*category.string_parent, str(item_id)), string_clone, region="GMS").data
+                string_data = mutate_img(string_data, "add", target_parent, name=str(item_id), kind="SubProperty", region="GMS").data
+            string_data = replace_img_record(string_data, (*target_parent, str(item_id)), string_clone, region="GMS").data
         else:
             string_data = _upsert_img_record(string_data, string_clone, str(item_id))
         payloads[string_path] = string_data
         string_xml = arc.property_to_xml(string_clone, 0).strip()
         for base in (SERVER_STRING, ZH_STRING):
             xml_path = base / f"{category.string_file}.xml"
-            if category.string_parent:
+            if target_parent:
                 text = xml_path.read_text(encoding="utf-8-sig")
-                updated = _upsert_string_xml(text, category.string_parent, str(item_id), string_clone)
+                updated = _upsert_string_xml(text, target_parent, str(item_id), string_clone)
                 payloads[xml_path] = updated.encode()
             else:
                 payloads[xml_path] = _replace_xml_record(xml_path.read_bytes(), str(item_id), string_xml)
-    _atomic_commit(payloads)
+    changed_payloads = {path: data for path, data in payloads.items() if not path.exists() or path.read_bytes() != data}
+    if changed_payloads:
+        _atomic_commit(changed_payloads)
     _local_catalog.cache_clear(); _legacy_schema.cache_clear()
     return {"files": [str(path) for path in payloads], "convertedCanvases": converted_canvases, "removedNodes": removed}
 
@@ -821,7 +959,7 @@ def detail(scope: str, category_key: str, item_id: int):
         projected, removed, converted = _build_projection(category, item_id, compatibility)
         projection = None if projected is None else {
             "nodes": _walk_nodes(projected), "removedNodes": removed, "convertedCanvases": converted,
-            "mutable": not category.standalone,
+            "mutable": category.key != "pet",
         }
     comparison_rows = projection["nodes"] if projection else (tms["nodes"] if tms else [])
     return _ok(
@@ -902,10 +1040,11 @@ def metadata():
     if node is None:
         raise KeyError("本地物品名称记录不存在")
     values = {"name": str(body.get("name", "")), "desc": str(body.get("desc", ""))}
+    target_parent = _category_string_parent(category, "local")
     payloads: dict[Path, bytes] = {}
     data = string_path.read_bytes()
     for key, next_value in values.items():
-        path = (*category.string_parent, str(item_id), key)
+        path = (*target_parent, str(item_id), key)
         current = node.child(key)
         if current is None:
             data = mutate_img(data, "add", path[:-1], name=key, kind="String", values={"value": next_value}, region="GMS").data
@@ -915,7 +1054,7 @@ def metadata():
     for base in (SERVER_STRING, ZH_STRING):
         path = base / f"{category.string_file}.xml"; text = path.read_text(encoding="utf-8-sig")
         for key, next_value in values.items():
-            node_path = (*category.string_parent, str(item_id), key)
+            node_path = (*target_parent, str(item_id), key)
             try:
                 text = mutate_xml(text, "edit", node_path, values={"value": next_value})
             except KeyError:

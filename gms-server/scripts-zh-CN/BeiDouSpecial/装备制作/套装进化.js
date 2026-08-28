@@ -1,13 +1,14 @@
 // ============================================================================
 // 装备升级系统（全新）
-// 20阶段单件升级 · 100%成功 · 双路线(套服/上下服) · 16条武器链
-// 条件：矿石·宝石·怪物掉落·击杀数量·任务·BOSS·装备献祭·金币·点券
+// 20阶段单件升级 · 80%成功率 · 双路线(套服/上下服) · 16条武器链
+// 条件：矿石·宝石·怪物掉落·击杀数量·任务·BOSS·装备献祭·上一级套装·金币·点券
 // ============================================================================
 
 var InventoryType = Java.type("org.gms.client.inventory.InventoryType");
 var InventoryManipulator = Java.type("org.gms.client.inventory.manipulator.InventoryManipulator");
 var ItemInformationProvider = Java.type("org.gms.server.ItemInformationProvider");
 var Job = Java.type("org.gms.client.Job");
+var Quest = Java.type("org.gms.server.quest.Quest");
 
 // ---- 职业 ----
 var JOB_NAMES = ["战士", "法师", "弓箭手", "飞侠", "海盗"];
@@ -17,6 +18,9 @@ var STAGE_KEY_PREFIX = "equip_upgrade_stage_";
 var BRANCH_KEY = "equip_upgrade_armor_branch";
 var KILL_KEY_PREFIX = "equip_upgrade_kill_";
 var BOSS_KEY_PREFIX = "equip_upgrade_boss_";
+
+// ---- 升级成功率 ----
+var UPGRADE_SUCCESS_RATE = 80; // 80%成功率
 
 // ---- BOSS名称 ----
 var BOSS_NAMES = {
@@ -314,7 +318,7 @@ function showArmorConfirm() {
 
     var text = "\t\t\t\t#e#r防具升级 → 阶段" + (targetIdx + 1) + " " + stg.name + "#k#n\r\n\r\n";
     text += "#e目标装备：#n\r\n" + formatPreview(targetIds) + "\r\n";
-    text += "#e升级条件（100%成功）：#n\r\n";
+    text += "#e升级条件（" + UPGRADE_SUCCESS_RATE + "%成功率）：#n\r\n";
 
     text += buildConditionText(conds, targetIdx);
 
@@ -340,7 +344,7 @@ function showWeaponConfirm() {
     text += "#e武器类型：#b" + path.name + "#k\r\n";
     text += "#e目标武器：#k#v" + targetId + "# #z" + targetId + "#\r\n";
     if (prevId > 0) text += "#e当前武器：#k#v" + prevId + "# #z" + prevId + "#\r\n";
-    text += "\r\n#e升级条件（100%成功）：#n\r\n";
+    text += "\r\n#e升级条件（" + UPGRADE_SUCCESS_RATE + "%成功率）：#n\r\n";
 
     // 武器本身的献祭
     if (prevId > 0) {
@@ -357,6 +361,16 @@ function showWeaponConfirm() {
 // ============================================================================
 function buildConditionText(conds, targetIdx) {
     var text = "";
+
+    // 成功率
+    text += "#e成功率：#n#b" + UPGRADE_SUCCESS_RATE + "%#k\r\n\r\n";
+
+    // 上一级套装（第2阶段开始需要）
+    if (targetIdx > 0) {
+        var prevStage = ARMOR_STAGES[targetIdx - 1];
+        var prevIds = getArmorIds(targetIdx - 1, cm.getCharacterExtendValue(BRANCH_KEY) || "coatPants");
+        text += "#r[上一级套装]#k " + prevStage.name + "（需要穿戴在身上）\r\n";
+    }
 
     // 装备献祭
     if (conds.equipSacrifice && conds.equipSacrifice.length > 0) {
@@ -375,12 +389,13 @@ function buildConditionText(conds, targetIdx) {
             + "（已有 " + owned + "）#k\r\n";
     }
 
-    // 任务
+    // 任务（显示名字）
     if (conds.quests.length > 0) {
         text += "\r\n#e任务要求：#n\r\n";
         for (var q = 0; q < conds.quests.length; q++) {
             var done = cm.isQuestCompleted(conds.quests[q]);
-            text += (done ? "#g[已完成]#k " : "#r[未完成]#k ") + "任务 " + conds.quests[q] + "\r\n";
+            var questName = getQuestName(conds.quests[q]);
+            text += (done ? "#g[已完成]#k " : "#r[未完成]#k ") + questName + "\r\n";
         }
     }
 
@@ -435,7 +450,8 @@ function doArmorUpgrade() {
     // 任务
     for (var q = 0; q < conds.quests.length; q++) {
         if (!cm.isQuestCompleted(conds.quests[q])) {
-            cm.sendOk("任务 " + conds.quests[q] + " 未完成"); cm.dispose(); return;
+            var questName = getQuestName(conds.quests[q]);
+            cm.sendOk("任务 " + questName + " 未完成"); cm.dispose(); return;
         }
     }
     // BOSS
@@ -461,6 +477,17 @@ function doArmorUpgrade() {
     if (conds.cash > 0 && cm.getPlayer().getCashShop().getCash(1) < conds.cash) {
         cm.sendOk("点券不足"); cm.dispose(); return;
     }
+    // 上一级套装检查（第2阶段开始需要）
+    if (targetIdx > 0) {
+        var prevIds = getArmorIds(targetIdx - 1, branch);
+        var inv = cm.getPlayer().getInventory(InventoryType.EQUIP);
+        for (var p = 0; p < prevIds.length; p++) {
+            if (!inv.findById(prevIds[p])) {
+                cm.sendOk("需要穿戴" + ARMOR_STAGES[targetIdx - 1].name + "（缺少 #v" + prevIds[p] + "# #z" + prevIds[p] + "#）");
+                cm.dispose(); return;
+            }
+        }
+    }
     // 装备栏空间
     if (cm.getPlayer().getInventory(InventoryType.EQUIP).getNumFreeSlot() < targetIds.length) {
         cm.sendOk("装备栏至少需要 " + targetIds.length + " 个空位"); cm.dispose(); return;
@@ -474,6 +501,16 @@ function doArmorUpgrade() {
     if (targetIdx > 0) consumePrevArmor(targetIdx - 1, branch);
     // 扣材料/金币/点券
     deductCosts(conds);
+
+    // 成功率判定
+    var rand = Math.random() * 100;
+    if (rand >= UPGRADE_SUCCESS_RATE) {
+        // 失败：重置击杀数量
+        cm.saveOrUpdateCharacterExtendValue(KILL_KEY_PREFIX + targetIdx, "0");
+        cm.sendOk("#r升级失败！#k\r\n\r\n材料已消耗，击杀数量已重置，请重新准备材料后再次尝试。\r\n（成功率：" + UPGRADE_SUCCESS_RATE + "%）");
+        cm.dispose(); return;
+    }
+
     // 发放新装备
     var ii = ItemInformationProvider.getInstance();
     for (var j = 0; j < targetIds.length; j++) {
@@ -502,7 +539,8 @@ function doWeaponUpgrade() {
     // 任务
     for (var q = 0; q < conds.quests.length; q++) {
         if (!cm.isQuestCompleted(conds.quests[q])) {
-            cm.sendOk("任务 " + conds.quests[q] + " 未完成"); cm.dispose(); return;
+            var questName = getQuestName(conds.quests[q]);
+            cm.sendOk("任务 " + questName + " 未完成"); cm.dispose(); return;
         }
     }
     // BOSS
@@ -552,6 +590,16 @@ function doWeaponUpgrade() {
     consumeSacrifice(conds.equipSacrifice);
     // 扣材料/金币/点券
     deductCosts(conds);
+
+    // 成功率判定
+    var rand = Math.random() * 100;
+    if (rand >= UPGRADE_SUCCESS_RATE) {
+        // 失败：重置击杀数量
+        cm.saveOrUpdateCharacterExtendValue(KILL_KEY_PREFIX + targetIdx, "0");
+        cm.sendOk("#r武器升级失败！#k\r\n\r\n材料已消耗，击杀数量已重置，请重新准备材料后再次尝试。\r\n（成功率：" + UPGRADE_SUCCESS_RATE + "%）");
+        cm.dispose(); return;
+    }
+
     // 发放新武器
     cm.gainEquip(newWeapon);
     cm.saveOrUpdateCharacterExtendValue(STAGE_KEY_PREFIX + "weapon", String(targetIdx));
@@ -596,6 +644,18 @@ function showWeaponPreview(pIdx) {
 // ============================================================================
 // 工具函数
 // ============================================================================
+function getQuestName(questId) {
+    try {
+        var quest = Quest.getInstance(questId);
+        if (quest && quest.getName()) {
+            return quest.getName();
+        }
+    } catch (e) {
+        // 忽略异常
+    }
+    return "任务 " + questId;
+}
+
 function getStage(type) {
     return parseInt(cm.getCharacterExtendValue(STAGE_KEY_PREFIX + type) || "-1", 10);
 }

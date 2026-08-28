@@ -74873,4 +74873,511 @@
     <imgdir name="1">
     </imgdir>
   </imgdir>
+  <imgdir name="-31408">
+    <imgdir name="0">
+      <string name="0" value="我是為了調查消逝的旅途而來的時間神官。 #ho#，我聽說你很厲害。" />
+      <string name="1" value="艾爾達…那裡面出現的艾爾達斯… 這個空間存在於與至今為止完全不同的定律內。" />
+      <string name="2" value="尤其是這裡，能風化存在於消逝的旅途中的所有事物這點來說是個威脅。 萬一這種現象無法控制地更加嚴重的話…" />
+      <string name="3" value="#ho#，你能幫助我們時間神官們早日破解這個空間的謎題嗎？" />
+      <imgdir name="stop" />
+      <imgdir name="yes">
+        <string name="0" value="謝謝你。 往後每天都會指派任務… 嗯… 必須針對任務給你詳細的說明才行… 但還需要稍微整理的時間。 當整理好時就會告訴你詳細內容。" />
+      </imgdir>
+      <imgdir name="no">
+        <string name="0" value="我們需要像#ho#一樣厲害的助手。" />
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <string name="0" value="恰巧想要叫#ho#呢，來的正好。 我要告訴你有關任務的內容。" />
+      <imgdir name="yes">
+        <string name="0" value="#ho#每天都會執行任務。任務內容是消滅消逝的旅途的怪物。" />
+        <string name="1" value="啊！每當各個任務完成時，就會給你#i2635509:# #t2635509:#。 那是表達我們神官感謝之意的物品。" />
+        <string name="2" value="有一點必須注意的是：任務請務必在當天晚上12時前完成。 若超過晚上12時，接獲的任務全部都會消失。" />
+        <string name="3" value="關於任務要告訴#ho#的內容到此為止。那麼，重新跟我對話，開始今天的任務吧。" />
+      </imgdir>
+      <imgdir name="stop" />
+    </imgdir>
+  </imgdir>
+  <imgdir name="-31407">
+    <imgdir name="0" />
+    <imgdir name="1" />
+  </imgdir>
+  <imgdir name="-31406">
+    <imgdir name="0" />
+    <imgdir name="1">
+      <string name="0" value="你擊退200隻喜悅艾爾達斯了，我給你 #i1712001:# #t1712001:# 1個." />
+      <imgdir name="yes">
+        <string name="0" value="#b(跟蘿娜說明將近距離觀察喜悅艾爾達斯後所獲得的情報。)#k" />
+        <string name="1" value="#ho#，謝謝！ 在你的幫助之下，揭露這空間真相的日子稍微提前了呢！" />
+      </imgdir>
+      <imgdir name="stop">
+        <imgdir name="mob">
+          <string name="0" value="擊退200隻喜悅艾爾達斯才行" />
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="-31405">
+    <imgdir name="0" />
+    <imgdir name="1">
+      <string name="0" value="你已經幫忙擊退了200隻憤怒艾爾達斯了啊！ 好！給你1個#i1712001:# #t1712001:# 。" />
+      <imgdir name="yes">
+        <string name="0" value="#b（將靠近觀察憤怒艾爾達斯所獲得的情報告知蘿娜。）#k" />
+        <string name="1" value="#ho#，謝謝！ 在你的幫助之下，揭露這空間真相的日子稍微提前了呢！" />
+      </imgdir>
+      <imgdir name="stop">
+        <imgdir name="mob">
+          <string name="0" value="擊退200隻憤怒艾爾達斯才行" />
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="-31404">
+    <imgdir name="0" />
+    <imgdir name="1">
+      <string name="0" value="你已經幫忙擊退了200隻悲傷的艾爾達斯了啊！ 好！給你1個#i1712001:# #t1712001:# 。" />
+      <imgdir name="yes">
+        <string name="0" value="#b（將靠近觀察悲傷的艾爾達斯所獲得的情報告知蘿娜。）#k" />
+        <string name="1" value="#ho#，謝謝！ 在你的幫助之下，揭露這空間真相的日子稍微提前了呢！" />
+      </imgdir>
+      <imgdir name="stop">
+        <imgdir name="mob">
+          <string name="0" value="必須要擊退200隻悲傷的艾爾達斯。" />
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="-31403">
+    <imgdir name="0" />
+    <imgdir name="1">
+      <string name="0" value="你已經幫忙擊退了200隻歡樂艾爾達斯了啊！ 好！給你1個#i1712001:# #t1712001:# 。" />
+      <imgdir name="yes">
+        <string name="0" value="#b（將靠近觀察歡樂艾爾達斯所獲得的情報告知蘿娜。）#k" />
+        <string name="1" value="#ho#，謝謝！ 在你的幫助之下，揭露這空間真相的日子稍微提前了呢！" />
+      </imgdir>
+      <imgdir name="stop">
+        <imgdir name="mob">
+          <string name="0" value="必須要擊退200隻歡樂艾爾達斯。" />
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="-31402">
+    <imgdir name="0" />
+    <imgdir name="1">
+      <imgdir name="stop">
+        <imgdir name="mob">
+          <string name="0" value="必須要擊退200隻岩石艾爾達斯。" />
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="-31401">
+    <imgdir name="0" />
+    <imgdir name="1">
+      <imgdir name="stop">
+        <imgdir name="mob">
+          <string name="0" value="必須要擊退200隻火焰艾爾達斯。" />
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="-31400">
+    <imgdir name="0" />
+    <imgdir name="1">
+      <imgdir name="stop">
+        <imgdir name="mob">
+          <string name="0" value="必須要擊退200隻強悍的靈魂艾爾達斯。" />
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="-31399">
+    <imgdir name="0" />
+    <imgdir name="1">
+      <imgdir name="stop">
+        <imgdir name="mob">
+          <string name="0" value="必須要擊退200隻安息艾爾達斯。" />
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  
+  <imgdir name="-31397">
+    <imgdir name="0" />
+    <imgdir name="1">
+      <imgdir name="stop">
+        <imgdir name="default">
+          <string name="0" value="必須帶回來50個#t4034922:#。" />
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="-31396">
+  <imgdir name="0" />
+  <imgdir name="1">
+    <imgdir name="stop">
+      <imgdir name="default">
+        <string name="0" value="必須帶回來50個#t4034923:#。" />
+      </imgdir>
+    </imgdir>
+  </imgdir>
+</imgdir>
+  <imgdir name="-31395">
+  <imgdir name="0" />
+  <imgdir name="1">
+    <imgdir name="stop">
+      <imgdir name="default">
+        <string name="0" value="必須帶回來50個#t4034924:#。" />
+      </imgdir>
+    </imgdir>
+  </imgdir>
+</imgdir>
+  <imgdir name="-31394">
+  <imgdir name="0" />
+  <imgdir name="1">
+    <imgdir name="stop">
+      <imgdir name="default">
+        <string name="0" value="必須帶回來50個#t4034925:#。" />
+      </imgdir>
+    </imgdir>
+  </imgdir>
+</imgdir>
+  <imgdir name="-31393">
+  <imgdir name="0" />
+  <imgdir name="1">
+    <imgdir name="stop">
+      <imgdir name="default">
+        <string name="0" value="必須帶回來50個#t4034926:#。" />
+      </imgdir>
+    </imgdir>
+  </imgdir>
+</imgdir>
+  <imgdir name="-31392">
+  <imgdir name="0" />
+  <imgdir name="1">
+    <imgdir name="stop">
+      <imgdir name="default">
+        <string name="0" value="必須帶回來50個#t4034927:#。" />
+      </imgdir>
+    </imgdir>
+  </imgdir>
+</imgdir>
+  <imgdir name="-31391">
+  <imgdir name="0" />
+  <imgdir name="1">
+    <imgdir name="stop">
+      <imgdir name="default">
+        <string name="0" value="必須帶回來50個#t4034928:#。" />
+      </imgdir>
+    </imgdir>
+  </imgdir>
+</imgdir>
+  <imgdir name="-31390">
+  <imgdir name="0" />
+  <imgdir name="1">
+    <imgdir name="stop">
+      <imgdir name="default">
+        <string name="0" value="必須帶回來50個#t4034929:#。" />
+      </imgdir>
+    </imgdir>
+  </imgdir>
+</imgdir>
+  <imgdir name="-31388">
+    <imgdir name="0" />
+    <imgdir name="1">
+      <imgdir name="stop">
+        <imgdir name="npc">
+          <string name="0" value="請帶回30個#t4034934#給潔娜。 她現在大概在忘卻之湖附近進行調查活動。" />
+        </imgdir>
+        <imgdir name="item">
+          <string name="0" value="蘿娜說要帶回30個#t4034934#… 沒有忘卻抑制劑的話，就無法再繼續進行調查活動…" />
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="-31387">
+    <imgdir name="0" />
+    <imgdir name="1">
+      <imgdir name="stop">
+        <imgdir name="npc">
+          <string name="0" value="請帶回30個#t4034935#給潔娜。 她現在大概在消失的火焰地帶附近進行調查活動。" />
+        </imgdir>
+        <imgdir name="item">
+          <string name="0" value="蘿娜說要帶回30個#t4034935#… 沒有#t4034935#的話，就無法再繼續進行調查活動…" />
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="-31386">
+    <imgdir name="0" />
+    <imgdir name="1">
+      <imgdir name="stop">
+        <imgdir name="npc">
+          <string name="0" value="請帶回30個#t4034936#給潔娜。 她現在大概在安息的洞窟附近進行調查活動。" />
+        </imgdir>
+        <imgdir name="item">
+          <string name="0" value="蘿娜說要帶回30個#t4034936#… 沒有#t4034936#的話，就無法再繼續進行調查活動…" />
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="-26481">
+    <imgdir name="0" />
+    <imgdir name="1">
+      <string name="0" value="擊退所有特拉 200隻。這邊再多給你 #i1712001:# #t1712001:# 1個。" />
+      <imgdir name="yes">
+        <string name="0" value="#b（讓羅娜近距離觀察特拉，並傳遞了所獲得的信息。）#k" />
+        <string name="1" value="謝謝，#ho#大大。在你的幫助之下，揭露這空間真相的日子稍微提前了呢！" />
+      </imgdir>
+      <imgdir name="stop">
+        <imgdir name="mob">
+          <string name="0" value="需擊退特拉 200隻 。" />
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="-26480">
+    <imgdir name="0" />
+    <imgdir name="1">
+      <string name="0" value="擊退所有蒙托 200隻。這邊再多給你 #i1712001:# #t1712001:# 1個。" />
+      <imgdir name="yes">
+        <string name="0" value="#b（讓羅娜近距離觀察蒙托，並傳遞了所獲得的信息。）#k" />
+        <string name="1" value="謝謝，#ho#大大。在你的幫助之下，揭露這空間真相的日子稍微提前了呢！" />
+      </imgdir>
+      <imgdir name="stop">
+        <imgdir name="mob">
+          <string name="0" value="需擊退蒙托 200隻。" />
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="-26479">
+    <imgdir name="0" />
+    <imgdir name="1">
+      <string name="0" value="擊退了所有搜索型T無人機A型200隻。這邊再多給你#i1712001:# #t1712001:# 1個。" />
+      <imgdir name="yes">
+        <string name="0" value="#b（讓羅納近距離觀察搜索型T無人機A型，並傳達取得的情報。）#k" />
+        <string name="1" value="謝謝，#ho#大大。在你的幫助之下，揭露這空間真相的日子稍微提前了呢！" />
+      </imgdir>
+      <imgdir name="stop">
+        <imgdir name="mob">
+          <string name="0" value="需擊退搜索型T無人機A型200隻。" />
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="-26478">
+    <imgdir name="0" />
+    <imgdir name="1">
+      <string name="0" value="擊退了所有搜索型T無人機B型 200隻 。這邊再多給你 #i1712001:# #t1712001:# 1個。" />
+      <imgdir name="yes">
+        <string name="0" value="#b（將搜索型 T無人機B型靠近蘿娜觀察，並傳達取得的情報。）#k" />
+        <string name="1" value="謝謝，#ho#大大。在你的幫助之下，揭露這空間真相的日子稍微提前了呢！" />
+      </imgdir>
+      <imgdir name="stop">
+        <imgdir name="mob">
+          <string name="0" value="需擊退搜索型T無人機B型 200隻 。" />
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="-26477">
+    <imgdir name="0" />
+    <imgdir name="1">
+      <imgdir name="stop">
+        <imgdir name="mob">
+          <string name="0" value="需擊退戰鬥型T無人機A型200隻。" />
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="-26476">
+    <imgdir name="0" />
+    <imgdir name="1">
+      <imgdir name="stop">
+        <imgdir name="mob">
+          <string name="0" value="需擊退戰鬥型T無人機B型 200隻。" />
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="-26475">
+    <imgdir name="0" />
+    <imgdir name="1">
+      <imgdir name="stop">
+        <imgdir name="mob">
+          <string name="0" value="需擊退殲滅型T無人機A型200隻。" />
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="-26474">
+    <imgdir name="0" />
+    <imgdir name="1">
+      <imgdir name="stop">
+        <imgdir name="mob">
+          <string name="0" value="需擊退殲滅型T無人機B型 200隻。" />
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="-26473">
+    <imgdir name="0" />
+    <imgdir name="1">
+      <imgdir name="stop">
+        <imgdir name="default">
+          <string name="0" value="需拿#t4036709:# 50個來。" />
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="-27935">
+    <imgdir name="0" />
+    <imgdir name="1" />
+  </imgdir>
+  <imgdir name="-27934">
+    <imgdir name="0" />
+    <imgdir name="1">
+      <imgdir name="stop">
+        <imgdir name="default">
+          <string name="0" value="前往地鐵站入口。" />
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="-27933">
+    <imgdir name="0" />
+    <imgdir name="1">
+      <imgdir name="stop">
+        <imgdir name="default">
+          <string name="0" value="前往地下線路4。拉索爾正在等你。" />
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="-27932">
+    <imgdir name="0" />
+    <imgdir name="1">
+      <imgdir name="stop">
+        <imgdir name="default">
+          <string name="0" value="請收集老鼠肉20個。" />
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="-27931">
+    <imgdir name="0" />
+    <imgdir name="1" />
+  </imgdir>
+  <imgdir name="-27930">
+    <imgdir name="0" />
+    <imgdir name="1">
+      <imgdir name="stop">
+        <imgdir name="default">
+          <string name="0" value="請收集紫色老鼠肉20個。" />
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="-27929">
+    <imgdir name="0" />
+    <imgdir name="1" />
+  </imgdir>
+  <imgdir name="-27928">
+    <imgdir name="0" />
+    <imgdir name="1">
+      <imgdir name="stop">
+        <imgdir name="default">
+          <string name="0" value="請消滅搜索型T-無人機100隻左右。" />
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="-27927">
+    <imgdir name="0" />
+    <imgdir name="1" />
+  </imgdir>
+  <imgdir name="-27926">
+    <imgdir name="0" />
+    <imgdir name="1">
+      <imgdir name="stop">
+        <imgdir name="default">
+          <string name="0" value="請收集20本T-boy的研究筆記本。" />
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="-27925">
+    <imgdir name="0" />
+    <imgdir name="1">
+      <imgdir name="stop">
+        <imgdir name="default">
+          <string name="0" value="如果想回地下線路避難處，必須往左走。" />
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="-27924">
+    <imgdir name="0" />
+    <imgdir name="1">
+      <imgdir name="stop">
+        <imgdir name="default">
+          <string name="0" value="幫、幫我收集20個無人機零件。" />
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="-27923">
+    <imgdir name="0" />
+    <imgdir name="1" />
+  </imgdir>
+  <imgdir name="-27922">
+    <imgdir name="0" />
+    <imgdir name="1">
+      <imgdir name="stop">
+        <imgdir name="default">
+          <string name="0" value=" 你能幫忙消滅#b戰鬥型T無人機B型#k100架嗎？" />
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="-27921">
+    <imgdir name="0" />
+    <imgdir name="1">
+      <imgdir name="stop">
+        <imgdir name="default">
+          <string name="0" value="擊退戰鬥型 T無人機 A型後，收集#b無人機零件#k吧。" />
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="-27920">
+    <imgdir name="0" />
+    <imgdir name="1" />
+  </imgdir>
+  <imgdir name="-27919">
+    <imgdir name="0" />
+    <imgdir name="1">
+      <imgdir name="stop">
+        <imgdir name="default">
+          <string name="0" value="幫我消滅戰鬥型 T無人機 B型100隻吧。" />
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="-27918">
+    <imgdir name="0" />
+    <imgdir name="1">
+      <imgdir name="stop">
+        <imgdir name="default">
+          <string name="0" value="請透過右下方的傳送點前往M高塔頂層，\r\n我很快就會跟上。" />
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="-27917">
+    <imgdir name="0" />
+    <imgdir name="1" />
+  </imgdir>
 </imgdir>

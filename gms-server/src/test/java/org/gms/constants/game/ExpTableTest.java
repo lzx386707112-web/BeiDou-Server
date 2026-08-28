@@ -7,6 +7,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class ExpTableTest {
 
     @Test
+    void maxLevelExpLimitStopsAtNinetyNinePercent() {
+        assertEquals(2_079_000_000, ExpTable.getMaxLevelExpLimit(255, 0));
+        assertEquals(2_079_000_000, ExpTable.getMaxLevelExpLimit(255, 10));
+    }
+
+    @Test
     void postLevel200ExpRateDecreasesOnePercentPerLevelWithFiftyPercentFloor() {
         assertEquals(1.0f, ExpTable.getPostLevel200ExpRate(199));
         assertEquals(1.0f, ExpTable.getPostLevel200ExpRate(200));

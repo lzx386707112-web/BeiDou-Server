@@ -60,6 +60,7 @@
           </section>
           <section class="compat-card">
             <div class="section-head"><div><h3>TMS → 旧端兼容检查</h3><p id="compatSummary"></p></div><span id="compatBadge"></span></div>
+            <div class="compat-legend"><span><b>阻断</b>无法安全自动处理，迁移按钮停用</span><span><b>自动转换</b>迁移时转换为旧端格式或路径</span><span><b>自动移除</b>现代节点不会写入旧端资源</span></div>
             <div id="compatIssues" class="issue-list"></div>
           </section>
           <section class="diff-summary-card">
@@ -73,7 +74,7 @@
             <div id="localNodeTable" class="node-table"></div>
           </section>
           <details class="raw-card">
-            <summary>TMS 原始节点（只读，用于核对迁移投影）</summary>
+            <summary>TMS 原始节点与兼容结论</summary>
             <div id="tmsNodeTable" class="node-table"></div>
           </details>
         </div>

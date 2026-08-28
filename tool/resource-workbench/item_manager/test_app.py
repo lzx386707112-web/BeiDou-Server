@@ -32,6 +32,23 @@ def string_parent(item_id: str, name: str) -> WzSubProperty:
     return root
 
 
+def equipment_string_root(category: str, item_id: str, name: str) -> WzSubProperty:
+    root = WzSubProperty("Eqp")
+    parent = WzSubProperty(category, root); root.add(parent)
+    node = WzSubProperty(item_id, parent); parent.add(node)
+    node.add(WzStringProperty("name", name, node)); node.add(WzStringProperty("desc", f"{name}描述", node))
+    return root
+
+
+def standalone_equipment_info(include_modern: bool) -> WzSubProperty:
+    info = WzSubProperty("info")
+    for name, value in (("reqJob", 0), ("reqLevel", 200), ("scanTradeBlock", 1)):
+        info.add(WzIntProperty(name, value, info))
+    if include_modern:
+        info.add(WzIntProperty("incARC", 30, info)); info.add(WzIntProperty("MDUReward", 1, info))
+    return info
+
+
 def record_bytes(data: bytes, name: str, region: str = "GMS") -> bytes:
     record = next(row for row in scan_img(data, region=region).root.records if row.name == name)
     return data[record.start:record.end]
@@ -41,27 +58,46 @@ class TemporaryItemWorkspace:
     def __enter__(self):
         self.temporary = tempfile.TemporaryDirectory(); self.root = Path(self.temporary.name)
         self.tms = self.root / "TMS" / "Data"; self.client_item = self.root / "clien" / "Data" / "Item"
+        self.client_character = self.root / "clien" / "Data" / "Character"
         self.server_item = self.root / "gms-server" / "wz" / "Item.wz"
+        self.server_character = self.root / "gms-server" / "wz" / "Character.wz"
         self.client_string = self.root / "clien" / "Data" / "String"
         self.server_string = self.root / "gms-server" / "wz" / "String.wz"
         self.zh_string = self.root / "gms-server" / "wz-zh-CN" / "String.wz"
         for path in (
-            self.tms / "Item" / "Etc", self.tms / "String", self.client_item / "Etc",
-            self.server_item / "Etc", self.client_string, self.server_string, self.zh_string,
+            self.tms / "Item" / "Etc", self.tms / "Character" / "ArcaneForce", self.tms / "String",
+            self.client_item / "Etc", self.client_character / "Weapon", self.server_item / "Etc",
+            self.server_character / "Weapon", self.client_string, self.server_string, self.zh_string,
         ):
             path.mkdir(parents=True, exist_ok=True)
         (self.client_item / "Etc" / "0400.img").write_bytes(encode_img([item_node("04000000", 7)], "GMS"))
         (self.tms / "Item" / "Etc" / "0400.img").write_bytes(encode_img([item_node("04000999", 15)], "BMS"))
         (self.client_string / "Etc.img").write_bytes(encode_img([string_parent("4000000", "旧物品")], "GMS"))
         (self.tms / "String" / "Etc.img").write_bytes(encode_img([string_parent("4000999", "TMS物品")], "BMS"))
+        (self.tms / "Character" / "ArcaneForce" / "01712001.img").write_bytes(
+            encode_img([standalone_equipment_info(True)], "BMS")
+        )
+        for analogue in item_module.CATEGORIES["quest_equip"].legacy_analogues:
+            (self.client_character / "Weapon" / analogue).write_bytes(
+                encode_img([standalone_equipment_info(False)], "GMS")
+            )
+        (self.tms / "String" / "Eqp.img").write_bytes(
+            encode_img([equipment_string_root("ArcaneForce", "1712001", "祕法符文：消逝的旅途")], "BMS")
+        )
+        (self.client_string / "Eqp.img").write_bytes(
+            encode_img([equipment_string_root("Weapon", "1700000", "旧端武器")], "GMS")
+        )
         item_xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<imgdir name="0400.img">\n  <imgdir name="04000000"><imgdir name="info"><int name="price" value="7"/><int name="slotMax" value="100"/></imgdir></imgdir>\n</imgdir>\n'
         string_xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<imgdir name="Etc.img"><imgdir name="Etc"><imgdir name="4000000"><string name="name" value="旧物品"/><string name="desc" value="旧物品描述"/></imgdir></imgdir></imgdir>\n'
+        equipment_string_xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<imgdir name="Eqp.img"><imgdir name="Eqp"><imgdir name="Weapon"><imgdir name="1700000"><string name="name" value="旧端武器"/><string name="desc" value="旧端武器描述"/></imgdir></imgdir></imgdir></imgdir>\n'
         (self.server_item / "Etc" / "0400.img.xml").write_text(item_xml)
         for base in (self.server_string, self.zh_string):
             (base / "Etc.img.xml").write_text(string_xml)
+            (base / "Eqp.img.xml").write_text(equipment_string_xml)
         replacements = {
             "ROOT": self.root, "TMS_DATA": self.tms, "CLIENT_ITEM": self.client_item,
-            "SERVER_ITEM": self.server_item, "CLIENT_STRING": self.client_string,
+            "CLIENT_CHARACTER": self.client_character, "SERVER_ITEM": self.server_item,
+            "SERVER_CHARACTER": self.server_character, "CLIENT_STRING": self.client_string,
             "SERVER_STRING": self.server_string, "ZH_STRING": self.zh_string,
             "BACKUP_ROOT": self.root / "backups",
         }
@@ -150,6 +186,57 @@ class ItemManagerTests(unittest.TestCase):
             self.assertTrue(payload["items"][0]["tms"])
             self.assertEqual(payload["items"][0]["status"], "missing")
             self.assertEqual(payload["counts"], {"all": 2, "both": 0, "local": 1, "missing": 1})
+
+    def test_task_equipment_has_explained_projection_and_idempotent_migration(self):
+        with TemporaryItemWorkspace() as workspace:
+            client = item_module.app.test_client()
+            response = item_module.app.test_client().get(
+                "/api/catalog?availability=missing&category=quest_equip&q=1712001"
+            )
+            self.assertEqual(response.status_code, 200, response.get_json())
+            self.assertEqual(response.get_json()["items"][0]["id"], "1712001")
+            self.assertEqual(response.get_json()["items"][0]["status"], "missing")
+
+            detail = client.get("/api/item/tms/quest_equip/1712001")
+            self.assertEqual(detail.status_code, 200, detail.get_json())
+            payload = detail.get_json()
+            self.assertTrue(payload["compatibility"]["safe"])
+            issues = {row["path"]: row for row in payload["compatibility"]["issues"]}
+            self.assertEqual("drop", issues["info/incARC"]["level"])
+            self.assertIn("神秘力量", issues["info/incARC"]["reason"])
+            self.assertTrue(issues["info/incARC"]["automatic"])
+            projection_paths = {row["path"] for row in payload["projection"]["nodes"]}
+            self.assertIn("info/scanTradeBlock", projection_paths)
+            self.assertNotIn("info/incARC", projection_paths)
+            self.assertNotIn("info/MDUReward", projection_paths)
+
+            migration = {
+                "category": "quest_equip", "id": "1712001",
+                "metadata": {"name": "祕法符文：消逝的旅途", "desc": "任务奖励"},
+            }
+            copied = client.post("/api/item/copy", json=migration)
+            self.assertEqual(copied.status_code, 200, copied.get_json())
+            client_img = workspace.client_character / "Weapon" / "01712001.img"
+            server_xml = workspace.server_character / "Weapon" / "01712001.img.xml"
+            self.assertTrue(client_img.is_file())
+            self.assertTrue(server_xml.is_file())
+            local_image = item_module._load_image(client_img, "local")
+            self.assertIsNotNone(local_image.root.get("info/scanTradeBlock"))
+            self.assertIsNone(local_image.root.get("info/incARC"))
+            self.assertNotIn("incARC", server_xml.read_text())
+            self.assertEqual(
+                "祕法符文：消逝的旅途",
+                item_module._string_values(item_module._string_node("local", item_module.CATEGORIES["quest_equip"], 1712001))["name"],
+            )
+
+            tracked = (
+                client_img, server_xml, workspace.client_string / "Eqp.img",
+                workspace.server_string / "Eqp.img.xml", workspace.zh_string / "Eqp.img.xml",
+            )
+            first = {path: path.read_bytes() for path in tracked}
+            repeated = client.post("/api/item/copy", json={**migration, "overwrite": True, "confirm": "1712001"})
+            self.assertEqual(repeated.status_code, 200, repeated.get_json())
+            self.assertEqual(first, {path: path.read_bytes() for path in tracked})
 
     def test_rejects_equipment_id(self):
         with TemporaryItemWorkspace():

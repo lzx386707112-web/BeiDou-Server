@@ -6,6 +6,14 @@ These instructions apply to the entire repository. They are mandatory for
 client WZ/IMG work, skill migrations, compatibility DLL changes, server logic,
 builds, tests, and delivery copies.
 
+## Project WZ/IMG Skill
+
+For every task that diagnoses, reads, changes, migrates, packs, verifies, or
+delivers client WZ/IMG resources or their matching server XML, first read and
+follow `.codex/skills/beidou-wz-img/SKILL.md` and every reference it marks as
+required for the affected resource type. This includes Quest, Skill, Map, NPC,
+Mob, Item, String, Effect, and Resource Workbench operations.
+
 ## Core Rule
 
 This is a compatibility migration project, not a clean-room rewrite and not a
@@ -197,13 +205,15 @@ skill-resource work must include all of the following:
    `String/Skill.img`.
 5. Full IMG parse with no truncation or warnings.
 6. Canvas format audit and payload decoding for every affected skill Canvas.
-7. Pack the actual client directory into a temporary WZ using version 83/GMS,
-   reopen the packed WZ independently, parse the affected IMG, and decode sample
-   or all affected Canvas payloads.
+7. Validate modified client IMG files directly with static raw-record, parse,
+   path/value, and Canvas decode checks. Do not create a temporary packed WZ for
+   ordinary verification unless the user explicitly requests packaging.
 8. Generator idempotence: run twice and compare SHA-256 hashes.
 9. Relevant MCV header, frame-count, duration, alpha, and visible-tail checks.
-10. Rebuild the compatibility DLL when DLL source or routing is involved.
-11. Rebuild the server JAR when server code is involved.
+10. Run targeted static/source checks when DLL source or routing is involved;
+    rebuild the DLL only when the user explicitly requests it.
+11. Run targeted static/source checks when server code is involved; rebuild the
+    server JAR only when the user explicitly requests it.
 12. Run `git diff --check` and inspect the final diff and change set.
 
 Run the broader contract suite when feasible. If it fails because earlier user
@@ -219,7 +229,8 @@ effect, movement, other-player view, map transition, and repeated casting.
 ## Delivery Rules
 
 - Never sync an unverified artifact to `/Users/lizixian/Downloads`.
-- Build and test locally first.
+- Run the required static validation locally first. Build or package only when
+  the user explicitly requests it.
 - Preserve every delivery filename and requested directory layout.
 - Do not rename files, add version suffixes, or include temporary baselines,
   backups, probe builds, or verification WZ packages.
@@ -238,7 +249,7 @@ only when:
 - the change set is minimal and explicitly bounded;
 - untouched binary records are proven unchanged;
 - relevant client, server, DLL, scripts, and grant paths agree;
-- required builds and validation gates pass;
+- required static validation gates and any explicitly requested builds pass;
 - the generator is idempotent;
 - verified delivery files are synchronized with matching hashes; and
 - remaining real-client risks are stated plainly.
