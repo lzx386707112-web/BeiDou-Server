@@ -1273,6 +1273,50 @@ def insert_property_record_before(
     return result
 
 
+def insert_property_records_before(
+    data: bytes,
+    parent_path: tuple[str, ...],
+    props,
+    before_name: str,
+) -> bytes:
+    """Insert multiple properties at one anchor without rewriting old siblings."""
+    props = tuple(props)
+    if not props:
+        return data
+    names = tuple(prop.name for prop in props)
+    if len(set(names)) != len(names):
+        raise ValueError(f"duplicate inserted property names: {names}")
+
+    layout = scan_img(data, region="GMS")
+    prop_list, ancestors = _find_list(layout.root, parent_path)
+    existing = {record.name for record in prop_list.records}
+    conflicts = existing.intersection(names)
+    if conflicts:
+        raise FileExistsError("/".join((*parent_path, sorted(conflicts)[0])))
+    before = next(
+        (record for record in prop_list.records if record.name == before_name),
+        None,
+    )
+    if before is None:
+        raise KeyError("/".join((*parent_path, before_name)))
+
+    reader = WzBinaryReader(io.BytesIO(data), GMS_KEY)
+    records = b"".join(_record_bytes(prop, reader) for prop in props)
+    count_edit = _count_edit(prop_list, prop_list.count + len(props))
+    count_delta = len(count_edit[2]) - (count_edit[1] - count_edit[0])
+    delta = len(records) + count_delta
+    edits = [
+        (before.start, before.start, records),
+        count_edit,
+        *_size_edits(ancestors, delta),
+    ]
+    edits.extend(_reference_edits(layout, edits))
+    result = verified_image_bytes(_apply_edits(data, edits), before_name)
+    approved = {(*parent_path, name) for name in names}
+    verify_raw_record_insert_scope(data, result, approved)
+    return result
+
+
 def ensure_binary_parent(data: bytes, path: tuple[str, ...]) -> bytes:
     current: tuple[str, ...] = ()
     for part in path:
@@ -1303,6 +1347,40 @@ def append_xml_properties(text: str, parent_path: tuple[str, ...], props: list) 
     )
     close_line_start = text.rfind("\n", 0, current.end_start) + 1
     insert_at = close_line_start if not text[close_line_start:current.end_start].strip() else current.end_start
+    result = text[:insert_at] + block + text[insert_at:]
+    scan_xml(result)
+    return result
+
+
+def insert_xml_properties_before(
+    text: str,
+    parent_path: tuple[str, ...],
+    props: list,
+    before_name: str,
+) -> str:
+    """Insert XML properties at one sibling anchor without rewriting old nodes."""
+    root = scan_xml(text)
+    current = root
+    for part in parent_path:
+        matches = [child for child in current.children if child.name == part]
+        if len(matches) != 1:
+            raise RuntimeError(f"XML path is not unique: {'/'.join(parent_path)}")
+        current = matches[0]
+    existing = {child.name for child in current.children}
+    duplicates = [prop.name for prop in props if prop.name in existing]
+    if duplicates:
+        raise FileExistsError(", ".join(duplicates))
+    anchors = [child for child in current.children if child.name == before_name]
+    if len(anchors) != 1:
+        raise RuntimeError(f"XML anchor is not unique: {before_name}")
+
+    anchor = anchors[0]
+    line_start = text.rfind("\n", 0, anchor.start) + 1
+    indent = text[line_start:anchor.start]
+    insert_at = line_start if not indent.strip() else anchor.start
+    block = "".join(
+        property_to_xml(prop, len(indent) // 2) + "\n" for prop in props
+    )
     result = text[:insert_at] + block + text[insert_at:]
     scan_xml(result)
     return result

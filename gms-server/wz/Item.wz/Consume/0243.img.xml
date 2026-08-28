@@ -39,4 +39,23 @@
       <int name="npc" value="9010000"/>
     </imgdir>
   </imgdir>
+                                                        <imgdir name="02436037">
+                                                          <imgdir name="info">
+                                                            <canvas name="icon" width="38" height="38" format="1">
+                                                              <vector name="origin" x="3" y="36"/>
+                                                            </canvas>
+                                                            <canvas name="iconRaw" width="38" height="38" format="1">
+                                                              <vector name="origin" x="3" y="36"/>
+                                                            </canvas>
+                                                            <int name="price" value="1"/>
+                                                            <int name="notSale" value="1"/>
+                                                            <int name="slotMax" value="1"/>
+                                                            <int name="tradeBlock" value="1"/>
+                                                            <int name="notConsume" value="1"/>
+                                                          </imgdir>
+                                                          <imgdir name="spec">
+                                                            <string name="script" value="consume_2436037"/>
+                                                            <int name="npc" value="9010010"/>
+                                                          </imgdir>
+                                                        </imgdir>
 </imgdir>
