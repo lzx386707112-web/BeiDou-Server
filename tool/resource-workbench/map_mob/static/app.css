@@ -151,6 +151,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent); box-sha
 .node-title-line { min-width: 0; display: flex; align-items: center; gap: 6px; }
 .node-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; font-weight: 580; }
 .node-status { flex: 0 0 auto; padding: 1px 5px; border-radius: 3px; color: var(--muted); background: #2c322d; font-size: 11px; line-height: 17px; }
+.node-resource-status { flex: 0 0 auto; padding: 1px 5px; border: 1px solid #71443f; border-radius: 3px; color: #efaaa4; background: #392523; font-size: 10px; line-height: 15px; }
 .status-changed .node-status { color: #f0ca85; background: #342d1e; }
 .status-leftOnly .node-status { color: #a8d4f1; background: #20303a; }
 .status-rightOnly .node-status { color: #d9c4ed; background: #30283a; }

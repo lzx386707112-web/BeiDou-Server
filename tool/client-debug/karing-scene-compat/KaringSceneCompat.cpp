@@ -428,6 +428,7 @@ DWORD WINAPI InstallThread(LPVOID) {
 extern "C" BOOL WINAPI DllMain(HINSTANCE instance, DWORD reason, LPVOID) {
     if (reason == DLL_PROCESS_ATTACH) {
         DisableThreadLibraryCalls(instance);
+        DeleteFileA("KaringSceneCompat.log");
         HANDLE thread = CreateThread(nullptr, 0, InstallThread, nullptr, 0, nullptr);
         if (thread == nullptr) {
             return FALSE;

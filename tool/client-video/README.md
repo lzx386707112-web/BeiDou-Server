@@ -88,6 +88,9 @@ MCV 文件
 `BDV_PlayFileEx()`、`BDV_StopChannel()`、`BDV_GetStatusEx()` 和
 `BDV_GetLastErrorEx()`。
 
+`BeiDouVideo.log` 和桌面代理实验使用的 `BeiDouVideoProxy.log` 会在对应 DLL
+每次进程加载时先删除旧文件，因此日志只记录最近一次启动。
+
 Harness 默认保持单视频播放。要验证两个通道并发，使用竖线分隔玩家和 Boss
 视频路径：
 
@@ -265,26 +268,30 @@ GPU 侧循环使用 2 张 `D3DFMT_A8R8G8B8`、`D3DPOOL_MANAGED` 纹理。当前�
 
 手机端不能把本项目的代理命名成游戏根目录 `d3d8.dll`。Winlator/Mobox 对 DLL override 和 Wine/DXVK 内置 D3D8 的转发行为与桌面 Windows 不完全一致，代理会导致 `Gr2D_DX8.dll` 初始化失败，游戏在启动阶段弹错。
 
-当前 v9 方案不替换 D3D8：
+当前方案不替换 D3D8：
 
 1. `BeiDou.exe` 启动时加载 `DawnWarriorSkillCompat.dll`；
 2. 兼容 DLL 监控 `Gr2D_DX8.dll`；
 3. 优先拦截其 `GetProcAddress("Direct3DCreate8")`；
 4. 捕获 `IDirect3D8::CreateDevice`；
 5. 捕获真实 `IDirect3DDevice8::Present`、`SetTexture` 和四种 draw 方法；
-6. 如果 Gr2D 已经完成初始化，则创建一个最小临时设备，取得 Wine/DXVK 共享的 D3D8 vtable；
-7. 游戏真实设备第一次 Present 时调用 `BDV_AttachDevice`；
-8. 服务端向施法者发送 `FIELD_EFFECT`，其 `Map/Effect.img` 节点只有一个 `7x5` 签名纹理；
-9. draw hook 在旧大帧 FIELD_EFFECT 的绘制位置识别签名纹理，调用 `BDV_Render`，并丢弃标记本身；
-10. `Present` 只承担设备附加、帧边界和状态检查，不再绘制视频。
+6. 游戏真实设备创建完成后立即调用 `BDV_AttachDevice`；
+7. 服务端向施法者发送 `FIELD_EFFECT`，其 `Map/Effect.img` 节点只有一个 `7x5` 签名纹理；
+8. draw hook 在旧大帧 FIELD_EFFECT 的绘制位置识别签名纹理，调用 `BDV_Render`，并丢弃标记本身；
+9. `Present` 只承担设备附加、帧边界和状态检查，不再绘制视频。
+
+兼容 DLL 在诊断器加载后重新链入 `LoadLibraryA`，避免诊断 hook 覆盖 Gr2D
+监控。若仍错过真实 `Direct3DCreate8`，本次会话仅禁用 MCV；不再创建临时
+D3D8 设备或循环重试，以免未施放视频技能的普通角色也承受图形设备扰动。
 
 成功日志应包含：
 
 ```text
-LOAD: Dawn Warrior Skill Compat v9 (Gr2D field layer)
-OK: Dawn Warrior Skill Compat v9 hooks installed (7 recognition sites)
-VIDEO OK: shared D3D8 field-layer hooks installed after initialization
-VIDEO OK: active D3D8 device attached on first Present
+LOAD: Cygnus/Explorer V-VI Attack Skill Compat vNN
+OK: unified skill compat vNN hooks installed
+VIDEO OK: Gr2D_DX8 hook installed
+VIDEO OK: real Direct3DCreate8 intercepted
+VIDEO OK: D3D8 device attached without a proxy DLL
 VIDEO OK: Gr2D field-layer marker texture detected
 ```
 
@@ -589,10 +596,11 @@ BeiDouVideoHarness.exe
 关键成功行：
 
 ```text
-LOAD: Dawn Warrior Skill Compat v9 (Gr2D field layer)
-OK: Dawn Warrior Skill Compat v9 hooks installed (7 recognition sites)
-VIDEO OK: shared D3D8 field-layer hooks installed after initialization
-VIDEO OK: active D3D8 device attached on first Present
+LOAD: Cygnus/Explorer V-VI Attack Skill Compat vNN
+OK: unified skill compat vNN hooks installed
+VIDEO OK: Gr2D_DX8 hook installed
+VIDEO OK: real Direct3DCreate8 intercepted
+VIDEO OK: D3D8 device attached without a proxy DLL
 VIDEO OK: Gr2D field-layer marker texture detected
 VIDEO OK: Galaxy Star Burst started
 VIDEO OK: Eclipse Force started
@@ -619,8 +627,8 @@ DW_ANIM v3
 
 | 现象 | 原因 | 处理 |
 | --- | --- | --- |
-| 放入 `d3d8.dll` 后游戏无法启动 | Wine/DXVK D3D8 override 冲突 | 删除或改名该 DLL，使用 v9 兼容 DLL |
-| `D3D8 device is not attached` | 真实设备尚未捕获或 DLL 版本旧 | 检查 v9 日志和 `DawnWarriorSkillCompat.dll` 是否已替换 |
+| 放入 `d3d8.dll` 后游戏无法启动 | Wine/DXVK D3D8 override 冲突 | 删除或改名该 DLL，使用当前兼容 DLL |
+| `D3D8 device is not attached` | 真实设备尚未捕获或 DLL 版本旧 | 检查当前日志和 `DawnWarriorSkillCompat.dll` 是否已替换 |
 | 视频不出现且日志报告没有 marker draw | 服务端 JAR 没有发送 FIELD_EFFECT，或 `Map.wz` 标记缺失 | 更新服务端 JAR，并由最新 `clien/Data/Map` 重新打包 `Map.wz` |
 | `failed to open MCV file` | MCV 路径错误 | 保留根目录 `Data/Video/...mcv`，不要打进 WZ |
 | `invalid MCV signature` | 文件损坏或不是 MCV0 | 重新导出并运行 `mcv_probe` |
@@ -655,7 +663,7 @@ DW_ANIM v3
 
 ## 当前限制和后续方向
 
-当前 v9 已通过手机实机验证，仍有以下边界：
+当前无代理接入方案已通过手机实机验证，仍有以下边界：
 
 - `BDV_Render` 由 `Map/Effect.img` 中 FIELD_EFFECT 标记的 draw 调用触发，层级跟随旧大帧方案；
 - 标记纹理依赖 `7x5` 尺寸和四像素签名，若 Gr2D 更换纹理格式或图集策略，需要重新适配检测；

@@ -5636,7 +5636,7 @@ public class Character extends AbstractCharacterObject {
     }
 
     public boolean needQuestItem(int questid, int itemid) {
-        if (questid == 0) { // Zero is the only unrestricted drop marker; signed quest IDs are valid.
+        if (questid == 0 || questid == -1) { // Zero and the legacy -1 sentinel are unrestricted; other signed quest IDs are valid.
             return true;
         }
 

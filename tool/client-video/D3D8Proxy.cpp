@@ -231,6 +231,7 @@ extern "C" __declspec(dllexport) IDirect3D8* WINAPI Direct3DCreate8(UINT sdkVers
 extern "C" BOOL WINAPI DllMain(HINSTANCE instance, DWORD reason, LPVOID) {
     if (reason == DLL_PROCESS_ATTACH) {
         DisableThreadLibraryCalls(instance);
+        DeleteFileA("BeiDouVideoProxy.log");
         LogLine("LOAD: BeiDou D3D8 video test proxy");
     }
     return TRUE;

@@ -779,6 +779,7 @@ void BDV_CALL BDV_GetLastErrorEx(uint32_t channel, char* buffer, uint32_t capaci
 
 extern "C" BOOL WINAPI DllMain(HINSTANCE, DWORD reason, LPVOID) {
     if (reason == DLL_PROCESS_ATTACH) {
+        DeleteFileA("BeiDouVideo.log");
         gPlayers[BDV_CHANNEL_PLAYER_SKILL] = new (std::nothrow) Player("player-skill");
         gPlayers[BDV_CHANNEL_BOSS_SCENE] = new (std::nothrow) Player("boss-scene");
         if (gPlayers[BDV_CHANNEL_PLAYER_SKILL] == nullptr ||

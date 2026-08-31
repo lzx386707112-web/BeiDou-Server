@@ -200,6 +200,7 @@ DWORD WINAPI InstallLimiter(LPVOID) {
 extern "C" BOOL WINAPI DllMain(HINSTANCE instance, DWORD reason, LPVOID) {
     if (reason == DLL_PROCESS_ATTACH) {
         DisableThreadLibraryCalls(instance);
+        DeleteFileA("BeiDou30FpsLimit.log");
         HANDLE thread = CreateThread(nullptr, 0, InstallLimiter, nullptr, 0, nullptr);
         if (thread != nullptr) {
             CloseHandle(thread);

@@ -37,6 +37,8 @@ const state = {
   mobPlaying: true,
   mobTimer: null,
   loadSequence: 0,
+  exportSourcePath: "",
+  exportFiles: new Set(),
 };
 
 function escapeHtml(value) {
@@ -239,6 +241,7 @@ function visiblePaths() {
     }
   }
   const output = [];
+  if (state.rowByPath.has("")) output.push({path: "", depth: 0});
   const visit = (parent, depth) => {
     for (const path of state.children.get(parent) || []) {
       if ((search || diffOnly) && !keep.has(path)) continue;
@@ -246,7 +249,7 @@ function visiblePaths() {
       if ((state.expanded.has(path) || search || diffOnly) && state.children.has(path)) visit(path, depth + 1);
     }
   };
-  visit("", 0);
+  if (state.expanded.has("") || search || diffOnly) visit("", 1);
   return output;
 }
 
@@ -258,11 +261,17 @@ function renderTree() {
     const hasChildren = state.children.has(path);
     const open = state.expanded.has(path);
     const statusLabel = ({same: "一致", changed: "修改", leftOnly: "仅 A", rightOnly: "仅 B"})[row.status];
+    const resourceLabels = {npc: "NPC", mob: "怪物", obj: "OBJ", tile: "Tile", back: "Back"};
+    const resourceBadges = (row.resources || []).filter((resource) => resource.status !== "ready").map((resource) => {
+      const label = resourceLabels[resource.kind] || resource.kind;
+      const prefix = resource.status === "missingFile" ? `缺 ${label}` : `${label} 不完整`;
+      return `<span class="node-resource-status" title="${escapeHtml((resource.issues || []).join("；") || "引用资源缺失或不兼容")}">${escapeHtml(prefix)} ${escapeHtml(resource.name)}</span>`;
+    }).join("");
     return `<div class="tree-row status-${row.status} ${state.selectedPath === path ? "selected" : ""}" data-path="${escapeHtml(path)}" style="padding-left:${8 + depth * 15}px" role="treeitem" aria-selected="${state.selectedPath === path}">
       <button class="twisty" type="button" data-twist="${escapeHtml(path)}" ${hasChildren ? "" : "disabled"}>${hasChildren ? (open ? "▾" : "▸") : ""}</button>
       <span class="node-icon">${typeIcon(meta.type)}</span>
       <span class="node-body">
-        <span class="node-title-line"><span class="node-name" title="${escapeHtml(path)}">${escapeHtml(rowLabel(row))}</span><span class="node-status">${statusLabel}</span></span>
+        <span class="node-title-line"><span class="node-name" title="${escapeHtml(path)}">${escapeHtml(rowLabel(row))}</span><span class="node-status">${statusLabel}</span>${resourceBadges}</span>
         <span class="node-compare-values">
           <span class="node-side side-a ${row.left ? "" : "missing"}" title="A 主文件：${escapeHtml(metaValue(row.left))}"><b>A</b><span>${escapeHtml(metaValue(row.left))}</span></span>
           <span class="node-side side-b ${row.right ? "" : "missing"}" title="B 对比文件：${escapeHtml(metaValue(row.right))}"><b>B</b><span>${escapeHtml(metaValue(row.right))}</span></span>
@@ -289,6 +298,10 @@ async function loadComparison() {
   try {
     const data = await post("/api/compare", {kind: state.kind, leftPath, rightPath});
     if (loadSequence !== state.loadSequence) return;
+    if (state.exportSourcePath !== data.leftPath) {
+      state.exportSourcePath = data.leftPath;
+      state.exportFiles = new Set();
+    }
     state.rows = data.nodes;
     state.leftPath = data.leftPath;
     state.rightPath = data.rightPath;
@@ -312,6 +325,36 @@ async function loadComparison() {
     showResult(error.message, true);
     $("previewEmpty").innerHTML = `<strong>加载失败</strong><span>${escapeHtml(error.message)}</span>`;
   }
+}
+
+async function refreshComparisonAfterCopy(path) {
+  const loadSequence = ++state.loadSequence;
+  const data = await post("/api/compare", {
+    kind: state.kind,
+    leftPath: state.leftPath,
+    rightPath: state.rightPath,
+  });
+  if (loadSequence !== state.loadSequence) return;
+  state.rows = data.nodes;
+  state.leftPath = data.leftPath;
+  state.rightPath = data.rightPath;
+  state.leftInfo = data.leftInfo;
+  state.rightInfo = data.rightInfo;
+  state.compatibility = data.compatibility;
+  buildTreeIndex();
+  for (let parent = path; parent; parent = parent.includes("/") ? parent.slice(0, parent.lastIndexOf("/")) : "") {
+    state.expanded.add(parent);
+  }
+  state.expanded.add("");
+  $("nodeCount").textContent = `${data.nodes.length} 节点`;
+  $("changedCount").textContent = data.counts.changed;
+  $("leftOnlyCount").textContent = data.counts.leftOnly;
+  $("rightOnlyCount").textContent = data.counts.rightOnly;
+  renderCompatibility(data.compatibility);
+  renderTree();
+  $("nodeActions").hidden = false;
+  if (state.rowByPath.has(path)) selectNode(path); else updateNodeActions();
+  await loadPreview(loadSequence);
 }
 
 async function loadPreview(loadSequence = state.loadSequence) {
@@ -354,14 +397,16 @@ async function prepareMapPreview(leftData, rightData, leftError = null, rightErr
   $("mapCompareView").hidden = false;
   const leftSummary = leftData?.summary;
   const rightSummary = rightData?.summary;
-  $("previewMeta").textContent = `${leftSummary ? `A ${leftSummary.elements} 个场景元素` : "A 主文件不存在"} · ${rightSummary ? `B ${rightSummary.elements} 个场景元素` : "B 预览不可用"}`;
+  const leftUnavailable = state.leftInfo?.exists === false;
+  const rightUnavailable = state.rightInfo?.exists === false;
+  $("previewMeta").textContent = `${leftSummary ? `A ${leftSummary.elements} 个场景元素` : (leftUnavailable ? "A 主文件不存在" : "A 预览不可用")} · ${rightSummary ? `B ${rightSummary.elements} 个场景元素` : (rightUnavailable ? "B 对比文件不存在" : "B 预览不可用")}`;
   $("leftMapMeta").textContent = leftSummary
     ? `${leftSummary.mobs} 怪 · ${leftSummary.npcs} NPC · ${leftSummary.portals} 门`
     : (state.leftInfo?.exists === false ? "主文件不存在，可先创建空白主文件" : (leftError?.message || "无法生成预览"));
   $("rightMapSourceLabel").textContent = state.rightPath.includes("/TMS/") ? "TMS 对比" : "对比文件";
   $("rightMapMeta").textContent = rightSummary
     ? `${rightSummary.mobs} 怪 · ${rightSummary.npcs} NPC · ${rightSummary.portals} 门`
-    : (rightError?.message || "无法生成预览");
+    : (rightUnavailable ? "对比文件不存在，仅显示 A" : (rightError?.message || "无法生成预览"));
   const imageCache = new Map();
   const loadImage = (url) => {
     if (!imageCache.has(url)) {
@@ -777,29 +822,52 @@ function updateNodeActions() {
   const projectPath = state.leftPath.startsWith("clien/") || state.leftPath.startsWith("gms-server/");
   const clientImgPath = state.leftPath.startsWith("clien/") && state.leftInfo?.format === "img";
   const writable = Boolean(state.leftInfo && leftExists && projectPath);
+  const copyWritable = Boolean(state.leftInfo && projectPath);
   const row = state.selectedPath === null ? null : state.rowByPath.get(state.selectedPath);
   const left = row?.left;
-  const parentPath = row?.path?.includes("/") ? row.path.slice(0, row.path.lastIndexOf("/")) : "";
-  const parentExists = parentPath === "" || Boolean(state.rowByPath.get(parentPath)?.left);
   const copyCompatibility = row?.right?.compatibility;
   const supportedCopyTypes = new Set(["imgdir", "short", "int", "long", "float", "double", "string", "vector", "uol", "null"]);
-  const unsafeDescendant = row?.path ? state.rows.find((candidate) => (
-    (candidate.path === row.path || candidate.path.startsWith(`${row.path}/`))
+  const unsafeDescendants = row ? state.rows.filter((candidate) => (
+    (row.path === "" || candidate.path === row.path || candidate.path.startsWith(`${row.path}/`))
     && candidate.right
     && (candidate.right.compatibility?.status !== "ok" || !supportedCopyTypes.has(candidate.right.type))
-  )) : null;
-  const safeToCopy = copyCompatibility?.status === "ok" && !unsafeDescendant;
+  )) : [];
+  const selectedSupported = Boolean(row?.right && supportedCopyTypes.has(row.right.type));
+  const safeToCopy = copyCompatibility?.status === "ok" && selectedSupported;
+  const relatedRows = row ? state.rows.filter((candidate) => (
+    row.path === "" || candidate.path === row.path || candidate.path.startsWith(`${row.path}/`)
+  )) : [];
+  const referencedResources = Array.from(new Map(relatedRows.flatMap((candidate) => candidate.resources || []).map((resource) => (
+    [`${resource.kind}:${resource.name}`, resource]
+  ))).values()).filter((resource) => resource.status !== "ready");
+  const autoResources = referencedResources.filter((resource) => resource.autoCopy);
+  const blockedEntities = referencedResources.filter((resource) => ["npc", "mob"].includes(resource.kind) && !resource.autoCopy);
+  const mergeIntoEmpty = Boolean(
+    left?.type === "imgdir" && Number(left.childCount || 0) === 0 && row?.right?.type === "imgdir"
+  );
+  const resourceOnlyRepair = Boolean(left && autoResources.length && !blockedEntities.length && !mergeIntoEmpty);
   const validParent = left?.type === "imgdir" || (state.leftInfo?.format === "xml" && left?.type === "canvas");
   $("createMainBtn").hidden = leftExists || !clientImgPath;
   $("createMainBtn").disabled = leftExists || !clientImgPath;
-  $("copyTmsBtn").title = safeToCopy
-    ? "按原路径复制，并同步客户端 IMG 与服务端 XML"
-    : (unsafeDescendant && unsafeDescendant.path !== row?.path
-      ? `子树包含不兼容节点 ${unsafeDescendant.path}；请缩小选择范围或先手工建立父目录`
-      : (copyCompatibility?.suggestion || "该节点不能直接复制到旧端"));
+  $("copyTmsBtn").textContent = resourceOnlyRepair
+    ? "补齐选中节点的引用资源"
+    : "复制选中的 TMS 节点到 A";
+  $("copyTmsBtn").title = resourceOnlyRepair
+    ? `保留当前地图节点不变，仅迁移 ${autoResources.length} 个不完整引用资源（NPC/怪物会同步服务端 XML 和 String）`
+    : safeToCopy
+    ? (unsafeDescendants.length
+      ? `复制整个兼容子树；自动略过 ${unsafeDescendants.length} 个现代或不兼容后代，首个为 ${unsafeDescendants[0].path}`
+      : "按原路径复制整个节点；缺失的主文件和父目录会自动建立，并同步客户端 IMG 与服务端 XML")
+    : (copyCompatibility?.suggestion || "该节点不能直接复制到旧端");
+  if (!resourceOnlyRepair && safeToCopy && autoResources.length) {
+    $("copyTmsBtn").title += `；同时自动迁移 ${autoResources.length} 个缺失引用资源（NPC/怪物会同步 String）`;
+  }
+  if (safeToCopy && blockedEntities.length) {
+    $("copyTmsBtn").title = `引用资源无法安全自动迁移：${blockedEntities.map((resource) => `${resource.kind.toUpperCase()} ${resource.name}`).join("、")}`;
+  }
   $("copyTmsBtn").disabled = !(
-    writable && clientImgPath && row?.right && !row?.left && row.path && parentExists
-    && safeToCopy && state.rightInfo?.format === "img"
+    copyWritable && clientImgPath && row?.right && (!row?.left || mergeIntoEmpty || resourceOnlyRepair)
+    && safeToCopy && !blockedEntities.length && state.rightInfo?.format === "img"
   );
   $("addRootBtn").disabled = !writable;
   $("addChildBtn").disabled = !(writable && validParent);
@@ -935,12 +1003,19 @@ function renderCompatibility(report) {
     container.innerHTML = '<div class="empty-state compact"><strong>当前类型暂无兼容分析</strong><span>节点详情仍可查看完整 A/B 差异。</span></div>';
     return;
   }
+  if (report.rightAvailable === false) {
+    $("compatibilityCount").textContent = "0";
+    container.innerHTML = '<div class="empty-state compact"><strong>没有 TMS 对比文件</strong><span>已加载 A 主文件的节点和地图预览；当前仅浏览本地资源，不进行 A/B 兼容分析。</span></div>';
+    return;
+  }
   $("compatibilityCount").textContent = report.missingResourceCount + report.modernCandidateCount;
-  const statusText = {ready: "旧客户端可解析", missingFile: "旧客户端缺文件", missingCanvas: "Canvas 路径不兼容"};
+  const statusText = {ready: "旧客户端可解析", missingFile: "旧客户端缺文件", missingCanvas: "Canvas 路径不兼容", missingServer: "服务端资源缺失", missingString: "名称记录缺失"};
   const statusAdvice = {
     ready: "可复用现有资源，但节点仍需投影到旧版结构。",
     missingFile: "不要整包复制 TMS IMG；提取必要 Canvas，转换为 GMS ARGB4444 后通过新增资源或增量记录迁移。",
     missingCanvas: "同名文件不等于兼容；映射到旧客户端支持的层级，并保留 origin、delay、z 和动画顺序。",
+    missingServer: "客户端资源存在，但服务端实体 XML 不完整；复制 NPC/怪物节点时会同步补齐。",
+    missingString: "实体动画存在，但客户端或服务端 String 记录不完整；复制 NPC/怪物节点时会增量补齐。",
   };
   const roots = report.addedRoots.length
     ? report.addedRoots.slice(0, 16).map((path) => `<button class="compat-path" type="button" data-compat-path="${escapeHtml(path)}">${escapeHtml(path)}</button>`).join("")
@@ -969,9 +1044,11 @@ function renderCompatibility(report) {
     </div>`).join("") : '<span class="compat-empty">B 独有节点中没有命中已知现代规则</span>';
   const resources = report.resources.length ? report.resources.map((item) => `
     <div class="resource-row status-${item.status}">
-      <div class="resource-title"><strong>${escapeHtml(item.kind.toUpperCase())} · ${escapeHtml(item.name)}</strong><span>${statusText[item.status]}</span></div>
+      <div class="resource-title"><strong>${escapeHtml(item.kind.toUpperCase())} · ${escapeHtml(item.name)}</strong><span>${statusText[item.status] || item.status}</span></div>
       <code>${escapeHtml(item.clientPath)}${item.canvasPaths.length ? ` → ${escapeHtml(item.canvasPaths.join(" · "))}` : ""}</code>
+      ${item.contract?.issues?.length ? `<p class="resource-issues">缺失项：${escapeHtml(item.contract.issues.join("；"))}</p>` : ""}
       <p>${statusAdvice[item.status]}</p>
+      ${item.autoCopy ? `<small>复制引用节点时将自动迁移该资源${["npc", "mob"].includes(item.kind) ? "、服务端 XML 和 String 记录" : "的兼容 Canvas 分支"}。</small>` : ""}
       ${item.nodes[0] ? `<button class="compat-path resource-node" type="button" data-compat-path="${escapeHtml(item.nodes[0])}">定位引用节点：${escapeHtml(item.nodes[0])}</button>` : ""}
     </div>`).join("") : '<span class="compat-empty">没有可审计的地图资源引用</span>';
   container.innerHTML = `
@@ -1036,8 +1113,11 @@ function renderInspector(row) {
     ${leftCompatibility?.reason ? `<p><b>A：</b>${escapeHtml(leftCompatibility.reason)}</p>` : ""}
     ${rightCompatibility?.reason ? `<p><b>B：</b>${escapeHtml(rightCompatibility.reason)}</p>` : ""}
   </div>`;
+  const resourceMarkup = (row.resources || []).length ? `<div class="node-explanation"><div class="side-label">引用资源状态</div>${row.resources.map((resource) => `
+    <p><b>${escapeHtml(resource.kind.toUpperCase())} ${escapeHtml(resource.name)}</b> · ${resource.status === "ready" ? "完整" : escapeHtml((resource.issues || []).join("；") || "缺失或不兼容")}${resource.autoCopy ? "；复制该节点时自动迁移" : ""}</p>
+    <code>${escapeHtml(resource.clientPath)}</code>`).join("")}</div>` : "";
   inspector.className = "inspector";
-  inspector.innerHTML = `${semanticMarkup}<div class="side-label">属性对比</div><table class="compare-table"><thead><tr><th>属性</th><th><span class="column-badge a">A</span>主文件</th><th><span class="column-badge b">B</span>对比</th></tr></thead><tbody>${table}</tbody></table>${editorMarkup(left)}`;
+  inspector.innerHTML = `${semanticMarkup}${resourceMarkup}<div class="side-label">属性对比</div><table class="compare-table"><thead><tr><th>属性</th><th><span class="column-badge a">A</span>主文件</th><th><span class="column-badge b">B</span>对比</th></tr></thead><tbody>${table}</tbody></table>${editorMarkup(left)}`;
   const leftXml = state.leftInfo?.format === "xml";
   const editable = Boolean(left?.editable && (leftXml || state.leftInfo?.format === "img"));
   $("editActions").hidden = !editable;
@@ -1119,20 +1199,39 @@ async function createMainFile() {
 
 async function copyTmsNode() {
   const path = state.selectedPath;
-  if (!path) return;
-  if (!confirm(`从 TMS 复制节点 ${path} 到 A，并同步服务端 XML？`)) return;
+  if (path === null) return;
+  const button = $("copyTmsBtn");
+  const operationLabel = button.textContent.startsWith("补齐") ? "正在补齐引用资源…" : "正在复制节点…";
+  button.disabled = true;
+  button.textContent = operationLabel;
+  showResult(`${operationLabel}\n请稍候，完成后会自动刷新对比结果。`);
   try {
     const data = await post("/api/copy-tms-node", {
       sourcePath: state.leftPath,
       tmsPath: state.rightPath,
       path,
     });
-    const resultText = `TMS 节点已按原路径复制到 A，并同步服务端 XML。\n${JSON.stringify(data, null, 2)}`;
-    await loadComparison();
-    revealNode(path);
+    for (const file of data.modifiedFiles || data.resources?.files || []) state.exportFiles.add(file);
+    const skipped = data.skippedPaths?.length ? `\n已自动略过 ${data.skippedPaths.length} 个现代或不兼容节点。` : "";
+    const migratedResources = data.resources?.migrated?.length
+      ? `\n已同步迁移 ${data.resources.migrated.map((item) => `${item.kind.toUpperCase()} ${item.id}`).join("、")} 引用资源。`
+      : "";
+    const unresolvedResources = data.resources?.unresolved?.length
+      ? `\n仍有 ${data.resources.unresolved.length} 个资源不能自动覆盖，请查看结果中的 unresolved 原因。`
+      : "";
+    const recordedFiles = data.modifiedFiles?.length
+      ? `\n已记录本次修改的 ${data.modifiedFiles.length} 个文件，复制到下载目录时会一并导出。`
+      : "";
+    const operation = data.resourceOnly
+      ? "地图节点保持不变，引用资源已执行补齐。"
+      : "TMS 节点已按原路径复制到 A，并同步服务端 XML。";
+    const resultText = `${operation}${skipped}${migratedResources}${unresolvedResources}${recordedFiles}\n${JSON.stringify(data, null, 2)}`;
     showResult(resultText);
+    await refreshComparisonAfterCopy(path);
   } catch (error) {
     showResult(error.message, true);
+  } finally {
+    updateNodeActions();
   }
 }
 
@@ -1235,8 +1334,13 @@ function chooseFile() {
 
 function updateExportPreview() {
   const destination = $("exportDestination").value.trim() || defaultExportRoot;
-  const serverLine = $("exportIncludeServer").checked ? "\n└─ 对应服务端 XML（按仓库目录）" : "";
-  $("exportStructurePreview").textContent = `${destination}/\n└─ ${state.leftPath}${serverLine}`;
+  const includeServer = $("exportIncludeServer").checked && !$("exportIncludeServer").disabled;
+  const tracked = Array.from(state.exportFiles).filter((path) => includeServer || !path.startsWith("gms-server/"));
+  const files = [state.leftPath, ...tracked.filter((path) => path !== state.leftPath)];
+  const hasTrackedServer = files.some((path) => path.startsWith("gms-server/"));
+  const lines = files.map((path, index) => `${index === files.length - 1 && (!includeServer || hasTrackedServer) ? "└" : "├"}─ ${path}`);
+  if (includeServer && !hasTrackedServer) lines.push("└─ 对应服务端 XML（按仓库目录）");
+  $("exportStructurePreview").textContent = `${destination}/\n${lines.join("\n")}`;
 }
 
 function openExportDialog() {
@@ -1244,8 +1348,9 @@ function openExportDialog() {
   $("exportSourcePath").title = state.leftPath;
   if (!$("exportDestination").value) $("exportDestination").value = defaultExportRoot;
   const canIncludeServer = state.leftInfo?.format === "img";
+  const hasTrackedServer = Array.from(state.exportFiles).some((path) => path.startsWith("gms-server/"));
   $("exportIncludeServer").disabled = !canIncludeServer;
-  $("exportIncludeServer").checked = canIncludeServer && $("syncServer").checked;
+  $("exportIncludeServer").checked = canIncludeServer && ($("syncServer").checked || hasTrackedServer);
   updateExportPreview();
   $("exportDialog").showModal();
 }
@@ -1265,7 +1370,12 @@ async function exportFiles() {
   const includeServer = $("exportIncludeServer").checked && !$("exportIncludeServer").disabled;
   if (!confirm(`复制当前修改文件到 ${destination}？`)) return;
   try {
-    const data = await post("/api/export", {sourcePath: state.leftPath, destination, includeServer});
+    const data = await post("/api/export", {
+      sourcePath: state.leftPath,
+      destination,
+      includeServer,
+      additionalFiles: Array.from(state.exportFiles),
+    });
     $("exportDialog").close();
     const files = data.files.map((item) => `${item.target}\nSHA-256 ${item.sha256}`).join("\n\n");
     showResult(`已复制 ${data.files.length} 个文件，并保持原目录结构：\n${files}`);

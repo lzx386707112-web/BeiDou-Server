@@ -25,6 +25,9 @@ clien\diagnostics\high-cpu-<会话>.dmp
 clien\diagnostics\manual-<会话>.dmp
 ```
 
+每次客户端进程启动时会先清理旧的 `diagnostics` 目录，再创建本次会话的日志和
+dump；因此该目录只保留最近一次启动产生的诊断数据。
+
 ## 构建与安装
 
 在 macOS 仓库根目录执行：

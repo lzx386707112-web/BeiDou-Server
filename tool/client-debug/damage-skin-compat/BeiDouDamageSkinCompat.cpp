@@ -360,6 +360,7 @@ extern "C" __declspec(dllexport) void BDS_SetSkin(int skinId) {
 extern "C" BOOL WINAPI DllMain(HINSTANCE instance, DWORD reason, LPVOID) {
     if (reason == DLL_PROCESS_ATTACH) {
         DisableThreadLibraryCalls(instance);
+        DeleteFileA("BeiDouDamageSkinCompat.log");
         HANDLE thread = CreateThread(nullptr, 0, Initialize, nullptr, 0, nullptr);
         if (thread != nullptr) {
             CloseHandle(thread);

@@ -1511,6 +1511,51 @@ static void LoadConfiguration() {
     }
 }
 
+static void RemoveDirectoryTree(const WCHAR *directory) {
+    WCHAR searchPath[MAX_PATH];
+    if (lstrlenW(directory) + 3 >= MAX_PATH) {
+        return;
+    }
+    lstrcpynW(searchPath, directory, MAX_PATH);
+    lstrcatW(searchPath, L"\\*");
+
+    WIN32_FIND_DATAW entry;
+    HANDLE search = FindFirstFileW(searchPath, &entry);
+    if (search != INVALID_HANDLE_VALUE) {
+        do {
+            if (lstrcmpW(entry.cFileName, L".") == 0 ||
+                lstrcmpW(entry.cFileName, L"..") == 0) {
+                continue;
+            }
+
+            WCHAR childPath[MAX_PATH];
+            if (lstrlenW(directory) + lstrlenW(entry.cFileName) + 2 >= MAX_PATH) {
+                continue;
+            }
+            lstrcpynW(childPath, directory, MAX_PATH);
+            lstrcatW(childPath, L"\\");
+            lstrcatW(childPath, entry.cFileName);
+
+            if ((entry.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0) {
+                if ((entry.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0) {
+                    RemoveDirectoryW(childPath);
+                } else {
+                    RemoveDirectoryTree(childPath);
+                }
+            } else {
+                if ((entry.dwFileAttributes & FILE_ATTRIBUTE_READONLY) != 0) {
+                    SetFileAttributesW(
+                        childPath,
+                        entry.dwFileAttributes & ~FILE_ATTRIBUTE_READONLY);
+                }
+                DeleteFileW(childPath);
+            }
+        } while (FindNextFileW(search, &entry));
+        FindClose(search);
+    }
+    RemoveDirectoryW(directory);
+}
+
 static void InitPaths(HMODULE self) {
     WCHAR exePath[MAX_PATH];
     GetModuleFileNameW(NULL, exePath, MAX_PATH);
@@ -1521,6 +1566,7 @@ static void InitPaths(HMODULE self) {
     }
     lstrcpynW(g_diagnosticsDir, g_exeDir, MAX_PATH);
     lstrcatW(g_diagnosticsDir, L"diagnostics");
+    RemoveDirectoryTree(g_diagnosticsDir);
     if (!CreateDirectoryW(g_diagnosticsDir, NULL) && GetLastError() != ERROR_ALREADY_EXISTS) {
         lstrcpynW(g_diagnosticsDir, g_exeDir, MAX_PATH);
     }

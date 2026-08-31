@@ -61,7 +61,7 @@ rtk python3 tool/scripts/patch-client/patch_dawn_warrior_skill_dll_loader.py
 ```
 
 At runtime, inspect `clien/DawnWarriorSkillCompat.log`. A successful load
-writes `LOAD: Cygnus/Explorer V-VI Attack Skill Compat v41`
+writes `LOAD: Cygnus/Explorer V-VI Attack Skill Compat vNN`
 followed by the recognition-hook result. Version 40 routes the migrated Hero
 `1121012..1121030` attack stages through the legacy Brandish active-skill,
 visual, state and hit branches. Version 38 removes the unsupported
@@ -90,11 +90,13 @@ skill-specific paths: Rapid Throw cycles through three fixed lanes and Silent Ni
 homing arcs. It also adds Dominion's
 MCV full-screen layer. Version 12 added ranged dispatch and the first Night Walker projectile runtime.
 Version 11 extended the magic visual range
-for hit-only replay stages; the video path first
-intercepts the real `Direct3DCreate8` lookup inside `Gr2D_DX8.dll`; if Gr2D has
-already initialized, it patches the shared D3D8 `Present`, `SetTexture`, and
-draw tables through a temporary device and attaches the active game device on
-its next frame. The server sends a caster-only `FIELD_EFFECT` whose
+for hit-only replay stages; the video path intercepts the real
+`Direct3DCreate8` lookup inside `Gr2D_DX8.dll`. After the diagnostics DLL is
+loaded, the compatibility DLL re-chains its `LoadLibraryA` hook so the logger
+cannot displace the early Gr2D interception. It does not create temporary D3D8
+devices or retry against shared vtables after initialization; missing the real
+device creation path disables MCV playback for that session without disturbing
+ordinary rendering. The server sends a caster-only `FIELD_EFFECT` whose
 `Map/Effect.img` node contains a signed `7x5` marker. Video rendering is
 triggered when Gr2D draws that marker, reusing the same field-effect layer as
 the previous large-Canvas implementation so hit effects, damage numbers, and

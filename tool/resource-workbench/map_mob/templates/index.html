@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Map & Mob Workbench</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='app.css', v=asset_version) }}">
   {% set embedded = request.args.get('embedded') == '1' %}
   {% if request.script_root and not embedded %}<link rel="stylesheet" href="/workbench-static/shell.css">{% endif %}
 </head>
@@ -270,7 +270,7 @@
           <button id="browseExportBtn" class="icon-button browse-button" type="button" title="选择下载目录" aria-label="选择下载目录">…</button>
         </span>
       </label>
-      <label class="toggle-label export-server-toggle"><input id="exportIncludeServer" type="checkbox" checked><span>同时复制对应服务端 XML</span></label>
+      <label class="toggle-label export-server-toggle"><input id="exportIncludeServer" type="checkbox" checked><span>同时复制所有关联服务端 XML</span></label>
       <div class="export-structure">
         <strong>保持原目录结构</strong>
         <code id="exportStructurePreview"></code>
@@ -306,6 +306,6 @@
     </form>
   </dialog>
 
-  <script src="{{ url_for('static', filename='app.js') }}"></script>
+  <script src="{{ url_for('static', filename='app.js', v=asset_version) }}"></script>
 </body>
 </html>

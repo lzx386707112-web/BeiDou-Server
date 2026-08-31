@@ -2,100 +2,49 @@
 <imgdir name="450009301.img">
   <imgdir name="back"/>
   <imgdir name="foothold">
-    <imgdir name="3">
-      <imgdir name="3">
-        <imgdir name="1">
-          <int name="next" value="0"/>
-          <int name="piece" value="0"/>
-          <int name="prev" value="0"/>
-          <int name="x1" value="-683"/>
-          <int name="x2" value="679"/>
-          <int name="y1" value="-629"/>
-          <int name="y2" value="-283"/>
-        </imgdir>
-      </imgdir>
-    </imgdir>
     <imgdir name="4">
       <imgdir name="0">
-        <imgdir name="3">
-          <int name="next" value="0"/>
-          <int name="piece" value="1"/>
+        <imgdir name="1">
+          <int name="next" value="2"/>
+          <int name="piece" value="0"/>
           <int name="prev" value="0"/>
-          <int name="x1" value="-684"/>
-          <int name="x2" value="680"/>
-          <int name="y1" value="-239"/>
-          <int name="y2" value="-449"/>
+          <int name="x1" value="-3586"/>
+          <int name="x2" value="-2686"/>
+          <int name="y1" value="-488"/>
+          <int name="y2" value="-488"/>
         </imgdir>
-      </imgdir>
-      <imgdir name="11">
         <imgdir name="2">
           <int name="next" value="0"/>
-          <int name="piece" value="0"/>
-          <int name="prev" value="0"/>
-          <int name="x1" value="668"/>
-          <int name="x2" value="667"/>
-          <int name="y1" value="-630"/>
-          <int name="y2" value="-630"/>
-        </imgdir>
-      </imgdir>
-    </imgdir>
-    <imgdir name="5">
-      <imgdir name="2">
-        <imgdir name="4">
-          <int name="next" value="0"/>
-          <int name="piece" value="0"/>
-          <int name="prev" value="0"/>
-          <int name="x1" value="-683"/>
-          <int name="x2" value="680"/>
-          <int name="y1" value="-257"/>
-          <int name="y2" value="-630"/>
-        </imgdir>
-      </imgdir>
-    </imgdir>
-    <imgdir name="6">
-      <imgdir name="1">
-        <imgdir name="5">
-          <int name="next" value="0"/>
-          <int name="piece" value="0"/>
-          <int name="prev" value="0"/>
-          <int name="x1" value="-684"/>
-          <int name="x2" value="678"/>
-          <int name="y1" value="-453"/>
-          <int name="y2" value="-238"/>
-        </imgdir>
-      </imgdir>
-    </imgdir>
-    <imgdir name="7">
-      <imgdir name="4">
-        <imgdir name="6">
-          <int name="next" value="0"/>
-          <int name="piece" value="0"/>
-          <int name="prev" value="0"/>
-          <int name="x1" value="-684"/>
-          <int name="x2" value="682"/>
-          <int name="y1" value="-157"/>
-          <int name="y2" value="-157"/>
+          <int name="piece" value="1"/>
+          <int name="prev" value="1"/>
+          <int name="x1" value="-2686"/>
+          <int name="x2" value="-1786"/>
+          <int name="y1" value="-488"/>
+          <int name="y2" value="-488"/>
         </imgdir>
       </imgdir>
     </imgdir>
   </imgdir>
   <imgdir name="info">
-    <string name="bgm" value="Bgm49/FerociousBattlefield"/>
+    <string name="bgm" value="Bgm49/WaveofEmptiness"/>
     <int name="cloud" value="0"/>
-    <int name="fieldLimit" value="861180"/>
+    <int name="fieldLimit" value="271340"/>
     <int name="fly" value="0"/>
     <int name="forcedReturn" value="910000000"/>
-    <int name="hideMinimap" value="1"/>
-    <string name="mapMark" value="None"/>
+    <int name="hideMinimap" value="0"/>
     <float name="mobRate" value="1.0"/>
+    <int name="MRBottom" value="-298"/>
+    <int name="MRLeft" value="-3576"/>
+    <int name="MRRight" value="-1796"/>
+    <int name="MRTop" value="-1300"/>
     <int name="returnMap" value="910000000"/>
     <int name="swim" value="0"/>
-    <int name="town" value="0"/>
+    <int name="town" value="1"/>
     <int name="version" value="10"/>
-    <int name="VRBottom" value="-70"/>
-    <int name="VRLeft" value="-680"/>
-    <int name="VRRight" value="680"/>
-    <int name="VRTop" value="-1000"/>
+    <int name="VRBottom" value="-298"/>
+    <int name="VRLeft" value="-3576"/>
+    <int name="VRRight" value="-1796"/>
+    <int name="VRTop" value="-1300"/>
   </imgdir>
   <imgdir name="ladderRope"/>
   <imgdir name="portal">
@@ -104,17 +53,24 @@
       <int name="pt" value="0"/>
       <int name="tm" value="999999999"/>
       <string name="tn" value=""/>
-      <int name="x" value="-295"/>
-      <int name="y" value="-211"/>
+      <int name="x" value="-3009"/>
+      <int name="y" value="-494"/>
     </imgdir>
     <imgdir name="1">
-      <string name="pn" value="out00"/>
+      <string name="pn" value="in00"/>
       <int name="pt" value="7"/>
-      <string name="script" value="shenshuoBossRetry"/>
-      <int name="tm" value="999999999"/>
-      <string name="tn" value=""/>
-      <int name="x" value="-608"/>
-      <int name="y" value="-159"/>
+      <int name="tm" value="450009400"/>
+      <string name="tn" value="sp"/>
+      <int name="x" value="-2081"/>
+      <int name="y" value="-489"/>
+    </imgdir>
+    <imgdir name="2">
+      <string name="pn" value="down00"/>
+      <int name="pt" value="7"/>
+      <int name="tm" value="910000000"/>
+      <string name="tn" value="sp"/>
+      <int name="x" value="-3335"/>
+      <int name="y" value="-488"/>
     </imgdir>
   </imgdir>
   <imgdir name="reactor"/>

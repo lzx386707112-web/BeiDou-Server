@@ -97,10 +97,10 @@ INSTALLED_ROUTE_MAP_IDS = {450007160, 450009301}
 
 PRESERVED_FILE_SHA256 = {
     "clien/Data/Map/Map/Map4/450009301.img": "6419324fc56d0b054e62fd5098499f20fa452641379c05f67a0aae3b6901a551",
-    "gms-server/wz/Map.wz/Map/Map4/450009301.img.xml": "6d839dee18a7fd93b6a287fc62dd2d80555d62240539976512a1e63bb250a7d4",
+    "gms-server/wz/Map.wz/Map/Map4/450009301.img.xml": "9c42ab56bfe8b3551a136ce83735d329d9f762827a0bd46455363e9f96047202",
     "clien/Data/Map/Map/Map4/450009400.img": "7e0160cbdf83ac7fcfc30b4aab8b31395f93e62e4c7b0793a4d31ed5e57beb48",
     "gms-server/wz/Map.wz/Map/Map4/450009400.img.xml": "2ecc5440eabe83d6a7d4b4c4b061166ba250dc7d4fb3ba1886d0f6fce6439d7a",
-    "clien/Data/Map/Map/Map4/450011990.img": "2602dea0efadaa8e47d80d40c2c6124647c19ba526534a1eca54e0b37601556a",
+    "clien/Data/Map/Map/Map4/450011990.img": "cb298f56bb437775e2cfbf30e75bedfe9f94d9bc42c3c0ec198abbbccd4c16d2",
     "gms-server/wz/Map.wz/Map/Map4/450011990.img.xml": "b68c9c2b8caefadd2b1ab6366a035c1b3450f30de21df1a478015bc2890e1735",
     "clien/Data/Sound/Bgm49.img": "a665b56cb6711b26c35319b36f2502c3c28501aa6e773f5f45feefd4b0f28842",
 }
@@ -148,6 +148,9 @@ SHARED_FILE_STATES = {
         "f9caa55f2a90a3a229fbb19997479d3edf3821368524f03ae92771878e7d5db7",
         "ae207d1fd687374f405005a5ad06701a3a966711bea165ae4e42e588f1fef171",
         "1115191114582ff25d33797f68f8dbb288ceb16c0308eac53bc3851026ab11d1",
+        "3f3cbf940bcd005fd6a5b3df431bc3f7729f15941cd7aeb01c4c65f3ff13c97e",
+        "a5415d3332ee85c122876ccf0cbc9cc2db253200604aaab672b706be3ccdca68",
+        "a24e6abdc7bc63d16791ce5d7ce9943270341bdc8ed0ab5f598acf5a7f378bf3",
     ),
     "gms-server/wz/Mob.wz/8645010.img.xml": (
         "4eeb699b2775aa491e56551df7177582389fc4ce018d49caa0e00795f809a941",
@@ -171,6 +174,9 @@ SHARED_FILE_STATES = {
         "3be86a9e890036d27b532040a245d62ad247cef6300c5bba4c77cda6eb9d32d5",
         "f4f2a74d1044f73774a6a26d3cdcfd4642c470be80bc41cb12a7190e345fbeba",
         "e4bab4a432ed59351df2a1bddc1a5cfecbf12fd30cb63588bbc749bfed7b7b97",
+        "3360a7d1088aa59dd09113d0ce372ea64f533d755ce3d854681ffe5e7bd57b77",
+        "0f4ccb1a3bd1413503eb7e0dd91aee6acb1e1e2c52589fc4cc31b7f065b0c88e",
+        "b74eab5f5218c1f9592ce70f2870707b3532b2eea4fbdf1e149b9d65766d4ead",
     ),
     "gms-server/wz-zh-CN/String.wz/Map.img.xml": (
         "f5320f063d512ab144656f604524f47c3da5085d1806452ec7df3ac840d8e441",
@@ -186,6 +192,9 @@ SHARED_FILE_STATES = {
         "8085a33bfeb6307a1cb498e7aac6b7c9c81d0653b1cc5fbc1476bb225cac179b",
         "a4b4e6743c7a0485485815d2eb43436e9df9b13e52ff5dcccbd2fcfad8ae1f9e",
         "d247c50fa775aa0a6e54dbb8149cee293ff2c9a25b3f4d08272506abd132aec5",
+        "ecbfd61236b04875b98cbf547b1040543ab72c5d2717f0590e48950eb50cec3f",
+        "6b5951d688e1dd93d32128e24d8b5ded69f2e079081b210414fbefbdc462c6f5",
+        "1e3493ef9de99a56240f084717d7cddd9d7d234e37b4625e310938dcd055bade",
     ),
 }
 

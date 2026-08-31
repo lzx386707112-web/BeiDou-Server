@@ -21,8 +21,6 @@ constexpr size_t kDrawPrimitiveVtableIndex = 70;
 constexpr size_t kDrawIndexedPrimitiveVtableIndex = 71;
 constexpr size_t kDrawPrimitiveUpVtableIndex = 72;
 constexpr size_t kDrawIndexedPrimitiveUpVtableIndex = 73;
-constexpr DWORD kVideoHookRetryMilliseconds = 100;
-constexpr int kVideoHookRetryCount = 300;
 constexpr int kFirstSkill = 11121005;
 constexpr int kLastSkill = 11121012;
 constexpr UINT kVideoMarkerWidth = 7;
@@ -1776,12 +1774,6 @@ bool PatchDeviceVideoHooks(void** vtable) {
         gRealDrawPrimitiveUp != nullptr && gRealDrawIndexedPrimitiveUp != nullptr;
 }
 
-bool DeviceVideoHooksReady() {
-    return gRealPresent != nullptr && gRealSetTexture != nullptr &&
-        gRealDrawPrimitive != nullptr && gRealDrawIndexedPrimitive != nullptr &&
-        gRealDrawPrimitiveUp != nullptr && gRealDrawIndexedPrimitiveUp != nullptr;
-}
-
 HRESULT WINAPI HookCreateDevice(
     IDirect3D8* direct3D,
     UINT adapter,
@@ -1848,17 +1840,20 @@ FARPROC WINAPI HookGetProcAddress(HMODULE module, LPCSTR name) {
 }
 
 bool InstallGr2DHook(HMODULE module) {
-    if (module == nullptr || gGr2DHookInstalled) {
-        return gGr2DHookInstalled;
+    if (module == nullptr) {
+        return false;
     }
     auto** slot = reinterpret_cast<void**>(
         reinterpret_cast<uintptr_t>(module) + kGr2DGetProcAddressIatRva);
-    void* original = nullptr;
-    if (!PatchPointer(slot, reinterpret_cast<void*>(&HookGetProcAddress), &original)) {
-        LogLine("VIDEO ERROR: failed to patch Gr2D_DX8 GetProcAddress");
-        return false;
+    void* replacement = reinterpret_cast<void*>(&HookGetProcAddress);
+    if (*slot != replacement) {
+        void* original = nullptr;
+        if (!PatchPointer(slot, replacement, &original)) {
+            LogLine("VIDEO ERROR: failed to patch Gr2D_DX8 GetProcAddress");
+            return false;
+        }
+        gRealGetProcAddress = FunctionFromPointer<GetProcAddressFn>(original);
     }
-    gRealGetProcAddress = FunctionFromPointer<GetProcAddressFn>(original);
     gGr2DHookInstalled = gRealGetProcAddress != nullptr;
     if (gGr2DHookInstalled) {
         LogLine("VIDEO OK: Gr2D_DX8 hook installed");
@@ -1877,75 +1872,19 @@ HMODULE WINAPI HookLoadLibraryA(LPCSTR name) {
 
 bool InstallLoadLibraryHook() {
     auto** slot = reinterpret_cast<void**>(kLoadLibraryAIat);
-    void* original = nullptr;
-    if (!PatchPointer(slot, reinterpret_cast<void*>(&HookLoadLibraryA), &original)) {
-        return false;
+    void* replacement = reinterpret_cast<void*>(&HookLoadLibraryA);
+    if (*slot != replacement) {
+        void* original = nullptr;
+        if (!PatchPointer(slot, replacement, &original)) {
+            return false;
+        }
+        gRealLoadLibraryA = FunctionFromPointer<LoadLibraryAFn>(original);
     }
-    gRealLoadLibraryA = FunctionFromPointer<LoadLibraryAFn>(original);
     HMODULE gr2D = GetModuleHandleA("Gr2D_DX8.dll");
     if (gr2D != nullptr) {
         InstallGr2DHook(gr2D);
     }
     return gRealLoadLibraryA != nullptr;
-}
-
-bool InstallSharedVideoHooks() {
-    HMODULE d3d8 = GetModuleHandleA("d3d8.dll");
-    if (d3d8 == nullptr) {
-        return false;
-    }
-    Direct3DCreate8Fn createDirect3D = LoadFunction<Direct3DCreate8Fn>(d3d8, "Direct3DCreate8");
-    if (createDirect3D == nullptr) {
-        return false;
-    }
-    IDirect3D8* direct3D = createDirect3D(D3D_SDK_VERSION);
-    if (direct3D == nullptr) {
-        return false;
-    }
-
-    void** direct3DVtable = *reinterpret_cast<void***>(direct3D);
-    CreateDeviceFn createDevice = FunctionFromPointer<CreateDeviceFn>(
-        direct3DVtable[kCreateDeviceVtableIndex]);
-    if (createDevice == &HookCreateDevice && gRealCreateDevice != nullptr) {
-        createDevice = gRealCreateDevice;
-    }
-
-    D3DPRESENT_PARAMETERS parameters = {};
-    parameters.BackBufferWidth = 1;
-    parameters.BackBufferHeight = 1;
-    parameters.BackBufferFormat = D3DFMT_UNKNOWN;
-    parameters.BackBufferCount = 1;
-    parameters.MultiSampleType = D3DMULTISAMPLE_NONE;
-    parameters.SwapEffect = D3DSWAPEFFECT_DISCARD;
-    parameters.hDeviceWindow = GetForegroundWindow();
-    if (parameters.hDeviceWindow == nullptr) {
-        parameters.hDeviceWindow = GetDesktopWindow();
-    }
-    parameters.Windowed = TRUE;
-
-    IDirect3DDevice8* dummyDevice = nullptr;
-    const HRESULT result = createDevice(
-        direct3D,
-        D3DADAPTER_DEFAULT,
-        D3DDEVTYPE_HAL,
-        parameters.hDeviceWindow,
-        D3DCREATE_FPU_PRESERVE | D3DCREATE_MULTITHREADED | D3DCREATE_SOFTWARE_VERTEXPROCESSING,
-        &parameters,
-        &dummyDevice);
-    if (FAILED(result) || dummyDevice == nullptr) {
-        direct3D->Release();
-        return false;
-    }
-
-    void** deviceVtable = *reinterpret_cast<void***>(dummyDevice);
-    const bool patched = PatchDeviceVideoHooks(deviceVtable);
-    dummyDevice->Release();
-    direct3D->Release();
-    if (patched && DeviceVideoHooksReady()) {
-        LogLine("VIDEO OK: shared D3D8 field-layer hooks installed after initialization");
-        return true;
-    }
-    return false;
 }
 
 struct VideoSkillMapping {
@@ -2449,6 +2388,9 @@ DWORD WINAPI InstallHooks(LPVOID) {
     } else {
         LogLine("INFO: WzFileLogger.dll not present; client diagnostics disabled");
     }
+    if (!InstallLoadLibraryHook()) {
+        LogLine("VIDEO ERROR: failed to chain LoadLibraryA after diagnostics initialization");
+    }
     if (reinterpret_cast<uintptr_t>(GetModuleHandleA(nullptr)) != kExpectedImageBase) {
         LogLine("ERROR: unexpected BeiDou.exe image base; no hooks installed");
         return 1;
@@ -2472,19 +2414,6 @@ DWORD WINAPI InstallHooks(LPVOID) {
     InstallNativeRangedProjectileHook();
     InstallMagicBulletHook();
     EnableRapidThrowImpactSupport();
-    for (int attempt = 0; attempt < kVideoHookRetryCount && !DeviceVideoHooksReady(); ++attempt) {
-        HMODULE gr2D = GetModuleHandleA("Gr2D_DX8.dll");
-        if (gr2D != nullptr) {
-            InstallGr2DHook(gr2D);
-        }
-        if (InstallSharedVideoHooks()) {
-            break;
-        }
-        Sleep(kVideoHookRetryMilliseconds);
-    }
-    if (!DeviceVideoHooksReady()) {
-        LogLine("VIDEO ERROR: no complete D3D8 field-layer hooks were installed within 30 seconds");
-    }
     return 0;
 }
 
@@ -2493,6 +2422,7 @@ DWORD WINAPI InstallHooks(LPVOID) {
 extern "C" BOOL WINAPI DllMain(HINSTANCE instance, DWORD reason, LPVOID) {
     if (reason == DLL_PROCESS_ATTACH) {
         DisableThreadLibraryCalls(instance);
+        DeleteFileA("DawnWarriorSkillCompat.log");
         InstallLoadLibraryHook();
         HANDLE thread = CreateThread(nullptr, 0, InstallHooks, nullptr, 0, nullptr);
         if (thread != nullptr) {

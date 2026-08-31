@@ -27,8 +27,10 @@ from urllib.parse import quote
 _HERE = Path(__file__).resolve().parent
 _ROOT = _HERE.parents[2]
 _WZPY = _ROOT / "tool" / "wz-python"
-if str(_WZPY) not in sys.path:
-    sys.path.insert(0, str(_WZPY))
+_MIGRATION = _ROOT / "tool" / "scripts" / "migration"
+for dependency in (_WZPY, _MIGRATION):
+    if str(dependency) not in sys.path:
+        sys.path.insert(0, str(dependency))
 from flask import Flask, jsonify, render_template, request, send_file  # noqa: E402
 from wzpy import (  # noqa: E402
     StaticWzKey,
@@ -55,6 +57,7 @@ from wzpy.properties import (  # noqa: E402
     WzVectorProperty,
 )
 from . import compat as map_compat  # noqa: E402
+import migrate_arcane_river_expansion as arc  # noqa: E402
 
 app = Flask(__name__)
 _WRITE_LOCK = threading.Lock()
@@ -933,14 +936,14 @@ def compatibility_category(path: str) -> str:
 def map_resource_references(root: WzSubProperty) -> list[dict[str, Any]]:
     references: dict[tuple[str, str, str], dict[str, Any]] = {}
 
-    def add(kind: str, name: str, canvas_path: str, node_path: str) -> None:
+    def add(kind: str, name: str, canvas_path: str, node_path: str, branch: str = "") -> None:
         if not name:
             return
         key = (kind, name, canvas_path)
         entry = references.setdefault(key, {
-            "kind": kind, "name": name, "canvasPath": canvas_path, "nodes": [],
+            "kind": kind, "name": name, "canvasPath": canvas_path, "branch": branch, "nodes": [],
         })
-        if len(entry["nodes"]) < 6:
+        if node_path not in entry["nodes"]:
             entry["nodes"].append(node_path)
 
     back = root.child("back")
@@ -949,8 +952,9 @@ def map_resource_references(root: WzSubProperty) -> list[dict[str, Any]]:
             if not isinstance(item, WzSubProperty):
                 continue
             number = str(child_value(item, "no", "0"))
-            canvas_path = f"ani/{number}/0" if int(child_value(item, "ani", 0)) else f"back/{number}"
-            add("back", str(child_value(item, "bS", "")), canvas_path, property_path(item))
+            branch = f"ani/{number}" if int(child_value(item, "ani", 0)) else f"back/{number}"
+            canvas_path = f"{branch}/0" if branch.startswith("ani/") else branch
+            add("back", str(child_value(item, "bS", "")), canvas_path, property_path(item), branch)
 
     for layer_number in range(8):
         layer = root.child(str(layer_number))
@@ -962,14 +966,15 @@ def map_resource_references(root: WzSubProperty) -> list[dict[str, Any]]:
         if isinstance(tile_root, WzSubProperty):
             for item in tile_root.children():
                 if isinstance(item, WzSubProperty):
-                    add("tile", tile_set, f"{child_value(item, 'u', '')}/{child_value(item, 'no', 0)}", property_path(item))
+                    branch = f"{child_value(item, 'u', '')}/{child_value(item, 'no', 0)}"
+                    add("tile", tile_set, branch, property_path(item), branch)
         obj_root = layer.child("obj")
         if isinstance(obj_root, WzSubProperty):
             for item in obj_root.children():
                 if not isinstance(item, WzSubProperty):
                     continue
-                canvas_path = "/".join(str(child_value(item, name, "")) for name in ("l0", "l1", "l2")) + "/0"
-                add("obj", str(child_value(item, "oS", "")), canvas_path, property_path(item))
+                branch = "/".join(str(child_value(item, name, "")) for name in ("l0", "l1", "l2"))
+                add("obj", str(child_value(item, "oS", "")), f"{branch}/0", property_path(item), branch)
 
     life = root.child("life")
     if isinstance(life, WzSubProperty):
@@ -981,44 +986,201 @@ def map_resource_references(root: WzSubProperty) -> list[dict[str, Any]]:
     return list(references.values())
 
 
+def entity_resource_paths(kind: str, entity_id: str, *, repo_root: Path = _ROOT) -> dict[str, Any]:
+    title = "Npc" if kind == "npc" else "Mob"
+    return {
+        "client": repo_root / "clien" / "Data" / title / f"{entity_id}.img",
+        "server": repo_root / "gms-server" / "wz" / f"{title}.wz" / f"{entity_id}.img.xml",
+        "stringClient": repo_root / "clien" / "Data" / "String" / f"{title}.img",
+        "stringServers": [
+            repo_root / "gms-server" / tree / "String.wz" / f"{title}.img.xml"
+            for tree in ("wz", "wz-zh-CN")
+        ],
+        "title": title,
+    }
+
+
+def tms_entity_source(kind: str, entity_id: str, *, tms_data: Path = _TMS_DATA) -> Path:
+    title = "Npc" if kind == "npc" else "Mob"
+    direct = tms_data / title / f"{entity_id}.img"
+    canvas = tms_data / title / "_Canvas" / f"{entity_id}.img"
+    return direct if direct.is_file() else canvas
+
+
+def xml_has_root_child(path: Path, name: str) -> bool:
+    if not path.is_file():
+        return False
+    stat = path.stat()
+    return name in _xml_node_paths_cached(str(path.resolve()), stat.st_mtime_ns, stat.st_size)
+
+
+@lru_cache(maxsize=20)
+def _xml_node_paths_cached(path_text: str, mtime_ns: int, size: int) -> frozenset[str]:
+    del mtime_ns, size
+    return frozenset(index_xml(Path(path_text).read_bytes()))
+
+
+def entity_contract_status(
+    kind: str, entity_id: str, *, repo_root: Path = _ROOT, tms_data: Path = _TMS_DATA,
+) -> dict[str, Any]:
+    paths = entity_resource_paths(kind, entity_id, repo_root=repo_root)
+    client = paths["client"]
+    client_exists = client.is_file()
+    canvas_ready = bool(first_entity_frame(client)) if client_exists else False
+    string_client = paths["stringClient"]
+    string_client_ready = bool(
+        string_client.is_file() and load_image(string_client).root.get(entity_id) is not None
+    )
+    missing_string_servers = [
+        relative_path(path) if repo_root == _ROOT else str(path.relative_to(repo_root))
+        for path in paths["stringServers"] if not xml_has_root_child(path, entity_id)
+    ]
+    issues = []
+    if not client_exists:
+        issues.append("客户端 IMG 缺失")
+    elif not canvas_ready:
+        issues.append("客户端 IMG 没有可用 Canvas")
+    if not paths["server"].is_file():
+        issues.append("服务端实体 XML 缺失")
+    if not string_client_ready:
+        issues.append("客户端 String 记录缺失")
+    if missing_string_servers:
+        issues.append("服务端 String 记录缺失")
+    source = tms_entity_source(kind, entity_id, tms_data=tms_data)
+    source_string = tms_data / "String" / f'{paths["title"]}.img'
+    source_string_ready = bool(
+        source_string.is_file() and load_image(source_string).root.get(entity_id) is not None
+    )
+    if not client_exists:
+        status = "missingFile"
+    elif not canvas_ready:
+        status = "missingCanvas"
+    elif not paths["server"].is_file():
+        status = "missingServer"
+    elif not string_client_ready or missing_string_servers:
+        status = "missingString"
+    else:
+        status = "ready"
+    return {
+        "status": status, "issues": issues, "clientExists": client_exists,
+        "canvasReady": canvas_ready, "serverExists": paths["server"].is_file(),
+        "stringClientExists": string_client_ready,
+        "stringServerExists": not missing_string_servers,
+        "sourcePath": relative_path(source) if source.is_file() else str(source),
+        "sourceExists": source.is_file(), "sourceStringExists": source_string_ready,
+        "autoCopy": status != "missingCanvas" and source.is_file() and source_string_ready,
+    }
+
+
 def audit_map_resources(left_path: Path, right_path: Path) -> list[dict[str, Any]]:
-    if not right_path.name.lower().endswith(".img"):
+    if not right_path.is_file() or not right_path.name.lower().endswith(".img"):
         return []
     right_root = load_image(right_path).root
+    left_root = load_image(left_path).root if left_path.is_file() and left_path.name.lower().endswith(".img") else None
     left_data = data_root_for(left_path)
     folders = {"back": ("Map", "Back"), "tile": ("Map", "Tile"), "obj": ("Map", "Obj"), "mob": ("Mob",), "npc": ("Npc",)}
-    result = []
-    for reference in map_resource_references(right_root):
+    left_references = {}
+    if left_root is not None:
+        for left_reference in map_resource_references(left_root):
+            for node_path in left_reference["nodes"]:
+                left_references[(left_reference["kind"], node_path)] = left_reference
+
+    def resource_path(reference: dict[str, Any]) -> Path:
         relative = Path(*folders[reference["kind"]]) / f'{reference["name"]}.img'
         resource = left_data / relative
         if not resource.is_file() and reference["kind"] in {"mob", "npc"}:
             resource = resource.parent / "_Canvas" / resource.name
-        if not resource.is_file():
+        return resource
+
+    result = []
+    for reference in map_resource_references(right_root):
+        relative = Path(*folders[reference["kind"]]) / f'{reference["name"]}.img'
+        resource = resource_path(reference)
+        contract = None
+        projected = False
+        if reference["kind"] in {"mob", "npc"}:
+            contract = entity_contract_status(reference["kind"], reference["name"])
+            status = contract["status"]
+        elif not resource.is_file():
             status = "missingFile"
-        elif reference["kind"] in {"mob", "npc"}:
-            status = "ready" if first_entity_frame(resource) else "missingCanvas"
         else:
             status = "ready" if canvas_descriptor(resource, reference["canvasPath"]) else "missingCanvas"
+        if status != "ready" and reference["kind"] in {"back", "tile", "obj"}:
+            projected_references = [
+                left_references.get((reference["kind"], node_path)) for node_path in reference["nodes"]
+            ]
+            projected = bool(projected_references) and all(
+                item is not None
+                and resource_path(item).is_file()
+                and canvas_descriptor(resource_path(item), item["canvasPath"])
+                for item in projected_references
+            )
+            if projected:
+                status = "ready"
+        auto_copy = contract["autoCopy"] if contract else False
+        if contract is None and status != "ready":
+            title = {"back": "Back", "tile": "Tile", "obj": "Obj"}[reference["kind"]]
+            source_resource = _TMS_DATA / "Map" / title / f'{reference["name"]}.img'
+            target_branch_missing = True
+            if resource.is_file():
+                target_branch_missing = load_image(resource).root.get(reference["branch"]) is None
+            auto_copy = bool(
+                source_resource.is_file() and target_branch_missing
+                and not (reference["kind"] == "obj" and reference["name"] == "connect")
+            )
+            contract = {
+                "issues": [
+                    "客户端资源文件缺失" if status == "missingFile"
+                    else f'缺少 Canvas：{reference["canvasPath"]}'
+                ],
+                "sourceExists": source_resource.is_file(), "sourcePath": relative_path(source_resource),
+                "autoCopy": auto_copy,
+            }
         result.append({
             **reference, "status": status,
             "clientPath": relative_path(resource) if resource.is_file() else relative_path(left_data / relative),
+            "contract": contract, "autoCopy": auto_copy, "projected": projected,
         })
-    severity = {"ready": 0, "missingCanvas": 1, "missingFile": 2}
+    severity = {"ready": 0, "missingString": 1, "missingServer": 2, "missingCanvas": 3, "missingFile": 4}
     grouped: dict[tuple[str, str], dict[str, Any]] = {}
     for item in result:
         key = (item["kind"], item["name"])
         entry = grouped.setdefault(key, {
             "kind": item["kind"], "name": item["name"], "status": item["status"],
             "clientPath": item["clientPath"], "canvasPaths": [], "nodes": [],
+            "issueNodes": [], "branches": [], "autoCopy": item["autoCopy"],
+            "contract": item.get("contract"), "projected": item.get("projected", False),
         })
         if severity[item["status"]] > severity[entry["status"]]:
             entry["status"] = item["status"]
+            entry["contract"] = item.get("contract")
+        entry["autoCopy"] = entry["autoCopy"] or item["autoCopy"]
+        entry["projected"] = entry["projected"] or item.get("projected", False)
         if item["canvasPath"] and item["canvasPath"] not in entry["canvasPaths"] and len(entry["canvasPaths"]) < 6:
             entry["canvasPaths"].append(item["canvasPath"])
+        if item.get("branch") and item["branch"] not in entry["branches"]:
+            entry["branches"].append(item["branch"])
         for node_path in item["nodes"]:
-            if node_path not in entry["nodes"] and len(entry["nodes"]) < 6:
+            if node_path not in entry["nodes"]:
                 entry["nodes"].append(node_path)
+            if item["status"] != "ready" and node_path not in entry["issueNodes"]:
+                entry["issueNodes"].append(node_path)
     return sorted(grouped.values(), key=lambda item: (item["status"] == "ready", item["kind"], natural_key(item["name"])))
+
+
+def attach_resource_statuses(rows: list[dict[str, Any]], resources: list[dict[str, Any]]) -> None:
+    row_by_path = {row["path"]: row for row in rows}
+    for resource in resources:
+        summary = {
+            "kind": resource["kind"], "name": resource["name"], "status": resource["status"],
+            "issues": (resource.get("contract") or {}).get("issues", []),
+            "clientPath": resource["clientPath"], "autoCopy": resource.get("autoCopy", False),
+        }
+        node_paths = (resource.get("issueNodes") or resource["nodes"]) if resource["status"] != "ready" else resource["nodes"]
+        for node_path in node_paths:
+            row = row_by_path.get(node_path)
+            if row is not None:
+                row.setdefault("resources", []).append(summary)
 
 
 _CRASH_PHASES = {
@@ -1147,6 +1309,8 @@ def analyze_scene_resource_risks(path: Path, image: WzImage, phase: str = "unkno
 def compatibility_analysis(
     left: dict[str, dict[str, Any]], right: dict[str, dict[str, Any]], left_path: Path, right_path: Path,
 ) -> dict[str, Any]:
+    left_available = left_path.is_file()
+    right_available = right_path.is_file()
     item_id = infer_id(left_path)
     right_only = sorted(
         (set(right) - set(left)) - {""},
@@ -1201,6 +1365,7 @@ def compatibility_analysis(
             break
     resources = audit_map_resources(left_path, right_path)
     return {
+        "leftAvailable": left_available, "rightAvailable": right_available,
         "rightOnlyCount": len(right_only), "addedRoots": added_roots[:40], "addedRootCount": len(added_roots),
         "modernCandidateCount": finding_counts["modern"], "incompatibleCount": finding_counts["incompatible"],
         "reviewCount": finding_counts["review"], "findings": findings, "changedNodes": changed_nodes,
@@ -2452,6 +2617,39 @@ def clone_supported_node(source: WzProperty) -> WzProperty:
     raise ValueError(f"节点 {property_path(source)} 的类型 {source.type_name} 不支持安全复制")
 
 
+def clone_compatible_map_node(source: WzProperty, client_path: Path) -> tuple[WzProperty, list[str]]:
+    skipped: list[str] = []
+
+    def clone(candidate: WzProperty, *, selected: bool = False) -> WzProperty | None:
+        candidate_path = property_path(candidate)
+        annotated = annotate_meta(
+            candidate_path, property_meta(candidate), "map", infer_id(client_path),
+        )
+        compatibility = annotated["compatibility"]
+        supported = not isinstance(candidate, WzCanvasProperty)
+        if compatibility["status"] != "ok" or not supported:
+            if selected:
+                detail = compatibility["suggestion"] if compatibility["status"] != "ok" else "Canvas 不能直接复制到旧端"
+                raise ValueError(
+                    f"所选节点 {candidate_path} 标记为“{compatibility['label']}”，不能直接复制。{detail}"
+                )
+            skipped.append(candidate_path)
+            return None
+        if not isinstance(candidate, WzSubProperty):
+            return clone_supported_node(candidate)
+        projected = WzSubProperty(candidate.name)
+        for child in candidate.children():
+            cloned_child = clone(child)
+            if cloned_child is not None:
+                projected.add(cloned_child)
+        return projected
+
+    projected = clone(source, selected=True)
+    if projected is None:
+        raise ValueError(f"节点 {property_path(source)} 没有可复制的旧端兼容内容")
+    return projected, skipped
+
+
 def xml_snippet_for_node(node: WzProperty, indent: bytes) -> bytes:
     name = html.escape(node.name, quote=True)
     if isinstance(node, WzSubProperty):
@@ -2473,7 +2671,9 @@ def xml_snippet_for_node(node: WzProperty, indent: bytes) -> bytes:
     return indent + f'<{tag} name="{name}" value="{value}"/>\n'.encode()
 
 
-def xml_add_cloned_node(path: Path, parent_path: str, node: WzProperty, *, dry_run: bool) -> dict[str, Any]:
+def xml_add_cloned_node(
+    path: Path, parent_path: str, node: WzProperty, *, dry_run: bool, backup: bool = True,
+) -> dict[str, Any]:
     data = path.read_bytes()
     spans = index_xml(data)
     parent = spans.get(parent_path)
@@ -2483,7 +2683,9 @@ def xml_add_cloned_node(path: Path, parent_path: str, node: WzProperty, *, dry_r
     if target_path in spans:
         raise ValueError(f"服务端同名节点已存在: {target_path}")
     line_start = data.rfind(b"\n", 0, parent.start) + 1
-    parent_indent = data[line_start:parent.start]
+    line_prefix = data[line_start:parent.start]
+    indent_match = re.match(rb"[ \t]*", line_prefix)
+    parent_indent = indent_match.group(0) if indent_match else b""
     indent = parent_indent + b"  "
     snippet = xml_snippet_for_node(node, indent)
     if parent.self_closing:
@@ -2496,68 +2698,424 @@ def xml_add_cloned_node(path: Path, parent_path: str, node: WzProperty, *, dry_r
     else:
         close_start = data.rfind(b"</", parent.open_end, parent.end)
         close_line_start = data.rfind(b"\n", parent.open_end, close_start) + 1
-        output = data[:close_line_start] + snippet + data[close_line_start:]
-        inserted_bytes = len(snippet)
+        if close_line_start <= parent.open_end:
+            insertion = b"\n" + snippet + parent_indent
+            output = data[:close_start] + insertion + data[close_start:]
+            inserted_bytes = len(insertion)
+        else:
+            output = data[:close_line_start] + snippet + data[close_line_start:]
+            inserted_bytes = len(snippet)
     ET.fromstring(output)
     if not dry_run:
-        atomic_write(path, output, backup=True)
+        atomic_write(path, output, backup=backup)
     return {"path": target_path, "insertedBytes": inserted_bytes}
+
+
+def selected_map_resource_references(root: WzSubProperty, node_path: str) -> list[dict[str, Any]]:
+    selected = node_path.strip("/")
+    output = []
+    for reference in map_resource_references(root):
+        if any(
+            not selected
+            or path == selected
+            or path.startswith(f"{selected}/")
+            or selected.startswith(f"{path}/")
+            for path in reference["nodes"]
+        ):
+            output.append(reference)
+    return output
+
+
+def migrate_missing_entity_resources(
+    references: list[dict[str, Any]], *, repo_root: Path = _ROOT, tms_data: Path = _TMS_DATA,
+) -> dict[str, Any]:
+    entities = sorted({
+        (reference["kind"], str(reference["name"]))
+        for reference in references if reference["kind"] in {"npc", "mob"}
+    })
+    asset_groups: dict[tuple[str, str], list[dict[str, Any]]] = {}
+    for reference in references:
+        if reference["kind"] in {"back", "tile", "obj"}:
+            asset_groups.setdefault((reference["kind"], str(reference["name"])), []).append(reference)
+    if not entities and not asset_groups:
+        return {"migrated": [], "unresolved": [], "files": []}
+
+    migrations = []
+    unresolved = []
+    with tempfile.TemporaryDirectory(prefix=".copy-map-resources-", dir=_HERE) as directory:
+        stage_root = Path(directory)
+        staged: dict[Path, Path] = {}
+
+        def staged_target(target: Path, *, initial: bytes | None = None) -> Path:
+            existing = staged.get(target)
+            if existing is not None:
+                return existing
+            try:
+                relative = target.relative_to(repo_root)
+            except ValueError as exc:
+                raise ValueError(f"资源目标不在项目目录内: {target}") from exc
+            output = stage_root / relative
+            output.parent.mkdir(parents=True, exist_ok=True)
+            if initial is not None:
+                output.write_bytes(initial)
+            elif target.is_file():
+                shutil.copy2(target, output)
+            staged[target] = output
+            return output
+
+        for kind, entity_id in entities:
+            contract = entity_contract_status(
+                kind, entity_id, repo_root=repo_root, tms_data=tms_data,
+            )
+            if contract["status"] == "ready":
+                continue
+            if contract["status"] == "missingCanvas":
+                raise ValueError(
+                    f"{kind.upper()} {entity_id} 已有客户端 IMG，但没有可用 Canvas；"
+                    "为保护现有二进制记录，不能自动覆盖，请先在资源审计中处理。"
+                )
+            paths = entity_resource_paths(kind, entity_id, repo_root=repo_root)
+            source = tms_entity_source(kind, entity_id, tms_data=tms_data)
+            image = None
+            materializer = None
+            if not paths["client"].is_file():
+                if not source.is_file():
+                    raise ValueError(f"TMS 缺少 {kind.upper()} {entity_id} 的资源文件: {source}")
+                sanitizer = arc.sanitize_npc if kind == "npc" else (
+                    lambda root, value=int(entity_id): arc.sanitize_mob(root, value)
+                )
+                image, materializer = arc.clone_image(source, sanitizer)
+                client_data = arc.verified_image_bytes(
+                    arc.encode_image_body(image, arc.gms_reader()), f"{entity_id}.img",
+                )
+                client_stage = staged_target(paths["client"], initial=client_data)
+                canvas_audit = _audit_canvas_payloads(client_stage)
+                if canvas_audit["errors"] or not canvas_audit["canvases"] or not canvas_audit["visible"]:
+                    raise ValueError(
+                        f"{kind.upper()} {entity_id} Canvas 兼容校验失败: "
+                        f"{canvas_audit['errors'] or '没有可见 Canvas'}"
+                    )
+            else:
+                image = load_image(paths["client"])
+                ET.parse(paths["server"]) if paths["server"].is_file() else None
+
+            if not paths["server"].is_file():
+                server_data = arc.image_to_xml(image, f"{entity_id}.img").encode("utf-8")
+                ET.fromstring(server_data)
+                staged_target(paths["server"], initial=server_data)
+
+            source_string_path = tms_data / "String" / f'{paths["title"]}.img'
+            source_string = load_image(source_string_path) if source_string_path.is_file() else None
+            source_record = source_string.root.get(entity_id) if source_string is not None else None
+            string_client = paths["stringClient"]
+            string_client_ready = bool(
+                string_client.is_file() and load_image(string_client).root.get(entity_id) is not None
+            )
+            missing_string_servers = [
+                target for target in paths["stringServers"] if not xml_has_root_child(target, entity_id)
+            ]
+            if (not string_client_ready or missing_string_servers) and source_record is None:
+                raise ValueError(f"TMS String/{paths['title']}.img 缺少 {entity_id} 记录")
+            if not string_client_ready:
+                if not string_client.is_file():
+                    raise ValueError(f"项目缺少 String 主文件: {string_client}")
+                string_stage = staged_target(string_client)
+                clone = clone_supported_node(source_record)
+                patch_img_add(
+                    string_stage, "", entity_id, "imgdir", None,
+                    dry_run=False, backup=False, node=clone,
+                )
+            for string_server in missing_string_servers:
+                initial = None
+                if not string_server.is_file():
+                    initial = f'<imgdir name="{paths["title"]}.img">\n</imgdir>\n'.encode("utf-8")
+                server_stage = staged_target(string_server, initial=initial)
+                xml_add_cloned_node(
+                    server_stage, "", clone_supported_node(source_record),
+                    dry_run=False, backup=False,
+                )
+
+            migrations.append({
+                "kind": kind, "id": entity_id,
+                "canvases": materializer.canvases if materializer is not None else 0,
+                "links": materializer.links if materializer is not None else 0,
+                "resized": materializer.resized if materializer is not None else 0,
+            })
+
+        for (kind, name), asset_references in sorted(asset_groups.items()):
+            title = {"back": "Back", "tile": "Tile", "obj": "Obj"}[kind]
+            source_path = tms_data / "Map" / title / f"{name}.img"
+            target_path = repo_root / "clien" / "Data" / "Map" / title / f"{name}.img"
+            target_image = load_image(target_path) if target_path.is_file() else None
+            missing = [
+                reference for reference in asset_references
+                if target_image is None or canvas_descriptor(target_path, reference["canvasPath"]) is None
+            ]
+            if not missing:
+                continue
+            blocked = [
+                reference for reference in missing
+                if (
+                    not source_path.is_file()
+                    or (target_image is not None and target_image.root.get(reference["branch"]) is not None)
+                    or (kind == "obj" and name == "connect")
+                )
+            ]
+            if blocked:
+                unresolved.append({
+                    "kind": kind, "name": name,
+                    "branches": sorted({reference["branch"] for reference in blocked}),
+                    "reason": (
+                        "Obj/connect 使用旧端专用结构，不能用现代 TMS 分支覆盖。"
+                        if kind == "obj" and name == "connect"
+                        else "TMS 来源缺失，或项目中已有同名分支但 Canvas 不兼容，拒绝自动覆盖。"
+                    ),
+                })
+            migratable = [reference for reference in missing if reference not in blocked]
+            if not migratable:
+                continue
+
+            source_image = arc.load_image(source_path, arc.BMS_KEY)
+            materializer = arc.CanvasMaterializer()
+            target_data = target_path.read_bytes() if target_path.is_file() else empty_gms_img_bytes()
+            working = WzImage.from_bytes(target_data, key=arc.GMS_KEY, name=target_path.name)
+            working.parse()
+            added_branches = []
+            for reference in migratable:
+                branch = reference["branch"]
+                if branch in added_branches or working.root.get(branch) is not None:
+                    continue
+                source_node = source_image.root.get(branch)
+                if source_node is None:
+                    raise ValueError(f"TMS 资源缺少分支: Map/{title}/{name}.img/{branch}")
+                parent_path, _, leaf = branch.rpartition("/")
+                clone = arc.clone_property(
+                    source_node, None, source_image, source_path, materializer, leaf,
+                )
+                parent_parts = tuple(part for part in parent_path.split("/") if part)
+                target_data = arc.ensure_binary_parent(target_data, parent_parts)
+                target_data = arc.append_property_record(target_data, parent_parts, clone)
+                working = WzImage.from_bytes(target_data, key=arc.GMS_KEY, name=target_path.name)
+                working.parse()
+                added_branches.append(branch)
+            asset_stage = staged_target(target_path, initial=target_data)
+            _verified_img_from_bytes(asset_stage, target_data)
+            _load_image_cached.cache_clear()
+            missing_after = [
+                reference["canvasPath"] for reference in migratable
+                if canvas_descriptor(asset_stage, reference["canvasPath"]) is None
+            ]
+            if missing_after:
+                raise ValueError(f"迁移后 Canvas 仍不可解析: Map/{title}/{name}.img {missing_after}")
+            migrations.append({
+                "kind": kind, "id": name, "branches": added_branches,
+                "canvases": materializer.canvases, "links": materializer.links,
+                "resized": materializer.resized,
+            })
+
+        payloads: dict[Path, bytes] = {}
+        for target, stage_path in staged.items():
+            data = stage_path.read_bytes()
+            if stage_path.name.lower().endswith(".img"):
+                _verified_img_from_bytes(stage_path, data)
+            else:
+                ET.fromstring(data)
+            payloads[target] = data
+
+        originals = {target: target.read_bytes() if target.is_file() else None for target in payloads}
+        committed: list[Path] = []
+        try:
+            for target, data in payloads.items():
+                target.parent.mkdir(parents=True, exist_ok=True)
+                atomic_write(target, data, backup=originals[target] is not None)
+                committed.append(target)
+        except Exception:
+            for target in reversed(committed):
+                original = originals[target]
+                if original is None:
+                    if target.exists():
+                        target.unlink()
+                else:
+                    atomic_write(target, original, backup=False)
+            _load_image_cached.cache_clear()
+            raise
+
+    _load_image_cached.cache_clear()
+    _xml_node_paths_cached.cache_clear()
+    return {
+        "migrated": migrations, "unresolved": unresolved,
+        "files": [relative_path(target) if repo_root == _ROOT else str(target.relative_to(repo_root)) for target in payloads],
+    }
 
 
 def copy_tms_node_with_server_sync(
     client_path: Path, source_path: Path, node_path: str,
 ) -> dict[str, Any]:
     require_repo_write(client_path)
-    if not client_path.is_file():
-        raise ValueError("主文件不存在，请先创建空白主文件")
-    if not node_path:
-        raise ValueError("不能复制 TMS 根节点")
     source_image = load_image(source_path)
-    source_node = source_image.root.get(node_path)
+    source_node = source_image.root if not node_path else source_image.root.get(node_path)
     if source_node is None:
         raise ValueError(f"TMS 节点不存在: {node_path}")
-    if "/Data/Map/Map/" in source_path.as_posix():
-        candidates = [source_node]
-        if isinstance(source_node, WzSubProperty):
-            candidates.extend(iter_subtree(source_node))
-        for candidate in candidates:
-            candidate_path = property_path(candidate)
-            annotated = annotate_meta(
-                candidate_path, property_meta(candidate), "map", infer_id(client_path),
-            )
-            compatibility = annotated["compatibility"]
-            if compatibility["status"] == "ok":
-                continue
-            raise ValueError(
-                f"所选子树包含“{compatibility['label']}”节点 {candidate_path}，不能直接复制到旧端。"
-                f"{compatibility['suggestion']} 请缩小选择范围，或先手工建立兼容父目录。"
-            )
-    clone = clone_supported_node(source_node)
-    parent_path = node_path.rpartition("/")[0]
+    is_map_source = "/Data/Map/Map/" in source_path.as_posix()
+    resource_references = selected_map_resource_references(source_image.root, node_path) if is_map_source else []
     server_path = server_xml_for_client(client_path)
-    if server_path is None or not server_path.is_file():
-        raise ValueError("找不到对应的服务端 XML")
+    if server_path is None:
+        raise ValueError("找不到对应的服务端 XML 路径")
 
-    patch_img_add(
-        client_path, parent_path, clone.name, "imgdir", None, dry_run=True, backup=False, node=clone,
+    existing_target = None
+    if client_path.is_file():
+        existing_image = load_image(client_path)
+        existing_target = existing_image.root if not node_path else existing_image.root.get(node_path)
+    mergeable_empty = bool(
+        isinstance(existing_target, WzSubProperty) and not existing_target.children()
     )
-    xml_add_cloned_node(server_path, parent_path, clone, dry_run=True)
-    client_original = client_path.read_bytes()
-    server_original = server_path.read_bytes()
+    if existing_target is not None and not mergeable_empty and resource_references:
+        resource_result = migrate_missing_entity_resources(resource_references)
+        return {
+            "path": node_path, "clientPath": relative_path(client_path),
+            "serverPath": relative_path(server_path), "client": [], "server": [],
+            "createdClient": False, "createdServer": False, "createdAncestors": [],
+            "skippedPaths": [], "resourceOnly": True, "resources": resource_result,
+            "modifiedFiles": list(dict.fromkeys(resource_result.get("files", []))),
+        }
+
+    if is_map_source:
+        clone, skipped_paths = clone_compatible_map_node(source_node, client_path)
+    else:
+        clone, skipped_paths = clone_supported_node(source_node), []
+    parent_path = node_path.rpartition("/")[0]
+
+    client_original = client_path.read_bytes() if client_path.is_file() else None
+    server_original = server_path.read_bytes() if server_path.is_file() else None
+    created_ancestors: list[str] = []
+    commit_started = False
     try:
-        client_result = patch_img_add(
-            client_path, parent_path, clone.name, "imgdir", None,
-            dry_run=False, backup=True, node=clone,
-        )
-        server_result = xml_add_cloned_node(server_path, parent_path, clone, dry_run=False)
+        with tempfile.TemporaryDirectory(prefix=".copy-tms-node-", dir=_HERE) as directory:
+            stage = Path(directory)
+            staged_client = stage / client_path.name
+            staged_server = stage / server_path.name
+            staged_client.write_bytes(client_original if client_original is not None else empty_gms_img_bytes())
+            staged_server.write_bytes(server_original if server_original is not None else (
+                f'<imgdir name="{html.escape(client_path.name, quote=True)}">\n</imgdir>\n'.encode("utf-8")
+            ))
+
+            current_parent = ""
+            for name in (part for part in parent_path.split("/") if part):
+                ancestor_path = f"{current_parent}/{name}".strip("/")
+                source_ancestor = source_image.root.get(ancestor_path)
+                if not isinstance(source_ancestor, WzSubProperty):
+                    raise ValueError(f"TMS 父节点不是目录: {ancestor_path}")
+
+                staged_image = _verified_img_from_bytes(staged_client, staged_client.read_bytes())
+                client_ancestor = staged_image.root.get(ancestor_path)
+                if client_ancestor is None:
+                    patch_img_add(
+                        staged_client, current_parent, name, "imgdir", None,
+                        dry_run=False, backup=False,
+                    )
+                    created_ancestors.append(ancestor_path)
+                elif not isinstance(client_ancestor, WzSubProperty):
+                    raise ValueError(f"客户端父节点不是目录: {ancestor_path}")
+
+                server_span = index_xml(staged_server.read_bytes()).get(ancestor_path)
+                if server_span is None:
+                    xml_add_cloned_node(
+                        staged_server, current_parent, WzSubProperty(name), dry_run=False,
+                    )
+                elif server_span.tag != "imgdir":
+                    raise ValueError(f"服务端父节点不是 imgdir: {ancestor_path}")
+                current_parent = ancestor_path
+
+            staged_image = _verified_img_from_bytes(staged_client, staged_client.read_bytes())
+            existing_target = staged_image.root.get(node_path)
+            if not node_path:
+                if staged_image.root.children():
+                    raise ValueError("客户端根节点已有子节点，不能整根复制")
+                server_spans = index_xml(staged_server.read_bytes())
+                server_root = server_spans.get("")
+                if server_root is None or server_root.tag != "imgdir":
+                    raise ValueError("服务端 XML 根节点不存在或不是 imgdir")
+                if any(path for path in server_spans):
+                    raise ValueError("服务端 XML 根节点已有子节点，不能整根复制")
+                client_result = []
+                server_result = []
+                for child in clone.children():
+                    client_result.append(patch_img_add(
+                        staged_client, "", child.name, "imgdir", None,
+                        dry_run=False, backup=False, node=child,
+                    ))
+                    server_result.append(xml_add_cloned_node(
+                        staged_server, "", child, dry_run=False,
+                    ))
+            elif existing_target is None:
+                client_result: Any = patch_img_add(
+                    staged_client, parent_path, clone.name, "imgdir", None,
+                    dry_run=False, backup=False, node=clone,
+                )
+                server_result: Any = xml_add_cloned_node(
+                    staged_server, parent_path, clone, dry_run=False,
+                )
+            elif (
+                isinstance(existing_target, WzSubProperty)
+                and isinstance(clone, WzSubProperty)
+                and not existing_target.children()
+            ):
+                server_target = index_xml(staged_server.read_bytes()).get(node_path)
+                if server_target is None:
+                    xml_add_cloned_node(
+                        staged_server, parent_path, WzSubProperty(clone.name), dry_run=False,
+                    )
+                elif server_target.tag != "imgdir":
+                    raise ValueError(f"服务端同名节点不是 imgdir: {node_path}")
+                client_result = []
+                server_result = []
+                for child in clone.children():
+                    client_result.append(patch_img_add(
+                        staged_client, node_path, child.name, "imgdir", None,
+                        dry_run=False, backup=False, node=child,
+                    ))
+                    server_result.append(xml_add_cloned_node(
+                        staged_server, node_path, child, dry_run=False,
+                    ))
+            else:
+                raise ValueError(f"客户端同名节点已存在且不是空目录: {node_path}")
+            client_data = staged_client.read_bytes()
+            server_data = staged_server.read_bytes()
+            _verified_img_from_bytes(client_path, client_data)
+            ET.fromstring(server_data)
+
+        client_path.parent.mkdir(parents=True, exist_ok=True)
+        server_path.parent.mkdir(parents=True, exist_ok=True)
+        commit_started = True
+        atomic_write(client_path, client_data, backup=client_original is not None)
+        atomic_write(server_path, server_data, backup=server_original is not None)
+        _load_image_cached.cache_clear()
+        _verified_img_from_bytes(client_path, client_path.read_bytes())
+        ET.parse(server_path)
+        resource_result = migrate_missing_entity_resources(resource_references)
     except Exception:
-        atomic_write(client_path, client_original, backup=False)
-        atomic_write(server_path, server_original, backup=False)
+        if commit_started:
+            if client_original is None:
+                if client_path.exists():
+                    client_path.unlink()
+            else:
+                atomic_write(client_path, client_original, backup=False)
+            if server_original is None:
+                if server_path.exists():
+                    server_path.unlink()
+            else:
+                atomic_write(server_path, server_original, backup=False)
         _load_image_cached.cache_clear()
         raise
     return {
         "path": node_path, "clientPath": relative_path(client_path),
         "serverPath": relative_path(server_path), "client": client_result, "server": server_result,
+        "createdClient": client_original is None, "createdServer": server_original is None,
+        "createdAncestors": created_ancestors, "skippedPaths": skipped_paths,
+        "resources": resource_result,
+        "modifiedFiles": list(dict.fromkeys([
+            relative_path(client_path), relative_path(server_path), *resource_result.get("files", []),
+        ])),
     }
 
 
@@ -2575,7 +3133,13 @@ def validate_export_source(path: Path) -> tuple[bytes, str]:
     return data, hashlib.sha256(data).hexdigest()
 
 
-def export_current_files(source: Path, destination_text: str, *, include_server: bool) -> dict[str, Any]:
+def export_current_files(
+    source: Path,
+    destination_text: str,
+    *,
+    include_server: bool,
+    additional_sources: Iterable[Path] = (),
+) -> dict[str, Any]:
     require_repo_write(source)
     downloads = (Path.home() / "Downloads").resolve()
     destination = Path(destination_text).expanduser() if destination_text else _DEFAULT_EXPORT_ROOT
@@ -2593,9 +3157,21 @@ def export_current_files(source: Path, destination_text: str, *, include_server:
             raise ValueError(f"找不到对应的服务端 XML: {target}")
         sources.append(server_path)
 
+    sources.extend(additional_sources)
+
     verified = []
+    seen: set[Path] = set()
     for item in sources:
-        relative = item.resolve().relative_to(_ROOT.resolve())
+        item = item.resolve()
+        require_repo_write(item)
+        if not item.is_file():
+            raise ValueError(f"关联修改文件不存在: {relative_path(item)}")
+        relative = item.relative_to(_ROOT.resolve())
+        if not include_server and relative.parts[0] == "gms-server":
+            continue
+        if item in seen:
+            continue
+        seen.add(item)
         data, digest = validate_export_source(item)
         verified.append((item, relative, data, digest))
 
@@ -2618,13 +3194,19 @@ def export_current_files(source: Path, destination_text: str, *, include_server:
 @app.errorhandler(Exception)
 def handle_error(exc: Exception):
     status = getattr(exc, "code", 400)
-    return jsonify({"ok": False, "reason": str(exc)}), status if isinstance(status, int) else 400
+    if not isinstance(status, int) or not 400 <= status <= 599:
+        status = 400
+    return jsonify({"ok": False, "reason": str(exc)}), status
 
 
 @app.get("/")
 def index():
     return render_template(
         "index.html", tms_data_root=str(_TMS_DATA), default_export_root=str(_DEFAULT_EXPORT_ROOT),
+        asset_version=max(
+            (_HERE / "static" / "app.js").stat().st_mtime_ns,
+            (_HERE / "static" / "app.css").stat().st_mtime_ns,
+        ),
     )
 
 
@@ -2642,9 +3224,16 @@ def api_files():
 def api_export():
     body = request.get_json(silent=True) or {}
     source = resolve_repo_path(str(body.get("sourcePath", "")))
+    additional_files = body.get("additionalFiles", [])
+    if not isinstance(additional_files, list) or not all(
+        isinstance(item, str) and item.strip() for item in additional_files
+    ):
+        raise ValueError("关联修改文件必须是路径列表")
+    additional_sources = [resolve_repo_path(item, must_exist=False) for item in additional_files]
     with _WRITE_LOCK:
         result = export_current_files(
             source, str(body.get("destination", "")), include_server=bool(body.get("includeServer", True)),
+            additional_sources=additional_sources,
         )
     return jsonify({"ok": True, **result})
 
@@ -2654,13 +3243,17 @@ def api_compare():
     body = request.get_json(silent=True) or {}
     kind = str(body.get("kind", "map"))
     left_path = resolve_repo_path(str(body.get("leftPath", "")), must_exist=False)
-    right_path = resolve_repo_path(str(body.get("rightPath", "")), must_exist=kind == "map")
+    right_path = resolve_repo_path(str(body.get("rightPath", "")), must_exist=False)
     left, left_info = flatten_optional_source(left_path)
     right, right_info = flatten_optional_source(right_path)
+    if not left_info["exists"] and not right_info["exists"]:
+        raise ValueError("A 与 B 文件都不存在，无法加载")
     nodes, counts = merge_sources(left, right)
     mode = "map" if kind == "map" else "boss"
     compatibility = compatibility_analysis(left, right, left_path, right_path) if mode == "map" else None
     annotate_rows(nodes, mode, infer_id(left_path))
+    if compatibility:
+        attach_resource_statuses(nodes, compatibility["resources"])
     return jsonify({
         "ok": True, "leftPath": relative_path(left_path), "rightPath": relative_path(right_path),
         "leftInfo": left_info, "rightInfo": right_info, "nodes": nodes, "counts": counts, "compatibility": compatibility,
@@ -2679,7 +3272,7 @@ def api_create_main():
 @app.post("/api/copy-tms-node")
 def api_copy_tms_node():
     body = request.get_json(silent=True) or {}
-    client_path = resolve_repo_path(str(body.get("sourcePath", "")))
+    client_path = resolve_repo_path(str(body.get("sourcePath", "")), must_exist=False)
     tms_path = resolve_repo_path(str(body.get("tmsPath", "")))
     if tms_path != _TMS_DATA and not tms_path.is_relative_to(_TMS_DATA):
         raise ValueError("复制来源必须位于 TMS 数据目录")

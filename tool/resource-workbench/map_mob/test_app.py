@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import shutil
 import subprocess
 import tempfile
@@ -44,6 +45,19 @@ class XmlPatchTests(unittest.TestCase):
             workbench.patch_xml_value(path, "info/level", 99, dry_run=True, backup=False)
             self.assertEqual(path.read_bytes(), self.SOURCE)
 
+    def test_add_cloned_node_inserts_inside_inline_empty_imgdir(self) -> None:
+        source = b'<imgdir name="1.img">\n  <imgdir name="1"><imgdir name="obj"></imgdir></imgdir>\n</imgdir>\n'
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "1.img.xml"
+            path.write_bytes(source)
+            child = workbench.WzSubProperty("0")
+            child.add(workbench.WzIntProperty("x", 12))
+            workbench.xml_add_cloned_node(path, "1/obj", child, dry_run=False)
+            workbench.ET.parse(path)
+            nodes, _ = workbench.flatten_xml(path)
+            self.assertEqual(nodes["1/obj/0/x"]["value"], 12)
+            self.assertTrue(path.read_bytes().startswith(b'<imgdir name="1.img">'))
+
 
 class ImgPatchTests(unittest.TestCase):
     def test_empty_gms_img_is_parseable_and_has_no_nodes(self) -> None:
@@ -59,6 +73,38 @@ class ImgPatchTests(unittest.TestCase):
         self.assertEqual(nodes, {})
         self.assertEqual(info["format"], "img")
         self.assertFalse(info["exists"])
+
+    def test_resource_status_is_attached_to_the_referencing_life_node(self) -> None:
+        rows = [{"path": "life/8"}, {"path": "life/8/id"}]
+        resources = [{
+            "kind": "npc", "name": "9000123", "status": "missingFile",
+            "clientPath": "clien/Data/Npc/9000123.img", "nodes": ["life/8"],
+            "autoCopy": True, "contract": {"issues": ["客户端 IMG 缺失"]},
+        }]
+        workbench.attach_resource_statuses(rows, resources)
+        self.assertEqual(rows[0]["resources"][0]["name"], "9000123")
+        self.assertEqual(rows[0]["resources"][0]["issues"], ["客户端 IMG 缺失"])
+        self.assertNotIn("resources", rows[1])
+
+    def test_reverse_city_marks_only_missing_branch_and_accepts_projected_connect_rope(self) -> None:
+        left = workbench._ROOT / "clien/Data/Map/Map/Map4/450014200.img"
+        right = workbench._TMS_DATA / "Map/Map/Map4/450014200.img"
+        if not left.is_file() or not right.is_file():
+            self.skipTest("Reverse City map samples are unavailable")
+        resources = workbench.audit_map_resources(left, right)
+        by_key = {(item["kind"], item["name"]): item for item in resources}
+        reverse_city = by_key[("obj", "ReverseCity")]
+        connect = by_key[("obj", "connect")]
+        self.assertEqual(reverse_city["status"], "missingCanvas")
+        self.assertEqual(reverse_city["issueNodes"], ["3/obj/24"])
+        self.assertIn("mtower/ani/3/0", reverse_city["contract"]["issues"][0])
+        self.assertEqual(connect["status"], "ready")
+        self.assertTrue(connect["projected"])
+        rows = [{"path": "3/obj/10"}, {"path": "3/obj/24"}, {"path": "7/obj/3"}]
+        workbench.attach_resource_statuses(rows, resources)
+        self.assertNotIn("resources", rows[0])
+        self.assertEqual(rows[1]["resources"][0]["name"], "ReverseCity")
+        self.assertEqual(rows[2]["resources"][0]["status"], "ready")
 
     def test_mob_default_path_prefers_tms_canvas_file(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -297,15 +343,344 @@ class ImgPatchTests(unittest.TestCase):
             self.assertEqual(server_nodes["0/info/tS"]["value"], "grassySoil")
             self.assertEqual(result["path"], "0/info/tS")
 
+    def test_copy_tms_leaf_creates_missing_main_files_and_parent_directories(self) -> None:
+        with tempfile.TemporaryDirectory(prefix=".map-mob-copy-missing-test-", dir=workbench._HERE) as directory:
+            root = Path(directory)
+            client = root / "999999997.img"
+            server = root / "999999997.img.xml"
+            source = root / "source.img"
+            source.write_bytes(workbench.empty_gms_img_bytes())
+            for parent, name, node_type, value in (
+                ("", "0", "imgdir", None),
+                ("0", "info", "imgdir", None),
+                ("0/info", "tS", "string", "grassySoil"),
+            ):
+                workbench.patch_img_add(
+                    source, parent, name, node_type, value, dry_run=False, backup=False,
+                )
+            original_resolver = workbench.server_xml_for_client
+            workbench.server_xml_for_client = lambda _path: server
+            try:
+                result = workbench.copy_tms_node_with_server_sync(client, source, "0/info/tS")
+
+                client_before = client.read_bytes()
+                server_before = server.read_bytes()
+                client_mtime = client.stat().st_mtime_ns
+                server_mtime = server.stat().st_mtime_ns
+                with self.assertRaisesRegex(ValueError, "同名节点已存在且不是空目录"):
+                    workbench.copy_tms_node_with_server_sync(client, source, "0/info/tS")
+            finally:
+                workbench.server_xml_for_client = original_resolver
+
+            image = workbench._verified_img_from_bytes(client, client.read_bytes())
+            server_nodes, _ = workbench.flatten_xml(server)
+            self.assertEqual(image.root.get("0/info/tS").value, "grassySoil")
+            self.assertEqual(server_nodes["0/info/tS"]["value"], "grassySoil")
+            self.assertTrue(result["createdClient"])
+            self.assertTrue(result["createdServer"])
+            self.assertEqual(result["createdAncestors"], ["0", "0/info"])
+            self.assertEqual(client.read_bytes(), client_before)
+            self.assertEqual(server.read_bytes(), server_before)
+            self.assertEqual(client.stat().st_mtime_ns, client_mtime)
+            self.assertEqual(server.stat().st_mtime_ns, server_mtime)
+
+    def test_copy_tms_leaf_populates_empty_main_file(self) -> None:
+        with tempfile.TemporaryDirectory(prefix=".map-mob-copy-empty-test-", dir=workbench._HERE) as directory:
+            root = Path(directory)
+            client = root / "999999996.img"
+            server = root / "999999996.img.xml"
+            source = root / "source.img"
+            client.write_bytes(workbench.empty_gms_img_bytes())
+            workbench.patch_img_add(
+                client, "", "life", "imgdir", None, dry_run=False, backup=False,
+            )
+            server.write_bytes(b'<imgdir name="999999996.img">\n  <imgdir name="life">\n  </imgdir>\n</imgdir>\n')
+            source.write_bytes(workbench.empty_gms_img_bytes())
+            for parent, name, node_type, value in (
+                ("", "life", "imgdir", None),
+                ("life", "0", "imgdir", None),
+                ("life/0", "id", "string", "9001000"),
+                ("life/0", "type", "string", "m"),
+            ):
+                workbench.patch_img_add(
+                    source, parent, name, node_type, value, dry_run=False, backup=False,
+                )
+            original_resolver = workbench.server_xml_for_client
+            workbench.server_xml_for_client = lambda _path: server
+            try:
+                result = workbench.copy_tms_node_with_server_sync(client, source, "life")
+            finally:
+                workbench.server_xml_for_client = original_resolver
+
+            image = workbench._verified_img_from_bytes(client, client.read_bytes())
+            server_nodes, _ = workbench.flatten_xml(server)
+            self.assertEqual(image.root.get("life/0/id").value, "9001000")
+            self.assertEqual(image.root.get("life/0/type").value, "m")
+            self.assertEqual(server_nodes["life/0/id"]["value"], "9001000")
+            self.assertFalse(result["createdClient"])
+            self.assertFalse(result["createdServer"])
+            self.assertEqual(result["createdAncestors"], [])
+
     def test_copy_rejects_known_modern_map_node(self) -> None:
         client = workbench._ROOT / "clien/Data/Map/Map/Map4/450002011.img"
         tms_source = workbench._TMS_DATA / "Map/Map/Map4/450002011.img"
         if not client.is_file() or not tms_source.is_file():
             self.skipTest("repository and TMS map samples are unavailable")
-        with self.assertRaisesRegex(ValueError, "不能直接复制到旧端"):
+        with self.assertRaisesRegex(ValueError, "不能直接复制"):
             workbench.copy_tms_node_with_server_sync(client, tms_source, "rapidStream")
-        with self.assertRaisesRegex(ValueError, r"4/obj/0/(?:dynamic|move)"):
-            workbench.copy_tms_node_with_server_sync(client, tms_source, "4")
+
+    def test_copy_tms_top_level_node_projects_complete_compatible_subtree(self) -> None:
+        tms_source = workbench._TMS_DATA / "Map/Map/Map4/450002011.img"
+        if not tms_source.is_file():
+            self.skipTest("TMS map sample is unavailable")
+        with tempfile.TemporaryDirectory(prefix=".map-mob-copy-root-test-", dir=workbench._HERE) as directory:
+            root = Path(directory)
+            client = root / "999999995.img"
+            server = root / "999999995.img.xml"
+            client.write_bytes(workbench.empty_gms_img_bytes())
+            server.write_bytes(b'<imgdir name="999999995.img">\n</imgdir>\n')
+            original_resolver = workbench.server_xml_for_client
+            workbench.server_xml_for_client = lambda _path: server
+            try:
+                result = workbench.copy_tms_node_with_server_sync(client, tms_source, "4")
+            finally:
+                workbench.server_xml_for_client = original_resolver
+
+            image = workbench._verified_img_from_bytes(client, client.read_bytes())
+            server_nodes, _ = workbench.flatten_xml(server)
+            self.assertIsNotNone(image.root.get("4/obj/0/x"))
+            self.assertIsNone(image.root.get("4/obj/0/dynamic"))
+            self.assertIn("4/obj/0/dynamic", result["skippedPaths"])
+            self.assertIn("4/obj/0/x", server_nodes)
+            self.assertNotIn("4/obj/0/dynamic", server_nodes)
+
+    def test_copy_tms_root_populates_empty_client_and_single_xml_root(self) -> None:
+        with tempfile.TemporaryDirectory(prefix=".map-mob-copy-file-root-test-", dir=workbench._HERE) as directory:
+            root = Path(directory)
+            client = root / "999999994.img"
+            server = root / "999999994.img.xml"
+            source = root / "source.img"
+            client.write_bytes(workbench.empty_gms_img_bytes())
+            server.write_bytes(b'<imgdir name="999999994.img">\n</imgdir>\n')
+            source.write_bytes(workbench.empty_gms_img_bytes())
+            workbench.patch_img_add(
+                source, "", "info", "imgdir", None, dry_run=False, backup=False,
+            )
+            workbench.patch_img_add(
+                source, "info", "fieldLimit", "int", 1, dry_run=False, backup=False,
+            )
+            original_resolver = workbench.server_xml_for_client
+            workbench.server_xml_for_client = lambda _path: server
+            try:
+                result = workbench.copy_tms_node_with_server_sync(client, source, "")
+            finally:
+                workbench.server_xml_for_client = original_resolver
+
+            image = workbench._verified_img_from_bytes(client, client.read_bytes())
+            server_nodes, _ = workbench.flatten_xml(server)
+            self.assertEqual(image.root.get("info/fieldLimit").value, 1)
+            self.assertEqual(server_nodes["info/fieldLimit"]["value"], 1)
+            self.assertEqual(result["path"], "")
+            workbench.ET.parse(server)
+
+    def test_copy_empty_tms_root_keeps_empty_client_and_valid_xml(self) -> None:
+        with tempfile.TemporaryDirectory(prefix=".map-mob-copy-empty-root-test-", dir=workbench._HERE) as directory:
+            root = Path(directory)
+            client = root / "999999993.img"
+            server = root / "999999993.img.xml"
+            source = root / "source.img"
+            client.write_bytes(workbench.empty_gms_img_bytes())
+            server.write_bytes(b'<imgdir name="999999993.img">\n</imgdir>\n')
+            source.write_bytes(workbench.empty_gms_img_bytes())
+            original_resolver = workbench.server_xml_for_client
+            workbench.server_xml_for_client = lambda _path: server
+            try:
+                result = workbench.copy_tms_node_with_server_sync(client, source, "")
+            finally:
+                workbench.server_xml_for_client = original_resolver
+
+            image = workbench._verified_img_from_bytes(client, client.read_bytes())
+            self.assertEqual(image.root.children(), [])
+            self.assertEqual(result["client"], [])
+            self.assertEqual(result["server"], [])
+            workbench.ET.parse(server)
+
+    def test_copy_empty_tms_directory_into_existing_empty_directory_is_a_noop(self) -> None:
+        with tempfile.TemporaryDirectory(prefix=".map-mob-copy-empty-directory-test-", dir=workbench._HERE) as directory:
+            root = Path(directory)
+            client = root / "999999991.img"
+            server = root / "999999991.img.xml"
+            source = root / "source.img"
+            client.write_bytes(workbench.empty_gms_img_bytes())
+            source.write_bytes(workbench.empty_gms_img_bytes())
+            workbench.patch_img_add(client, "", "reactor", "imgdir", None, dry_run=False, backup=False)
+            workbench.patch_img_add(source, "", "reactor", "imgdir", None, dry_run=False, backup=False)
+            server.write_bytes(b'<imgdir name="999999991.img">\n  <imgdir name="reactor"></imgdir>\n</imgdir>\n')
+            original_resolver = workbench.server_xml_for_client
+            workbench.server_xml_for_client = lambda _path: server
+            try:
+                result = workbench.copy_tms_node_with_server_sync(client, source, "reactor")
+            finally:
+                workbench.server_xml_for_client = original_resolver
+
+            self.assertEqual(result["client"], [])
+            self.assertEqual(result["server"], [])
+            workbench.ET.parse(server)
+
+    def test_missing_npc_resource_migration_is_complete_and_idempotent(self) -> None:
+        npc_id = "9010106"
+        source = workbench.tms_entity_source("npc", npc_id)
+        source_string = workbench._TMS_DATA / "String/Npc.img"
+        if not source.is_file() or not source_string.is_file():
+            self.skipTest("TMS NPC migration samples are unavailable")
+        with tempfile.TemporaryDirectory(prefix=".map-mob-npc-resource-test-", dir=workbench._HERE) as directory:
+            repo = Path(directory)
+            string_client = repo / "clien/Data/String/Npc.img"
+            string_client.parent.mkdir(parents=True)
+            string_client.write_bytes(workbench.empty_gms_img_bytes())
+            for tree in ("wz", "wz-zh-CN"):
+                string_server = repo / f"gms-server/{tree}/String.wz/Npc.img.xml"
+                string_server.parent.mkdir(parents=True)
+                string_server.write_bytes(b'<imgdir name="Npc.img">\n</imgdir>\n')
+
+            references = [{"kind": "npc", "name": npc_id}]
+            result = workbench.migrate_missing_entity_resources(
+                references, repo_root=repo, tms_data=workbench._TMS_DATA,
+            )
+            client = repo / f"clien/Data/Npc/{npc_id}.img"
+            server = repo / f"gms-server/wz/Npc.wz/{npc_id}.img.xml"
+            audit = workbench._audit_canvas_payloads(client)
+            self.assertEqual(audit["errors"], [])
+            self.assertGreater(audit["visible"], 0)
+            workbench.ET.parse(server)
+            self.assertIsNotNone(workbench.load_image(string_client).root.get(npc_id))
+            for tree in ("wz", "wz-zh-CN"):
+                self.assertTrue(workbench.xml_has_root_child(
+                    repo / f"gms-server/{tree}/String.wz/Npc.img.xml", npc_id,
+                ))
+            self.assertEqual(result["migrated"][0]["id"], npc_id)
+            self.assertEqual(len(result["files"]), 5)
+
+            files = [path for path in repo.rglob("*") if path.is_file()]
+            before = {path: hashlib.sha256(path.read_bytes()).hexdigest() for path in files}
+            second = workbench.migrate_missing_entity_resources(
+                references, repo_root=repo, tms_data=workbench._TMS_DATA,
+            )
+            after = {path: hashlib.sha256(path.read_bytes()).hexdigest() for path in files}
+            self.assertEqual(second, {"migrated": [], "unresolved": [], "files": []})
+            self.assertEqual(after, before)
+
+    def test_missing_map_object_branch_is_materialized_with_gms_canvas(self) -> None:
+        source = workbench._TMS_DATA / "Map/Obj/morass.img"
+        if not source.is_file():
+            self.skipTest("TMS map object sample is unavailable")
+        reference = {
+            "kind": "obj", "name": "morass", "branch": "castle_Outside/acc/11",
+            "canvasPath": "castle_Outside/acc/11/0", "nodes": ["4/obj/1"],
+        }
+        with tempfile.TemporaryDirectory(prefix=".map-mob-object-resource-test-", dir=workbench._HERE) as directory:
+            repo = Path(directory)
+            result = workbench.migrate_missing_entity_resources(
+                [reference], repo_root=repo, tms_data=workbench._TMS_DATA,
+            )
+            target = repo / "clien/Data/Map/Obj/morass.img"
+            descriptor = workbench.canvas_descriptor(target, reference["canvasPath"])
+            self.assertIsNotNone(descriptor)
+            audit = workbench._audit_canvas_payloads(target)
+            self.assertEqual(audit["errors"], [])
+            self.assertGreater(audit["visible"], 0)
+            self.assertEqual(result["migrated"][0]["branches"], [reference["branch"]])
+            self.assertEqual(result["unresolved"], [])
+
+    def test_copy_map_life_subtree_forwards_referenced_npc_for_resource_migration(self) -> None:
+        with tempfile.TemporaryDirectory(prefix=".map-mob-copy-resource-integration-", dir=workbench._HERE) as directory:
+            root = Path(directory)
+            source = root / "Data/Map/Map/Map9/source.img"
+            source.parent.mkdir(parents=True)
+            source.write_bytes(workbench.empty_gms_img_bytes())
+            for parent, name, node_type, value in (
+                ("", "life", "imgdir", None),
+                ("life", "0", "imgdir", None),
+                ("life/0", "id", "string", "9010106"),
+                ("life/0", "type", "string", "n"),
+            ):
+                workbench.patch_img_add(
+                    source, parent, name, node_type, value, dry_run=False, backup=False,
+                )
+            client = root / "999999990.img"
+            server = root / "999999990.img.xml"
+            client.write_bytes(workbench.empty_gms_img_bytes())
+            server.write_bytes(b'<imgdir name="999999990.img">\n</imgdir>\n')
+            captured = []
+            original_resolver = workbench.server_xml_for_client
+            original_migrator = workbench.migrate_missing_entity_resources
+            workbench.server_xml_for_client = lambda _path: server
+            workbench.migrate_missing_entity_resources = lambda references: (
+                captured.extend(references) or {
+                    "migrated": [{"kind": "npc", "id": "9010106"}],
+                    "files": ["clien/Data/Npc/9010106.img"],
+                }
+            )
+            try:
+                result = workbench.copy_tms_node_with_server_sync(client, source, "life")
+            finally:
+                workbench.server_xml_for_client = original_resolver
+                workbench.migrate_missing_entity_resources = original_migrator
+
+            self.assertEqual([(item["kind"], item["name"]) for item in captured], [("npc", "9010106")])
+            self.assertEqual(result["resources"]["migrated"][0]["id"], "9010106")
+            self.assertEqual(
+                result["modifiedFiles"],
+                [
+                    workbench.relative_path(client), workbench.relative_path(server),
+                    "clien/Data/Npc/9010106.img",
+                ],
+            )
+
+    def test_existing_map_life_node_can_repair_incomplete_npc_without_rewriting_map(self) -> None:
+        with tempfile.TemporaryDirectory(prefix=".map-mob-repair-resource-integration-", dir=workbench._HERE) as directory:
+            root = Path(directory)
+            source = root / "Data/Map/Map/Map9/source.img"
+            source.parent.mkdir(parents=True)
+            source.write_bytes(workbench.empty_gms_img_bytes())
+            client = root / "999999989.img"
+            client.write_bytes(workbench.empty_gms_img_bytes())
+            for target in (source, client):
+                for parent, name, node_type, value in (
+                    ("", "life", "imgdir", None),
+                    ("life", "0", "imgdir", None),
+                    ("life/0", "id", "string", "9010106"),
+                    ("life/0", "type", "string", "n"),
+                ):
+                    workbench.patch_img_add(
+                        target, parent, name, node_type, value, dry_run=False, backup=False,
+                    )
+            server = root / "999999989.img.xml"
+            server.write_bytes(b'<imgdir name="999999989.img">\n</imgdir>\n')
+            client_before = client.read_bytes()
+            server_before = server.read_bytes()
+            captured = []
+            original_resolver = workbench.server_xml_for_client
+            original_migrator = workbench.migrate_missing_entity_resources
+            workbench.server_xml_for_client = lambda _path: server
+            workbench.migrate_missing_entity_resources = lambda references: (
+                captured.extend(references) or {
+                    "migrated": [{"kind": "npc", "id": "9010106"}],
+                    "unresolved": [],
+                    "files": ["gms-server/wz/String.wz/Npc.img.xml"],
+                }
+            )
+            try:
+                result = workbench.copy_tms_node_with_server_sync(client, source, "life/0")
+            finally:
+                workbench.server_xml_for_client = original_resolver
+                workbench.migrate_missing_entity_resources = original_migrator
+
+            self.assertTrue(result["resourceOnly"])
+            self.assertEqual([(item["kind"], item["name"]) for item in captured], [("npc", "9010106")])
+            self.assertEqual(client.read_bytes(), client_before)
+            self.assertEqual(server.read_bytes(), server_before)
+            self.assertEqual(result["modifiedFiles"], ["gms-server/wz/String.wz/Npc.img.xml"])
 
     def test_copy_rejects_canvas_subtree(self) -> None:
         root = workbench.WzSubProperty("modern")
@@ -329,6 +704,34 @@ class ImgPatchTests(unittest.TestCase):
         self.assertTrue(all(row["status"] == "rightOnly" for row in payload["nodes"]))
         self.assertGreater(payload["compatibility"]["addedRootCount"], 0)
 
+    def test_compare_api_loads_local_map_when_tms_file_is_missing(self) -> None:
+        left = "clien/Data/Map/Map/Map4/450006130.img"
+        missing = str(workbench._TMS_DATA / "Map/Map/Map4/__missing_workbench_test__.img")
+        if not (workbench._ROOT / left).is_file():
+            self.skipTest("repository map sample is unavailable")
+        response = workbench.app.test_client().post("/api/compare", json={
+            "kind": "map", "leftPath": left, "rightPath": missing,
+        })
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertTrue(payload["ok"])
+        self.assertTrue(payload["leftInfo"]["exists"])
+        self.assertFalse(payload["rightInfo"]["exists"])
+        self.assertTrue(payload["nodes"])
+        self.assertTrue(all(row["status"] == "leftOnly" for row in payload["nodes"]))
+        self.assertTrue(payload["compatibility"]["leftAvailable"])
+        self.assertFalse(payload["compatibility"]["rightAvailable"])
+        self.assertEqual(payload["compatibility"]["resources"], [])
+
+    def test_compare_api_rejects_when_both_files_are_missing(self) -> None:
+        response = workbench.app.test_client().post("/api/compare", json={
+            "kind": "map",
+            "leftPath": "clien/Data/Map/Map/Map9/__missing_workbench_left__.img",
+            "rightPath": str(workbench._TMS_DATA / "Map/Map/Map9/__missing_workbench_right__.img"),
+        })
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("A 与 B 文件都不存在", response.get_json()["reason"])
+
     def test_compare_api_keeps_mob_main_loaded_when_tms_file_is_missing(self) -> None:
         left = "clien/Data/Mob/8642050.img"
         missing = str(workbench._TMS_DATA / "Mob/_Canvas/__missing_workbench_test__.img")
@@ -346,18 +749,70 @@ class ImgPatchTests(unittest.TestCase):
     def test_export_preserves_repo_paths_and_hashes_client_and_server(self) -> None:
         client = workbench._ROOT / "clien/Data/Map/Map/Map4/450002011.img"
         server = workbench._ROOT / "gms-server/wz/Map.wz/Map/Map4/450002011.img.xml"
+        additional = [
+            workbench._ROOT / "clien/Data/Map/Obj/login.img",
+            workbench._ROOT / "clien/Data/String/Npc.img",
+            workbench._ROOT / "gms-server/wz/Npc.wz/9330045.img.xml",
+            workbench._ROOT / "gms-server/wz/String.wz/Npc.img.xml",
+            workbench._ROOT / "gms-server/wz-zh-CN/String.wz/Npc.img.xml",
+        ]
         downloads = Path.home() / "Downloads"
-        if not client.is_file() or not server.is_file() or not downloads.is_dir():
+        if not client.is_file() or not server.is_file() or not all(path.is_file() for path in additional) or not downloads.is_dir():
             self.skipTest("repository export samples or Downloads directory are unavailable")
         with tempfile.TemporaryDirectory(prefix=".map-mob-export-test-", dir=downloads) as directory:
             destination = Path(directory)
-            result = workbench.export_current_files(client, str(destination), include_server=True)
-            client_target = destination / client.relative_to(workbench._ROOT)
-            server_target = destination / server.relative_to(workbench._ROOT)
-            self.assertEqual(client_target.read_bytes(), client.read_bytes())
-            self.assertEqual(server_target.read_bytes(), server.read_bytes())
-            self.assertEqual(len(result["files"]), 2)
+            result = workbench.export_current_files(
+                client,
+                str(destination),
+                include_server=True,
+                additional_sources=[server, *additional, additional[0]],
+            )
+            expected = [client, server, *additional]
+            for source in expected:
+                target = destination / source.relative_to(workbench._ROOT)
+                self.assertEqual(target.read_bytes(), source.read_bytes())
+            self.assertEqual(len(result["files"]), len(expected))
             self.assertTrue(all(len(item["sha256"]) == 64 for item in result["files"]))
+
+    def test_export_without_server_filters_all_related_server_files(self) -> None:
+        client = workbench._ROOT / "clien/Data/Map/Map/Map4/450002011.img"
+        client_resource = workbench._ROOT / "clien/Data/Map/Obj/login.img"
+        server_resources = [
+            workbench._ROOT / "gms-server/wz/Map.wz/Map/Map4/450002011.img.xml",
+            workbench._ROOT / "gms-server/wz/String.wz/Npc.img.xml",
+        ]
+        downloads = Path.home() / "Downloads"
+        if not all(path.is_file() for path in [client, client_resource, *server_resources]) or not downloads.is_dir():
+            self.skipTest("repository export samples or Downloads directory are unavailable")
+        with tempfile.TemporaryDirectory(prefix=".map-mob-export-client-test-", dir=downloads) as directory:
+            destination = Path(directory)
+            result = workbench.export_current_files(
+                client,
+                str(destination),
+                include_server=False,
+                additional_sources=[client_resource, *server_resources],
+            )
+            self.assertEqual(
+                [item["source"] for item in result["files"]],
+                [workbench.relative_path(client), workbench.relative_path(client_resource)],
+            )
+            self.assertFalse((destination / server_resources[0].relative_to(workbench._ROOT)).exists())
+            self.assertFalse((destination / server_resources[1].relative_to(workbench._ROOT)).exists())
+
+    def test_export_rejects_missing_related_file(self) -> None:
+        client = workbench._ROOT / "clien/Data/Map/Map/Map4/450002011.img"
+        downloads = Path.home() / "Downloads"
+        if not client.is_file() or not downloads.is_dir():
+            self.skipTest("repository map IMG sample or Downloads directory is unavailable")
+        missing = workbench._ROOT / "clien/Data/Npc/__missing_export_resource__.img"
+        with tempfile.TemporaryDirectory(prefix=".map-mob-export-missing-test-", dir=downloads) as directory:
+            with self.assertRaisesRegex(ValueError, "关联修改文件不存在"):
+                workbench.export_current_files(
+                    client,
+                    directory,
+                    include_server=False,
+                    additional_sources=[missing],
+                )
 
     def test_export_rejects_destination_outside_downloads(self) -> None:
         client = workbench._ROOT / "clien/Data/Map/Map/Map4/450002011.img"
