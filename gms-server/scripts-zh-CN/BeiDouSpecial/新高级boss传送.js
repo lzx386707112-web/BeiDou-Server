@@ -17,6 +17,7 @@ var entryItems = Array(
     Array(2210006, 1)
 );
 var KARING_BOSS_SPAWN_DELAY = 2000;
+var LUCID_EXPEDITION_SELECTION = 998;
 var KARING_FINAL_BATTLE_SELECTION = 999;
 
 function start() {
@@ -34,12 +35,19 @@ function start() {
         }
         text += "#L" + i + "#" + bossMaps[i][2] + "#l\r\n";
     }
-    text += "\r\n#L" + KARING_FINAL_BATTLE_SELECTION
+    text += "\r\n#L" + LUCID_EXPEDITION_SELECTION
+        + "##r梦中的路西德·远征入口           （前往恶梦时间塔）#b#l\r\n";
+    text += "#L" + KARING_FINAL_BATTLE_SELECTION
         + "##r咖凌·终局之战                 （远征队正式流程）#b#l\r\n";
     cm.sendNextSelectLevel("Boss", text);
 }
 
 function levelBoss(selection) {
+    if (selection == LUCID_EXPEDITION_SELECTION) {
+        cm.warp(450004000, 0);
+        cm.dispose();
+        return;
+    }
     if (selection == KARING_FINAL_BATTLE_SELECTION) {
         cm.dispose();
         cm.openNpc(9900001, "咖凌终局之战");

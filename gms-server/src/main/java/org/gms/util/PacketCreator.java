@@ -122,6 +122,8 @@ import java.util.stream.Collectors;
  */
 public class PacketCreator {
     private static final Logger log = LoggerFactory.getLogger(PacketCreator.class);
+    private static final long CLIENT_BOSS_HP_BAR_SIZE = Integer.MAX_VALUE;
+    private static final int BOSS_HP_BAR_COLOR_COUNT = 7;
     public static final List<Pair<Stat, Integer>> EMPTY_STATUPDATE = Collections.emptyList();
     private final static long FT_UT_OFFSET = 116444736010800000L + (10000L * TimeZone.getDefault().getOffset(System.currentTimeMillis())); // normalize with timezone offset suggested by Ari
     private final static long DEFAULT_TIME = 150842304000000000L;//00 80 05 BB 46 E6 17 02
@@ -3680,15 +3682,15 @@ public class PacketCreator {
     }
 
     public static Packet showBossHP(int oid, long currHP, long maxHP, byte tagColor, byte tagBgColor) {
-        Pair<Integer, Integer> customHP = clientVisibleMonsterHP(currHP, maxHP);
+        ClientBossHpBar clientBar = clientVisibleBossHpBar(currHP, maxHP, tagColor, tagBgColor);
 
         final OutPacket p = OutPacket.create(SendOpcode.FIELD_EFFECT);
         p.writeByte(5);
         p.writeInt(oid);
-        p.writeInt(customHP.left);
-        p.writeInt(customHP.right);
-        p.writeByte(tagColor);
-        p.writeByte(tagBgColor);
+        p.writeInt(clientBar.hp());
+        p.writeInt(clientBar.maxHp());
+        p.writeByte(clientBar.color());
+        p.writeByte(clientBar.backgroundColor());
         return p;
     }
 
@@ -3711,7 +3713,7 @@ public class PacketCreator {
             sendHP = clampToClientInt(currHP);
             sendMaxHP = (int) maxHP;
         } else {
-            long barSize = Integer.MAX_VALUE;
+            long barSize = CLIENT_BOSS_HP_BAR_SIZE;
             long topBarSize = maxHP % barSize;
             if (topBarSize == 0) {
                 topBarSize = barSize;
@@ -3736,6 +3738,32 @@ public class PacketCreator {
         }
 
         return new Pair<>(sendHP, sendMaxHP);
+    }
+
+    private static ClientBossHpBar clientVisibleBossHpBar(
+            long currHP, long maxHP, byte tagColor, byte tagBgColor) {
+        Pair<Integer, Integer> visibleHP = clientVisibleMonsterHP(currHP, maxHP);
+        if (maxHP <= Integer.MAX_VALUE) {
+            return new ClientBossHpBar(visibleHP.left, visibleHP.right, tagColor, tagBgColor);
+        }
+
+        long barSize = CLIENT_BOSS_HP_BAR_SIZE;
+        long totalBars = ((maxHP - 1) / barSize) + 1;
+        long currentBar = currHP <= 0 ? 1 : ((currHP - 1) / barSize) + 1;
+        currentBar = Math.min(currentBar, totalBars);
+
+        byte color = clientBossHpBarColor(currentBar);
+        byte backgroundColor = currentBar > 1
+                ? clientBossHpBarColor(currentBar - 1)
+                : tagBgColor;
+        return new ClientBossHpBar(visibleHP.left, visibleHP.right, color, backgroundColor);
+    }
+
+    private static byte clientBossHpBarColor(long barIndex) {
+        return (byte) (((barIndex - 1) % BOSS_HP_BAR_COLOR_COUNT) + 1);
+    }
+
+    private record ClientBossHpBar(int hp, int maxHp, byte color, byte backgroundColor) {
     }
 
     public static Packet customShowBossHP(byte call, int oid, long currHP, long maxHP, byte tagColor, byte tagBgColor) {

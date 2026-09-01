@@ -80,7 +80,7 @@ static volatile LONG g_shutdownRequested = 0;
 static volatile LONG g_exitDumpStarted = 0;
 static volatile LONG g_errorDialogDumpStarted = 0;
 static volatile LONG g_karingMapDetected = 0;
-static volatile LONG g_karingCompatLoadStarted = 0;
+static volatile LONG g_bossSceneCompatLoadStarted = 0;
 static BOOL g_inLog = FALSE;
 static WCHAR g_wideLogLine[4096];
 static CHAR g_utf8LogLine[16384];
@@ -247,7 +247,7 @@ static BOOL EqualsNoCaseW(const WCHAR *a, const WCHAR *b) {
     return *a == L'\0' && *b == L'\0';
 }
 
-static BOOL IsKaringMapPath(const WCHAR *path) {
+static BOOL IsBossSceneMapPath(const WCHAR *path) {
     if (path == NULL
             || (!ContainsNoCase(path, L"\\Map\\Map\\Map4\\")
                 && !ContainsNoCase(path, L"/Map/Map/Map4/"))) {
@@ -261,14 +261,16 @@ static BOOL IsKaringMapPath(const WCHAR *path) {
         }
     }
 
-    static const WCHAR *const kKaringMapFiles[] = {
+    static const WCHAR *const kBossSceneMapFiles[] = {
         L"410007100.img", L"410007120.img", L"410007140.img",
         L"410007160.img", L"410007180.img", L"410007200.img",
         L"410007220.img", L"410007240.img", L"410007260.img",
         L"410007280.img", L"410007300.img",
+        L"450004150.img", L"450004250.img",
     };
-    for (size_t i = 0; i < sizeof(kKaringMapFiles) / sizeof(kKaringMapFiles[0]); ++i) {
-        if (EqualsNoCaseW(fileName, kKaringMapFiles[i])) {
+    for (size_t i = 0;
+            i < sizeof(kBossSceneMapFiles) / sizeof(kBossSceneMapFiles[0]); ++i) {
+        if (EqualsNoCaseW(fileName, kBossSceneMapFiles[i])) {
             return TRUE;
         }
     }
@@ -394,12 +396,12 @@ static void AppendLine(const WCHAR *line) {
 }
 
 static void DetectKaringMapOpen(const WCHAR *path) {
-    if (!IsKaringMapPath(path)
+    if (!IsBossSceneMapPath(path)
             || InterlockedCompareExchange(&g_karingMapDetected, 1, 0) != 0) {
         return;
     }
     WCHAR line[2048];
-    wsprintfW(line, L"event=karing_map status=detected path=\"%s\"", path);
+    wsprintfW(line, L"event=boss_scene_map status=detected path=\"%s\"", path);
     AppendLine(line);
 }
 
@@ -1409,15 +1411,14 @@ static DWORD WINAPI WatchdogThreadProc(LPVOID) {
             sawClientWindow = TRUE;
         }
         if (sawClientWindow
-                && InterlockedCompareExchange(&g_karingMapDetected, 0, 0) != 0
                 && GetModuleHandleA("BeiDouVideo.dll") != NULL
-                && InterlockedCompareExchange(&g_karingCompatLoadStarted, 1, 0) == 0) {
-            HMODULE karingCompat = RealLoadLibraryA != NULL
+                && InterlockedCompareExchange(&g_bossSceneCompatLoadStarted, 1, 0) == 0) {
+            HMODULE bossSceneCompat = RealLoadLibraryA != NULL
                 ? RealLoadLibraryA("KaringSceneCompat.dll")
                 : NULL;
-            AppendLine(karingCompat != NULL
-                ? L"event=karing_scene_compat status=loaded"
-                : L"event=karing_scene_compat status=not_found");
+            AppendLine(bossSceneCompat != NULL
+                ? L"event=boss_scene_compat status=loaded"
+                : L"event=boss_scene_compat status=not_found");
         }
 
         WCHAR resourcePath[MAX_PATH];

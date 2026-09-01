@@ -12,6 +12,11 @@ function action(mode, type, selection) {
     status++;
 
     if (status == 0) {
+        if (cm.getMapId() == 450004000) {
+            cm.dispose();
+            cm.openNpc(9900001, "露希妲远征");
+            return;
+        }
 if (cm.getQuestStatus(34331) == 1) {
             cm.completeQuest(34331);
             cm.sendOk("與露希妲的最終決戰！");

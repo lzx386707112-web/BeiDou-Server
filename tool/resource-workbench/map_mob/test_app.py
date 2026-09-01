@@ -119,6 +119,139 @@ class ImgPatchTests(unittest.TestCase):
                 workbench._TMS_DATA = original_tms_data
             self.assertEqual(right, canvas)
 
+    def test_ms_mob_index_resolves_lucid_id_to_exact_pack_entry(self) -> None:
+        if not workbench._MS_PROBE.is_file() or not workbench.ms_pack_signature():
+            self.skipTest("TMS MS packs or MSProbe are unavailable")
+        index = workbench.ms_mob_index()
+        self.assertIn("8880141", index)
+        self.assertEqual(index["8880141"].name, "Mob_00000.ms")
+
+    def test_mob_sources_extract_complete_ms_record_and_confirm_identity(self) -> None:
+        if not workbench._MS_PROBE.is_file() or not workbench.ms_pack_signature():
+            self.skipTest("TMS MS packs or MSProbe are unavailable")
+        result = workbench.mob_source_options("8880141")
+        self.assertEqual(result["name"], "夢中的露希妲")
+        self.assertEqual(result["msEntry"], "Mob/8880141.img")
+        source = next(item for item in result["sources"] if item["kind"] == "ms")
+        self.assertEqual(source["pack"], "Mob_00000.ms")
+        self.assertEqual(source["rootCount"], 14)
+        self.assertIn("attack5", source["roots"])
+        self.assertEqual(result["comparisonPath"], source["path"])
+        extracted = workbench.resolve_repo_path(source["path"])
+        self.assertTrue(extracted.is_relative_to(workbench._MS_CACHE_ROOT))
+        self.assertEqual(workbench.data_root_for(extracted), workbench._TMS_DATA)
+        image = workbench.load_image(extracted)
+        self.assertFalse(image.truncated)
+        self.assertEqual(image.parse_warnings, [])
+
+    def test_mob_catalog_can_search_tms_name_and_show_phase_candidates(self) -> None:
+        if not workbench._MS_PROBE.is_file() or not workbench.ms_pack_signature():
+            self.skipTest("TMS MS packs or MSProbe are unavailable")
+        rows = workbench.catalog_rows("mob", "夢中的露希妲")
+        by_id = {row["id"]: row for row in rows}
+        self.assertTrue({"8880140", "8880141", "8880142"}.issubset(by_id))
+        self.assertEqual(by_id["8880141"]["name"], "夢中的露希妲")
+        self.assertIn("MS", by_id["8880141"]["sources"])
+
+    def test_ms_mob_preview_contains_metadata_actions_missing_from_canvas_only_view(self) -> None:
+        if not workbench._MS_PROBE.is_file() or not workbench.ms_pack_signature():
+            self.skipTest("TMS MS packs or MSProbe are unavailable")
+        source = workbench.mob_source_options("8880141")
+        preview = workbench.mob_preview(workbench.resolve_repo_path(source["comparisonPath"]))
+        actions = {action["name"] for action in preview["actions"]}
+        self.assertTrue({"stand", "skill5", "attack5"}.issubset(actions))
+        self.assertGreaterEqual(len(actions), 13)
+
+    def test_migrate_ms_mob_action_adds_replaces_and_is_idempotent(self) -> None:
+        if not workbench._MS_PROBE.is_file() or not workbench.ms_pack_signature():
+            self.skipTest("TMS MS packs or MSProbe are unavailable")
+        project_client = workbench._ROOT / "clien/Data/Mob/8880141.img"
+        project_server = workbench._ROOT / "gms-server/wz/Mob.wz/8880141.img.xml"
+        if not project_client.is_file() or not project_server.is_file():
+            self.skipTest("Lucid client/server baseline is unavailable")
+        source_info = workbench.mob_source_options("8880141")
+        source = workbench.resolve_repo_path(source_info["comparisonPath"])
+
+        with tempfile.TemporaryDirectory(prefix=".mob-action-migration-test-", dir=workbench._HERE) as directory:
+            repo = Path(directory)
+            client = repo / "clien/Data/Mob/8880141.img"
+            server = repo / "gms-server/wz/Mob.wz/8880141.img.xml"
+            client.parent.mkdir(parents=True)
+            server.parent.mkdir(parents=True)
+            client.write_bytes(project_client.read_bytes())
+            server.write_bytes(project_server.read_bytes())
+            original_root = workbench._ROOT
+            workbench._ROOT = repo
+            try:
+                before = client.read_bytes()
+                before_records, before_orders = workbench.arc.raw_record_state(before)
+                server_before = server.read_bytes()
+                plan = workbench.migrate_mob_action_with_server_sync(
+                    client, source, "stand", dry_run=True,
+                )
+                self.assertTrue(plan["dryRun"])
+                self.assertTrue(plan["changed"])
+                self.assertEqual(plan["modifiedFiles"], [])
+                self.assertEqual(client.read_bytes(), before)
+                self.assertEqual(server.read_bytes(), server_before)
+                added = workbench.migrate_mob_action_with_server_sync(client, source, "stand")
+                self.assertEqual(added["clientOperation"], "add")
+                self.assertEqual(added["serverOperation"], "add")
+                self.assertEqual(added["canvas"]["formats"], ["1/0"])
+                self.assertEqual(added["canvas"]["canvases"], 8)
+                self.assertEqual(added["canvas"]["visible"], 8)
+
+                after_add = client.read_bytes()
+                after_records, after_orders = workbench.arc.raw_record_state(after_add)
+                self.assertEqual(after_orders[()][:-1], before_orders[()])
+                self.assertEqual(after_orders[()][-1], "stand")
+                for path, raw in before_records.items():
+                    self.assertEqual(after_records[path], raw, "/".join(path))
+                stand_xml = workbench.index_xml(server.read_bytes())["stand"]
+                self.assertEqual(stand_xml.tag, "imgdir")
+                stand_element = next(
+                    child for child in workbench.ET.parse(server).getroot()
+                    if child.tag == "imgdir" and child.get("name") == "stand"
+                )
+                stand_canvases = [child for child in stand_element if child.tag == "canvas"]
+                self.assertEqual(len(stand_canvases), 8)
+                self.assertTrue(all(canvas.get("format") == "1" for canvas in stand_canvases))
+
+                first_hashes = (
+                    hashlib.sha256(client.read_bytes()).hexdigest(),
+                    hashlib.sha256(server.read_bytes()).hexdigest(),
+                )
+                repeated = workbench.migrate_mob_action_with_server_sync(client, source, "stand")
+                second_hashes = (
+                    hashlib.sha256(client.read_bytes()).hexdigest(),
+                    hashlib.sha256(server.read_bytes()).hexdigest(),
+                )
+                self.assertFalse(repeated["changed"])
+                self.assertEqual(repeated["modifiedFiles"], [])
+                self.assertEqual(second_hashes, first_hashes)
+
+                before_replace = client.read_bytes()
+                replaced = workbench.migrate_mob_action_with_server_sync(client, source, "skill4")
+                self.assertEqual(replaced["clientOperation"], "replace")
+                self.assertEqual(replaced["serverOperation"], "replace")
+                self.assertGreater(replaced["rawScope"]["protectedRecords"], 0)
+                before_replace_records, _ = workbench.arc.raw_record_state(before_replace)
+                after_replace_records, _ = workbench.arc.raw_record_state(client.read_bytes())
+                for path, raw in before_replace_records.items():
+                    if path[:1] != ("skill4",):
+                        self.assertEqual(after_replace_records[path], raw, "/".join(path))
+                workbench.ET.parse(server)
+
+                blocked_client = client.read_bytes()
+                blocked_server = server.read_bytes()
+                with self.assertRaisesRegex(ValueError, "未授权记录"):
+                    workbench.migrate_mob_action_with_server_sync(client, source, "hit1")
+                self.assertEqual(client.read_bytes(), blocked_client)
+                self.assertEqual(server.read_bytes(), blocked_server)
+            finally:
+                workbench._ROOT = original_root
+                workbench._load_image_cached.cache_clear()
+
     def test_create_empty_main_creates_parseable_client_and_server_pair(self) -> None:
         with tempfile.TemporaryDirectory(prefix=".map-mob-create-test-", dir=workbench._HERE) as directory:
             client = Path(directory) / "999999999.img"
@@ -591,6 +724,31 @@ class ImgPatchTests(unittest.TestCase):
             self.assertGreater(audit["visible"], 0)
             self.assertEqual(result["migrated"][0]["branches"], [reference["branch"]])
             self.assertEqual(result["unresolved"], [])
+
+    def test_modern_spine_object_is_not_reported_as_a_missing_static_resource(self) -> None:
+        root = workbench.WzSubProperty("root")
+        layer = workbench.WzSubProperty("1")
+        objects = workbench.WzSubProperty("obj")
+        modern = workbench.WzSubProperty("0")
+        for name, value in (
+            ("oS", "Lacheln"), ("l0", "Boss"), ("l1", "obj"),
+            ("l2", "9"), ("spineAni", "animation"), ("tags", "spine"),
+        ):
+            modern.add(workbench.WzStringProperty(name, value))
+        objects.add(modern)
+        layer.add(objects)
+        root.add(layer)
+
+        self.assertEqual(workbench.map_resource_references(root), [])
+        projected, skipped = workbench.clone_compatible_map_node(
+            objects, Path("clien/Data/Map/Map/Map4/450004150.img"),
+        )
+        self.assertIsNone(projected.child("0"))
+        self.assertEqual(skipped, ["1/obj/0"])
+        with self.assertRaisesRegex(ValueError, "现代 Spine/动态对象"):
+            workbench.clone_compatible_map_node(
+                modern, Path("clien/Data/Map/Map/Map4/450004150.img"),
+            )
 
     def test_copy_map_life_subtree_forwards_referenced_npc_for_resource_migration(self) -> None:
         with tempfile.TemporaryDirectory(prefix=".map-mob-copy-resource-integration-", dir=workbench._HERE) as directory:

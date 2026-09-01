@@ -68,6 +68,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 
@@ -717,6 +720,65 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
         );
     }
 
+    private void scheduleCosmosAttacks(AttackInfo attack, Character chr) {
+        MapleMap expectedMap = chr.getMap();
+        Skill skill = SkillFactory.getSkill(DawnWarrior.COSMOS);
+        int skillLevel = Math.max(1, Math.min(chr.getSkillLevel(skill), skill.getMaxLevel()));
+        StatEffect effect = skill.getEffect(skillLevel);
+        int attackCount = Math.max(1, Math.min(15, effect.getAttackCount()));
+        int mobCount = Math.max(1, Math.min(15, effect.getMobCount()));
+        List<Integer> sourceDamageTemplate = copyCapturedDamageTemplate(attack);
+        if (sourceDamageTemplate.isEmpty()) {
+            sourceDamageTemplate = Collections.singletonList(
+                    calculateFallbackCloseDamage(chr, effect)
+            );
+        }
+        List<Integer> damageTemplate = adaptDamageTemplate(
+                sourceDamageTemplate,
+                attackCount,
+                effect.getDamage(),
+                effect.getDamage()
+        );
+        AtomicInteger tick = new AtomicInteger();
+        AtomicReference<ScheduledFuture<?>> task = new AtomicReference<>();
+
+        // Keep one duration-owned periodic task, matching Poison Mist's field lifecycle.
+        Runnable attackTask = () -> {
+            int tickIndex = tick.getAndIncrement();
+            if (tickIndex >= COSMOS_ATTACK_TIMES_MS.length
+                    || !canContinueAnimatedAttack(chr, expectedMap)) {
+                TimerManager.getInstance().stop(task.get());
+                return;
+            }
+            if (tickIndex == 0) {
+                showCapturedDamageNumbers(attack, chr, expectedMap);
+                applyAttack(attack, chr, effect.getAttackCount());
+            } else {
+                repeatTrackingCloseAttack(
+                        attack,
+                        chr,
+                        expectedMap,
+                        DawnWarrior.COSMOS,
+                        attackCount,
+                        mobCount,
+                        damageTemplate,
+                        effect,
+                        effect,
+                        null,
+                        true,
+                        tickIndex == COSMOS_ATTACK_TIMES_MS.length - 1
+                );
+            }
+            if (tickIndex == COSMOS_ATTACK_TIMES_MS.length - 1) {
+                TimerManager.getInstance().stop(task.get());
+            }
+        };
+        int interval = COSMOS_ATTACK_TIMES_MS[1] - COSMOS_ATTACK_TIMES_MS[0];
+        task.set(TimerManager.getInstance().register(
+                attackTask, interval, COSMOS_ATTACK_TIMES_MS[0]
+        ));
+    }
+
     void scheduleTrackingCloseAttacks(
             AttackInfo attack,
             Character chr,
@@ -1359,9 +1421,7 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
             chr.sendPacket(PacketCreator.showEffect(SOUL_ECLIPSE_VIDEO_LAYER));
             scheduleAnimatedAttacks(attack, chr, attackCount, SOUL_ECLIPSE_ATTACK_TIMES_MS);
         } else if (attack.skill == DawnWarrior.COSMOS) {
-            scheduleTrackingCloseAttacks(
-                    attack, chr, COSMOS_ATTACK_TIMES_MS, DawnWarrior.COSMOS, true
-            );
+            scheduleCosmosAttacks(attack, chr);
         } else if (attack.skill == ThunderBreaker.SEA_DRAGON_SPIRAL) {
             MapleMap expectedMap = chr.getMap();
             // SHOW_*_EFFECT type 2 is the legacy client's supported `special`

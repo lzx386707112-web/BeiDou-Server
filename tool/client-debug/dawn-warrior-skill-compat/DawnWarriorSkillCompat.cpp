@@ -1424,6 +1424,29 @@ int KaringMarkerCodeFromA8R8G8B8(const uint32_t* pixels, bool ignoreAlpha) {
     return -1;
 }
 
+int LucidMarkerCodeFromA4R4G4B4(const uint16_t* pixels) {
+    if (pixels[0] == 0xF124 && pixels[1] == 0xF567 &&
+        pixels[2] == 0xF89A && pixels[3] == 0xFBCE) {
+        const int code = (pixels[4] >> 8) & 0x0F;
+        return code >= 1 && code <= 14 ? 14 + code : -1;
+    }
+    return -1;
+}
+
+int LucidMarkerCodeFromA8R8G8B8(const uint32_t* pixels, bool ignoreAlpha) {
+    const uint32_t alphaMask = ignoreAlpha ? 0x00000000u : 0xFF000000u;
+    const uint32_t colorMask = ignoreAlpha ? 0x00FFFFFFu : 0xFFFFFFFFu;
+    if ((pixels[0] & colorMask) == (alphaMask | 0x00112244u) &&
+        (pixels[1] & colorMask) == (alphaMask | 0x00556677u) &&
+        (pixels[2] & colorMask) == (alphaMask | 0x008899AAu) &&
+        (pixels[3] & colorMask) == (alphaMask | 0x00BBCCEEu)) {
+        const int red = static_cast<int>((pixels[4] >> 16) & 0xFF);
+        const int code = red / 17;
+        return red == code * 17 && code >= 1 && code <= 14 ? 14 + code : -1;
+    }
+    return -1;
+}
+
 int DetectVideoMarkerPixels(IDirect3DTexture8* texture, const D3DSURFACE_DESC& description) {
     D3DLOCKED_RECT locked = {};
     if (FAILED(texture->LockRect(0, &locked, nullptr, D3DLOCK_READONLY))) {
@@ -1437,6 +1460,9 @@ int DetectVideoMarkerPixels(IDirect3DTexture8* texture, const D3DSURFACE_DESC& d
             markerCode = 0;
         } else {
             markerCode = KaringMarkerCodeFromA4R4G4B4(pixels);
+            if (markerCode < 0) {
+                markerCode = LucidMarkerCodeFromA4R4G4B4(pixels);
+            }
         }
     } else if (description.Format == D3DFMT_A8R8G8B8 && locked.Pitch >= 16) {
         const auto* pixels = static_cast<const uint32_t*>(locked.pBits);
@@ -1445,6 +1471,9 @@ int DetectVideoMarkerPixels(IDirect3DTexture8* texture, const D3DSURFACE_DESC& d
             markerCode = 0;
         } else {
             markerCode = KaringMarkerCodeFromA8R8G8B8(pixels, false);
+            if (markerCode < 0) {
+                markerCode = LucidMarkerCodeFromA8R8G8B8(pixels, false);
+            }
         }
     } else if (description.Format == D3DFMT_X8R8G8B8 && locked.Pitch >= 16) {
         const auto* pixels = static_cast<const uint32_t*>(locked.pBits);
@@ -1455,6 +1484,9 @@ int DetectVideoMarkerPixels(IDirect3DTexture8* texture, const D3DSURFACE_DESC& d
             markerCode = 0;
         } else {
             markerCode = KaringMarkerCodeFromA8R8G8B8(pixels, true);
+            if (markerCode < 0) {
+                markerCode = LucidMarkerCodeFromA8R8G8B8(pixels, true);
+            }
         }
     }
     texture->UnlockRect(0);
@@ -1487,7 +1519,7 @@ int DetectVideoMarkerTexture(IDirect3DBaseTexture8* baseTexture) {
     }
     LogLine(markerCode == 0
         ? "VIDEO OK: Gr2D field-layer marker texture detected"
-        : "VIDEO OK: Karing boss-scene marker texture detected");
+        : "VIDEO OK: boss-scene marker texture detected");
     return markerCode;
 }
 
@@ -1512,6 +1544,20 @@ constexpr KaringSceneMapping kKaringSceneVideos[] = {
     {12, "Data\\Video\\karing-clear-hondon2.mcv", "VIDEO OK: Karing Hondon clear 2 started"},
     {13, "Data\\Video\\karing-p2-regen.mcv", "VIDEO OK: Karing P2 spawn started"},
     {14, "Data\\Video\\karing-p3-regen.mcv", "VIDEO OK: Karing P3 spawn started"},
+    {15, "Data\\Video\\lucid-dragon-p1.mcv", "VIDEO OK: Lucid P1 dragon started"},
+    {16, "Data\\Video\\lucid-dragon-p2.mcv", "VIDEO OK: Lucid P2 dragon started"},
+    {17, "Data\\Video\\lucid-laser-rain.mcv", "VIDEO OK: Lucid laser rain started"},
+    {18, "Data\\Video\\lucid-phantom-barrage.mcv", "VIDEO OK: Lucid phantom barrage started"},
+    {19, "Data\\Video\\lucid-rush.mcv", "VIDEO OK: Lucid rush started"},
+    {20, "Data\\Video\\lucid-fury.mcv", "VIDEO OK: Lucid fury started"},
+    {21, "Data\\Video\\lucid-butterfly-burst.mcv", "VIDEO OK: Lucid butterfly burst started"},
+    {22, "Data\\Video\\lucid-bomb.mcv", "VIDEO OK: Lucid bomb started"},
+    {23, "Data\\Video\\lucid-stained-glass.mcv", "VIDEO OK: Lucid stained glass started"},
+    {24, "Data\\Video\\lucid-stained-glass-1.mcv", "VIDEO OK: Lucid stained glass 1 started"},
+    {25, "Data\\Video\\lucid-stained-glass-2.mcv", "VIDEO OK: Lucid stained glass 2 started"},
+    {26, "Data\\Video\\lucid-stained-glass-3.mcv", "VIDEO OK: Lucid stained glass 3 started"},
+    {27, "Data\\Video\\lucid-stained-glass-4.mcv", "VIDEO OK: Lucid stained glass 4 started"},
+    {28, "Data\\Video\\lucid-stained-glass-5.mcv", "VIDEO OK: Lucid stained glass 5 started"},
 };
 
 bool StartKaringSceneVideo(int markerCode) {

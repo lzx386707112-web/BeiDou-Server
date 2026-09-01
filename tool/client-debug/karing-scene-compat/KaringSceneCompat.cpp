@@ -1,4 +1,4 @@
-// Adds Karing scene-marker playback through the existing D3D8 hook chain.
+// Adds boss scene-marker playback through the existing D3D8 hook chain.
 
 #include "../../client-video/BeiDouVideoApi.h"
 
@@ -17,7 +17,7 @@ constexpr size_t kDrawPrimitiveUpVtableIndex = 72;
 constexpr size_t kDrawIndexedPrimitiveUpVtableIndex = 73;
 constexpr UINT kMarkerWidth = 7;
 constexpr UINT kMarkerHeight = 5;
-constexpr int kMarkerCodeCount = 15;
+constexpr int kMarkerCodeCount = 29;
 constexpr DWORD kAttachRetryMilliseconds = 100;
 constexpr int kAttachRetryCount = 600;
 constexpr int kMarkerRearmFrames = 10;
@@ -62,6 +62,20 @@ constexpr SceneMapping kScenes[] = {
     {12, "Data\\Video\\karing-clear-hondon2.mcv"},
     {13, "Data\\Video\\karing-p2-regen.mcv"},
     {14, "Data\\Video\\karing-p3-regen.mcv"},
+    {15, "Data\\Video\\lucid-dragon-p1.mcv"},
+    {16, "Data\\Video\\lucid-dragon-p2.mcv"},
+    {17, "Data\\Video\\lucid-laser-rain.mcv"},
+    {18, "Data\\Video\\lucid-phantom-barrage.mcv"},
+    {19, "Data\\Video\\lucid-rush.mcv"},
+    {20, "Data\\Video\\lucid-fury.mcv"},
+    {21, "Data\\Video\\lucid-butterfly-burst.mcv"},
+    {22, "Data\\Video\\lucid-bomb.mcv"},
+    {23, "Data\\Video\\lucid-stained-glass.mcv"},
+    {24, "Data\\Video\\lucid-stained-glass-1.mcv"},
+    {25, "Data\\Video\\lucid-stained-glass-2.mcv"},
+    {26, "Data\\Video\\lucid-stained-glass-3.mcv"},
+    {27, "Data\\Video\\lucid-stained-glass-4.mcv"},
+    {28, "Data\\Video\\lucid-stained-glass-5.mcv"},
 };
 
 GetAttachedDeviceFn gGetAttachedDevice = nullptr;
@@ -167,6 +181,29 @@ int DetectA8R8G8B8(const uint32_t* pixels, bool ignoreAlpha) {
     return red == code * 17 && code >= 1 && code <= 14 ? code : -1;
 }
 
+int DetectLucidA4R4G4B4(const uint16_t* pixels) {
+    if (pixels[0] != 0xF124 || pixels[1] != 0xF567
+            || pixels[2] != 0xF89A || pixels[3] != 0xFBCE) {
+        return -1;
+    }
+    const int code = (pixels[4] >> 8) & 0x0F;
+    return code >= 1 && code <= 14 ? 14 + code : -1;
+}
+
+int DetectLucidA8R8G8B8(const uint32_t* pixels, bool ignoreAlpha) {
+    const uint32_t colorMask = ignoreAlpha ? 0x00FFFFFFu : 0xFFFFFFFFu;
+    const uint32_t alpha = ignoreAlpha ? 0u : 0xFF000000u;
+    if ((pixels[0] & colorMask) != (alpha | 0x00112244u)
+            || (pixels[1] & colorMask) != (alpha | 0x00556677u)
+            || (pixels[2] & colorMask) != (alpha | 0x008899AAu)
+            || (pixels[3] & colorMask) != (alpha | 0x00BBCCEEu)) {
+        return -1;
+    }
+    const int red = static_cast<int>((pixels[4] >> 16) & 0xFF);
+    const int code = red / 17;
+    return red == code * 17 && code >= 1 && code <= 14 ? 14 + code : -1;
+}
+
 int DetectMarker(IDirect3DBaseTexture8* baseTexture) {
     if (baseTexture == nullptr || baseTexture->GetType() != D3DRTYPE_TEXTURE) {
         return -1;
@@ -185,10 +222,21 @@ int DetectMarker(IDirect3DBaseTexture8* baseTexture) {
     int code = -1;
     if (description.Format == D3DFMT_A4R4G4B4 && locked.Pitch >= 10) {
         code = DetectA4R4G4B4(static_cast<const uint16_t*>(locked.pBits));
+        if (code < 0) {
+            code = DetectLucidA4R4G4B4(static_cast<const uint16_t*>(locked.pBits));
+        }
     } else if (description.Format == D3DFMT_A8R8G8B8 && locked.Pitch >= 20) {
         code = DetectA8R8G8B8(static_cast<const uint32_t*>(locked.pBits), false);
+        if (code < 0) {
+            code = DetectLucidA8R8G8B8(
+                static_cast<const uint32_t*>(locked.pBits), false);
+        }
     } else if (description.Format == D3DFMT_X8R8G8B8 && locked.Pitch >= 20) {
         code = DetectA8R8G8B8(static_cast<const uint32_t*>(locked.pBits), true);
+        if (code < 0) {
+            code = DetectLucidA8R8G8B8(
+                static_cast<const uint32_t*>(locked.pBits), true);
+        }
     }
     texture->UnlockRect(0);
     return code;

@@ -12,6 +12,7 @@ import os
 import re
 import shutil
 import struct
+import subprocess
 import sys
 import tempfile
 import threading
@@ -41,6 +42,7 @@ from wzpy import (  # noqa: E402
 )
 from wzpy import writer as wz_writer  # noqa: E402
 from wzpy.canvas import decode_canvas  # noqa: E402
+from wzpy.incremental_img import replace_img_record  # noqa: E402
 from wzpy.reader import WzBinaryReader  # noqa: E402
 from wzpy.properties import (  # noqa: E402
     WzCanvasProperty,
@@ -63,7 +65,11 @@ app = Flask(__name__)
 _WRITE_LOCK = threading.Lock()
 _ALLOWED_SUFFIXES = (".img", ".img.xml", ".xml", ".json")
 _SCALAR_TYPES = {"short", "int", "long", "float", "double", "string", "uol", "vector"}
+_TMS_ROOT = _ROOT.parent / "TMS"
 _TMS_DATA = _ROOT.parent / "TMS" / "MapleStory-IMG" / "Data"
+_MS_PACKS = _TMS_ROOT / "MapleStory" / "Data" / "Packs"
+_MS_PROBE = _TMS_ROOT / "black_mage_report_tools" / "ms_probe" / "bin" / "Debug" / "net8.0" / "MSProbe.dll"
+_MS_CACHE_ROOT = Path.home() / "Library" / "Caches" / "BeiDouMapMobWorkbench" / "ms"
 _DEFAULT_EXPORT_ROOT = Path.home() / "Downloads" / "MapMobWorkbenchExport"
 
 
@@ -156,6 +162,165 @@ def default_paths(kind: str, item_id: str) -> tuple[Path, Path]:
         _ROOT / "clien" / "Data" / "Map" / "Map" / bucket / f"{item_id}.img",
         tms if tms.is_file() else _ROOT / "gms-server" / "wz" / "Map.wz" / "Map" / bucket / f"{item_id}.img.xml",
     )
+
+
+def ms_pack_signature() -> tuple[tuple[str, int, int], ...]:
+    return tuple(
+        (str(path), path.stat().st_mtime_ns, path.stat().st_size)
+        for path in sorted(_MS_PACKS.glob("Mob_*.ms"))
+    )
+
+
+@lru_cache(maxsize=4)
+def _ms_mob_index_cached(
+    signature: tuple[tuple[str, int, int], ...],
+) -> dict[str, Path]:
+    if not signature or not _MS_PROBE.is_file():
+        return {}
+    dotnet = shutil.which("dotnet")
+    if not dotnet:
+        return {}
+    output: dict[str, Path] = {}
+    for pack_text, _mtime_ns, _size in signature:
+        pack = Path(pack_text)
+        result = subprocess.run(
+            [dotnet, str(_MS_PROBE), str(pack), str(_MS_CACHE_ROOT), "--list"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if result.returncode != 0:
+            raise ValueError(
+                f"无法读取 {pack.name}: {result.stderr.strip() or result.stdout.strip()}"
+            )
+        for line in result.stdout.splitlines():
+            match = re.fullmatch(r"Mob/(\d{7})\.img", line.strip(), re.IGNORECASE)
+            if match:
+                output.setdefault(match.group(1), pack)
+    return output
+
+
+def ms_mob_index() -> dict[str, Path]:
+    return _ms_mob_index_cached(ms_pack_signature())
+
+
+def extract_ms_mob(item_id: str) -> tuple[Path, Path] | None:
+    if not re.fullmatch(r"\d{7}", item_id):
+        raise ValueError("怪物 ID 必须是 7 位数字")
+    pack = ms_mob_index().get(item_id)
+    if pack is None:
+        return None
+    target_dir = _MS_CACHE_ROOT / pack.stem
+    target = target_dir / f"Mob_{item_id}.img"
+    if target.is_file() and target.stat().st_mtime_ns >= pack.stat().st_mtime_ns:
+        load_image(target)
+        return target, pack
+    if not _MS_PROBE.is_file():
+        raise ValueError(f"MSProbe 不存在: {_MS_PROBE}")
+    dotnet = shutil.which("dotnet")
+    if not dotnet:
+        raise ValueError("找不到 dotnet，无法读取 TMS MS 包")
+    _MS_CACHE_ROOT.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix=".mob-extract-", dir=_MS_CACHE_ROOT) as directory:
+        result = subprocess.run(
+            [dotnet, str(_MS_PROBE), str(pack), directory, f"Mob/{item_id}.img"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        extracted = Path(directory) / f"Mob_{item_id}.img"
+        if result.returncode != 0 or not extracted.is_file():
+            raise ValueError(
+                f"无法从 {pack.name} 提取 {item_id}: "
+                f"{result.stderr.strip() or result.stdout.strip()}"
+            )
+        data = extracted.read_bytes()
+        image = WzImage.from_bytes(data, key=key_for_data(data), name=f"{item_id}.img")
+        image.parse()
+        if image.truncated or image.parse_warnings:
+            raise ValueError(
+                f"MS 条目解析不完整: truncated={image.truncated}, "
+                f"warnings={image.parse_warnings}"
+            )
+        target_dir.mkdir(parents=True, exist_ok=True)
+        atomic_write(target, data, backup=False)
+    return target, pack
+
+
+@lru_cache(maxsize=4)
+def _mob_names_cached(path_text: str, mtime_ns: int, size: int) -> dict[str, str]:
+    del mtime_ns, size
+    image = load_image(Path(path_text))
+    output = {}
+    for record in image.root.children():
+        name = child_value(record if isinstance(record, WzSubProperty) else None, "name")
+        if record.name.isdigit() and name:
+            output[record.name] = str(name)
+    return output
+
+
+def mob_names(path: Path) -> dict[str, str]:
+    if not path.is_file():
+        return {}
+    stat = path.stat()
+    return _mob_names_cached(str(path.resolve()), stat.st_mtime_ns, stat.st_size)
+
+
+def mob_source_summary(path: Path) -> dict[str, Any]:
+    nodes, info = flatten_source(path)
+    roots = sorted(
+        (node_path for node_path in nodes if node_path and "/" not in node_path),
+        key=natural_key,
+    )
+    return {
+        "format": info["format"],
+        "size": path.stat().st_size,
+        "rootCount": len(roots),
+        "roots": roots,
+    }
+
+
+def mob_source_options(item_id: str) -> dict[str, Any]:
+    if not re.fullmatch(r"\d{7}", item_id):
+        raise ValueError("怪物 ID 必须是 7 位数字")
+    client = _ROOT / "clien" / "Data" / "Mob" / f"{item_id}.img"
+    direct = _TMS_DATA / "Mob" / f"{item_id}.img"
+    canvas = _TMS_DATA / "Mob" / "_Canvas" / f"{item_id}.img"
+    server = _ROOT / "gms-server" / "wz" / "Mob.wz" / f"{item_id}.img.xml"
+    extracted = extract_ms_mob(item_id)
+    sources = []
+
+    def add_source(kind: str, label: str, path: Path, *, pack: Path | None = None) -> None:
+        if not path.is_file():
+            return
+        sources.append({
+            "kind": kind,
+            "label": label,
+            "path": relative_path(path),
+            "pack": pack.name if pack else "",
+            **mob_source_summary(path),
+        })
+
+    if extracted:
+        add_source("ms", "MS 完整记录", extracted[0], pack=extracted[1])
+    add_source("img", "TMS IMG", direct)
+    add_source("canvas", "TMS Canvas", canvas)
+    add_source("server", "服务端 XML", server)
+    tms_names = mob_names(_TMS_DATA / "String" / "Mob.img")
+    client_names = mob_names(_ROOT / "clien" / "Data" / "String" / "Mob.img")
+    comparison = next(
+        (source["path"] for source in sources if source["kind"] in {"ms", "img", "canvas"}),
+        relative_path(server),
+    )
+    return {
+        "id": item_id,
+        "name": tms_names.get(item_id) or client_names.get(item_id) or "",
+        "clientPath": relative_path(client),
+        "clientExists": client.is_file(),
+        "comparisonPath": comparison,
+        "sources": sources,
+        "msEntry": f"Mob/{item_id}.img" if extracted else "",
+    }
 
 
 def server_xml_for_client(path: Path) -> Path | None:
@@ -597,29 +762,85 @@ def catalog_rows(kind: str, query: str) -> list[dict[str, Any]]:
     if kind == "map":
         left_files = (_ROOT / "clien" / "Data" / "Map" / "Map").glob("Map*/*.img")
         right_root = _ROOT / "gms-server" / "wz" / "Map.wz" / "Map"
-    elif kind == "mob":
-        left_files = (_ROOT / "clien" / "Data" / "Mob").glob("*.img")
-        right_root = _ROOT / "gms-server" / "wz" / "Mob.wz"
-    else:
+        query = query.strip().lower()
+        rows = []
+        for left in left_files:
+            item_id = left.stem
+            if query and query not in item_id.lower():
+                continue
+            _, right = default_paths(kind, item_id)
+            rows.append({
+                "id": item_id,
+                "name": "",
+                "leftPath": relative_path(left),
+                "rightPath": relative_path(right),
+                "hasXml": right.is_file(),
+                "sources": ["A", "TMS" if right.is_file() and right.name.endswith(".img") else "XML"],
+            })
+        rows.sort(key=lambda row: natural_key(row["id"]))
+        return rows[:300]
+    if kind != "mob":
         raise ValueError("kind 必须是 map 或 mob")
+
     query = query.strip().lower()
+    client_root = _ROOT / "clien" / "Data" / "Mob"
+    server_root = _ROOT / "gms-server" / "wz" / "Mob.wz"
+    direct_root = _TMS_DATA / "Mob"
+    canvas_root = direct_root / "_Canvas"
+    clients = {path.stem: path for path in client_root.glob("*.img")}
+    candidate_ids = set(clients)
+    names = {}
+    ms_index = {}
+    if query:
+        names = mob_names(_TMS_DATA / "String" / "Mob.img")
+        ms_index = ms_mob_index()
+        candidate_ids.update(item_id for item_id in ms_index if item_id.startswith(query))
+        candidate_ids.update(
+            item_id for item_id, name in names.items()
+            if query in item_id.lower() or query in name.lower()
+        )
+        if query.isdigit():
+            candidate_ids.update(path.stem for path in direct_root.glob(f"{query}*.img"))
+            candidate_ids.update(path.stem for path in canvas_root.glob(f"{query}*.img"))
     rows = []
-    for left in left_files:
-        item_id = left.stem
-        if query and query not in item_id.lower():
+    for item_id in candidate_ids:
+        name = names.get(item_id, "")
+        if query and query not in item_id.lower() and query not in name.lower():
             continue
-        _, right = default_paths(kind, item_id)
+        left = clients.get(item_id, client_root / f"{item_id}.img")
+        direct = direct_root / f"{item_id}.img"
+        canvas = canvas_root / f"{item_id}.img"
+        server = server_root / f"{item_id}.img.xml"
+        _, right = default_paths("mob", item_id)
+        sources = []
+        if left.is_file():
+            sources.append("A")
+        if item_id in ms_index:
+            sources.append("MS")
+        if direct.is_file():
+            sources.append("IMG")
+        if canvas.is_file():
+            sources.append("Canvas")
+        if server.is_file():
+            sources.append("XML")
         rows.append({
             "id": item_id,
+            "name": name,
             "leftPath": relative_path(left),
             "rightPath": relative_path(right),
             "hasXml": right.is_file(),
+            "sources": sources,
         })
     rows.sort(key=lambda row: natural_key(row["id"]))
     return rows[:300]
 
 
 def data_root_for(path: Path) -> Path:
+    try:
+        if path.resolve().is_relative_to(_MS_CACHE_ROOT.resolve()):
+            return _TMS_DATA
+    except OSError:
+        pass
     for parent in path.parents:
         if parent.name == "Data":
             return parent
@@ -722,6 +943,28 @@ def mob_preview(path: Path) -> dict[str, Any]:
         if value is not None:
             stats[name] = value
     return {"kind": "mob", "actions": actions, "stats": stats}
+
+
+def mob_xml_preview(path: Path) -> dict[str, Any]:
+    root = ET.parse(path).getroot()
+    info = next(
+        (child for child in root if child.tag == "imgdir" and child.get("name") == "info"),
+        None,
+    )
+    stats = {}
+    if info is not None:
+        wanted = {"level", "maxHP", "maxMP", "PADamage", "MADamage", "speed", "exp"}
+        for child in info:
+            name = child.get("name", "")
+            if name not in wanted or child.get("value") is None:
+                continue
+            value: Any = child.get("value")
+            try:
+                value = int(value)
+            except (TypeError, ValueError):
+                pass
+            stats[name] = value
+    return {"kind": "mob", "actions": [], "stats": stats}
 
 
 def foothold_lines(root: WzSubProperty) -> list[dict[str, Any]]:
@@ -933,6 +1176,17 @@ def compatibility_category(path: str) -> str:
     return "other"
 
 
+def is_spine_map_object(node: WzSubProperty) -> bool:
+    if node.child("spineAni") is not None:
+        return True
+    return any(
+        isinstance(child, WzStringProperty)
+        and child.name.lower() in map_compat.SPINE_NAMES
+        and map_compat.SPINE_VALUE_HINT.search(str(child.value))
+        for child in node.children()
+    )
+
+
 def map_resource_references(root: WzSubProperty) -> list[dict[str, Any]]:
     references: dict[tuple[str, str, str], dict[str, Any]] = {}
 
@@ -972,6 +1226,8 @@ def map_resource_references(root: WzSubProperty) -> list[dict[str, Any]]:
         if isinstance(obj_root, WzSubProperty):
             for item in obj_root.children():
                 if not isinstance(item, WzSubProperty):
+                    continue
+                if is_spine_map_object(item):
                     continue
                 branch = "/".join(str(child_value(item, name, "")) for name in ("l0", "l1", "l2"))
                 add("obj", str(child_value(item, "oS", "")), f"{branch}/0", property_path(item), branch)
@@ -2622,6 +2878,17 @@ def clone_compatible_map_node(source: WzProperty, client_path: Path) -> tuple[Wz
 
     def clone(candidate: WzProperty, *, selected: bool = False) -> WzProperty | None:
         candidate_path = property_path(candidate)
+        if (
+            isinstance(candidate, WzSubProperty)
+            and re.fullmatch(r"[0-7]/obj/[^/]+", candidate_path)
+            and is_spine_map_object(candidate)
+        ):
+            if selected:
+                raise ValueError(
+                    f"所选节点 {candidate_path} 是现代 Spine/动态对象，必须整条删除后再做旧端静态投影。"
+                )
+            skipped.append(candidate_path)
+            return None
         annotated = annotate_meta(
             candidate_path, property_meta(candidate), "map", infer_id(client_path),
         )
@@ -2652,6 +2919,14 @@ def clone_compatible_map_node(source: WzProperty, client_path: Path) -> tuple[Wz
 
 def xml_snippet_for_node(node: WzProperty, indent: bytes) -> bytes:
     name = html.escape(node.name, quote=True)
+    if isinstance(node, WzCanvasProperty):
+        child_indent = indent + b"  "
+        children = b"".join(xml_snippet_for_node(child, child_indent) for child in node.children())
+        attrs = (
+            f'<canvas name="{name}" width="{int(node.width)}" height="{int(node.height)}" '
+            f'format="{int(node.format)}">'
+        ).encode()
+        return indent + attrs + b"\n" + children + indent + b"</canvas>\n"
     if isinstance(node, WzSubProperty):
         child_indent = indent + b"  "
         children = b"".join(xml_snippet_for_node(child, child_indent) for child in node.children())
@@ -2709,6 +2984,29 @@ def xml_add_cloned_node(
     if not dry_run:
         atomic_write(path, output, backup=backup)
     return {"path": target_path, "insertedBytes": inserted_bytes}
+
+
+def xml_replace_cloned_node(
+    path: Path, node_path: str, node: WzProperty, *, dry_run: bool, backup: bool = True,
+) -> dict[str, Any]:
+    data = path.read_bytes()
+    target = index_xml(data).get(node_path)
+    if target is None:
+        raise ValueError(f"服务端节点不存在: {node_path}")
+    line_start = data.rfind(b"\n", 0, target.start) + 1
+    indent_match = re.match(rb"[ \t]*", data[line_start:target.start])
+    indent = indent_match.group(0) if indent_match else b""
+    replacement = xml_snippet_for_node(node, indent).rstrip(b"\n")
+    output = data[:line_start] + replacement + data[target.end:]
+    ET.fromstring(output)
+    if not dry_run and output != data:
+        atomic_write(path, output, backup=backup)
+    return {
+        "path": node_path,
+        "replacedBytes": target.end - target.start,
+        "replacementBytes": len(replacement),
+        "changed": output != data,
+    }
 
 
 def selected_map_resource_references(root: WzSubProperty, node_path: str) -> list[dict[str, Any]]:
@@ -2945,6 +3243,215 @@ def migrate_missing_entity_resources(
     return {
         "migrated": migrations, "unresolved": unresolved,
         "files": [relative_path(target) if repo_root == _ROOT else str(target.relative_to(repo_root)) for target in payloads],
+    }
+
+
+_LEGACY_MOB_ACTION = re.compile(
+    r"^(?:stand|move|fly|jump|hit|die|attack|skill|regen|chase|rope|ladder|speak)\d*$",
+    re.I,
+)
+
+
+def clone_compatible_mob_action(
+    source: WzSubProperty, source_image: WzImage, source_path: Path,
+) -> tuple[WzSubProperty, arc.CanvasMaterializer]:
+    if not _LEGACY_MOB_ACTION.fullmatch(source.name):
+        raise ValueError(f"动作名称不属于旧端已知结构: {source.name}")
+    materializer = arc.CanvasMaterializer()
+
+    def clone_node(node: WzProperty, parent: WzProperty | None) -> WzProperty:
+        if isinstance(node, WzUolProperty) and node.name.isdigit():
+            try:
+                linked_image, linked_canvas, linked_path = resolve_canvas_node(
+                    source_image, property_path(node), source_path,
+                )
+            except ValueError:
+                pass
+            else:
+                return arc.clone_property(
+                    linked_canvas, parent, linked_image, linked_path, materializer, node.name,
+                )
+        if isinstance(node, WzCanvasProperty):
+            return arc.clone_property(node, parent, source_image, source_path, materializer)
+        if isinstance(node, WzSubProperty):
+            output = WzSubProperty(node.name, parent)
+            for child in node.children():
+                output.add(clone_node(child, output))
+            return output
+        return arc.clone_property(node, parent, source_image, source_path, materializer)
+
+    clone = clone_node(source, None)
+    if not isinstance(clone, WzSubProperty):
+        raise ValueError(f"动作根节点不是 imgdir: {source.name}")
+    return clone, materializer
+
+
+def audit_mob_action_canvases(data: bytes, image_name: str, action_name: str) -> dict[str, Any]:
+    image = WzImage.from_bytes(data, key=arc.GMS_KEY, name=image_name)
+    image.parse()
+    if image.truncated or image.parse_warnings:
+        raise ValueError(f"动作迁移结果解析失败: {image.parse_warnings}")
+    action = image.root.get(action_name)
+    if not isinstance(action, WzSubProperty):
+        raise ValueError(f"迁移后动作不存在: {action_name}")
+
+    canvases = 0
+    visible = 0
+    formats: set[tuple[int, int]] = set()
+
+    def visit(node: WzProperty) -> None:
+        nonlocal canvases, visible
+        if isinstance(node, WzCanvasProperty):
+            canvases += 1
+            formats.add((int(node.format), int(node.format2)))
+            bitmap = decode_canvas(node, region="GMS").convert("RGBA")
+            if bitmap.width > 4 and bitmap.height > 4 and bitmap.getchannel("A").getbbox():
+                visible += 1
+        for child in node.children() if hasattr(node, "children") else ():
+            visit(child)
+
+    visit(action)
+    if not canvases:
+        raise ValueError(f"动作 {action_name} 没有 Canvas，拒绝迁移")
+    if formats != {(1, 0)}:
+        raise ValueError(f"动作 {action_name} Canvas 不是 GMS ARGB4444: {sorted(formats)}")
+    if not visible:
+        raise ValueError(f"动作 {action_name} 只有占位或透明 Canvas，拒绝迁移")
+    return {"canvases": canvases, "visible": visible, "formats": ["1/0"]}
+
+
+def verify_mob_action_replace_scope(before: bytes, after: bytes, action_name: str) -> int:
+    before_records, before_orders = arc.raw_record_state(before)
+    after_records, after_orders = arc.raw_record_state(after)
+    action_root = (action_name,)
+    outside = lambda path: path[:1] != action_root
+    removed = {path for path in before_records.keys() - after_records.keys() if outside(path)}
+    added = {path for path in after_records.keys() - before_records.keys() if outside(path)}
+    if removed or added:
+        raise ValueError(f"动作迁移影响了其他记录: removed={sorted(removed)} added={sorted(added)}")
+    for parent, names in before_orders.items():
+        if parent[:1] == action_root:
+            continue
+        if after_orders.get(parent) != names:
+            raise ValueError(f"动作迁移改变了其他兄弟顺序: {'/'.join(parent) or '/'}")
+    protected = 0
+    for path, raw in before_records.items():
+        if not outside(path):
+            continue
+        if after_records.get(path) != raw:
+            raise ValueError(f"动作迁移改变了未授权记录: {'/'.join(path)}")
+        protected += 1
+    return protected
+
+
+def migrate_mob_action_with_server_sync(
+    client_path: Path, source_path: Path, action_name: str, *, dry_run: bool = False,
+) -> dict[str, Any]:
+    require_repo_write(client_path)
+    if client_path.parent.resolve() != (_ROOT / "clien" / "Data" / "Mob").resolve():
+        raise ValueError("动作迁移目标必须是 clien/Data/Mob 下的 IMG")
+    if not client_path.is_file():
+        raise ValueError("当前项目怪物 IMG 不存在，不能只迁移单个动作")
+    action_name = action_name.strip()
+    if "/" in action_name or "\\" in action_name or not action_name:
+        raise ValueError("动作名称必须是顶层节点名")
+
+    source_image = load_image(source_path)
+    source_action = source_image.root.get(action_name)
+    if not isinstance(source_action, WzSubProperty):
+        raise ValueError(f"TMS 动作不存在或不是 imgdir: {action_name}")
+    clone, materializer = clone_compatible_mob_action(source_action, source_image, source_path)
+
+    server_path = server_xml_for_client(client_path)
+    if server_path is None or not server_path.is_file():
+        raise ValueError("当前项目缺少对应的服务端 Mob XML，不能执行动作级同步")
+    client_original = client_path.read_bytes()
+    if detect_region_from_img(client_original) != "GMS":
+        raise ValueError("当前项目怪物 IMG 不是 GMS 格式")
+    current = _verified_img_from_bytes(client_path, client_original).root.get(action_name)
+    if current is not None and not isinstance(current, WzSubProperty):
+        raise ValueError(f"当前项目同名节点不是动作目录: {action_name}")
+
+    if current is None:
+        client_data = arc.append_property_record(client_original, (), clone)
+        arc.verify_raw_record_insert_scope(client_original, client_data, {(action_name,)})
+        protected_records = len(arc.raw_record_state(client_original)[0])
+        client_operation = "add"
+    else:
+        client_data = replace_img_record(
+            client_original, (action_name,), clone, region="GMS",
+        ).data
+        protected_records = verify_mob_action_replace_scope(
+            client_original, client_data, action_name,
+        )
+        client_operation = "replace"
+    canvas_audit = audit_mob_action_canvases(client_data, client_path.name, action_name)
+
+    server_original = server_path.read_bytes()
+    with tempfile.TemporaryDirectory(prefix=".migrate-mob-action-", dir=_HERE) as directory:
+        staged_server = Path(directory) / server_path.name
+        staged_server.write_bytes(server_original)
+        if action_name in index_xml(server_original):
+            xml_result = xml_replace_cloned_node(
+                staged_server, action_name, clone, dry_run=False, backup=False,
+            )
+            server_operation = "replace"
+        else:
+            xml_result = xml_add_cloned_node(
+                staged_server, "", clone, dry_run=False, backup=False,
+            )
+            server_operation = "add"
+        server_data = staged_server.read_bytes()
+        ET.fromstring(server_data)
+        if action_name not in index_xml(server_data):
+            raise ValueError(f"服务端动作同步失败: {action_name}")
+
+    client_changed = client_data != client_original
+    server_changed = server_data != server_original
+    committed: list[tuple[Path, bytes]] = []
+    try:
+        if client_changed and not dry_run:
+            atomic_write(client_path, client_data, backup=True)
+            committed.append((client_path, client_original))
+        if server_changed and not dry_run:
+            atomic_write(server_path, server_data, backup=True)
+            committed.append((server_path, server_original))
+        if not dry_run:
+            _load_image_cached.cache_clear()
+            _verified_img_from_bytes(client_path, client_path.read_bytes())
+            ET.parse(server_path)
+    except Exception:
+        for target, original in reversed(committed):
+            atomic_write(target, original, backup=False)
+        _load_image_cached.cache_clear()
+        raise
+
+    modified_files = []
+    if client_changed and not dry_run:
+        modified_files.append(relative_path(client_path))
+    if server_changed and not dry_run:
+        modified_files.append(relative_path(server_path))
+    return {
+        "action": action_name,
+        "clientPath": relative_path(client_path),
+        "serverPath": relative_path(server_path),
+        "clientOperation": client_operation,
+        "serverOperation": server_operation,
+        "changed": client_changed or server_changed,
+        "dryRun": dry_run,
+        "canvas": canvas_audit,
+        "materialized": {
+            "canvases": materializer.canvases,
+            "links": materializer.links,
+            "resized": materializer.resized,
+        },
+        "rawScope": {"approvedRoots": [action_name], "protectedRecords": protected_records},
+        "xml": xml_result,
+        "modifiedFiles": modified_files,
+        "sha256": {
+            "client": hashlib.sha256(client_data).hexdigest(),
+            "server": hashlib.sha256(server_data).hexdigest(),
+        },
     }
 
 
@@ -3215,6 +3722,11 @@ def api_catalog():
     return jsonify({"ok": True, "items": catalog_rows(request.args.get("kind", "map"), request.args.get("q", ""))})
 
 
+@app.get("/api/mob-sources")
+def api_mob_sources():
+    return jsonify({"ok": True, **mob_source_options(request.args.get("id", ""))})
+
+
 @app.get("/api/files")
 def api_files():
     return jsonify({"ok": True, **browse_directory(request.args.get("path", ""))})
@@ -3282,12 +3794,49 @@ def api_copy_tms_node():
     return jsonify({"ok": True, **result})
 
 
+@app.post("/api/migrate-mob-action")
+def api_migrate_mob_action():
+    body = request.get_json(silent=True) or {}
+    client_path = resolve_repo_path(str(body.get("sourcePath", "")))
+    tms_path = resolve_repo_path(str(body.get("tmsPath", "")))
+    require_mob_action_source(tms_path)
+    action_name = str(body.get("action", "")).strip()
+    with _WRITE_LOCK:
+        result = migrate_mob_action_with_server_sync(client_path, tms_path, action_name)
+    return jsonify({"ok": True, **result})
+
+
+def require_mob_action_source(path: Path) -> None:
+    allowed_roots = ((_TMS_DATA / "Mob").resolve(), _MS_CACHE_ROOT.resolve())
+    if not any(path == root or path.is_relative_to(root) for root in allowed_roots):
+        raise ValueError("动作迁移来源必须是 TMS Mob IMG 或已提取的 Mob MS 记录")
+
+
+@app.post("/api/mob-action-plan")
+def api_mob_action_plan():
+    body = request.get_json(silent=True) or {}
+    client_path = resolve_repo_path(str(body.get("sourcePath", "")))
+    tms_path = resolve_repo_path(str(body.get("tmsPath", "")))
+    require_mob_action_source(tms_path)
+    action_name = str(body.get("action", "")).strip()
+    try:
+        with _WRITE_LOCK:
+            result = migrate_mob_action_with_server_sync(
+                client_path, tms_path, action_name, dry_run=True,
+            )
+    except (ValueError, RuntimeError) as exc:
+        return jsonify({"ok": True, "allowed": False, "action": action_name, "reason": str(exc)})
+    return jsonify({"ok": True, "allowed": True, "action": action_name, "plan": result})
+
+
 @app.post("/api/preview")
 def api_preview():
     body = request.get_json(silent=True) or {}
     kind = str(body.get("kind", "map"))
     source = resolve_repo_path(str(body.get("sourcePath", "")))
     if not source.name.lower().endswith(".img"):
+        if kind == "mob":
+            return jsonify({"ok": True, "sourcePath": relative_path(source), **mob_xml_preview(source)})
         client, _ = default_paths(kind, infer_id(source))
         source = resolve_repo_path(relative_path(client))
     payload = map_preview(source) if kind == "map" else mob_preview(source)

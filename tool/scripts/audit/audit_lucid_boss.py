@@ -18,9 +18,14 @@ from wzpy.canvas import decode_canvas  # noqa: E402
 
 KEY = WzKey.for_region("GMS")
 MAIN_IDS = (8880140, 8880141, 8880142)
-SUPPORT_IDS = (8880161, 8880165, 8880171, 8880175)
+SUPPORT_IDS = (8880161, 8880164, 8880165, 8880171, 8880175)
 LUCID_IDS = MAIN_IDS + SUPPORT_IDS
 EXPECTED_REVIVE = {8880140: 8880141, 8880141: 8880142}
+EXPECTED_SERVER_HP = {
+    8880140: "250000000000",
+    8880141: "5000000000",
+    8880142: "5000000000",
+}
 EXPECTED_SKILLS = {
     8880140: ((145, 2, 2), (128, 16, 3), (131, 13, 4), (185, 1, 1)),
     8880141: ((145, 5, 1), (145, 2, 2), (128, 16, 3), (125, 9, 4)),
@@ -114,8 +119,9 @@ def main() -> int:
         root = ET.parse(ROOT / f"gms-server/wz/Mob.wz/{mob_id}.img.xml").getroot()
         info = server_info(root)
         hp = server_direct_child(info, "string", "maxHP")
-        if hp is None or hp.attrib.get("value") != "5000000000":
-            errors.append(f"server maxHP {mob_id}: expected string 5000000000")
+        expected_hp = EXPECTED_SERVER_HP[mob_id]
+        if hp is None or hp.attrib.get("value") != expected_hp:
+            errors.append(f"server maxHP {mob_id}: expected string {expected_hp}")
 
         expected = EXPECTED_SKILLS[mob_id]
         skills = mobs[mob_id].root.get("info/skill")
@@ -181,7 +187,8 @@ def main() -> int:
     print(
         "lucid audit ok: "
         f"mobs={len(LUCID_IDS)} canvas={canvas_count} "
-        f"stages={len(MAIN_IDS)} stage_hp=5000000000 skills={sum(len(v) for v in EXPECTED_SKILLS.values())}"
+        f"stages={len(MAIN_IDS)} stage_hp={','.join(EXPECTED_SERVER_HP.values())} "
+        f"skills={sum(len(v) for v in EXPECTED_SKILLS.values())}"
     )
     return 0
 

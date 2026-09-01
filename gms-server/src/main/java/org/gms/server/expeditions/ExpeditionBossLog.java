@@ -52,6 +52,7 @@ public class ExpeditionBossLog {
         CQ(1, 1, false),
         VELLUM(1, 1, false),
         AKAYRUM(1, 1, false),
+        LUCID(1, 1, false),
         PINKBEAN(3, 1, false),
         SCARGA(1, 1, false),
         PAPULATUS(2, 1, false);

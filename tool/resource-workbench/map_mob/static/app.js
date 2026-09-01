@@ -26,14 +26,17 @@ const state = {
   diagnosticPeers: "",
   preview: null,
   rightPreview: null,
+  mobSources: null,
+  mobSourceSequence: 0,
+  mobActionPlanSequence: 0,
   zoom: 1,
   waterSelectMode: false,
   mapViews: {
     left: {preview: null, images: [], lifeImages: [], portalImages: [], hitRegions: [], canvasId: "mapCanvas", stageId: "leftMapStage", coordinateId: "leftMapCoordinate", selectionId: "leftWaterSelection"},
     right: {preview: null, images: [], lifeImages: [], portalImages: [], hitRegions: [], canvasId: "rightMapCanvas", stageId: "rightMapStage", coordinateId: "rightMapCoordinate", selectionId: "rightWaterSelection"},
   },
-  mobAction: null,
-  mobFrame: 0,
+  mobActionName: "",
+  mobElapsed: 0,
   mobPlaying: true,
   mobTimer: null,
   loadSequence: 0,
@@ -88,14 +91,17 @@ function debounce(fn, wait) {
 
 function setKind(kind) {
   state.kind = kind;
+  document.body.classList.toggle("mob-mode", kind === "mob");
   document.querySelectorAll(".segment").forEach((button) => button.classList.toggle("active", button.dataset.kind === kind));
   $("previewTitle").textContent = kind === "map" ? "地图预览" : "怪物预览";
   $("mapControls").hidden = kind !== "map";
   $("mobControls").hidden = kind !== "mob";
   $("itemId").placeholder = kind === "map" ? "9 位地图 ID" : "7 位怪物 ID";
   $("diagnosticTab").disabled = kind !== "map";
+  $("mobSourceBar").hidden = kind !== "mob";
   clearWorkspace();
   updateDefaultPaths($("itemId").value.trim());
+  if (kind === "mob") loadMobSources($("itemId").value.trim(), true);
   searchCatalog();
 }
 
@@ -108,7 +114,58 @@ function updateDefaultPaths(id) {
     $("rightPath").value = `${tmsDataRoot}/Map/Map/${bucket}/${id}.img`;
   } else {
     $("leftPath").value = `clien/Data/Mob/${id}.img`;
-    $("rightPath").value = `${tmsDataRoot}/Mob/_Canvas/${id}.img`;
+    $("rightPath").value = `gms-server/wz/Mob.wz/${id}.img.xml`;
+  }
+}
+
+function formatBytes(value) {
+  if (value < 1024) return `${value} B`;
+  if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`;
+  return `${(value / 1024 / 1024).toFixed(1)} MB`;
+}
+
+function renderMobSources(data) {
+  state.mobSources = data;
+  $("mobSourceIdentity").innerHTML = `<strong>${escapeHtml(data.id)}${data.name ? ` · ${escapeHtml(data.name)}` : ""}</strong><span>${escapeHtml(data.msEntry || "TMS 未发现同 ID 的 MS 条目")}</span>`;
+  $("mobSourceOptions").innerHTML = data.sources.map((source) => `
+    <button class="mob-source-button ${source.path === $("rightPath").value.trim() ? "active" : ""}" type="button" data-source-path="${escapeHtml(source.path)}" title="${escapeHtml(source.path)}">
+      <b>${escapeHtml(source.label)}</b><small>${escapeHtml(source.pack || `${source.rootCount} 根节点`)}</small>
+    </button>`).join("");
+  const ms = data.sources.find((source) => source.kind === "ms");
+  $("mobSourceStatus").textContent = ms
+    ? `${ms.rootCount} 根节点 · ${formatBytes(ms.size)} · BMS`
+    : `${data.sources.length} 个可用来源`;
+  $("mobSourceOptions").querySelectorAll("[data-source-path]").forEach((button) => button.addEventListener("click", async () => {
+    $("rightPath").value = button.dataset.sourcePath;
+    $("mobSourceOptions").querySelectorAll(".mob-source-button").forEach((item) => item.classList.toggle("active", item === button));
+    await loadComparison();
+  }));
+}
+
+async function loadMobSources(id, selectPreferred = false) {
+  if (state.kind !== "mob" || !/^\d{7}$/.test(id)) {
+    if (state.kind === "mob") {
+      $("mobSourceIdentity").innerHTML = "<strong>输入 7 位怪物 ID</strong><span>–</span>";
+      $("mobSourceOptions").innerHTML = "";
+      $("mobSourceStatus").textContent = "";
+    }
+    return null;
+  }
+  const sequence = ++state.mobSourceSequence;
+  $("mobSourceStatus").textContent = "正在读取 MS 索引…";
+  try {
+    const data = await api(`/api/mob-sources?id=${encodeURIComponent(id)}`);
+    if (sequence !== state.mobSourceSequence || state.kind !== "mob" || $("itemId").value.trim() !== id) return null;
+    if (selectPreferred && data.comparisonPath) $("rightPath").value = data.comparisonPath;
+    $("leftPath").value = data.clientPath;
+    renderMobSources(data);
+    return data;
+  } catch (error) {
+    if (sequence === state.mobSourceSequence) {
+      $("mobSourceStatus").textContent = error.message;
+      $("mobSourceOptions").innerHTML = "";
+    }
+    return null;
   }
 }
 
@@ -147,6 +204,12 @@ function clearWorkspace() {
   $("previewEmpty").hidden = false;
   $("mapCompareView").hidden = true;
   $("mobStage").hidden = true;
+  $("leftMobImage").removeAttribute("src");
+  $("leftMobImage").hidden = true;
+  $("rightMobImage").removeAttribute("src");
+  $("rightMobImage").hidden = true;
+  state.mobActionPlanSequence += 1;
+  $("migrateMobActionBtn").disabled = true;
   $("previewMeta").textContent = "未加载";
   $("inspector").className = "inspector empty-state compact";
   $("inspector").innerHTML = '<span class="empty-mark small" aria-hidden="true">⌖</span><strong>选择左侧节点</strong><span>这里会显示属性、差异与可编辑值。</span>';
@@ -179,16 +242,20 @@ async function searchCatalog() {
 function renderCatalog(items) {
   const catalog = $("catalog");
   catalog.innerHTML = items.length
-    ? items.map((item) => `<button class="catalog-item" type="button" data-id="${escapeHtml(item.id)}" data-left="${escapeHtml(item.leftPath)}" data-right="${escapeHtml(item.rightPath)}"><span>${escapeHtml(item.id)}</span><small>${item.hasXml ? "A + B" : "仅 A"}</small></button>`).join("")
+    ? items.map((item) => `<button class="catalog-item ${state.kind === "mob" ? "rich" : ""}" type="button" data-id="${escapeHtml(item.id)}" data-left="${escapeHtml(item.leftPath)}" data-right="${escapeHtml(item.rightPath)}">
+      <span class="catalog-item-main"><strong>${escapeHtml(item.id)}</strong>${item.name ? `<span>${escapeHtml(item.name)}</span>` : ""}</span>
+      <small class="catalog-source-list">${escapeHtml((item.sources || []).join(" · ") || (item.hasXml ? "A + B" : "仅 A"))}</small>
+    </button>`).join("")
     : '<div class="empty-state compact"><span>没有匹配文件</span></div>';
   catalog.hidden = false;
   catalog.querySelectorAll(".catalog-item").forEach((button) => {
-    button.addEventListener("click", () => {
+    button.addEventListener("click", async () => {
       $("itemId").value = button.dataset.id;
       $("leftPath").value = button.dataset.left;
       $("rightPath").value = button.dataset.right;
       catalog.hidden = true;
-      loadComparison();
+      if (state.kind === "mob") await loadMobSources(button.dataset.id, true);
+      await loadComparison();
     });
   });
 }
@@ -308,6 +375,7 @@ async function loadComparison() {
     state.leftInfo = data.leftInfo;
     state.rightInfo = data.rightInfo;
     state.compatibility = data.compatibility;
+    if (state.kind === "mob" && state.mobSources) renderMobSources(state.mobSources);
     buildTreeIndex();
     state.expanded = new Set([""]);
     $("nodeCount").textContent = `${data.nodes.length} 节点`;
@@ -341,6 +409,7 @@ async function refreshComparisonAfterCopy(path) {
   state.leftInfo = data.leftInfo;
   state.rightInfo = data.rightInfo;
   state.compatibility = data.compatibility;
+  if (state.kind === "mob" && state.mobSources) renderMobSources(state.mobSources);
   buildTreeIndex();
   for (let parent = path; parent; parent = parent.includes("/") ? parent.slice(0, parent.lastIndexOf("/")) : "") {
     state.expanded.add(parent);
@@ -378,11 +447,23 @@ async function loadPreview(loadSequence = state.loadSequence) {
         rightResult.status === "rejected" ? rightResult.reason : null,
       );
     } else {
-      const data = await post("/api/preview", {kind: "mob", sourcePath: state.leftPath});
+      const [leftResult, rightResult] = await Promise.allSettled([
+        post("/api/preview", {kind: "mob", sourcePath: state.leftPath}),
+        post("/api/preview", {kind: "mob", sourcePath: state.rightPath}),
+      ]);
       if (loadSequence !== state.loadSequence) return;
-      state.preview = data;
+      const leftData = leftResult.status === "fulfilled" ? leftResult.value : null;
+      const rightData = rightResult.status === "fulfilled" ? rightResult.value : null;
+      if (!leftData && !rightData) throw leftResult.reason || rightResult.reason;
+      state.preview = leftData;
+      state.rightPreview = rightData;
       $("previewEmpty").hidden = true;
-      prepareMobPreview(data);
+      prepareMobPreview(
+        leftData,
+        rightData,
+        leftResult.status === "rejected" ? leftResult.reason : null,
+        rightResult.status === "rejected" ? rightResult.reason : null,
+      );
     }
   } catch (error) {
     if (loadSequence !== state.loadSequence) return;
@@ -717,20 +798,109 @@ function drawPoints(context, points, ox, oy, color, visible, label) {
   }
 }
 
-function prepareMobPreview(data) {
+function hasVisibleMobFrame(action) {
+  return Boolean(action?.frames.some((frame) => frame.width > 4 && frame.height > 4));
+}
+
+function activeMobComparisonSource() {
+  return state.mobSources?.sources.find((source) => source.path === state.rightPath) || null;
+}
+
+async function updateMobActionMigration() {
+  const button = $("migrateMobActionBtn");
+  const actionName = state.mobActionName;
+  const leftAction = state.preview?.actions.find((action) => action.name === actionName);
+  const rightAction = state.rightPreview?.actions.find((action) => action.name === actionName);
+  const source = activeMobComparisonSource();
+  const sourceSupported = ["ms", "img", "canvas"].includes(source?.kind);
+  const targetSupported = state.leftPath.startsWith("clien/Data/Mob/") && state.leftInfo?.format === "img";
+  const sequence = ++state.mobActionPlanSequence;
+  button.textContent = "→ A";
+  button.disabled = true;
+  if (!actionName) button.title = "没有可迁移的动作";
+  else if (!sourceSupported) button.title = "请先选择 MS 完整记录、TMS IMG 或 TMS Canvas 来源";
+  else if (!targetSupported) button.title = "A 必须是当前项目 clien/Data/Mob 下的 IMG";
+  else if (!rightAction) button.title = `${actionName} 在 B 侧没有可迁移的动作记录`;
+  else {
+    button.textContent = "…";
+    button.title = `正在验证 ${actionName} 的增量记录与 Canvas…`;
+    try {
+      const data = await post("/api/mob-action-plan", {
+        sourcePath: state.leftPath,
+        tmsPath: state.rightPath,
+        action: actionName,
+      });
+      if (sequence !== state.mobActionPlanSequence || actionName !== state.mobActionName) return;
+      button.textContent = "→ A";
+      button.disabled = !data.allowed;
+      button.title = data.allowed
+        ? `${leftAction ? "兼容替换" : "兼容新增"} ${actionName}：`
+          + `${data.plan.canvas.visible}/${data.plan.canvas.canvases} 个可见 Canvas，`
+          + `${data.plan.rawScope.protectedRecords} 个其他记录保持不变`
+        : `不能安全迁移 ${actionName}：${data.reason}`;
+    } catch (error) {
+      if (sequence !== state.mobActionPlanSequence) return;
+      button.textContent = "→ A";
+      button.disabled = true;
+      button.title = `迁移预检失败：${error.message}`;
+    }
+  }
+}
+
+function prepareMobPreview(leftData, rightData, leftError = null, rightError = null) {
   $("mapCompareView").hidden = true;
   $("mobStage").hidden = false;
   const select = $("actionSelect");
-  select.innerHTML = data.actions.map((action) => `<option value="${escapeHtml(action.name)}">${escapeHtml(action.name)} · ${action.frames.length}</option>`).join("");
-  state.mobAction = data.actions[0] || null;
-  state.mobFrame = 0;
+  const discoveredActionNames = Array.from(new Set([
+    ...(leftData?.actions || []).map((action) => action.name),
+    ...(rightData?.actions || []).map((action) => action.name),
+  ]));
+  const preferredOrder = ["stand", "move", "fly", "jump", "hit1", "die1"];
+  const actionNames = [
+    ...preferredOrder.filter((name) => discoveredActionNames.includes(name)),
+    ...discoveredActionNames.filter((name) => !preferredOrder.includes(name)),
+  ];
+  select.innerHTML = actionNames.map((name) => {
+    const left = leftData?.actions.find((action) => action.name === name);
+    const right = rightData?.actions.find((action) => action.name === name);
+    const placeholder = right?.frames.length && !hasVisibleMobFrame(right) ? " · B 占位" : "";
+    return `<option value="${escapeHtml(name)}">${escapeHtml(name)} · A ${left?.frames.length || 0} / B ${right?.frames.length || 0}${placeholder}</option>`;
+  }).join("");
+  state.mobActionName = preferredOrder.find((name) => (
+    hasVisibleMobFrame(leftData?.actions.find((action) => action.name === name))
+    && hasVisibleMobFrame(rightData?.actions.find((action) => action.name === name))
+  ))
+    || actionNames.find((name) => (
+      hasVisibleMobFrame(leftData?.actions.find((action) => action.name === name))
+      && hasVisibleMobFrame(rightData?.actions.find((action) => action.name === name))
+    ))
+    || preferredOrder.find((name) => hasVisibleMobFrame(rightData?.actions.find((action) => action.name === name)))
+    || actionNames.find((name) => hasVisibleMobFrame(rightData?.actions.find((action) => action.name === name)))
+    || preferredOrder.find((name) => hasVisibleMobFrame(leftData?.actions.find((action) => action.name === name)))
+    || actionNames[0]
+    || "";
+  select.value = state.mobActionName;
+  state.mobElapsed = 0;
   state.mobPlaying = true;
   state.zoom = 1;
   $("zoomRange").value = 100;
   $("zoomValue").textContent = "100%";
   $("playBtn").textContent = "Ⅱ";
-  $("previewMeta").textContent = data.actions.length ? `${data.actions.length} 个动作 · Lv.${data.stats.level ?? "?"}` : "没有可播放动作";
-  showMobFrame();
+  $("leftMobMeta").textContent = leftData
+    ? `${leftData.actions.length} 动作 · Lv.${leftData.stats.level ?? "?"}`
+    : (leftError?.message || "主文件预览不可用");
+  const activeSource = activeMobComparisonSource();
+  $("rightMobSourceLabel").textContent = activeSource?.kind === "ms"
+    ? "TMS MS 完整记录"
+    : (activeSource?.label || "对比文件");
+  $("rightMobMeta").textContent = rightData
+    ? `${rightData.actions.length} 动作 · Lv.${rightData.stats.level ?? "?"}`
+    : (rightError?.message || "对比预览不可用");
+  $("previewMeta").textContent = actionNames.length
+    ? `${actionNames.length} 个合并动作 · A/B 同步播放`
+    : "没有可播放动作";
+  showMobFrames();
+  updateMobActionMigration();
 }
 
 function stopMobTimer() {
@@ -738,26 +908,48 @@ function stopMobTimer() {
   state.mobTimer = null;
 }
 
-function showMobFrame() {
+function showMobFrames() {
   stopMobTimer();
-  const action = state.mobAction;
-  if (!action || !action.frames.length) {
-    $("mobImage").removeAttribute("src");
-    $("frameCounter").textContent = "0 / 0";
-    return;
+  const sides = [
+    {name: "left", data: state.preview, imageId: "leftMobImage", counterId: "leftFrameCounter"},
+    {name: "right", data: state.rightPreview, imageId: "rightMobImage", counterId: "rightFrameCounter"},
+  ];
+  const remainingDelays = [];
+  for (const side of sides) {
+    const action = side.data?.actions.find((candidate) => candidate.name === state.mobActionName);
+    const image = $(side.imageId);
+    if (!action?.frames.length) {
+      image.removeAttribute("src");
+      image.hidden = true;
+      $(side.counterId).textContent = "此侧无该动作";
+      continue;
+    }
+    const elapsed = state.mobElapsed % action.duration;
+    let cursor = 0;
+    let index = 0;
+    for (let frameIndex = 0; frameIndex < action.frames.length; frameIndex += 1) {
+      const end = cursor + action.frames[frameIndex].delay;
+      if (elapsed < end) {
+        index = frameIndex;
+        remainingDelays.push(end - elapsed);
+        break;
+      }
+      cursor = end;
+    }
+    const frame = action.frames[index];
+    image.hidden = false;
+    image.src = apiUrl(frame.url);
+    image.style.marginLeft = `${(frame.origin.x - frame.width / 2) * state.zoom * -1}px`;
+    image.style.marginTop = `${(frame.origin.y - frame.height) * state.zoom * -1}px`;
+    image.style.transform = `scale(${state.zoom})`;
+    $(side.counterId).textContent = `${index + 1} / ${action.frames.length} · ${frame.delay} ms`;
   }
-  const frame = action.frames[state.mobFrame % action.frames.length];
-  const image = $("mobImage");
-  image.src = apiUrl(frame.url);
-  image.style.marginLeft = `${(frame.origin.x - frame.width / 2) * state.zoom * -1}px`;
-  image.style.marginTop = `${(frame.origin.y - frame.height) * state.zoom * -1}px`;
-  image.style.transform = `scale(${state.zoom})`;
-  $("frameCounter").textContent = `${state.mobFrame + 1} / ${action.frames.length} · ${frame.delay} ms`;
-  if (state.mobPlaying) {
+  if (state.mobPlaying && remainingDelays.length) {
+    const nextDelay = Math.min(...remainingDelays);
     state.mobTimer = setTimeout(() => {
-      state.mobFrame = (state.mobFrame + 1) % action.frames.length;
-      showMobFrame();
-    }, frame.delay);
+      state.mobElapsed += nextDelay;
+      showMobFrames();
+    }, nextDelay);
   }
 }
 
@@ -779,7 +971,7 @@ function applyZoom() {
       canvas.style.marginTop = `${Math.max(0, (stage.clientHeight - scaledHeight) / 2)}px`;
     }
   }
-  else showMobFrame();
+  else showMobFrames();
 }
 
 function fitPreview() {
@@ -993,6 +1185,7 @@ async function openDiagnosticMob(id) {
   $("itemId").value = id;
   $("leftPath").value = `clien/Data/Mob/${id}.img`;
   $("rightPath").value = `gms-server/wz/Mob.wz/${id}.img.xml`;
+  await loadMobSources(id, true);
   await loadComparison();
 }
 
@@ -1235,6 +1428,50 @@ async function copyTmsNode() {
   }
 }
 
+async function migrateMobAction() {
+  const actionName = state.mobActionName;
+  const source = activeMobComparisonSource();
+  const leftAction = state.preview?.actions.find((action) => action.name === actionName);
+  if (!actionName || !source) return;
+  const verb = leftAction ? "替换" : "新增";
+  if (!confirm(
+    `${verb} A 中的动作 ${actionName}？\n\n`
+    + `来源：${source.label}\n`
+    + "客户端只修改这个顶层动作记录，并同步服务端同名 XML 块。",
+  )) return;
+
+  const button = $("migrateMobActionBtn");
+  button.disabled = true;
+  button.textContent = "…";
+  showResult(`正在兼容迁移 ${actionName}…\n将验证原始记录范围、Canvas 格式和可见像素。`);
+  try {
+    const data = await post("/api/migrate-mob-action", {
+      sourcePath: state.leftPath,
+      tmsPath: state.rightPath,
+      action: actionName,
+    });
+    for (const file of data.modifiedFiles || []) state.exportFiles.add(file);
+    await loadComparison();
+    if (Array.from($("actionSelect").options).some((option) => option.value === actionName)) {
+      state.mobActionName = actionName;
+      state.mobElapsed = 0;
+      $("actionSelect").value = actionName;
+      showMobFrames();
+    }
+    const resultText = data.changed
+      ? `${actionName} 已迁移到 A：客户端 ${data.clientOperation}，服务端 ${data.serverOperation}；`
+        + `${data.canvas.visible}/${data.canvas.canvases} 个 Canvas 有可见像素，格式 ${data.canvas.formats.join("、")}；`
+        + `${data.rawScope.protectedRecords} 个未授权记录保持不变。`
+      : `${actionName} 已是相同的兼容结果，本次没有产生文件变化。`;
+    showResult(`${resultText}\n${JSON.stringify(data, null, 2)}`);
+  } catch (error) {
+    showResult(error.message, true);
+  } finally {
+    button.textContent = "→ A";
+    updateMobActionMigration();
+  }
+}
+
 function showResult(text, error = false) {
   const result = $("operationResult");
   result.hidden = false;
@@ -1433,8 +1670,11 @@ async function addNode() {
 
 document.querySelectorAll(".segment").forEach((button) => button.addEventListener("click", () => setKind(button.dataset.kind)));
 const searchCatalogDebounced = debounce(searchCatalog, 180);
+const loadMobSourcesDebounced = debounce((id) => loadMobSources(id, true), 220);
 $("itemId").addEventListener("input", () => {
-  updateDefaultPaths($("itemId").value.trim());
+  const id = $("itemId").value.trim();
+  updateDefaultPaths(id);
+  if (state.kind === "mob") loadMobSourcesDebounced(id);
   searchCatalogDebounced();
 });
 $("itemId").addEventListener("focus", searchCatalog);
@@ -1502,15 +1742,17 @@ $("waterSelectBtn").addEventListener("click", () => {
 $("zoomRange").addEventListener("input", () => { state.zoom = Number($("zoomRange").value) / 100; applyZoom(); });
 $("fitBtn").addEventListener("click", fitPreview);
 $("actionSelect").addEventListener("change", () => {
-  state.mobAction = state.preview.actions.find((action) => action.name === $("actionSelect").value) || null;
-  state.mobFrame = 0;
-  showMobFrame();
+  state.mobActionName = $("actionSelect").value;
+  state.mobElapsed = 0;
+  showMobFrames();
+  updateMobActionMigration();
 });
 $("playBtn").addEventListener("click", () => {
   state.mobPlaying = !state.mobPlaying;
   $("playBtn").textContent = state.mobPlaying ? "Ⅱ" : "▶";
-  showMobFrame();
+  showMobFrames();
 });
+$("migrateMobActionBtn").addEventListener("click", migrateMobAction);
 function attachMapStageInteraction(side) {
   const stage = $(state.mapViews[side].stageId);
   let dragStart = null;

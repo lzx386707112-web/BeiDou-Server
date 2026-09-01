@@ -69,6 +69,15 @@
     <button id="compareBtn" class="primary-button compare-button" type="button">加载并对比</button>
   </section>
 
+  <section id="mobSourceBar" class="mob-source-bar" hidden>
+    <div id="mobSourceIdentity" class="mob-source-identity">
+      <strong>等待怪物 ID</strong>
+      <span>–</span>
+    </div>
+    <div id="mobSourceOptions" class="mob-source-options"></div>
+    <span id="mobSourceStatus" class="mob-source-status"></span>
+  </section>
+
   <nav class="mobile-tabs" aria-label="工作区">
     <button type="button" class="active" data-panel="treePanel">节点</button>
     <button type="button" data-panel="previewPanel">预览</button>
@@ -115,6 +124,7 @@
         <div id="mobControls" class="preview-controls" hidden>
           <select id="actionSelect" aria-label="怪物动作"></select>
           <button id="playBtn" class="icon-button small" type="button" title="播放或暂停" aria-label="播放或暂停">Ⅱ</button>
+          <button id="migrateMobActionBtn" class="mob-migrate-button" type="button" title="兼容迁移当前 TMS 动作到 A" aria-label="兼容迁移当前 TMS 动作到 A" disabled>→ A</button>
         </div>
         <div id="mapControls" class="preview-controls">
           <label class="layer-toggle"><input id="showFootholds" type="checkbox" checked><span>地形</span></label>
@@ -137,10 +147,15 @@
             <div id="rightMapStage" class="map-stage"><canvas id="rightMapCanvas"></canvas><div id="rightWaterSelection" class="water-selection" hidden></div><output id="rightMapCoordinate" class="map-coordinate" hidden></output></div>
           </section>
         </div>
-        <div id="mobStage" class="mob-stage" hidden>
-          <div class="mob-ground"></div>
-          <img id="mobImage" alt="怪物动作帧">
-          <span id="frameCounter" class="frame-counter"></span>
+        <div id="mobStage" class="mob-compare-view" hidden>
+          <section class="mob-preview-pane">
+            <div class="map-pane-head"><span><b class="column-badge a">A</b>主文件</span><small id="leftMobMeta">未加载</small></div>
+            <div class="mob-stage"><div class="mob-ground"></div><img id="leftMobImage" alt="A 主文件怪物动作帧"><span id="leftFrameCounter" class="frame-counter"></span></div>
+          </section>
+          <section class="mob-preview-pane secondary">
+            <div class="map-pane-head"><span><b class="column-badge b">B</b><span id="rightMobSourceLabel">对比文件</span></span><small id="rightMobMeta">未加载</small></div>
+            <div class="mob-stage"><div class="mob-ground"></div><img id="rightMobImage" alt="B 对比文件怪物动作帧"><span id="rightFrameCounter" class="frame-counter"></span></div>
+          </section>
         </div>
         <div id="previewEmpty" class="empty-state">
           <span class="empty-mark" aria-hidden="true">◇</span>

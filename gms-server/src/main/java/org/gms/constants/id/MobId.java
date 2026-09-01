@@ -101,6 +101,10 @@ public class MobId {
     public static final int CYGNUS_HAWKEYE = 8850004;
     public static final int CYGNUS = 8850011;
 
+    public static final int LUCID_PHASE_1 = 8880140;
+    public static final int LUCID_PHASE_2 = 8880141;
+    public static final int LUCID_PHASE_3 = 8880142;
+
     public static boolean isDeadHorntailPart(int mobId) {
         return mobId >= DEAD_HORNTAIL_MIN && mobId <= DEAD_HORNTAIL_MAX;
     }

@@ -48,6 +48,7 @@ public enum ExpeditionType {
     CQ(1, 30, 125, 255, 5),
     VELLUM(1, 30, 125, 255, 5),
     AKAYRUM(1, 30, 140, 255, 5),
+    LUCID(1, 30, 220, 255, 5),
     KARING(1, 30, 100, 255, 5);
 
     private final int minSize;
