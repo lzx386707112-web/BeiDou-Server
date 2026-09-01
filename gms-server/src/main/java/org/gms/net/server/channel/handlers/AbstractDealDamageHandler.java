@@ -71,12 +71,79 @@ public abstract class AbstractDealDamageHandler extends AbstractPacketHandler {
 
     private static final Logger log = LoggerFactory.getLogger(AbstractDealDamageHandler.class);
     private static final double DISTANCE_HACK_BLOCK_MULTIPLIER = 1.5;
+    protected static final int INDEXED_DAMAGE_NUMBER_HIT_INTERVAL_MS = 120;
 
     private static int decodeClientDamage(int damage) {
         if (damage >= 0) {
             return damage;
         }
         return (int) Math.min(Integer.MAX_VALUE, (long) damage + (long) Integer.MAX_VALUE + 1L);
+    }
+
+    protected static void showIndexedDamageNumbers(
+            Character chr,
+            MapleMap expectedMap,
+            Map<Integer, List<Integer>> damageByMonster
+    ) {
+        showIndexedDamageNumbers(
+                chr,
+                expectedMap,
+                damageByMonster,
+                INDEXED_DAMAGE_NUMBER_HIT_INTERVAL_MS
+        );
+    }
+
+    protected static void showIndexedDamageNumbers(
+            Character chr,
+            MapleMap expectedMap,
+            Map<Integer, List<Integer>> damageByMonster,
+            int hitIntervalMs
+    ) {
+        if (hitIntervalMs <= 0) {
+            throw new IllegalArgumentException("hitIntervalMs must be positive");
+        }
+        Map<Integer, List<Integer>> capturedDamage = new LinkedHashMap<>();
+        int hitCount = 0;
+        for (Map.Entry<Integer, List<Integer>> entry : damageByMonster.entrySet()) {
+            List<Integer> damageValues = entry.getValue();
+            if (damageValues == null || damageValues.isEmpty()) {
+                continue;
+            }
+            int capturedHitCount = Math.min(15, damageValues.size());
+            capturedDamage.put(
+                    entry.getKey(),
+                    new ArrayList<>(damageValues.subList(0, capturedHitCount))
+            );
+            hitCount = Math.max(hitCount, capturedHitCount);
+        }
+
+        for (int hitIndex = 0; hitIndex < hitCount; hitIndex++) {
+            int indexedHit = hitIndex;
+            Runnable showHit = () -> {
+                if (chr.getMap() != expectedMap) {
+                    return;
+                }
+                for (Map.Entry<Integer, List<Integer>> entry : capturedDamage.entrySet()) {
+                    if (indexedHit >= entry.getValue().size()) {
+                        continue;
+                    }
+                    // Keep the raw value so the sign-bit critical marker reaches the renderer.
+                    chr.sendPacket(PacketCreator.indexedDamageMonsterNumber(
+                            entry.getKey(),
+                            entry.getValue().get(indexedHit),
+                            indexedHit
+                    ));
+                }
+            };
+            if (hitIndex == 0) {
+                showHit.run();
+            } else {
+                TimerManager.getInstance().schedule(
+                        showHit,
+                        (long) hitIndex * hitIntervalMs
+                );
+            }
+        }
     }
 
     public static class AttackInfo {

@@ -6,11 +6,13 @@ var phaseTwoMap = 450004250;
 var exitMap = 450004000;
 var recruitMap = 450004000;
 var eventTime = 30;
-var maxDeaths = 10;
+var maxDeaths = 50;
 
 const maxLobbies = 1;
 const LifeFactory = Java.type('org.gms.server.life.LifeFactory');
 const LucidBossCompat = Java.type('org.gms.server.life.LucidBossCompat');
+const PacketCreator = Java.type('org.gms.util.PacketCreator');
+const AbstractAnimatedMapObject = Java.type('org.gms.server.maps.AbstractAnimatedMapObject');
 const Point = Java.type('java.awt.Point');
 
 var eventMaps = [entryMap, phaseTwoMap];
@@ -33,7 +35,7 @@ function getEventMaps() {
 }
 
 function setEventRequirements() {
-    em.setProperty("party", "\r\n   Players: 1 ~ 30\r\n   Level: 220 ~ 255\r\n   Time limit: 30 minutes\r\n   Death limit: 10 per character");
+    em.setProperty("party", "\r\n   Players: 1 ~ 30\r\n   Level: 220 ~ 255\r\n   Time limit: 30 minutes\r\n   Death limit: 50 per character");
 }
 
 function setEventExclusives(eim) {
@@ -72,7 +74,7 @@ function playerEntry(eim, player) {
     if (eim.getIntProperty("eliminated_" + id) == 1) {
         eim.unregisterPlayer(player);
         player.changeMap(exitMap, 0);
-        player.dropMessage(5, "You have reached the 10-death limit for this Lucid expedition.");
+        player.dropMessage(5, "You have reached the 50-death limit for this Lucid expedition.");
         return;
     }
     if (eim.getIntProperty("joined_" + id) == 0) {
@@ -116,7 +118,7 @@ function playerRevive(eim, player) {
     eim.setIntProperty(deathKey, deaths);
     if (deaths >= maxDeaths) {
         eim.setIntProperty("eliminated_" + player.getId(), 1);
-        player.dropMessage(5, "You have died 10 times and will return to the Nightmare Clocktower.");
+        player.dropMessage(5, "You have died 50 times and will return to the Nightmare Clocktower.");
         player.respawn(eim, exitMap);
         disposeIfEmpty(eim);
         return false;
@@ -126,6 +128,13 @@ function playerRevive(eim, player) {
     player.updateHp(50);
     player.setStance(0);
     player.enableActions();
+    var reviveMap = eim.getInstanceMap(mapId);
+    reviveMap.movePlayer(player, reviveMap.getPortal(0).getPosition());
+    var reviveMovement = PacketCreator.movePlayer(
+        player.getId(), player.getIdleMovement(),
+        AbstractAnimatedMapObject.IDLE_MOVEMENT_PACKET_LENGTH);
+    player.sendPacket(reviveMovement);
+    reviveMap.broadcastMessage(player, reviveMovement, false);
     player.dropMessage(5, "Lucid expedition deaths: " + deaths + "/" + maxDeaths);
     return false;
 }

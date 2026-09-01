@@ -199,7 +199,11 @@ def test_lucid_expedition_contract_is_wired_end_to_end():
         assert "LifeFactory.getMonster(8880141)" in event
         assert "mob.getId() == 8880142" in event
         assert "if (!hasKiller)" in event
-        assert "var maxDeaths = 10" in event
+        assert "var maxDeaths = 50" in event
+        assert "var reviveMap = eim.getInstanceMap(mapId)" in event
+        assert "reviveMap.movePlayer(player, reviveMap.getPortal(0).getPosition());" in event
+        assert "PacketCreator.movePlayer(" in event
+        assert "player.sendPacket(reviveMovement);" in event
 
     entrance = (
         ROOT / "gms-server/scripts-zh-CN/BeiDouSpecial/露希妲远征.js"

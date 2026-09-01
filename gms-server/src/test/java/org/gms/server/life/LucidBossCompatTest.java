@@ -34,6 +34,28 @@ class LucidBossCompatTest {
     }
 
     @Test
+    void seduceCooldownIsOneMinuteForAllThreePhases() {
+        assertEquals(60_000, LucidBossCompat.skillCooldownMillis(8880140, 128, 16, 20_000));
+        assertEquals(60_000, LucidBossCompat.skillCooldownMillis(8880141, 128, 16, 20_000));
+        assertEquals(60_000, LucidBossCompat.skillCooldownMillis(8880142, 128, 10, 50_000));
+        assertEquals(20_000, LucidBossCompat.skillCooldownMillis(8880140, 128, 15, 20_000));
+        assertEquals(20_000, LucidBossCompat.skillCooldownMillis(8880140, 127, 16, 20_000));
+    }
+
+    @Test
+    void stunAttackCooldownIsLimitedToTheTwoDiseaseAttacks() {
+        assertTrue(LucidBossCompat.usesAttackCooldown(8880140, 1));
+        assertTrue(LucidBossCompat.usesAttackCooldown(8880141, 2));
+        assertFalse(LucidBossCompat.usesAttackCooldown(8880140, 0));
+        assertFalse(LucidBossCompat.usesAttackCooldown(8880141, 1));
+        assertFalse(LucidBossCompat.usesAttackCooldown(8880142, 1));
+
+        assertEquals(60_000, LucidBossCompat.attackCooldownMillis(8880140, 1, 1200));
+        assertEquals(60_000, LucidBossCompat.attackCooldownMillis(8880141, 2, 1200));
+        assertEquals(1200, LucidBossCompat.attackCooldownMillis(8880140, 0, 1200));
+    }
+
+    @Test
     void rushPathKeepsTheTmsStartAndEndCoordinates() {
         assertEquals(new Point(685, -510), LucidBossCompat.rushPositionAt(0));
         assertEquals(new Point(978, -742), LucidBossCompat.rushPositionAt(3000));

@@ -36,6 +36,10 @@ public final class LucidBossCompat {
     private static final int BUTTERFLY_P1 = 8880165;
     private static final int GOLEM_P2 = 8880171;
     private static final int BUTTERFLY_P2 = 8880175;
+    private static final int SEDUCE_SKILL_ID = 128;
+    private static final int SEDUCE_P1_P2_LEVEL = 16;
+    private static final int SEDUCE_P3_LEVEL = 10;
+    private static final int CONTROL_EFFECT_COOLDOWN_MS = 60_000;
     private static final int BUTTERFLY_CAPACITY = 40;
     private static final int MAX_VISIBLE_BUTTERFLIES = 12;
     private static final int MAX_GOLEMS = 15;
@@ -120,6 +124,27 @@ public final class LucidBossCompat {
 
     public static boolean isLucidBoss(int mobId) {
         return mobId == LUCID_P1 || mobId == LUCID_P2 || mobId == LUCID_P3;
+    }
+
+    static long skillCooldownMillis(int mobId, int skillId, int level, long fallback) {
+        boolean phaseOneOrTwoSeduce = (mobId == LUCID_P1 || mobId == LUCID_P2)
+                && level == SEDUCE_P1_P2_LEVEL;
+        boolean phaseThreeSeduce = mobId == LUCID_P3 && level == SEDUCE_P3_LEVEL;
+        if (skillId == SEDUCE_SKILL_ID && (phaseOneOrTwoSeduce || phaseThreeSeduce)) {
+            return CONTROL_EFFECT_COOLDOWN_MS;
+        }
+        return fallback;
+    }
+
+    static boolean usesAttackCooldown(int mobId, int attackPosition) {
+        return (mobId == LUCID_P1 && attackPosition == 1)
+                || (mobId == LUCID_P2 && attackPosition == 2);
+    }
+
+    static int attackCooldownMillis(int mobId, int attackPosition, int fallback) {
+        return usesAttackCooldown(mobId, attackPosition)
+                ? CONTROL_EFFECT_COOLDOWN_MS
+                : fallback;
     }
 
     public static int butterflyIntervalMillis(int hpPercent) {

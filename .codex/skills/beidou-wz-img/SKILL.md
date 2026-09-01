@@ -27,6 +27,12 @@ Then read only the references matching the requested surface:
 For Skill IMG or compatibility-DLL work, follow the repository `AGENTS.md`
 skill-contract and runtime-hook sections in addition to the shared workflow.
 
+For a server-scheduled multi-hit replay that needs caster-local damage numbers,
+read [references/indexed-replay-damage-numbers.md](references/indexed-replay-damage-numbers.md)
+before editing. It defines the evidence gate, reserved packet markers, native
+`120ms * hitIndex` cadence, display-vs-damage separation, and the reusable
+`NONE`/`TOTAL`/`INDEXED` integration pattern.
+
 ## Non-negotiable invariants
 
 - Start with `rtk git status --short`; preserve every pre-existing change.
@@ -48,6 +54,12 @@ skill-contract and runtime-hook sections in addition to the shared workflow.
   not create temporary packed WZ files or build JAR/DLL artifacts unless the
   user explicitly requests that output in the current task.
 - Never copy unverified artifacts to Downloads or another delivery location.
+- After a requested minimal fix is verified, synchronize the minimum runtime
+  file set to
+  `/Users/lizixian/Downloads/路西德/` (or the explicitly requested delivery
+  folder), preserve each file's repository-relative path, and compare
+  SHA-256 hashes between source and destination. Do not include unrelated
+  worktree changes, baselines, backups, generated packages, or probe files.
 
 ## Work sequence
 

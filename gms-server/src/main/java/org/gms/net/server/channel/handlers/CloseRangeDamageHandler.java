@@ -55,6 +55,7 @@ import org.gms.server.maps.Summon;
 import org.gms.server.maps.SummonMovementType;
 import org.gms.util.PacketCreator;
 import org.gms.util.Pair;
+import org.gms.util.Randomizer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -77,6 +78,13 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
     private static final Logger log = LoggerFactory.getLogger(CloseRangeDamageHandler.class);
     private static final String ANIMATED_ATTACK_LOG_VERSION = "DW_ANIM v3";
+
+    private enum LocalDamageNumberMode {
+        NONE,
+        TOTAL,
+        INDEXED
+    }
+
     private static final int DEATH_FAULT_HIT_DELAY_MS = 1000;
     private static final String DEATH_FAULT_FIELD_EFFECT = "customSkill/deathFault/full";
     private static final String GALAXY_STAR_BURST_VIDEO_LAYER =
@@ -104,6 +112,7 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
     private static final int[] GALAXY_STAR_BURST_ATTACK_TIMES_MS = {
         1200, 1380, 1560, 1740, 3180, 3360, 3540, 3720, 4560, 4740, 6240, 6420, 6600, 6780
     };
+    private static final int GALAXY_STAR_BURST_DAMAGE_NUMBER_HIT_INTERVAL_MS = 60;
     private static final int[] ECLIPSE_FORCE_ATTACK_TIMES_MS = {
         1200, 1380, 1560, 1740, 1920, 2100, 2280, 2340,
         3120, 3300, 3480, 3660, 3840, 4020, 4200, 4260
@@ -283,6 +292,31 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
         return (int) Math.max(1, Math.min(Integer.MAX_VALUE, skillDamage));
     }
 
+    private static List<Integer> createFallbackCloseDamageTemplate(
+            Character chr,
+            StatEffect effect,
+            int attackCount
+    ) {
+        int maximumDamage = calculateFallbackCloseDamage(chr, effect);
+        int masteryValue = 0;
+        if (chr.getJob().isA(Job.DAWNWARRIOR1)) {
+            Skill mastery = SkillFactory.getSkill(DawnWarrior.SWORD_MASTERY);
+            int masteryLevel = mastery == null ? 0 : Math.max(0, chr.getSkillLevel(mastery));
+            // 11100000 stores mastery as ceil(skillLevel / 2), added to the
+            // legacy physical-damage range's base 10% lower bound.
+            masteryValue = Math.min(10, (masteryLevel + 1) / 2);
+        }
+        int minimumDamage = (int) Math.max(
+                1,
+                Math.round((double) maximumDamage * (10 + masteryValue * 5) / 100.0)
+        );
+        List<Integer> result = new ArrayList<>(attackCount);
+        for (int index = 0; index < attackCount; index++) {
+            result.add(Randomizer.rand(minimumDamage, maximumDamage));
+        }
+        return result;
+    }
+
     private static List<Integer> adaptDamageTemplate(
             List<Integer> source,
             int attackCount,
@@ -323,7 +357,7 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
             List<Integer> damageTemplate
     ) {
         Map<Integer, List<Integer>> liveDamage = new LinkedHashMap<>();
-        if (attackBounds != null && !damageTemplate.isEmpty()) {
+        if (attackBounds != null) {
             List<MapObject> targets = expectedMap.getMapObjectsInBox(
                     attackBounds,
                     Collections.singletonList(MapObjectType.MONSTER)
@@ -355,7 +389,10 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
             MapleMap expectedMap,
             Rectangle attackBounds,
             int mobCount,
-            List<Integer> damageTemplate
+            List<Integer> damageTemplate,
+            StatEffect fallbackEffect,
+            LocalDamageNumberMode damageNumberMode,
+            int damageNumberHitIntervalMs
     ) {
         if (!canContinueAnimatedAttack(chr, expectedMap)) {
             return -1;
@@ -369,6 +406,14 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
         );
         if (liveDamage.isEmpty()) {
             return 0;
+        }
+        if (damageTemplate.isEmpty()) {
+            List<Integer> fallbackDamage = createFallbackCloseDamageTemplate(
+                    chr, fallbackEffect, Math.max(1, Math.min(15, fallbackEffect.getAttackCount()))
+            );
+            liveDamage.replaceAll(
+                    (objectId, ignored) -> new ArrayList<>(fallbackDamage)
+            );
         }
 
         int packedCount = (Math.min(15, liveDamage.size()) << 4) | (attack.numDamage & 0xF);
@@ -385,6 +430,11 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
         );
         chr.sendPacket(repeatedAttack);
         expectedMap.broadcastMessage(chr, repeatedAttack, false, true);
+        if (damageNumberMode == LocalDamageNumberMode.INDEXED) {
+            showIndexedDamageNumbers(
+                    chr, expectedMap, liveDamage, damageNumberHitIntervalMs
+            );
+        }
 
         for (Map.Entry<Integer, List<Integer>> entry : liveDamage.entrySet()) {
             Monster monster = expectedMap.getMonsterByOid(entry.getKey());
@@ -395,7 +445,9 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
             for (Integer hit : entry.getValue()) {
                 damage = (int) Math.min(Integer.MAX_VALUE, (long) damage + decodeRepeatedDamage(hit));
             }
-            chr.sendPacket(PacketCreator.damageMonster(monster.getObjectId(), damage));
+            if (damageNumberMode == LocalDamageNumberMode.TOTAL) {
+                chr.sendPacket(PacketCreator.damageMonster(monster.getObjectId(), damage));
+            }
             monster.aggroMonsterDamage(chr, damage);
             expectedMap.damageMonster(chr, monster, damage);
         }
@@ -414,6 +466,35 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
             }
             chr.sendPacket(PacketCreator.damageMonster(monster.getObjectId(), damage));
         }
+    }
+
+    private static void showCapturedIndexedDamageNumbers(
+            AttackInfo attack,
+            Character chr,
+            MapleMap expectedMap
+    ) {
+        showCapturedIndexedDamageNumbers(
+                attack, chr, expectedMap, INDEXED_DAMAGE_NUMBER_HIT_INTERVAL_MS
+        );
+    }
+
+    private static void showCapturedIndexedDamageNumbers(
+            AttackInfo attack,
+            Character chr,
+            MapleMap expectedMap,
+            int damageNumberHitIntervalMs
+    ) {
+        Map<Integer, List<Integer>> visibleDamage = new LinkedHashMap<>();
+        for (Map.Entry<Integer, List<Integer>> entry : attack.allDamage.entrySet()) {
+            Monster monster = expectedMap.getMonsterByOid(entry.getKey());
+            if (monster == null || !monster.isAlive() || entry.getValue() == null) {
+                continue;
+            }
+            visibleDamage.put(monster.getObjectId(), entry.getValue());
+        }
+        showIndexedDamageNumbers(
+                chr, expectedMap, visibleDamage, damageNumberHitIntervalMs
+        );
     }
 
     private static boolean usesFixedThunderBreakerOrigin(int skillId) {
@@ -572,9 +653,6 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
             List<Integer> damageTemplate
     ) {
         Map<Integer, List<Integer>> result = new LinkedHashMap<>();
-        if (damageTemplate.isEmpty()) {
-            return result;
-        }
         List<Monster> monsters = new ArrayList<>(expectedMap.getAllMonsters());
         monsters.removeIf(monster -> !monster.isAlive()
                 || (attackBounds != null && !attackBounds.contains(monster.getPosition())));
@@ -602,7 +680,7 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
             StatEffect replayEffect,
             StatEffect targetingEffect,
             Point fixedAttackOrigin,
-            boolean showLocalDamageNumbers,
+            LocalDamageNumberMode damageNumberMode,
             boolean logReplayTargets
     ) {
         if (!canContinueAnimatedAttack(chr, expectedMap)) {
@@ -660,6 +738,14 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
         if (damage.isEmpty()) {
             return;
         }
+        if (damageTemplate.isEmpty()) {
+            List<Integer> fallbackDamage = createFallbackCloseDamageTemplate(
+                    chr, replayEffect, replayAttackCount
+            );
+            damage.replaceAll(
+                    (objectId, ignored) -> new ArrayList<>(fallbackDamage)
+            );
+        }
         int packedCount = (damage.size() << 4) | (replayAttackCount & 0xF);
         Packet packet = PacketCreator.closeRangeAttack(
                 chr,
@@ -674,6 +760,9 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
         );
         chr.sendPacket(packet);
         expectedMap.broadcastMessage(chr, packet, false, true);
+        if (damageNumberMode == LocalDamageNumberMode.INDEXED) {
+            showIndexedDamageNumbers(chr, expectedMap, damage);
+        }
         int appliedTargets = 0;
         long appliedDamage = 0;
         for (Map.Entry<Integer, List<Integer>> entry : damage.entrySet()) {
@@ -685,7 +774,7 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
             for (Integer hit : entry.getValue()) {
                 total = (int) Math.min(Integer.MAX_VALUE, (long) total + decodeRepeatedDamage(hit));
             }
-            if (showLocalDamageNumbers) {
+            if (damageNumberMode == LocalDamageNumberMode.TOTAL) {
                 chr.sendPacket(PacketCreator.damageMonster(monster.getObjectId(), total));
             }
             monster.aggroMonsterDamage(chr, total);
@@ -728,11 +817,6 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
         int attackCount = Math.max(1, Math.min(15, effect.getAttackCount()));
         int mobCount = Math.max(1, Math.min(15, effect.getMobCount()));
         List<Integer> sourceDamageTemplate = copyCapturedDamageTemplate(attack);
-        if (sourceDamageTemplate.isEmpty()) {
-            sourceDamageTemplate = Collections.singletonList(
-                    calculateFallbackCloseDamage(chr, effect)
-            );
-        }
         List<Integer> damageTemplate = adaptDamageTemplate(
                 sourceDamageTemplate,
                 attackCount,
@@ -751,7 +835,7 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
                 return;
             }
             if (tickIndex == 0) {
-                showCapturedDamageNumbers(attack, chr, expectedMap);
+                showCapturedIndexedDamageNumbers(attack, chr, expectedMap);
                 applyAttack(attack, chr, effect.getAttackCount());
             } else {
                 repeatTrackingCloseAttack(
@@ -765,7 +849,7 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
                         effect,
                         effect,
                         null,
-                        true,
+                        LocalDamageNumberMode.INDEXED,
                         tickIndex == COSMOS_ATTACK_TIMES_MS.length - 1
                 );
             }
@@ -797,11 +881,6 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
         int replayAttackCount = Math.max(1, Math.min(15, replayEffect.getAttackCount()));
         int mobCount = Math.max(1, Math.min(15, replayEffect.getMobCount()));
         List<Integer> sourceDamageTemplate = copyCapturedDamageTemplate(attack);
-        if (sourceDamageTemplate.isEmpty()) {
-            sourceDamageTemplate = Collections.singletonList(
-                    calculateFallbackCloseDamage(chr, originalEffect)
-            );
-        }
         List<Integer> damageTemplate = adaptDamageTemplate(
                 sourceDamageTemplate,
                 replayAttackCount,
@@ -837,7 +916,9 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
                         replayEffect,
                         targetingEffect,
                         fixedAttackOrigin,
-                        showLocalDamageNumbers,
+                        showLocalDamageNumbers
+                                ? LocalDamageNumberMode.TOTAL
+                                : LocalDamageNumberMode.NONE,
                         logReplayTargets
                 );
             }, attackTimesMs[index]);
@@ -856,8 +937,10 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
         StatEffect thunderEffect = thunderSkill.getEffect(thunderLevel);
         List<Integer> sourceDamageTemplate = copyCapturedDamageTemplate(attack);
         if (sourceDamageTemplate.isEmpty()) {
-            sourceDamageTemplate = Collections.singletonList(
-                    calculateFallbackCloseDamage(chr, originalEffect)
+            sourceDamageTemplate = createFallbackCloseDamageTemplate(
+                    chr,
+                    originalEffect,
+                    Math.max(1, Math.min(15, thunderEffect.getAttackCount()))
             );
         }
         List<Integer> damageTemplate = adaptDamageTemplate(
@@ -916,11 +999,6 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
         Skill originalSkill = SkillFactory.getSkill(attack.skill);
         StatEffect originalEffect = originalSkill.getEffect(chr.getSkillLevel(originalSkill));
         List<Integer> sourceDamageTemplate = copyCapturedDamageTemplate(attack);
-        if (sourceDamageTemplate.isEmpty()) {
-            sourceDamageTemplate = Collections.singletonList(
-                    calculateFallbackCloseDamage(chr, originalEffect)
-            );
-        }
         int[] times = {
             LIGHTNING_SPEAR_FINISH_TIMES_MS[0],
             LIGHTNING_SPEAR_GIANT_THUNDER_TIMES_MS[0],
@@ -963,7 +1041,7 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
                         replayEffect,
                         replayEffect,
                         null,
-                        false,
+                        LocalDamageNumberMode.NONE,
                         false
                 );
                 if (stageIndex == times.length - 1) {
@@ -1059,7 +1137,9 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
             AttackInfo attack,
             Character chr,
             int attackCount,
-            int[] attackTimesMs
+            int[] attackTimesMs,
+            LocalDamageNumberMode damageNumberMode,
+            int damageNumberHitIntervalMs
     ) {
         MapleMap expectedMap = chr.getMap();
         Skill skill = SkillFactory.getSkill(attack.skill);
@@ -1095,7 +1175,13 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
                     return;
                 }
                 if (tickIndex == 0) {
-                    showCapturedDamageNumbers(attack, chr, expectedMap);
+                    if (damageNumberMode == LocalDamageNumberMode.INDEXED) {
+                        showCapturedIndexedDamageNumbers(
+                                attack, chr, expectedMap, damageNumberHitIntervalMs
+                        );
+                    } else if (damageNumberMode == LocalDamageNumberMode.TOTAL) {
+                        showCapturedDamageNumbers(attack, chr, expectedMap);
+                    }
                     applyAttack(attack, chr, attackCount);
                     log.info(
                             "{} first skill={} tick=1/{} targets={}",
@@ -1111,7 +1197,10 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
                             expectedMap,
                             attackBounds,
                             mobCount,
-                            damageTemplate
+                            damageTemplate,
+                            effect,
+                            damageNumberMode,
+                            damageNumberHitIntervalMs
                     );
                     if (tickIndex == 1 || tickIndex == attackTimesMs.length - 1) {
                         log.info(
@@ -1413,13 +1502,25 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
             );
         } else if (attack.skill == DawnWarrior.GALAXY_STAR_BURST) {
             chr.sendPacket(PacketCreator.showEffect(GALAXY_STAR_BURST_VIDEO_LAYER));
-            scheduleAnimatedAttacks(attack, chr, attackCount, GALAXY_STAR_BURST_ATTACK_TIMES_MS);
+            scheduleAnimatedAttacks(
+                    attack, chr, attackCount, GALAXY_STAR_BURST_ATTACK_TIMES_MS,
+                    LocalDamageNumberMode.INDEXED,
+                    GALAXY_STAR_BURST_DAMAGE_NUMBER_HIT_INTERVAL_MS
+            );
         } else if (attack.skill == DawnWarrior.ECLIPSE_FORCE) {
             chr.sendPacket(PacketCreator.showEffect(ECLIPSE_FORCE_VIDEO_LAYER));
-            scheduleAnimatedAttacks(attack, chr, attackCount, ECLIPSE_FORCE_ATTACK_TIMES_MS);
+            scheduleAnimatedAttacks(
+                    attack, chr, attackCount, ECLIPSE_FORCE_ATTACK_TIMES_MS,
+                    LocalDamageNumberMode.INDEXED,
+                    INDEXED_DAMAGE_NUMBER_HIT_INTERVAL_MS
+            );
         } else if (attack.skill == DawnWarrior.SOUL_ECLIPSE) {
             chr.sendPacket(PacketCreator.showEffect(SOUL_ECLIPSE_VIDEO_LAYER));
-            scheduleAnimatedAttacks(attack, chr, attackCount, SOUL_ECLIPSE_ATTACK_TIMES_MS);
+            scheduleAnimatedAttacks(
+                    attack, chr, attackCount, SOUL_ECLIPSE_ATTACK_TIMES_MS,
+                    LocalDamageNumberMode.INDEXED,
+                    INDEXED_DAMAGE_NUMBER_HIT_INTERVAL_MS
+            );
         } else if (attack.skill == DawnWarrior.COSMOS) {
             scheduleCosmosAttacks(attack, chr);
         } else if (attack.skill == ThunderBreaker.SEA_DRAGON_SPIRAL) {

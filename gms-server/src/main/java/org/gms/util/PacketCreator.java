@@ -124,6 +124,8 @@ public class PacketCreator {
     private static final Logger log = LoggerFactory.getLogger(PacketCreator.class);
     private static final long CLIENT_BOSS_HP_BAR_SIZE = Integer.MAX_VALUE;
     private static final int BOSS_HP_BAR_COLOR_COUNT = 7;
+    private static final int INDEXED_DAMAGE_NUMBER_MARKER = 0x80;
+    private static final int MAX_INDEXED_DAMAGE_NUMBER_HITS = 15;
     public static final List<Pair<Stat, Integer>> EMPTY_STATUPDATE = Collections.emptyList();
     private final static long FT_UT_OFFSET = 116444736010800000L + (10000L * TimeZone.getDefault().getOffset(System.currentTimeMillis())); // normalize with timezone offset suggested by Ari
     private final static long DEFAULT_TIME = 150842304000000000L;//00 80 05 BB 46 E6 17 02
@@ -4152,6 +4154,23 @@ public class PacketCreator {
 
     public static Packet damageMonster(int oid, int damage) {
         return damageMonster(oid, damage, 0, 0);
+    }
+
+    /**
+     * Creates one caster-only display line for the indexed damage-number client hook.
+     * This packet does not apply monster damage; callers must keep real damage settlement separate.
+     */
+    public static Packet indexedDamageMonsterNumber(int oid, int damage, int hitIndex) {
+        if (hitIndex < 0 || hitIndex >= MAX_INDEXED_DAMAGE_NUMBER_HITS) {
+            throw new IllegalArgumentException("hitIndex must be between 0 and 14");
+        }
+        final OutPacket p = OutPacket.create(SendOpcode.DAMAGE_MONSTER);
+        p.writeInt(oid);
+        p.writeByte(INDEXED_DAMAGE_NUMBER_MARKER | hitIndex);
+        p.writeInt(damage);
+        p.writeInt(0);
+        p.writeInt(0);
+        return p;
     }
 
     public static Packet healMonster(int oid, int heal, long curhp, long maxhp) {

@@ -291,6 +291,26 @@ def test_server_controller_covers_tms_lucid_mechanics_and_timing():
     assert "skillId == 201" not in source
 
 
+def test_lucid_control_effects_have_boss_specific_cooldowns():
+    compat = (
+        ROOT / "gms-server/src/main/java/org/gms/server/life/LucidBossCompat.java"
+    ).read_text(encoding="utf-8")
+    monster = (
+        ROOT / "gms-server/src/main/java/org/gms/server/life/Monster.java"
+    ).read_text(encoding="utf-8")
+    life_factory = (
+        ROOT / "gms-server/src/main/java/org/gms/server/life/LifeFactory.java"
+    ).read_text(encoding="utf-8")
+
+    assert "CONTROL_EFFECT_COOLDOWN_MS = 60_000" in compat
+    assert "mobId == LUCID_P3 && level == SEDUCE_P3_LEVEL" in compat
+    assert "mobId == LUCID_P1 && attackPosition == 1" in compat
+    assert "mobId == LUCID_P2 && attackPosition == 2" in compat
+    assert "LucidBossCompat.skillCooldownMillis(" in monster
+    assert "LucidBossCompat.usesAttackCooldown(getId(), attackPos)" in monster
+    assert "LucidBossCompat.attackCooldownMillis(mid, i, coolTime)" in life_factory
+
+
 def test_event_scripts_start_stop_and_transition_the_controller():
     for tree in ("gms-server/scripts", "gms-server/scripts-zh-CN"):
         source = (ROOT / tree / "event/LucidBattle.js").read_text(encoding="utf-8")
@@ -305,7 +325,8 @@ def test_event_scripts_start_stop_and_transition_the_controller():
             source.index("function playerDisconnected")
         ]
         assert "player.enableActions();" in revive
-        assert "changeMap(" not in revive
+        assert "reviveMap.movePlayer(player, reviveMap.getPortal(0).getPosition());" in revive
+        assert "player.sendPacket(reviveMovement);" in revive
 
 
 def test_unified_client_hook_routes_all_lucid_scene_markers():

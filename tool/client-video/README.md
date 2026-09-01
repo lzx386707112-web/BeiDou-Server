@@ -19,7 +19,7 @@
 | 正式技能 | 技能 ID | MCV | 帧数 | 时长 |
 | --- | ---: | --- | ---: | ---: |
 | 银河星爆 | `11121005` | `galaxy-star-burst.mcv` | 119 | 7140ms |
-| 全蚀之力 | `11121006` | `eclipse-force.mcv` | 52 | 5220ms |
+| 全蚀之力 | `11121006` | `eclipse-force.mcv` | 87 | 5220ms |
 | 灵魂蚀日 | `11121008` | `soul-eclipse.mcv` | 159 | 20000ms |
 
 三者均为 `1280x720` VP9 颜色流 + Alpha 流。独立测试技能 `11121013` 已删除，正式技能直接触发视频。
@@ -401,13 +401,13 @@ rtk python3 tool/scripts/patch-client/patch_dawn_warrior_skill_dll_loader.py
 
 ## 生成和验证 MCV
 
-导出器从迁移脚本临时生成的以下 WZ 节点读取三段正式演出：
+银河星爆和灵魂蚀日仍从迁移脚本临时生成的以下 WZ 节点读取。全蚀之力直接读取 MS 导出的 `11141503/screen` 43帧和 `11141504/screen` 44帧，避免中间 IMG 旧抽样策略再次丢帧：
 
 ```text
 clien/Data/Map/Effect.img
 customSkill/dawnWarrior/galaxyStarBurst
-customSkill/dawnWarrior/fullEclipseMale
 customSkill/dawnWarrior/soulEclipse
+/Users/lizixian/Documents/mxd/TMS/MapleStory-MS-Export/DawnWarrior
 ```
 
 完整生成顺序：
@@ -418,7 +418,7 @@ rtk python3 tool/client-video/export_dawn_warrior_mcvs.py
 rtk python3 tool/client-video/finalize_dawn_warrior_video_skills.py
 ```
 
-最后一步必须在 MCV 成功生成后执行，因为它会从最终 `Effect.img` 删除导出源。默认输出：
+最后一步必须在 MCV 成功生成后执行，因为它会从最终 `Effect.img` 删除银河星爆和灵魂蚀日的导出源。默认输出：
 
 ```text
 clien/Data/Video/galaxy-star-burst.mcv
@@ -426,7 +426,7 @@ clien/Data/Video/eclipse-force.mcv
 clien/Data/Video/soul-eclipse.mcv
 ```
 
-导出参数为 VP9：颜色 CRF 24、Alpha CRF 16、I420、无音频。每个 Canvas 的 delay 会写入逐帧 delay 表；灵魂蚀日的 18030ms 源演出按比例校准到 TMS `time=20` 的 20000ms。动态画面保留源 Alpha；银河星爆背景 Alpha 为220，灵魂蚀日暖色背景 Alpha 为145。
+导出参数为 VP9：颜色 CRF 24、Alpha CRF 16、I420、无音频。全蚀之力完整保留87张源视频帧和每帧60ms；其他演出的每个 Canvas delay 会写入逐帧 delay 表。灵魂蚀日的18030ms源演出按比例校准到 TMS `time=20` 的20000ms。动态画面保留源 Alpha；银河星爆背景 Alpha 为220，灵魂蚀日暖色背景 Alpha 为145。
 
 灵魂蚀日的 `400011088/screen1` 源轨是684x384半分辨率资源，导出前按2倍缩放到1368x768参考画布。若按1倍导出，三个黄色边缘帧会只出现在中央小矩形内。
 
@@ -442,7 +442,7 @@ rtk tool/client-video/build/mcv_probe clien/Data/Video/soul-eclipse.mcv
 
 ```text
 codec=VP90 size=1280x720 frames=119 alpha=yes duration_ms=7140 bytes=6587446
-codec=VP90 size=1280x720 frames=52 alpha=yes duration_ms=5220 bytes=8173516
+codec=VP90 size=1280x720 frames=87 alpha=yes duration_ms=5220 bytes=10902999
 codec=VP90 size=1280x720 frames=159 alpha=yes duration_ms=20000 bytes=6645874
 ```
 

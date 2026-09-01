@@ -1545,8 +1545,10 @@ public class Monster extends AbstractLoadedLife {
         Runnable r = () -> mons.clearSkill(skill.getId());
 
         MobClearSkillService service = (MobClearSkillService) map.getChannelServer().getServiceAccess(ChannelServices.MOB_CLEAR_SKILL);
-        service.registerMobClearSkillAction(
-                mmap.getId(), r, KaringBossCompat.skillCooldownMillis(this, skill));
+        long cooldown = KaringBossCompat.skillCooldownMillis(this, skill);
+        cooldown = LucidBossCompat.skillCooldownMillis(
+                getId(), msId.type().getId(), msId.level(), cooldown);
+        service.registerMobClearSkillAction(mmap.getId(), r, cooldown);
     }
 
     private void clearSkill(MobSkillId msId) {
@@ -1561,7 +1563,9 @@ public class Monster extends AbstractLoadedLife {
     public int canUseAttack(int attackPos, boolean isSkill) {
         monsterLock.lock();
         try {
-            if (KaringBossCompat.isKaringBoss(getId()) && usedAttacks.contains(attackPos)) {
+            if ((KaringBossCompat.isKaringBoss(getId())
+                    || LucidBossCompat.usesAttackCooldown(getId(), attackPos))
+                    && usedAttacks.contains(attackPos)) {
                 return -1;
             }
 

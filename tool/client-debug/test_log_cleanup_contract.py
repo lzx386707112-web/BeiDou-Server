@@ -22,6 +22,10 @@ class LogCleanupContractTest(unittest.TestCase):
             "KaringSceneCompat.log",
             "CreateThread",
         ),
+        "tool/client-debug/indexed-damage-number-compat/IndexedDamageNumberCompat.cpp": (
+            "IndexedDamageNumberCompat.log",
+            "CreateThread",
+        ),
         "tool/client-debug/fps-limit/BeiDouFpsLimit.cpp": (
             "BeiDou30FpsLimit.log",
             "CreateThread",
@@ -55,6 +59,27 @@ class LogCleanupContractTest(unittest.TestCase):
         cleanup = init_paths.index("RemoveDirectoryTree(g_diagnosticsDir)")
         create = init_paths.index("CreateDirectoryW(g_diagnosticsDir")
         self.assertLess(cleanup, create)
+
+    def test_skill_ui_incident_bundle_covers_the_full_client_chain(self) -> None:
+        source = (
+            ROOT / "tool/client-debug/wz_file_logger/WzFileLogger.cpp"
+        ).read_text(encoding="utf-8")
+        for required in (
+            "incident_ui_message",
+            "incident_resource_read",
+            "incident_mapping",
+            "first_chance_cpp",
+            "flash-null",
+            "error-dialog",
+            "MessageBoxIndirectA",
+            "FatalAppExitA",
+            'L"Data\\\\Skill\\\\412.img"',
+            'L"Data\\\\String\\\\Skill.img"',
+            'L"EquipSlotDiagnostic.log"',
+            'L"BeiDouSetItemCompat.log"',
+        ):
+            with self.subTest(required=required):
+                self.assertIn(required, source)
 
 
 if __name__ == "__main__":

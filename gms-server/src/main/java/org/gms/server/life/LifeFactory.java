@@ -621,6 +621,7 @@ public class LifeFactory {
             int mpCon = DataTool.getIntConvert("info/conMP", monsterAttackData, 0);
             int impactDelay = DataTool.getIntConvert("info/attackAfter", monsterAttackData, 0);
             int coolTime = KaringBossCompat.attackCooldownMillis(mid, i, impactDelay);
+            coolTime = LucidBossCompat.attackCooldownMillis(mid, i, coolTime);
             attackInfos.add(new MobAttackInfoHolder(i, mpCon, coolTime, animationTime));
             i++;
         }
