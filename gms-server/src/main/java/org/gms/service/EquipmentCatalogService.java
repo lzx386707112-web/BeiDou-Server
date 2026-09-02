@@ -102,7 +102,8 @@ public class EquipmentCatalogService {
 
     public EquipmentCatalogPageDTO catalog(String keyword, String category,
                                            Integer requestedPage, Integer requestedPageSize,
-                                           Boolean cashFilter, String weaponTypeFilter) {
+                                           Boolean cashFilter, String weaponTypeFilter,
+                                           Integer jobFilter, Integer minLevelFilter, Integer maxLevelFilter) {
         CatalogData data = requireData();
         String query = normalize(keyword);
         String categoryFilter = category == null ? "" : category.trim();
@@ -142,6 +143,9 @@ public class EquipmentCatalogService {
         List<CatalogItem> matched = base.stream()
                 .filter(item -> cashFilter == null || item.cash() == cashFilter)
                 .filter(item -> weaponFilter.isEmpty() || isEquipKind(item, weaponFilter))
+                .filter(item -> jobFilter == null || jobFilter == 0 || matchesJob(item, jobFilter))
+                .filter(item -> minLevelFilter == null || getReqLevel(item) >= minLevelFilter)
+                .filter(item -> maxLevelFilter == null || getReqLevel(item) <= maxLevelFilter)
                 .sorted(Comparator.comparingInt((CatalogItem item) -> matchRank(item, query))
                         .thenComparingInt(CatalogItem::id))
                 .toList();
@@ -299,6 +303,20 @@ public class EquipmentCatalogService {
 
     private static boolean isEquipKind(CatalogItem item, String equipKindName) {
         return equipKindName.equals(item.equipKind());
+    }
+
+    private static boolean matchesJob(CatalogItem item, int jobFilter) {
+        int reqJob = item.stats().getOrDefault("reqJob", 0);
+        // reqJob == 0 表示全职业可用
+        if (reqJob == 0) {
+            return true;
+        }
+        // 检查位掩码：jobFilter 是单个职业的位值（1,2,4,8,16）
+        return (reqJob & jobFilter) != 0;
+    }
+
+    private static int getReqLevel(CatalogItem item) {
+        return item.stats().getOrDefault("reqLevel", 0);
     }
 
 private record CatalogItem(int id, String name, String description,

@@ -32,6 +32,9 @@ export interface EquipmentCatalogParams {
   pageSize?: number;
   cash?: boolean;
   weaponType?: string;
+  job?: number;
+  minLevel?: number;
+  maxLevel?: number;
 }
 
 export function getEquipmentCatalog(params: EquipmentCatalogParams) {

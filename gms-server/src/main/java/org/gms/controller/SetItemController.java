@@ -58,9 +58,12 @@ public class SetItemController {
             @RequestParam(required = false) Integer pageNo,
             @RequestParam(required = false) Integer pageSize,
             @RequestParam(required = false) Boolean cash,
-            @RequestParam(required = false) String weaponType) {
+            @RequestParam(required = false) String weaponType,
+            @RequestParam(required = false) Integer job,
+            @RequestParam(required = false) Integer minLevel,
+            @RequestParam(required = false) Integer maxLevel) {
         return ResultBody.success(equipmentCatalogService.catalog(
-                keyword, category, pageNo, pageSize, cash, weaponType));
+                keyword, category, pageNo, pageSize, cash, weaponType, job, minLevel, maxLevel));
     }
 
     @Tag(name = "/setItem/" + ApiConstant.LATEST)

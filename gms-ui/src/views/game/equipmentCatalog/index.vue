@@ -18,6 +18,38 @@
             @press-enter="applySearch"
             @clear="applySearch"
           />
+          <a-select
+            v-model="filters.job"
+            :placeholder="$t('equipmentCatalog.job.placeholder')"
+            allow-clear
+            :style="{ width: '140px' }"
+            @change="onJobChange"
+          >
+            <a-option :value="0">{{ $t('equipmentCatalog.job.all') }}</a-option>
+            <a-option :value="1">{{ $t('equipmentCatalog.job.warrior') }}</a-option>
+            <a-option :value="2">{{ $t('equipmentCatalog.job.magician') }}</a-option>
+            <a-option :value="4">{{ $t('equipmentCatalog.job.bowman') }}</a-option>
+            <a-option :value="8">{{ $t('equipmentCatalog.job.thief') }}</a-option>
+            <a-option :value="16">{{ $t('equipmentCatalog.job.pirate') }}</a-option>
+          </a-select>
+          <a-input-group compact>
+            <a-input-number
+              v-model="filters.minLevel"
+              :placeholder="$t('equipmentCatalog.level.min')"
+              :min="0"
+              :max="filters.maxLevel || 255"
+              :style="{ width: '100px' }"
+              @change="onLevelChange"
+            />
+            <a-input-number
+              v-model="filters.maxLevel"
+              :placeholder="$t('equipmentCatalog.level.max')"
+              :min="filters.minLevel || 0"
+              :max="255"
+              :style="{ width: '100px' }"
+              @change="onLevelChange"
+            />
+          </a-input-group>
           <a-radio-group v-model="filters.cash" type="button" @change="onCashChange">
             <a-radio value="">{{ $t('equipmentCatalog.cash.all') }}</a-radio>
             <a-radio value="cash">现金 ({{ page.cashCount }})</a-radio>
@@ -149,6 +181,9 @@
     category: '',
     cash: '' as '' | 'cash' | 'normal',
     weaponType: '',
+    job: 0,
+    minLevel: null as number | null,
+    maxLevel: null as number | null,
     pageNo: 1,
     pageSize: 60,
   });
@@ -184,6 +219,9 @@
         category: filters.category || undefined,
         cash: filters.cash === '' ? undefined : filters.cash === 'cash',
         weaponType: filters.weaponType || undefined,
+        job: filters.job || undefined,
+        minLevel: filters.minLevel || undefined,
+        maxLevel: filters.maxLevel || undefined,
         pageNo: filters.pageNo,
         pageSize: filters.pageSize,
       });
@@ -236,6 +274,16 @@
   };
 
   const onCashChange = () => {
+    filters.pageNo = 1;
+    loadData();
+  };
+
+  const onJobChange = () => {
+    filters.pageNo = 1;
+    loadData();
+  };
+
+  const onLevelChange = () => {
     filters.pageNo = 1;
     loadData();
   };
