@@ -47,6 +47,8 @@ public final class LucidBossCompat {
     private static final int PHANTOM_BARRAGE_PREPARE_MS = 2400;
     private static final int PHANTOM_BARRAGE_HIT_INTERVAL_MS = 1000;
     private static final int PHANTOM_BARRAGE_HIT_COUNT = 12;
+    private static final long DRAGON_BREATH_DAMAGE_MS = 6300;
+    private static final long BUTTERFLY_RETURN_DURATION_MS = 3960;
     private static final long RUSH_DURATION_MS = 3000;
     private static final long RUSH_HIT_INTERVAL_MS = 100;
     private static final long CONTROLLER_TICK_MS = 250;
@@ -374,7 +376,11 @@ public final class LucidBossCompat {
                 map.dropMessage(5, "[Lucid] Lucid has become enraged!");
                 map.broadcastMessage(PacketCreator.showEffect(BUTTERFLY_BURST_EFFECT));
                 scheduleDamage(1350, 30, null, "butterfly-burst");
-                removeMobs(Set.of(BUTTERFLY_P1, BUTTERFLY_P2));
+                TimerManager.getInstance().schedule(() -> {
+                    if (active && isCurrentBossAlive()) {
+                        removeMobs(Set.of(BUTTERFLY_P1, BUTTERFLY_P2));
+                    }
+                }, BUTTERFLY_RETURN_DURATION_MS);
             }
             nextButterfly = now + butterflyIntervalMillis(hpPercent);
         }
@@ -402,7 +408,7 @@ public final class LucidBossCompat {
             map.dropMessage(5, "[Lucid] Lucid is preparing a powerful attack!");
             map.broadcastMessage(PacketCreator.showEffect(
                     phase == PHASE_ONE ? DRAGON_P1_EFFECT : DRAGON_P2_EFFECT));
-            scheduleDamage(4650, 100, null, "dragon-breath");
+            scheduleDamage(DRAGON_BREATH_DAMAGE_MS, 100, null, "dragon-breath");
         }
 
         private void castLaserRain() {
@@ -410,6 +416,12 @@ public final class LucidBossCompat {
             map.broadcastMessage(PacketCreator.showEffect(LASER_RAIN_EFFECT));
             scheduleDamage(1260, 18, null, "laser-rain-1");
             scheduleDamage(3000, 18, null, "laser-rain-2");
+            TimerManager.getInstance().schedule(() -> {
+                if (active && phase == PHASE_TWO && isCurrentBossAlive()
+                        && countMobs(GOLEM_P2) < MAX_GOLEMS) {
+                    spawnGroundMob(GOLEM_P2, randomGroundPoint(PHASE_TWO));
+                }
+            }, 3000);
         }
 
         private void castPhantomBarrage() {

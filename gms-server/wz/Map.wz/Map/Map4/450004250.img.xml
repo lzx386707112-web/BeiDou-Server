@@ -4,7 +4,7 @@
     <int name="version" value="10"/>
     <int name="cloud" value="0"/>
     <int name="town" value="0"/>
-    <int name="swim" value="1"/>
+    <int name="swim" value="0"/>
     <float name="mobRate" value="1.0"/>
     <string name="bgm" value="Bgm46/BrokenDream"/>
     <string name="mapMark" value="Lacheln"/>
@@ -2137,10 +2137,16 @@
       <string name="pn" value="pt00"/>
       <int name="x" value="652"/>
       <int name="y" value="320"/>
-      <int name="pt" value="7"/>
+      <int name="pt" value="9"/>
       <int name="tm" value="999999999"/>
       <string name="tn" value=""/>
-      <string name="script" value="lucid_exit"/>
+      <string name="script" value="pt00_450004250"/>
+      <int name="delay" value="1000"/>
+      <int name="horizontalImpact" value="0"/>
+      <int name="hRange" value="1600"/>
+      <int name="vRange" value="200"/>
+      <int name="hideTooltip" value="0"/>
+      <int name="onlyOnce" value="0"/>
     </imgdir>
   </imgdir>
 </imgdir>

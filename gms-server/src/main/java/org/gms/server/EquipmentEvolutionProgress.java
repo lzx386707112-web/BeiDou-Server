@@ -2,101 +2,86 @@ package org.gms.server;
 
 import org.gms.client.Character;
 
-import java.util.Set;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
-/**
- * Tracks progress for the equipment upgrade system (套装进化).
- * - Boss-clear qualifications (permanent).
- * - Kill counts per upgrade stage (reset on failure).
- */
+/** Tracks stage-bound monster kills for the equipment evolution system. */
 public final class EquipmentEvolutionProgress {
-    public static final String BOSS_KEY_PREFIX = "equipment_evolution_boss_";
-    public static final String STAGE_KEY_PREFIX = "equip_upgrade_stage_";
-    public static final String KILL_KEY_PREFIX = "equip_upgrade_kill_";
+    public static final String STAGE_KEY_PREFIX = "equip_upgrade_v2_stage_";
+    public static final String KILL_KEY_PREFIX = "equip_upgrade_v2_kill_";
 
-    /**
-     * Min-level requirement per stage index (0-19).
-     * Matches the killCount.minLevel in the NPC script's ARMOR_STAGES config.
-     */
-    private static final int[] STAGE_MIN_LEVEL = {
-            10, 20, 30, 40, 50, 60, 70, 80, 90, 100,
-            110, 120, 130, 135, 140, 150, 160, 170, 185, 200
-    };
-
-    private static final Set<Integer> QUALIFICATION_BOSSES = Set.of(
-            2220000, 9400610, 9400609, 9400613, 9400612, 9400611, 9400633,
-            3220000, 3220001, 4220001, 5220002, 5220004, 5220001, 5220003,
-            6220000, 6220001, 6090002, 7220001, 7220000, 7220002,
-            8220000, 8220002, 8220009, 8220003,
-            8860000, 8850011,
-            8910100, 8900100, 8920101, 8930100,
-            8870000, 8870200, 8880400, 8880200, 8645009, 8880700, 8880803
+    private static final List<Map<Integer, Integer>> STAGE_KILL_REQUIREMENTS = List.of(
+            requirements(1140100, 100, 2130103, 100, 3230300, 100),
+            requirements(4230125, 100, 4230102, 100, 4130100, 100, 3230100, 100),
+            requirements(6230601, 100, 6230100, 100, 6130208, 100, 7130104, 100, 6130209, 100),
+            requirements(2230103, 100, 3230103, 100, 3230304, 100, 3230400, 100, 6230300, 100),
+            requirements(8140600, 100, 8140701, 100, 8140702, 100, 8141100, 100,
+                    8141300, 100, 9400013, 100, 8140101, 100, 8140111, 100, 9400205, 10),
+            requirements(9420530, 100, 9420533, 100, 9420538, 100, 9420540, 100,
+                    9400542, 100, 9400562, 100),
+            requirements(8190004, 100, 8200008, 100, 8200010, 100, 8220003, 3,
+                    8500002, 3, 9400014, 3, 9400121, 3, 8220004, 3, 8220005, 3, 8220006, 3),
+            requirements(8800002, 10, 9400300, 10, 8510000, 10,
+                    9400549, 20, 9400575, 20, 8150000, 20),
+            requirements(8810018, 10, 8600000, 100, 8600001, 100, 8600002, 100,
+                    8600003, 100, 8600004, 100, 8600005, 100, 8600006, 100,
+                    8610005, 100, 8610006, 100, 8610007, 100, 8610008, 100, 8610009, 100,
+                    8610010, 100, 8610011, 100, 8610012, 100, 8610013, 100, 8610014, 100),
+            requirements(8880142, 1)
     );
 
     private EquipmentEvolutionProgress() {
     }
 
-    public static void recordBossClear(Character chr, int mobId) {
-        if (chr == null || !QUALIFICATION_BOSSES.contains(mobId)) {
+    /** Records only kills required by the character's immediate next armor stage. */
+    public static void recordKill(Character chr, int mobId) {
+        if (chr == null) {
             return;
         }
-        chr.getAbstractPlayerInteraction().saveOrUpdateCharacterExtendValue(
-                BOSS_KEY_PREFIX + mobId, "1"
-        );
-    }
 
-    /**
-     * Increment kill count for the equipment upgrade system when a monster is killed.
-     * Only counts if the monster's level meets the minimum for the player's next upgrade stage.
-     * Armor and weapon share the same kill count (same stage index → same key).
-     *
-     * @param chr    the attacking player
-     * @param mobLevel the killed monster's level
-     */
-    public static void recordKill(Character chr, int mobLevel) {
-        if (chr == null) return;
-
-        // Get current armor and weapon stages
-        int armorStage = getInt(chr, STAGE_KEY_PREFIX + "armor", -1);
-        int weaponStage = getInt(chr, STAGE_KEY_PREFIX + "weapon", -1);
-
-        // Use the lower stage (the one that still needs upgrading)
-        // If both are at the same stage, use that stage
-        // If one is behind, use the behind one
-        int currentStage = Math.min(
-                armorStage < 0 ? Integer.MAX_VALUE : armorStage,
-                weaponStage < 0 ? Integer.MAX_VALUE : weaponStage
-        );
-
-        // Both stages not started yet - count from stage 0
-        if (currentStage == Integer.MAX_VALUE) {
-            currentStage = -1;
+        int completedStage = getInt(chr, STAGE_KEY_PREFIX + "armor", -1);
+        int targetStage = completedStage + 1;
+        if (targetStage < 0 || targetStage >= STAGE_KILL_REQUIREMENTS.size()) {
+            return;
         }
 
-        int nextStage = currentStage + 1;
+        Integer requiredCount = STAGE_KILL_REQUIREMENTS.get(targetStage).get(mobId);
+        if (requiredCount == null) {
+            return;
+        }
 
-        // Already at max stage
-        if (nextStage >= STAGE_MIN_LEVEL.length) return;
-
-        // Check if monster level meets the minimum for next stage
-        if (mobLevel < STAGE_MIN_LEVEL[nextStage]) return;
-
-        incrementKillCount(chr, nextStage);
-    }
-
-    private static void incrementKillCount(Character chr, int stageIndex) {
-        String key = KILL_KEY_PREFIX + stageIndex;
+        String key = KILL_KEY_PREFIX + targetStage + "_" + mobId;
         int current = getInt(chr, key, 0);
+        if (current >= requiredCount) {
+            return;
+        }
         chr.getAbstractPlayerInteraction().saveOrUpdateCharacterExtendValue(
                 key, String.valueOf(current + 1)
         );
     }
 
+    private static Map<Integer, Integer> requirements(int... mobIdAndCountPairs) {
+        if (mobIdAndCountPairs.length % 2 != 0) {
+            throw new IllegalArgumentException("mob requirements must use id/count pairs");
+        }
+        Map<Integer, Integer> result = new LinkedHashMap<>();
+        for (int i = 0; i < mobIdAndCountPairs.length; i += 2) {
+            Integer previous = result.put(mobIdAndCountPairs[i], mobIdAndCountPairs[i + 1]);
+            if (previous != null) {
+                throw new IllegalArgumentException("duplicate mob id " + mobIdAndCountPairs[i]);
+            }
+        }
+        return Map.copyOf(result);
+    }
+
     private static int getInt(Character chr, String key, int defaultValue) {
-        String val = chr.getAbstractPlayerInteraction().getCharacterExtendValue(key);
-        if (val == null || val.isEmpty()) return defaultValue;
+        String value = chr.getAbstractPlayerInteraction().getCharacterExtendValue(key);
+        if (value == null || value.isEmpty()) {
+            return defaultValue;
+        }
         try {
-            return Integer.parseInt(val);
+            return Integer.parseInt(value);
         } catch (NumberFormatException e) {
             return defaultValue;
         }

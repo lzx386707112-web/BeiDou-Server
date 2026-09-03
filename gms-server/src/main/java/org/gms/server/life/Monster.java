@@ -762,8 +762,7 @@ public class Monster extends AbstractLoadedLife {
             attacker.gainExp(_personalExp, _partyExp, true, false, white);
             attacker.increaseEquipExp(_personalExp);
             attacker.raiseQuestMobCount(getId());
-            EquipmentEvolutionProgress.recordBossClear(attacker, getId());
-            EquipmentEvolutionProgress.recordKill(attacker, stats.getLevel());
+            EquipmentEvolutionProgress.recordKill(attacker, getId());
         }
     }
 

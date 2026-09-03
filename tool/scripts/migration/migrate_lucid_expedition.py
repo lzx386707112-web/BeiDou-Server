@@ -101,6 +101,7 @@ GENERATED_BASELINE_SHA256 = {
     },
     "clien/Data/Map/Map/Map4/450004250.img": {
         "d7b82ca94b8bc139f52ccf75ca994b070f5ade1559a6a245fce35a820a8682cd",
+        "6e5e2506ef74a497d067ee3973a0c9c209816464ccda241f5db95eb7a8d7e716",
     },
     "gms-server/wz/Map.wz/Map/Map4/450004000.img.xml": {
         "e3e1fa8223016456cb81cfa68061de12d6a72e0085ad7da9645e3fdc7428ef68",
@@ -110,6 +111,7 @@ GENERATED_BASELINE_SHA256 = {
     },
     "gms-server/wz/Map.wz/Map/Map4/450004250.img.xml": {
         "003c3f0cc82384e8ba1d32a685a800c1296ef0389437448833cd4a8594a6584b",
+        "9bdd9cb1fd6bc716a2462666d6a687c881876eca0d9911d63748661f6bbe520b",
     },
 }
 
@@ -200,8 +202,6 @@ def sanitize_lucid_map(root, map_id: int) -> None:
         arc.set_int(out, "pt", 2)
         arc.set_int(out, "tm", ROUTE_MAP)
         arc.set_string(out, "tn", "sp")
-    elif map_id == 450004250:
-        arc.remove_child(portal_by_name(root, "pt00"), "script")
 
     arc.sanitize_map(root, map_id)
 
@@ -238,8 +238,6 @@ def sanitize_lucid_map(root, map_id: int) -> None:
         arc.set_string(recruit, "tn", "")
         arc.set_string(recruit, "script", "")
     elif map_id == 450004150:
-        set_script_portal(portal_by_name(root, "pt00"), "lucid_exit")
-    elif map_id == 450004250:
         set_script_portal(portal_by_name(root, "pt00"), "lucid_exit")
 
 

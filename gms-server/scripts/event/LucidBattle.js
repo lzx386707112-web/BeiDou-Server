@@ -7,6 +7,18 @@ var exitMap = 450004000;
 var recruitMap = 450004000;
 var eventTime = 30;
 var maxDeaths = 50;
+var flowerExplosionInitialDelay = 2000;
+var flowerExplosionInterval = 2000;
+var flowerExplosionDamageDelay = 1080;
+var flowerExplosionDamagePercent = 35;
+var flowerExplosionEffects = [
+    "customSkill/lucid/flowerExplosionVideoLayer",
+    "customSkill/lucid/flowerExplosion1VideoLayer",
+    "customSkill/lucid/flowerExplosion2VideoLayer",
+    "customSkill/lucid/flowerExplosion3VideoLayer"
+];
+var fallRecoveryPollInterval = 100;
+var fallRecoveryY = 180;
 
 const maxLobbies = 1;
 const LifeFactory = Java.type('org.gms.server.life.LifeFactory');
@@ -14,6 +26,7 @@ const LucidBossCompat = Java.type('org.gms.server.life.LucidBossCompat');
 const PacketCreator = Java.type('org.gms.util.PacketCreator');
 const AbstractAnimatedMapObject = Java.type('org.gms.server.maps.AbstractAnimatedMapObject');
 const Point = Java.type('java.awt.Point');
+const ThreadLocalRandom = Java.type('java.util.concurrent.ThreadLocalRandom');
 
 var eventMaps = [entryMap, phaseTwoMap];
 
@@ -52,6 +65,7 @@ function setup(channel) {
     var eim = em.newInstance("LucidBattle" + channel);
     eim.setProperty("canJoin", "1");
     eim.setIntProperty("phase", 1);
+    eim.setIntProperty("flowerExplosionVariant", -1);
     for (var i = 0; i < eventMaps.length; i++) {
         var map = eim.getInstanceMap(eventMaps[i]);
         map.resetPQ(1);
@@ -61,6 +75,8 @@ function setup(channel) {
     var phaseOneBoss = LifeFactory.getMonster(8880140);
     phaseOneMap.spawnMonsterOnGroundBelow(phaseOneBoss, new Point(1000, 0));
     LucidBossCompat.startPhase(phaseOneMap, phaseOneBoss, 1);
+    eim.schedule("castFlowerExplosion", flowerExplosionInitialDelay);
+    eim.schedule("recoverFallenPlayers", fallRecoveryPollInterval);
     eim.startEventTimer(eventTime * 60000);
     setEventRewards(eim);
     setEventExclusives(eim);
@@ -150,6 +166,80 @@ function disbandParty(eim) {}
 
 function monsterValue(eim, mobId) {
     return mobId == 8880140 || mobId == 8880141 || mobId == 8880142 ? 1 : 0;
+}
+
+function castFlowerExplosion(eim) {
+    if (eim.isEventDisposed() || eim.getIntProperty("phase") != 1) {
+        return;
+    }
+    var map = eim.getInstanceMap(entryMap);
+    var boss = map.getMonsterById(8880140);
+    if (boss == null || !boss.isAlive()) {
+        return;
+    }
+    map.dropMessage(5, "[Lucid] Flower Explosion");
+    var previous = eim.getIntProperty("flowerExplosionVariant");
+    var variant;
+    if (previous < 0 || previous >= flowerExplosionEffects.length) {
+        variant = ThreadLocalRandom.current().nextInt(flowerExplosionEffects.length);
+    } else {
+        variant = ThreadLocalRandom.current().nextInt(flowerExplosionEffects.length - 1);
+        if (variant >= previous) {
+            variant++;
+        }
+    }
+    eim.setIntProperty("flowerExplosionVariant", variant);
+    map.broadcastMessage(PacketCreator.showEffect(flowerExplosionEffects[variant]));
+    eim.schedule("damageFlowerExplosion", flowerExplosionDamageDelay);
+    eim.schedule("castFlowerExplosion", flowerExplosionInterval);
+}
+
+function damageFlowerExplosion(eim) {
+    if (eim.isEventDisposed() || eim.getIntProperty("phase") != 1) {
+        return;
+    }
+    var map = eim.getInstanceMap(entryMap);
+    var boss = map.getMonsterById(8880140);
+    if (boss == null || !boss.isAlive()) {
+        return;
+    }
+    var players = eim.getPlayers();
+    for (var i = 0; i < players.size(); i++) {
+        var player = players.get(i);
+        if (!player.isAlive() || player.getMap() != map) {
+            continue;
+        }
+        var damage = Math.max(
+            1, Math.floor(player.getMaxHp() * flowerExplosionDamagePercent / 100));
+        player.addHP(-damage);
+        map.broadcastMessage(
+            player,
+            PacketCreator.damagePlayer(
+                0, boss.getId(), player.getId(), damage, 0, 0,
+                false, 0, true, boss.getObjectId(), 0, 0),
+            false);
+    }
+}
+
+function recoverFallenPlayers(eim) {
+    if (eim.isEventDisposed()) {
+        return;
+    }
+    if (eim.getIntProperty("phase") >= 2) {
+        var map = eim.getInstanceMap(phaseTwoMap);
+        var destination = map.getPortal(3);
+        if (destination != null) {
+            var players = eim.getPlayers();
+            for (var i = 0; i < players.size(); i++) {
+                var player = players.get(i);
+                if (player.isAlive() && player.getMap() == map
+                        && player.getPosition().y >= fallRecoveryY) {
+                    player.changeMap(map, destination);
+                }
+            }
+        }
+    }
+    eim.schedule("recoverFallenPlayers", fallRecoveryPollInterval);
 }
 
 function monsterKilled(mob, eim, hasKiller) {

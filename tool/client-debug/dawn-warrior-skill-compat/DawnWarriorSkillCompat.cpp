@@ -1428,7 +1428,7 @@ int LucidMarkerCodeFromA4R4G4B4(const uint16_t* pixels) {
     if (pixels[0] == 0xF124 && pixels[1] == 0xF567 &&
         pixels[2] == 0xF89A && pixels[3] == 0xFBCE) {
         const int code = (pixels[4] >> 8) & 0x0F;
-        return code >= 1 && code <= 14 ? 14 + code : -1;
+        return code >= 1 && code <= 15 ? 14 + code : -1;
     }
     return -1;
 }
@@ -1442,7 +1442,7 @@ int LucidMarkerCodeFromA8R8G8B8(const uint32_t* pixels, bool ignoreAlpha) {
         (pixels[3] & colorMask) == (alphaMask | 0x00BBCCEEu)) {
         const int red = static_cast<int>((pixels[4] >> 16) & 0xFF);
         const int code = red / 17;
-        return red == code * 17 && code >= 1 && code <= 14 ? 14 + code : -1;
+        return red == code * 17 && code >= 1 && code <= 15 ? 14 + code : -1;
     }
     return -1;
 }
@@ -1558,6 +1558,7 @@ constexpr KaringSceneMapping kKaringSceneVideos[] = {
     {26, "Data\\Video\\lucid-stained-glass-3.mcv", "VIDEO OK: Lucid stained glass 3 started"},
     {27, "Data\\Video\\lucid-stained-glass-4.mcv", "VIDEO OK: Lucid stained glass 4 started"},
     {28, "Data\\Video\\lucid-stained-glass-5.mcv", "VIDEO OK: Lucid stained glass 5 started"},
+    {29, "Data\\Video\\lucid-flower-explosion.mcv", "VIDEO OK: Lucid flower explosion started"},
 };
 
 bool StartKaringSceneVideo(int markerCode) {

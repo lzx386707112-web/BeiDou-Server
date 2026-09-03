@@ -85,7 +85,8 @@ class MultiChannelContractTest(unittest.TestCase):
 
     def test_karing_spawn_markers_are_detectable_and_routed(self) -> None:
         source = COMPAT.read_text(encoding="utf-8")
-        self.assertEqual(4, source.count("code >= 1 && code <= 14"))
+        self.assertEqual(2, source.count("code >= 1 && code <= 14"))
+        self.assertIn("DecodeLucidMarkerCode", source)
         self.assertIn("pixels[3] != 0xFCDD", source)
         self.assertNotIn("0xFCDE", source)
         self.assertIn('{13, "Data\\\\Video\\\\karing-p2-regen.mcv"', source)
@@ -94,6 +95,10 @@ class MultiChannelContractTest(unittest.TestCase):
         self.assertIn("DetectLucidA8R8G8B8", source)
         self.assertIn('{15, "Data\\\\Video\\\\lucid-dragon-p1.mcv"', source)
         self.assertIn('{28, "Data\\\\Video\\\\lucid-stained-glass-5.mcv"', source)
+        self.assertIn('{29, "Data\\\\Video\\\\lucid-flower-explosion.mcv"', source)
+        self.assertIn('{30, "Data\\\\Video\\\\lucid-flower-explosion-1.mcv"', source)
+        self.assertIn('{31, "Data\\\\Video\\\\lucid-flower-explosion-2.mcv"', source)
+        self.assertIn('{32, "Data\\\\Video\\\\lucid-flower-explosion-3.mcv"', source)
 
     def test_only_karing_dark_pulse_uses_the_ground_anchor_offset(self) -> None:
         source = (VIDEO / "export_karing_boss_mcvs.py").read_text(encoding="utf-8")

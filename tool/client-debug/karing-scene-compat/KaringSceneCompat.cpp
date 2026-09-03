@@ -17,7 +17,7 @@ constexpr size_t kDrawPrimitiveUpVtableIndex = 72;
 constexpr size_t kDrawIndexedPrimitiveUpVtableIndex = 73;
 constexpr UINT kMarkerWidth = 7;
 constexpr UINT kMarkerHeight = 5;
-constexpr int kMarkerCodeCount = 29;
+constexpr int kMarkerCodeCount = 33;
 constexpr DWORD kAttachRetryMilliseconds = 100;
 constexpr int kAttachRetryCount = 600;
 constexpr int kMarkerRearmFrames = 10;
@@ -76,6 +76,10 @@ constexpr SceneMapping kScenes[] = {
     {26, "Data\\Video\\lucid-stained-glass-3.mcv"},
     {27, "Data\\Video\\lucid-stained-glass-4.mcv"},
     {28, "Data\\Video\\lucid-stained-glass-5.mcv"},
+    {29, "Data\\Video\\lucid-flower-explosion.mcv"},
+    {30, "Data\\Video\\lucid-flower-explosion-1.mcv"},
+    {31, "Data\\Video\\lucid-flower-explosion-2.mcv"},
+    {32, "Data\\Video\\lucid-flower-explosion-3.mcv"},
 };
 
 GetAttachedDeviceFn gGetAttachedDevice = nullptr;
@@ -181,13 +185,31 @@ int DetectA8R8G8B8(const uint32_t* pixels, bool ignoreAlpha) {
     return red == code * 17 && code >= 1 && code <= 14 ? code : -1;
 }
 
+int DecodeLucidMarkerCode(int redCode, int greenCode) {
+    if (redCode < 1 || redCode > 15) {
+        return -1;
+    }
+    if (greenCode == 4) {
+        return redCode;
+    }
+    if (greenCode == 5 && redCode <= 3) {
+        return 15 + redCode;
+    }
+    return -1;
+}
+
 int DetectLucidA4R4G4B4(const uint16_t* pixels) {
     if (pixels[0] != 0xF124 || pixels[1] != 0xF567
             || pixels[2] != 0xF89A || pixels[3] != 0xFBCE) {
         return -1;
     }
-    const int code = (pixels[4] >> 8) & 0x0F;
-    return code >= 1 && code <= 14 ? 14 + code : -1;
+    const uint16_t marker = pixels[4];
+    if ((marker & 0xF00F) != 0xF00D) {
+        return -1;
+    }
+    const int code = DecodeLucidMarkerCode(
+        (marker >> 8) & 0x0F, (marker >> 4) & 0x0F);
+    return code > 0 ? 14 + code : -1;
 }
 
 int DetectLucidA8R8G8B8(const uint32_t* pixels, bool ignoreAlpha) {
@@ -200,8 +222,13 @@ int DetectLucidA8R8G8B8(const uint32_t* pixels, bool ignoreAlpha) {
         return -1;
     }
     const int red = static_cast<int>((pixels[4] >> 16) & 0xFF);
-    const int code = red / 17;
-    return red == code * 17 && code >= 1 && code <= 14 ? 14 + code : -1;
+    const int green = static_cast<int>((pixels[4] >> 8) & 0xFF);
+    const int blue = static_cast<int>(pixels[4] & 0xFF);
+    if (red % 17 != 0 || green % 17 != 0 || blue != 0xDD) {
+        return -1;
+    }
+    const int code = DecodeLucidMarkerCode(red / 17, green / 17);
+    return code > 0 ? 14 + code : -1;
 }
 
 int DetectMarker(IDirect3DBaseTexture8* baseTexture) {

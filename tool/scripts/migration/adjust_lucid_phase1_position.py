@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Move Lucid P1 artwork down 50px without changing its server foot point."""
+"""Maintain Lucid P1's 50px adjustment and complete its idle TMS flower."""
 
 from __future__ import annotations
 
@@ -17,20 +17,21 @@ CLIENT = ROOT / "clien/Data/Mob/8880140.img"
 SERVER = ROOT / "gms-server/wz/Mob.wz/8880140.img.xml"
 CLIENT_GIT_PATH = "clien/Data/Mob/8880140.img"
 SERVER_GIT_PATH = "gms-server/wz/Mob.wz/8880140.img.xml"
-BASELINE_CLIENT_SHA256 = "19eb3e121d1b7db402cc46da14c037f81e9b4f30e41e026b786a48fa1083b700"
-BASELINE_SERVER_SHA256 = "0983a7b15be4e4c99a75c5a8e75e984d79f5d552927fa4a7719c773b9a8076bd"
+BASELINE_CLIENT_SHA256 = "ce7c639498db723707040e8d96718161ca5ea8a71ec1050751e8ba70e92d2b41"
+BASELINE_SERVER_SHA256 = "51e60848390e16d4f57f3ac3d247063e4fb79e227216357c428b52645e346582"
 POSITION_SHIFT_Y = 50
 ACTION_ROOTS = (
     "die1", "skill1", "skill2", "attack2",
     "attack1", "stand", "skill3", "skill4",
 )
 EXPECTED_FRAME_COUNT = 173
+FLOWER_STAND_FRAMES = tuple(str(index) for index in range(8))
 
 sys.path.insert(0, str(ROOT / "tool/wz-python"))
 
 from wzpy import WzCanvasProperty, WzImage, WzKey, WzVectorProperty  # noqa: E402
-from wzpy.canvas import decode_canvas  # noqa: E402
-from wzpy.incremental_img import mutate_img  # noqa: E402
+from wzpy.canvas import _read_canvas_bytes, decode_canvas  # noqa: E402
+from wzpy.incremental_img import replace_img_record  # noqa: E402
 
 
 ARC_SCRIPT = ROOT / "tool/scripts/migration/migrate_arcane_river_expansion.py"
@@ -91,29 +92,48 @@ def patch_client(baseline: bytes, current: bytes) -> bytes:
     baseline_image = load_image(baseline)
     baseline_values = action_origin_values(baseline_image)
     current_values = action_origin_values(load_image(current))
-    expected_values = {
-        path: (x, y - POSITION_SHIFT_Y)
-        for path, (x, y) in baseline_values.items()
-    }
-    if current_values == expected_values:
-        return current
-    if current_values != baseline_values:
+    position_only_values = dict(baseline_values)
+    expected_values = dict(position_only_values)
+    for frame in FLOWER_STAND_FRAMES:
+        expected_values[("stand", frame, "origin")] = position_only_values[
+            ("die1", frame, "origin")
+        ]
+    if current_values not in (baseline_values, position_only_values, expected_values):
         changed = [
             "/".join(path) for path in baseline_values
-            if current_values.get(path) not in (baseline_values[path], expected_values[path])
+            if current_values.get(path) not in (
+                baseline_values[path], position_only_values[path], expected_values[path]
+            )
         ]
         raise RuntimeError(f"unexpected existing Lucid origin edits: {changed[:10]}")
 
     result = current
-    approved = set(baseline_values)
-    for path, (x, y) in baseline_values.items():
-        result = mutate_img(
-            result,
-            "edit",
-            path,
-            values={"x": x, "y": y - POSITION_SHIFT_Y},
-            region="GMS",
+    image = load_image(result)
+    for frame in FLOWER_STAND_FRAMES:
+        source = image.root.get(f"die1/{frame}")
+        target = image.root.get(f"stand/{frame}")
+        if not isinstance(source, WzCanvasProperty) or not isinstance(
+                target, WzCanvasProperty):
+            raise RuntimeError(f"missing Lucid flower source frame: die1/{frame}")
+        source_origin = source.child("origin")
+        target_origin = target.child("origin")
+        if not isinstance(source_origin, WzVectorProperty) or not isinstance(
+                target_origin, WzVectorProperty):
+            raise RuntimeError(f"missing Lucid flower origin: {frame}")
+        target.width = source.width
+        target.height = source.height
+        target.format = source.format
+        target.format2 = source.format2
+        target._png_data = _read_canvas_bytes(source)
+        target._png_length = len(target._png_data)
+        target._png_offset = 0
+        target_origin.x = source_origin.x
+        target_origin.y = source_origin.y
+        result = replace_img_record(
+            result, ("stand", frame), target, region="GMS"
         ).data
+
+    approved = {("stand", frame) for frame in FLOWER_STAND_FRAMES}
     arc.verify_raw_record_scope(current, result, approved, allow_additions=False)
     if action_origin_values(load_image(result)) != expected_values:
         raise RuntimeError("Lucid P1 client origin verification failed")
@@ -163,38 +183,54 @@ def block_span(text: str, action: str) -> tuple[int, int]:
 
 def patch_server(baseline: bytes, current: bytes) -> bytes:
     baseline_values = direct_canvas_origins(baseline)
-    current_values = direct_canvas_origins(current)
-    expected_values = {
-        path: (x, y - POSITION_SHIFT_Y)
-        for path, (x, y) in baseline_values.items()
-    }
-    if current_values == expected_values:
-        return current
-    if current_values != baseline_values:
-        raise RuntimeError("unexpected existing Lucid server origin edits")
+    expected_values = dict(baseline_values)
+    for frame in FLOWER_STAND_FRAMES:
+        expected_values[("stand", frame)] = baseline_values[("die1", frame)]
 
-    text = current.decode("utf-8")
-    for action in ACTION_ROOTS:
-        start, end = block_span(text, action)
-        block = text[start:end]
-        for (target_action, frame), (x, y) in baseline_values.items():
-            if target_action != action:
-                continue
-            canvas = re.compile(
-                rf'(<canvas name="{re.escape(frame)}"[^>]*>.*?'
-                rf'<vector name="origin" x="){x}(" y="){y}("/>)',
-                re.DOTALL,
-            )
-            block, count = canvas.subn(
-                rf'\g<1>{x}\g<2>{y - POSITION_SHIFT_Y}\g<3>', block, count=1
-            )
-            if count != 1:
-                raise RuntimeError(f"server origin replacement failed: {action}/{frame}")
-        text = text[:start] + block + text[end:]
+    baseline_root = ET.fromstring(baseline)
+    text = baseline.decode("utf-8")
+    die_start, die_end = block_span(text, "die1")
+    stand_start, stand_end = block_span(text, "stand")
+    stand_block = text[stand_start:stand_end]
+    for frame in FLOWER_STAND_FRAMES:
+        source = baseline_root.find(f'./imgdir[@name="die1"]/canvas[@name="{frame}"]')
+        target = baseline_root.find(f'./imgdir[@name="stand"]/canvas[@name="{frame}"]')
+        if source is None or target is None:
+            raise RuntimeError(f"missing server flower Canvas: {frame}")
+        source_origin = source.find('./vector[@name="origin"]')
+        target_origin = target.find('./vector[@name="origin"]')
+        if source_origin is None or target_origin is None:
+            raise RuntimeError(f"missing server flower origin: {frame}")
+        canvas_pattern = re.compile(
+            rf'(<canvas name="{frame}" width="){target.get("width")}'
+            rf'(" height="){target.get("height")}(" format="[^"]+">)'
+        )
+        stand_block, count = canvas_pattern.subn(
+            rf'\g<1>{source.get("width")}\g<2>{source.get("height")}\g<3>',
+            stand_block,
+            count=1,
+        )
+        if count != 1:
+            raise RuntimeError(f"server stand dimensions failed: stand/{frame}")
+        origin_pattern = re.compile(
+            rf'(<canvas name="{frame}"[^>]*>.*?<vector name="origin" x=")'
+            rf'{target_origin.get("x")}(" y="){target_origin.get("y")}("/>)',
+            re.DOTALL,
+        )
+        stand_block, count = origin_pattern.subn(
+            rf'\g<1>{source_origin.get("x")}\g<2>{source_origin.get("y")}\g<3>',
+            stand_block,
+            count=1,
+        )
+        if count != 1:
+            raise RuntimeError(f"server stand origin failed: stand/{frame}")
+    text = text[:stand_start] + stand_block + text[stand_end:]
     result = text.encode("utf-8")
     ET.fromstring(result)
     if direct_canvas_origins(result) != expected_values:
         raise RuntimeError("Lucid P1 server origin verification failed")
+    if current not in (baseline, result):
+        raise RuntimeError("unexpected existing Lucid server XML edits")
     return result
 
 
@@ -229,7 +265,8 @@ def main() -> int:
         arc.atomic_write_bytes(SERVER, server_result)
     print(
         f"Lucid P1 position adjusted: frames={EXPECTED_FRAME_COUNT} "
-        f"shiftY={POSITION_SHIFT_Y} visible={visible} "
+        f"shiftY={POSITION_SHIFT_Y} flowerStand={len(FLOWER_STAND_FRAMES)} "
+        f"visible={visible} "
         f"client_sha256={sha256(client_result)} server_sha256={sha256(server_result)}"
     )
     return 0

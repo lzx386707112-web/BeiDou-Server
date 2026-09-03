@@ -131,6 +131,9 @@ def test_phantom_barrage_has_projectile_paths_and_timed_hit_effects():
 
 def test_dragon_shadow_and_end_actions_are_in_both_dragon_timelines():
     proxy, _ = exporter.load_images()
+    assert set(offset[1] for offset in exporter.DRAGON_RIGHT_OFFSETS.values()) == {155}
+    assert set(offset[1] for offset in exporter.DRAGON_WARNING_OFFSETS.values()) == {167}
+    assert set(exporter.DRAGON_ENTRY_DISPLACEMENTS.values()) == {-544}
     for key in ("dragon-p1", "dragon-p2"):
         phase = "phase1" if key == "dragon-p1" else "phase2"
         scene = next(scene for scene in exporter.SCENES if scene.key == key)
@@ -146,13 +149,74 @@ def test_dragon_shadow_and_end_actions_are_in_both_dragon_timelines():
         assert len(endings) == 1
         assert endings[0].end_ms == 11850
         dragon_offset = (exporter.DRAGON_RIGHT_OFFSETS[phase],)
-        assert [layers[index].offsets for index in (4, 6, 7, 8)] == [
-            dragon_offset,
-            dragon_offset,
-            dragon_offset,
-            dragon_offset,
+        warning_offset = (exporter.DRAGON_WARNING_OFFSETS[phase],)
+        assert [layers[index].offsets for index in (4, 6, 8)] == [
+            dragon_offset, dragon_offset, dragon_offset,
         ]
-        assert all(layers[index].offsets == ((0, 0),) for index in (1, 2, 3, 5))
+        assert all(layers[index].offsets == warning_offset for index in (1, 2, 3, 5))
+        entry_y = exporter.DRAGON_ENTRY_DISPLACEMENTS[phase]
+        assert layers[4].motion == ((0, entry_y), (0, entry_y // 2), (0, 0))
+        assert layers[8].motion == ((0, 0), (0, entry_y // 2), (0, entry_y))
+        assert layers[4].end_ms == exporter.DRAGON_ENTRY_END_MS
+        assert layers[7].start_ms == exporter.DRAGON_BREATH_START_MS
+        assert layers[7].end_ms == exporter.DRAGON_EXIT_START_MS
+        assert len(layers[7].offsets) == 5
+        assert len({offset[0] for offset in layers[7].offsets}) == 5
+        assert all(
+            offset[1] == exporter.DRAGON_RIGHT_OFFSETS[phase][1]
+            for offset in layers[7].offsets
+        )
+
+
+def test_flower_explosion_uses_tms_mobskill_238_columns():
+    scenes = tuple(
+        scene for scene in exporter.SCENES
+        if scene.key.startswith("flower-explosion")
+    )
+    proxy, _ = exporter.load_images()
+    assert exporter.FLOWER_CANVAS_PATH.as_posix().endswith(
+        "Skill/MobSkill/_Canvas/238.img"
+    )
+    assert len(scenes) == len(exporter.FLOWER_ROTATION_LAYOUTS) == 4
+    assert [scene.marker_code for scene in scenes] == [15, 16, 17, 18]
+    assert len({scene.marker_name for scene in scenes}) == 4
+    assert len({scene.output_name for scene in scenes}) == 4
+    rendered_layouts = []
+    for scene in scenes:
+        layers = exporter.scene_layers(proxy, exporter.arc.CanvasMaterializer(), scene)
+        assert scene.duration_ms == 2000
+        assert len(layers) == 6
+        assert sum(len(layer.offsets) for layer in layers) == 9
+        layout = tuple(angle for layer in layers for angle in layer.rotations)
+        rendered_layouts.append(layout)
+        assert any(angle < 0 for angle in layout)
+        assert any(angle > 0 for angle in layout)
+        assert max(frame[1].height for layer in layers for frame in layer.frames) >= 736
+    assert tuple(rendered_layouts) == exporter.FLOWER_ROTATION_LAYOUTS
+    assert len(set(rendered_layouts)) == 4
+
+
+def test_butterflies_return_to_lucid_with_the_tms_phase_two_sequences():
+    scene = next(scene for scene in exporter.SCENES if scene.key == "butterfly-burst")
+    proxy, _ = exporter.load_images()
+    layers = exporter.scene_layers(proxy, exporter.arc.CanvasMaterializer(), scene)
+    assert scene.duration_ms == 3960
+    assert len(layers) == 24
+    assert all(layers[index].motion is not None for index in range(0, 24, 4))
+    assert all(
+        layers[index].motion[-1] == layers[index + 1].offsets[0]
+        for index in range(0, 24, 4)
+    )
+    source = (ROOT / "tool/client-video/export_lucid_boss_mcvs.py").read_text(
+        encoding="utf-8"
+    )
+    for path in ("fly_phase2", "change", "prepare", "erase"):
+        assert f'{{root}}/{path}' in source
+    butterfly_branch = source[
+        source.index('if scene.key == "butterfly-burst":'):
+        source.index('if scene.key == "bomb":')
+    ]
+    assert "Butterfly/butterfly/0/bomb" not in butterfly_branch
 
 
 def test_rush_uses_all_tms_path_points_instead_of_a_full_map_impact():
@@ -245,6 +309,25 @@ def test_lucid_mushroom_is_materialized_for_the_legacy_client():
         assert name is not None and name.get("value") == "噩梦毒蘑菇"
 
 
+def test_lucid_phase_one_idle_uses_complete_flower_frames():
+    image = load_img(ROOT / "clien/Data/Mob/8880140.img")
+    for index in range(8):
+        stand = image.root.get(f"stand/{index}")
+        flower = image.root.get(f"die1/{index}")
+        assert isinstance(stand, WzCanvasProperty)
+        assert isinstance(flower, WzCanvasProperty)
+        assert (stand.width, stand.height) == (flower.width, flower.height)
+        assert (int(stand.format), int(stand.format2)) == (1, 0)
+        assert [child.name for child in stand.children()] == [
+            "origin", "z", "head", "lt", "rb"
+        ]
+        stand_pixels = decode_canvas(stand, region="GMS").convert("RGBA")
+        flower_pixels = decode_canvas(flower, region="GMS").convert("RGBA")
+        assert stand_pixels.tobytes() == flower_pixels.tobytes()
+        stand_pixels.close()
+        flower_pixels.close()
+
+
 def test_server_controller_covers_tms_lucid_mechanics_and_timing():
     source = (
         ROOT / "gms-server/src/main/java/org/gms/server/life/LucidBossCompat.java"
@@ -269,8 +352,14 @@ def test_server_controller_covers_tms_lucid_mechanics_and_timing():
     assert "scheduleDamage(1260, 20, area, \"stained-glass\")" in source
     assert "FURY_LIMIT_MS = 45_000" in source
     assert "FURY_FAIL_DELAY_MS = FURY_LIMIT_MS + 4320" in source
-    assert "scheduleDamage(4650, 100" in source
+    assert "DRAGON_BREATH_DAMAGE_MS = 6300" in source
+    assert "scheduleDamage(DRAGON_BREATH_DAMAGE_MS, 100" in source
     assert "scheduleDamage(1260, 18" in source
+    assert "BUTTERFLY_RETURN_DURATION_MS = 3960" in source
+    assert "}, BUTTERFLY_RETURN_DURATION_MS);" in source
+    assert "phase == PHASE_TWO && isCurrentBossAlive()" in source
+    assert "spawnGroundMob(GOLEM_P2, randomGroundPoint(PHASE_TWO))" in source
+    assert "character.changeMap" not in source
     assert "PHANTOM_BARRAGE_PREPARE_MS = 2400" in source
     assert "PHANTOM_BARRAGE_HIT_INTERVAL_MS = 1000" in source
     assert "PHANTOM_BARRAGE_HIT_COUNT = 12" in source
@@ -289,6 +378,76 @@ def test_server_controller_covers_tms_lucid_mechanics_and_timing():
     assert "character.changeMap(map, destination)" not in source
     assert "skillId == 238" not in source
     assert "skillId == 201" not in source
+
+
+def test_phase_two_fall_recovery_matches_the_rescue_floor_and_top_portal():
+    root = ET.parse(
+        ROOT / "gms-server/wz/Map.wz/Map/Map4/450004250.img.xml"
+    ).getroot()
+    portal = root.find('./imgdir[@name="portal"]/imgdir[@name="3"]')
+    assert portal is not None
+    values = {
+        child.attrib["name"]: child.attrib["value"]
+        for child in portal
+        if "value" in child.attrib
+    }
+    assert values["pn"] == "sp"
+    assert (int(values["x"]), int(values["y"])) == (1017, -879)
+    info = root.find('./imgdir[@name="info"]')
+    assert info is not None
+    assert info.find('./int[@name="swim"]').attrib["value"] == "0"
+    fall = root.find('./imgdir[@name="portal"]/imgdir[@name="11"]')
+    assert fall is not None
+    fall_values = {
+        child.attrib["name"]: child.attrib["value"]
+        for child in fall
+        if "value" in child.attrib
+    }
+    assert fall_values == {
+        "pn": "pt00", "pt": "9", "x": "652", "y": "320",
+        "tm": "999999999", "tn": "", "delay": "1000",
+        "horizontalImpact": "0", "script": "pt00_450004250",
+        "hRange": "1600", "vRange": "200", "hideTooltip": "0",
+        "onlyOnce": "0",
+    }
+    for tree in ("gms-server/scripts", "gms-server/scripts-zh-CN"):
+        script = (ROOT / tree / "portal/pt00_450004250.js").read_text(
+            encoding="utf-8"
+        )
+        assert "map.getPortal(3)" in script
+        assert "player.changeMap(map, destination)" in script
+
+
+def test_phase_one_flower_explosion_is_event_scheduled_every_two_seconds():
+    compat = (
+        ROOT / "gms-server/src/main/java/org/gms/server/life/LucidBossCompat.java"
+    ).read_text(encoding="utf-8")
+    assert "nextFlowerExplosion" not in compat
+    for tree in ("gms-server/scripts", "gms-server/scripts-zh-CN"):
+        event = (ROOT / tree / "event/LucidBattle.js").read_text(encoding="utf-8")
+        assert "flowerExplosionInitialDelay = 2000" in event
+        assert "flowerExplosionInterval = 2000" in event
+        assert "flowerExplosionDamageDelay = 1080" in event
+        assert "flowerExplosionDamagePercent = 35" in event
+        assert 'eim.schedule("castFlowerExplosion", flowerExplosionInitialDelay)' in event
+        assert 'eim.schedule("castFlowerExplosion", flowerExplosionInterval)' in event
+        assert 'eim.schedule("damageFlowerExplosion", flowerExplosionDamageDelay)' in event
+        assert "flowerExplosionEffects.length - 1" in event
+        assert "if (variant >= previous)" in event
+        assert "flowerExplosionVariant" in event
+        assert "PacketCreator.showEffect(flowerExplosionEffects[variant])" in event
+        assert "player.addHP(-damage)" in event
+
+
+def test_phase_two_and_three_falls_use_authoritative_same_map_recovery():
+    for tree in ("gms-server/scripts", "gms-server/scripts-zh-CN"):
+        event = (ROOT / tree / "event/LucidBattle.js").read_text(encoding="utf-8")
+        assert "fallRecoveryPollInterval = 100" in event
+        assert "fallRecoveryY = 180" in event
+        assert 'eim.schedule("recoverFallenPlayers", fallRecoveryPollInterval)' in event
+        assert 'eim.getIntProperty("phase") >= 2' in event
+        assert "player.getPosition().y >= fallRecoveryY" in event
+        assert "player.changeMap(map, destination)" in event
 
 
 def test_lucid_control_effects_have_boss_specific_cooldowns():
@@ -336,8 +495,9 @@ def test_unified_client_hook_routes_all_lucid_scene_markers():
     assert "DetectLucidA4R4G4B4" in source
     assert "DetectLucidA8R8G8B8" in source
     assert "0xF124" in source
-    assert "code >= 1 && code <= 14 ? 14 + code" in source
-    assert "kMarkerCodeCount = 29" in source
+    assert "DecodeLucidMarkerCode" in source
+    assert "greenCode == 5 && redCode <= 3" in source
+    assert "kMarkerCodeCount = 33" in source
     for code, scene in enumerate(exporter.SCENES, start=15):
         path = scene.output_name.replace("/", "\\")
         assert f'{{{code}, "Data\\\\Video\\\\{path}"}}' in source

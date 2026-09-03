@@ -77,13 +77,22 @@ def test_lucid_portals_form_the_legacy_expedition_route():
     assert arc.child_value(out, "tm") == migration.ROUTE_MAP
     assert arc.child_value(out, "tn") == "sp"
 
-    for map_id in (450004150, 450004250):
-        image = arc.load_image(
-            ROOT / f"clien/Data/Map/Map/Map4/{map_id}.img", arc.GMS_KEY
-        )
-        out = migration.portal_by_name(image.root, "pt00")
-        assert arc.child_value(out, "pt") == 7
-        assert arc.child_value(out, "script") == "lucid_exit"
+    phase_one = arc.load_image(
+        ROOT / "clien/Data/Map/Map/Map4/450004150.img", arc.GMS_KEY
+    )
+    phase_one_out = migration.portal_by_name(phase_one.root, "pt00")
+    assert arc.child_value(phase_one_out, "pt") == 7
+    assert arc.child_value(phase_one_out, "script") == "lucid_exit"
+
+    phase_two = arc.load_image(
+        ROOT / "clien/Data/Map/Map/Map4/450004250.img", arc.GMS_KEY
+    )
+    assert arc.child_value(phase_two.root.get("info"), "swim") == 0
+    fall = migration.portal_by_name(phase_two.root, "pt00")
+    assert arc.child_value(fall, "pt") == 9
+    assert arc.child_value(fall, "script") == "pt00_450004250"
+    assert arc.child_value(fall, "hRange") == 1600
+    assert arc.child_value(fall, "vRange") == 200
 
 
 def test_lucid_phase_one_spine_objects_are_projected_to_static_legacy_objects():

@@ -22,6 +22,7 @@ VIDEO_DIR = Path(__file__).resolve().parent
 TMS_DATA = Path("/Users/lizixian/Documents/mxd/TMS/MapleStory-IMG/Data")
 PROXY_PATH = TMS_DATA / "Etc/BossLucid.img"
 CANVAS_PATH = TMS_DATA / "Etc/_Canvas/BossLucid.img"
+FLOWER_CANVAS_PATH = TMS_DATA / "Skill/MobSkill/_Canvas/238.img"
 DEFAULT_OUTPUT_DIRECTORY = ROOT / "clien/Data/Video"
 CLIENT_MAP_EFFECT = ROOT / "clien/Data/Map/Effect.img"
 FIELD_EFFECT_ROOT = "customSkill/lucid"
@@ -33,15 +34,44 @@ PHANTOM_HIT_INTERVAL_MS = 1000
 PHANTOM_HIT_COUNT = 12
 PHANTOM_PROJECTILE_TRAVEL_MS = 720
 RUSH_DURATION_MS = 3000
+DRAGON_BREATH_START_MS = 6300
+DRAGON_ENTRY_END_MS = 4650
+DRAGON_EXIT_START_MS = 10050
+FLOWER_EXPLOSION_DAMAGE_MS = 1080
+
+# The legacy video layer cannot rotate sprites at playback time.  Four
+# deterministic MCV variants preserve reproducible assets while the event
+# script chooses a different variant for each cast.
+FLOWER_ROTATION_LAYOUTS = (
+    (-35, -20, 8, 22, 38, -30, -12, 15, 30),
+    (22, -35, 30, -12, 15, 38, -20, 8, -30),
+    (-12, 30, -35, 15, -20, 8, 38, -30, 22),
+    (38, 8, -30, -35, 22, 15, -12, 30, -20),
+)
 
 # TMS phase 1 places the right-side dragon at pos1=(2308, 30) and its field
 # warning at (1019, 45).  Projecting that 1289-unit gap across map
 # VRLeft=-37..VRRight=1960 onto 1280px gives 826px.  Phase 2 reuses the same
 # art with every corresponding frame origin shifted 414px left, so 412px
 # preserves the same visible right-side placement.
+DRAGON_VERTICAL_OFFSET = 155
+DRAGON_WARNING_VERTICAL_OFFSET = 167
+DRAGON_ENTRY_DISPLACEMENT = -544
+DRAGON_RIGHT_X_OFFSETS = {
+    "phase1": 826,
+    "phase2": 412,
+}
 DRAGON_RIGHT_OFFSETS = {
-    "phase1": (826, 0),
-    "phase2": (412, 0),
+    phase: (offset_x, DRAGON_VERTICAL_OFFSET)
+    for phase, offset_x in DRAGON_RIGHT_X_OFFSETS.items()
+}
+DRAGON_WARNING_OFFSETS = {
+    phase: (0, DRAGON_WARNING_VERTICAL_OFFSET)
+    for phase in DRAGON_RIGHT_X_OFFSETS
+}
+DRAGON_ENTRY_DISPLACEMENTS = {
+    phase: DRAGON_ENTRY_DISPLACEMENT
+    for phase in DRAGON_RIGHT_X_OFFSETS
 }
 
 # Exact TMS BossLucid/RushLucid/path0 field coordinates.  The legacy MCV is a
@@ -133,6 +163,7 @@ class TimelineLayer:
     end_ms: int
     loop: bool = False
     offsets: tuple[tuple[int, int], ...] = ((0, 0),)
+    rotations: tuple[int, ...] = (0,)
     motion: tuple[tuple[int, int], tuple[int, int], tuple[int, int]] | None = None
     path: tuple[tuple[int, int, int], ...] | None = None
 
@@ -149,7 +180,7 @@ SCENES = (
     LucidSceneSpec("fury", "lucid-fury.mcv", "furyVideoLayer", 6, 49320, 120),
     LucidSceneSpec(
         "butterfly-burst", "lucid-butterfly-burst.mcv",
-        "butterflyBurstVideoLayer", 7, 1620,
+        "butterflyBurstVideoLayer", 7, 3960, 90,
     ),
     LucidSceneSpec("bomb", "lucid-bomb.mcv", "bombVideoLayer", 8, 4170),
     LucidSceneSpec(
@@ -175,6 +206,22 @@ SCENES = (
     LucidSceneSpec(
         "stained-glass-5", "lucid-stained-glass-5.mcv",
         "stainedGlass5VideoLayer", 14, 1260,
+    ),
+    LucidSceneSpec(
+        "flower-explosion", "lucid-flower-explosion.mcv",
+        "flowerExplosionVideoLayer", 15, 2000, 90,
+    ),
+    LucidSceneSpec(
+        "flower-explosion-1", "lucid-flower-explosion-1.mcv",
+        "flowerExplosion1VideoLayer", 16, 2000, 90,
+    ),
+    LucidSceneSpec(
+        "flower-explosion-2", "lucid-flower-explosion-2.mcv",
+        "flowerExplosion2VideoLayer", 17, 2000, 90,
+    ),
+    LucidSceneSpec(
+        "flower-explosion-3", "lucid-flower-explosion-3.mcv",
+        "flowerExplosion3VideoLayer", 18, 2000, 90,
     ),
 )
 
@@ -225,6 +272,23 @@ def load_sequence(
     return tuple(output)
 
 
+def load_direct_sequence(
+        image: WzImage,
+        path: str,
+        default_delay: int = 90,
+) -> tuple[tuple[WzCanvasProperty, WzCanvasProperty, int], ...]:
+    node = image.root.get(path)
+    if not isinstance(node, WzSubProperty):
+        raise RuntimeError(f"missing direct Canvas sequence: {path}")
+    output = tuple(
+        (frame, frame, frame_delay(frame, default_delay))
+        for frame in numeric_frames(node)
+    )
+    if not output:
+        raise RuntimeError(f"empty direct Canvas sequence: {path}")
+    return output
+
+
 def joined(*sequences):
     return tuple(frame for sequence in sequences for frame in sequence)
 
@@ -264,6 +328,10 @@ def scene_layers(
     if scene.key.startswith("dragon-"):
         phase = "phase1" if scene.key.endswith("p1") else "phase2"
         dragon_offset = (DRAGON_RIGHT_OFFSETS[phase],)
+        warning_offset = (DRAGON_WARNING_OFFSETS[phase],)
+        entry_y = DRAGON_ENTRY_DISPLACEMENTS[phase]
+        entry_motion = ((0, entry_y), (0, entry_y // 2), (0, 0))
+        exit_motion = ((0, 0), (0, entry_y // 2), (0, entry_y))
         warning_pre = sequence(f"Dragon/{phase}/areaWarning/pre", 90)
         warning_start = sequence(f"Dragon/{phase}/areaWarning/start", 90)
         warning_loop = sequence(f"Dragon/{phase}/areaWarning/loop", 90)
@@ -282,18 +350,38 @@ def scene_layers(
                 shadow, 0, sequence_duration(shadow),
                 motion=((-650, 110), (0, 80), (650, 110)),
             ),
-            TimelineLayer(warning_pre, 0, sequence_duration(warning_pre)),
+            TimelineLayer(
+                warning_pre, 0, sequence_duration(warning_pre),
+                offsets=warning_offset,
+            ),
             TimelineLayer(
                 warning_start,
                 sequence_duration(warning_pre),
                 sequence_duration(warning_pre) + sequence_duration(warning_start),
+                offsets=warning_offset,
             ),
-            TimelineLayer(warning_loop, 2790, 4650, True),
-            TimelineLayer(prepare, 3000, 4800, offsets=dragon_offset),
-            TimelineLayer(warning_end, 4650, 5490),
+            TimelineLayer(warning_loop, 2790, DRAGON_ENTRY_END_MS, True,
+                          warning_offset),
+            TimelineLayer(
+                prepare, 3000, DRAGON_ENTRY_END_MS,
+                offsets=dragon_offset, motion=entry_motion,
+            ),
+            TimelineLayer(
+                warning_end, DRAGON_ENTRY_END_MS, 5490,
+                offsets=warning_offset,
+            ),
             TimelineLayer(attack, 4650, 10050, offsets=dragon_offset),
-            TimelineLayer(breath, 4650, 6300, True, offsets=dragon_offset),
-            TimelineLayer(end, 10050, scene.duration_ms, offsets=dragon_offset),
+            TimelineLayer(
+                breath, DRAGON_BREATH_START_MS, DRAGON_EXIT_START_MS, True,
+                offsets=tuple(
+                    (dragon_offset[0][0] - spacing * index, dragon_offset[0][1])
+                    for index, spacing in enumerate((0, 330, 330, 330, 330))
+                ),
+            ),
+            TimelineLayer(
+                end, DRAGON_EXIT_START_MS, scene.duration_ms,
+                offsets=dragon_offset, motion=exit_motion,
+            ),
         )
     if scene.key == "laser-rain":
         action = sequence("LaserRain/action", 150)
@@ -375,19 +463,91 @@ def scene_layers(
             TimelineLayer(fog, 0, 45000, True),
             TimelineLayer(fail, 45000, scene.duration_ms),
         )
+    if scene.key.startswith("flower-explosion"):
+        variant = 0 if scene.key == "flower-explosion" else int(scene.key.rsplit("-", 1)[1])
+        rotations = FLOWER_ROTATION_LAYOUTS[variant]
+        flower = arc.load_image(FLOWER_CANVAS_PATH, arc.BMS_KEY)
+        if flower.truncated or flower.parse_warnings:
+            raise RuntimeError(
+                f"{FLOWER_CANVAS_PATH}: truncated={flower.truncated} "
+                f"warnings={flower.parse_warnings}"
+            )
+        sequences = {
+            size: load_direct_sequence(flower, f"level/1/{size}")
+            for size in ("XL", "L", "M", "MS")
+        }
+        return (
+            TimelineLayer(
+                sequences["XL"], 0, scene.duration_ms,
+                offsets=((-480, 0),), rotations=rotations[0:1],
+            ),
+            TimelineLayer(
+                sequences["L"], 90, scene.duration_ms,
+                offsets=((-245, 35),), rotations=rotations[1:2],
+            ),
+            TimelineLayer(
+                sequences["M"], 180, scene.duration_ms,
+                offsets=((0, 75),), rotations=rotations[2:3],
+            ),
+            TimelineLayer(
+                sequences["L"], 0, scene.duration_ms,
+                offsets=((245, 25),), rotations=rotations[3:4],
+            ),
+            TimelineLayer(
+                sequences["XL"], 180, scene.duration_ms,
+                offsets=((480, -10),), rotations=rotations[4:5],
+            ),
+            TimelineLayer(
+                sequences["MS"], 270, scene.duration_ms,
+                offsets=((-365, 145), (-125, 120), (125, 150), (365, 115)),
+                rotations=rotations[5:9],
+            ),
+        )
     if scene.key.startswith("stained-glass-"):
         glass_index = int(scene.key.rsplit("-", 1)[1])
         glass = sequence(f"StainedGlass/BreakEffect/{glass_index}", 90)
         return (TimelineLayer(glass, 0, scene.duration_ms),)
-    fly = sequence("Butterfly/butterfly/0/fly", 90)
-    bomb = sequence("Butterfly/butterfly/0/bomb", 90)
     if scene.key == "butterfly-burst":
-        offsets = ((-420, -180), (-250, 110), (-80, -80), (110, 140), (280, -120), (430, 80))
-        return (
-            TimelineLayer(fly, 0, 450, True, offsets),
-            TimelineLayer(bomb, 450, scene.duration_ms, False, offsets),
+        # TMS uses nine phase-2 butterfly variants.  They fly back toward
+        # Lucid, transform into the eye-like prepare rings seen in the source
+        # video, then erase upward.  The old fly/bomb pair was a different
+        # stationary explosion and could not reproduce this mechanic.
+        return_paths = (
+            (0, (-520, -250), (-330, -310), (-125, -105)),
+            (2, (-390, 180), (-280, 260), (-80, 35)),
+            (3, (-150, -300), (-80, -360), (-25, -80)),
+            (5, (180, 250), (110, 310), (35, 20)),
+            (7, (410, -250), (300, -330), (90, -100)),
+            (8, (530, 150), (350, 230), (130, 45)),
         )
+        layers = []
+        fly_end = 540
+        change_end = fly_end + 1260
+        prepare_end = change_end + 1350
+        for variant, start, control, end in return_paths:
+            root = f"Butterfly/butterflies/{variant}"
+            layers.extend((
+                TimelineLayer(
+                    sequence(f"{root}/fly_phase2", 90),
+                    0, fly_end, True, motion=(start, control, end),
+                ),
+                TimelineLayer(
+                    sequence(f"{root}/change", 90),
+                    fly_end, change_end, offsets=(end,),
+                ),
+                TimelineLayer(
+                    sequence(f"{root}/prepare", 90),
+                    change_end, prepare_end, offsets=(end,),
+                ),
+                TimelineLayer(
+                    sequence(f"{root}/erase", 90),
+                    prepare_end, scene.duration_ms, offsets=(end,),
+                ),
+            ))
+        return tuple(layers)
     if scene.key == "bomb":
+        fly = sequence("Butterfly/butterfly/0/fly", 90)
+        bomb = sequence("Butterfly/butterfly/0/bomb", 90)
         return (
             TimelineLayer(fly, 0, 3000, True),
             TimelineLayer(bomb, 3000, scene.duration_ms),
@@ -444,7 +604,7 @@ def alpha_composite_clipped(
 def render_scene_frame(
         layers: tuple[TimelineLayer, ...],
         timestamp: int,
-        decoded_cache: dict[int, Image.Image],
+        decoded_cache: dict[tuple[int, int], Image.Image],
 ) -> Image.Image:
     output = Image.new("RGBA", (WIDTH, HEIGHT), (0, 0, 0, 0))
     for layer in layers:
@@ -452,13 +612,15 @@ def render_scene_frame(
         if current is None:
             continue
         proxy_frame, pixel_frame = current
-        cache_key = id(pixel_frame)
+        cache_key = (id(pixel_frame), 0)
         source = decoded_cache.get(cache_key)
         if source is None:
             source = arc.decode_source_canvas(pixel_frame).convert("RGBA")
             decoded_cache[cache_key] = source
         origin_x, origin_y = frame_origin(proxy_frame, pixel_frame)
         offsets = layer.offsets
+        if len(layer.rotations) not in (1, len(offsets)):
+            raise RuntimeError("rotation count must be one or match the offset count")
         path_offset = (0, 0)
         if layer.motion is not None:
             duration = max(1, layer.end_ms - layer.start_ms)
@@ -491,12 +653,28 @@ def render_scene_frame(
                 round(start[1] + (end[1] - start[1]) * progress),
                 round(start[2] + (end[2] - start[2]) * progress),
             )
-        for offset_x, offset_y in offsets:
+        for index, (offset_x, offset_y) in enumerate(offsets):
+            rotation = layer.rotations[0] if len(layer.rotations) == 1 else layer.rotations[index]
+            rendered_source = source
+            rendered_origin_x = origin_x
+            rendered_origin_y = origin_y
+            if rotation != 0:
+                if (origin_x, origin_y) != (source.width // 2, source.height // 2):
+                    raise RuntimeError("rotated Lucid layer must use a centred frame origin")
+                rotated_key = (id(pixel_frame), rotation)
+                rendered_source = decoded_cache.get(rotated_key)
+                if rendered_source is None:
+                    rendered_source = source.rotate(
+                        rotation, resample=Image.Resampling.BICUBIC, expand=True
+                    )
+                    decoded_cache[rotated_key] = rendered_source
+                rendered_origin_x = rendered_source.width // 2
+                rendered_origin_y = rendered_source.height // 2
             alpha_composite_clipped(
                 output,
-                source,
-                WIDTH // 2 + path_offset[0] + offset_x - origin_x,
-                HEIGHT // 2 + path_offset[1] + offset_y - origin_y,
+                rendered_source,
+                WIDTH // 2 + path_offset[0] + offset_x - rendered_origin_x,
+                HEIGHT // 2 + path_offset[1] + offset_y - rendered_origin_y,
             )
     return output
 
@@ -520,7 +698,7 @@ def encode_scene(
     materializer = arc.CanvasMaterializer()
     layers = scene_layers(proxy, materializer, scene)
     delays = frame_delays(scene)
-    decoded_cache: dict[int, Image.Image] = {}
+    decoded_cache: dict[tuple[int, int], Image.Image] = {}
     visible_frames = 0
     visible_tail = False
     output_directory.mkdir(parents=True, exist_ok=True)
@@ -591,14 +769,16 @@ def encode_scene(
 
 
 def marker_pixels(marker_code: int) -> list[tuple[int, int, int, int]]:
-    if marker_code < 1 or marker_code > 14:
+    if marker_code < 1 or marker_code > 18:
         raise RuntimeError(f"invalid Lucid marker code: {marker_code}")
+    red_code = marker_code if marker_code <= 15 else marker_code - 15
+    green_code = 4 if marker_code <= 15 else 5
     return [
         (17, 34, 68, 255),
         (85, 102, 119, 255),
         (136, 153, 170, 255),
         (187, 204, 238, 255),
-        (marker_code * 17, 68, 221, 255),
+        (red_code * 17, green_code * 17, 221, 255),
     ] + [(0, 0, 0, 0)] * (MARKER_WIDTH * MARKER_HEIGHT - 5)
 
 
@@ -629,29 +809,39 @@ def build_marker(
     return effect
 
 
-def patch_lucid_record(image: WzImage, original: bytes, parent: WzSubProperty) -> bytes:
-    replacement = karing.encode_property_record(parent, image)
+def patch_lucid_records(
+        image: WzImage,
+        original: bytes,
+        replacements: dict[str, WzSubProperty],
+) -> bytes:
     (size_offsets, count_offset, count_end,
      names, spans, records_end) = karing.locate_nested_property_records(
-        image, original, ("customSkill",)
+        image, original, ("customSkill", "lucid")
     )
     original_records = {
         name: original[start:end]
         for name, (start, end) in zip(names, spans)
     }
-    if "lucid" in original_records:
-        index = names.index("lucid")
-        record_start, record_end = spans[index]
-        updated = bytearray(original[:record_start] + replacement + original[record_end:])
-        count_delta = 0
-    else:
-        updated = bytearray(original[:records_end] + replacement + original[records_end:])
-        count_delta = 1
+    edits = []
+    additions = []
+    for name, node in replacements.items():
+        replacement = karing.encode_property_record(node, image)
+        if name in original_records:
+            start, end = spans[names.index(name)]
+            edits.append((start, end, replacement))
+        else:
+            additions.append(replacement)
+    if additions:
+        edits.append((records_end, records_end, b"".join(additions)))
+
+    updated = bytearray(original)
+    for start, end, replacement in sorted(edits, reverse=True):
+        updated[start:end] = replacement
     size_delta = len(updated) - len(original)
-    if count_delta:
-        new_count = karing.encode_compressed_int(len(names) + count_delta)
+    if additions:
+        new_count = karing.encode_compressed_int(len(names) + len(additions))
         if len(new_count) != count_end - count_offset:
-            raise RuntimeError("customSkill child-count encoding size changed")
+            raise RuntimeError("Lucid marker child-count encoding size changed")
         updated[count_offset:count_end] = new_count
     for size_offset in size_offsets:
         old_size = struct.unpack_from("<I", original, size_offset)[0]
@@ -666,15 +856,15 @@ def patch_lucid_record(image: WzImage, original: bytes, parent: WzSubProperty) -
         raise RuntimeError(f"incremental Effect.img patch is malformed: {verified.parse_warnings}")
     (_, _, _, verified_names,
      verified_spans, _) = karing.locate_nested_property_records(
-        verified, result, ("customSkill",)
+        verified, result, ("customSkill", "lucid")
     )
     verified_records = {
         name: result[start:end]
         for name, (start, end) in zip(verified_names, verified_spans)
     }
     for name, record in original_records.items():
-        if name != "lucid" and verified_records.get(name) != record:
-            raise RuntimeError(f"unchanged customSkill record changed: {name}")
+        if name not in replacements and verified_records.get(name) != record:
+            raise RuntimeError(f"unchanged Lucid marker record changed: {name}")
     return result
 
 
@@ -705,10 +895,16 @@ def install_markers(selected: tuple[LucidSceneSpec, ...]) -> None:
         )
     if all(marker_matches(image, scene) for scene in selected):
         return
-    parent = karing.ensure_path(root, FIELD_EFFECT_ROOT)
+    parent = root.get(FIELD_EFFECT_ROOT)
+    if not isinstance(parent, WzSubProperty):
+        raise RuntimeError(f"missing established marker root: {FIELD_EFFECT_ROOT}")
+    replacements = {}
     for scene in selected:
-        karing.replace_child(parent, build_marker(parent, scene, image.wz_file.reader.key))
-    updated = patch_lucid_record(image, original, parent)
+        if not marker_matches(image, scene):
+            replacements[scene.marker_name] = build_marker(
+                parent, scene, image.wz_file.reader.key
+            )
+    updated = patch_lucid_records(image, original, replacements)
     if updated != original:
         arc.atomic_write_bytes(CLIENT_MAP_EFFECT, updated)
 
@@ -734,13 +930,18 @@ def verify_markers(selected: tuple[LucidSceneSpec, ...]) -> None:
 def selected_scenes(key: str) -> tuple[LucidSceneSpec, ...]:
     if key == "all":
         return SCENES
+    if key == "flowers":
+        return tuple(scene for scene in SCENES if scene.key.startswith("flower-explosion"))
     return tuple(scene for scene in SCENES if scene.key == key)
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output-directory", type=Path, default=DEFAULT_OUTPUT_DIRECTORY)
-    parser.add_argument("--scene", choices=("all", *(scene.key for scene in SCENES)), default="all")
+    parser.add_argument(
+        "--scene", choices=("all", "flowers", *(scene.key for scene in SCENES)),
+        default="all",
+    )
     parser.add_argument("--markers-only", action="store_true")
     parser.add_argument("--videos-only", action="store_true")
     args = parser.parse_args()
