@@ -7376,8 +7376,8 @@ public class Character extends AbstractCharacterObject {
             localluk = addPercent(localluk, linkStatPercent);
             localmagic += linkedInt - localint_;
             localint_ = linkedInt;
-            clientMaxHp = cappedHpMp((long) getMaxHp() + linkBonus.hp());
-            clientMaxMp = cappedHpMp((long) getMaxMp() + linkBonus.mp());
+            clientMaxHp = MAX_HP_MP;
+            clientMaxMp = MAX_HP_MP;
 
             localmagic = Math.min(localmagic, 2000);
 
@@ -7390,8 +7390,8 @@ public class Character extends AbstractCharacterObject {
                 localMaxMp += (int) ((hbmp.doubleValue() / 100) * localMaxMp);
             }
 
-            localMaxHp = Math.min(30000, localMaxHp);
-            localMaxMp = Math.min(30000, localMaxMp);
+            localMaxHp = MAX_HP_MP;
+            localMaxMp = MAX_HP_MP;
 
             StatEffect combo = getBuffEffect(BuffStat.ARAN_COMBO);
             if (combo != null) {
@@ -7493,10 +7493,6 @@ public class Character extends AbstractCharacterObject {
 
     private static int addPercent(int value, int percent) {
         return (int) Math.min(Integer.MAX_VALUE, value + (long) value * percent / 100L);
-    }
-
-    private static int cappedHpMp(long value) {
-        return (int) Math.min(30000L, Math.max(0L, value));
     }
 
     public List<Pair<Stat, Integer>> recalcLocalStats() {
@@ -8563,9 +8559,9 @@ public class Character extends AbstractCharacterObject {
     }
 
     private int calcHpRatioUpdate(int curpoint, int maxpoint, int diffpoint) {
-        int nextMax = Math.min(30000, maxpoint + diffpoint);
+        int nextMax = Math.min(MAX_HP_MP, maxpoint + diffpoint);
 
-        float temp = curpoint * nextMax;
+        double temp = (double) curpoint * nextMax;
         int ret = (int) Math.ceil(temp / maxpoint);
 
         transientHp = (maxpoint > nextMax) ? ((float) curpoint) / maxpoint : ((float) ret) / nextMax;
@@ -8573,9 +8569,9 @@ public class Character extends AbstractCharacterObject {
     }
 
     private int calcMpRatioUpdate(int curpoint, int maxpoint, int diffpoint) {
-        int nextMax = Math.min(30000, maxpoint + diffpoint);
+        int nextMax = Math.min(MAX_HP_MP, maxpoint + diffpoint);
 
-        float temp = curpoint * nextMax;
+        double temp = (double) curpoint * nextMax;
         int ret = (int) Math.ceil(temp / maxpoint);
 
         transientMp = (maxpoint > nextMax) ? ((float) curpoint) / maxpoint : ((float) ret) / nextMax;

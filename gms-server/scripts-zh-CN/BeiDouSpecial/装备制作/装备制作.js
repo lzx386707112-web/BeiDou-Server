@@ -660,7 +660,6 @@ function action(mode, type, selection) {
     if (status === 0) {
         let text = OldTitle;
         text += " \r\n";
-        text += "#r#L0#整套装备进化#l#k\t\r\n\r\n";
         text += "#b#L1#耳环#l\t\r\n\r\n";
         text += "#L2#眼睛#l\t\r\n\r\n";
         text += "#L3#鞋子#l\t\r\n\r\n";
@@ -715,9 +714,6 @@ function action(mode, type, selection) {
 
 function doSelect(selection) {
     switch (selection) {
-        case 0:
-            openNpc("装备制作/套装进化");
-            break;
         case 1:
             选择的制作列表 = 耳环;
             展示物品制作列表();

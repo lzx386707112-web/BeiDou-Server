@@ -371,12 +371,10 @@ function buildConditionText(conds, targetIdx) {
     }
 
     // 金币/点券
-    text += "\r\n" + (cm.getMeso() >= conds.meso ? "#g" : "#r")
-        + "金币：" + formatNum(conds.meso) + "（已有 " + formatNum(cm.getMeso()) + "）#k\r\n";
+    text += "\r\n#r金币：" + formatNum(conds.meso) + "（已有 " + formatNum(cm.getMeso()) + "）#k\r\n";
     if (conds.cash > 0) {
         var cash = cm.getPlayer().getCashShop().getCash(1);
-        text += (cash >= conds.cash ? "#g" : "#r")
-            + "点券：" + formatNum(conds.cash) + "（已有 " + formatNum(cash) + "）#k\r\n";
+        text += "#r点券：" + formatNum(conds.cash) + "（已有 " + formatNum(cash) + "）#k\r\n";
     }
 
     return text;

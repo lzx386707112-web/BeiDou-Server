@@ -47,11 +47,31 @@ not patch the skill window, globally short-circuit native validation, or read/mo
 `ijl15.dll`. The accompanying EXE patch only calls
 `LoadLibraryA("DawnWarriorSkillCompat.dll")` during startup.
 
+Version 70 also expands HP, MaxHP, MP, and MaxMP to four-byte values with a
+hard cap of `50000`. It validates and patches the 13 packet decoders, 25 secure
+storage writes, both secure Fuse entry points, and every proven 16-bit read,
+comparison, life check, map-hazard, and Mortal Blow truncation site. This
+requires the matching server packet-width and stat-pool changes; an old server
+and a patched client, or a patched server and an old client, are protocol
+incompatible. The synchronized packet changes include full character stats,
+stat updates, map changes, and the MP/MaxMP tail of remote ranged attacks.
+
 Build on macOS:
 
 ```bash
 rtk bash tool/client-debug/dawn-warrior-skill-compat/build.sh
 ```
+
+The HP/MP expansion uses a wrapper because the verified unified DLL has no
+matching complete source snapshot. The wrapper keeps that binary byte-for-byte
+as `BeiDouSkillCompatCore.dll`, loads it first, and then installs only the v70
+HP/MP hooks:
+
+```bash
+rtk bash tool/client-debug/dawn-warrior-skill-compat/build_hpmp_wrapper.sh
+```
+
+Both DLL files are required at runtime in the client directory.
 
 Install the tiny loader after building:
 

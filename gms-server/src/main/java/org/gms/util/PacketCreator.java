@@ -201,10 +201,10 @@ public class PacketCreator {
         p.writeShort(chr.getDex()); // dex
         p.writeShort(chr.getInt()); // int
         p.writeShort(chr.getLuk()); // luk
-        p.writeShort(chr.getHp()); // hp (?)
-        p.writeShort(chr.getClientMaxHp()); // maxhp
-        p.writeShort(chr.getMp()); // mp (?)
-        p.writeShort(chr.getClientMaxMp()); // maxmp
+        p.writeInt(chr.getHp()); // hp
+        p.writeInt(chr.getClientMaxHp()); // maxhp
+        p.writeInt(chr.getMp()); // mp
+        p.writeInt(chr.getClientMaxMp()); // maxmp
         p.writeShort(chr.getRemainingAp()); // remaining ap
         if (GameConstants.hasSPTable(chr.getJob())) {
             addRemainingSkillInfo(p, chr);
@@ -1023,6 +1023,9 @@ public class PacketCreator {
                     p.writeInt(statupdate.getRight());
                 } else if (statupdate.getLeft().getValue() < 0x20) {
                     p.writeByte(statupdate.getRight().shortValue());
+                } else if (statupdate.getLeft() == Stat.HP || statupdate.getLeft() == Stat.MAXHP
+                        || statupdate.getLeft() == Stat.MP || statupdate.getLeft() == Stat.MAXMP) {
+                    p.writeInt(statupdate.getRight());
                 } else if (statupdate.getLeft().getValue() == 0x8000) {
                     if (GameConstants.hasSPTable(chr.getJob())) {
                         addRemainingSkillInfo(p, chr);
@@ -1056,7 +1059,7 @@ public class PacketCreator {
         p.writeByte(0);//updated
         p.writeInt(to.getId());
         p.writeByte(spawnPoint);
-        p.writeShort(chr.getHp());
+        p.writeInt(chr.getHp());
         p.writeBool(chr.isChasing());
         if (chr.isChasing()) {
             chr.setChasing(false);
@@ -1074,7 +1077,7 @@ public class PacketCreator {
         p.writeByte(0);//updated
         p.writeInt(to.getId());
         p.writeByte(spawnPoint);
-        p.writeShort(chr.getHp());
+        p.writeInt(chr.getHp());
         p.writeBool(true);
         p.writeInt(spawnPosition.x);    // spawn position placement thanks to Arnah (Vertisy)
         p.writeInt(spawnPosition.y);
@@ -2353,7 +2356,8 @@ public class PacketCreator {
     public static Packet rangedAttack(Character chr, int skill, int skilllevel, int stance, int numAttackedAndDamage, int projectile, Map<Integer, List<Integer>> damage, int speed, int direction, int display) {
         final OutPacket p = OutPacket.create(SendOpcode.RANGED_ATTACK);
         addAttackBody(p, chr, skill, skilllevel, stance, numAttackedAndDamage, projectile, damage, speed, direction, display);
-        p.writeInt(0);
+        p.writeInt(chr.getMp());
+        p.writeInt(chr.getClientMaxMp());
         return p;
     }
 
