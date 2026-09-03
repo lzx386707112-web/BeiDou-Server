@@ -37,6 +37,7 @@ import org.gms.constants.skills.FPMage;
 import org.gms.constants.skills.ILArchMage;
 import org.gms.net.packet.InPacket;
 import org.gms.net.packet.Packet;
+import org.gms.server.DamageCapService;
 import org.gms.server.StatEffect;
 import org.gms.server.TimerManager;
 import org.gms.server.life.Monster;
@@ -148,6 +149,7 @@ public final class MagicDamageHandler extends AbstractDealDamageHandler {
     }
 
     private static List<Integer> adaptDamageTemplate(
+            Character chr,
             List<Integer> source,
             int attackCount,
             int sourcePercent,
@@ -163,7 +165,11 @@ public final class MagicDamageHandler extends AbstractDealDamageHandler {
             long scaled = sourcePercent > 0
                     ? Math.round((double) decoded * targetPercent / sourcePercent)
                     : decoded;
-            result.add(encodeRepeatedDamage((int) Math.min(Integer.MAX_VALUE, scaled), original < 0));
+            result.add(encodeRepeatedDamage(
+                    DamageCapService.capDamage(
+                            chr, (int) Math.min(Integer.MAX_VALUE, scaled)
+                    ), original < 0
+            ));
         }
         return result;
     }
@@ -217,7 +223,9 @@ public final class MagicDamageHandler extends AbstractDealDamageHandler {
         int mobCount = Math.max(1, Math.min(8, effect.getMobCount()));
         long oneLineDamage = (long) SummonDamageHandler.calcMaxDamage(effect, chr, true)
                 * Math.max(1, Math.min(15, effect.getAttackCount()));
-        int damage = (int) Math.min(Integer.MAX_VALUE, oneLineDamage);
+        int damage = DamageCapService.capDamage(
+                chr, (int) Math.min(Integer.MAX_VALUE, oneLineDamage)
+        );
         for (int attackTimeMs : FOUNTAIN_FOR_ANGEL_VI_ATTACK_TIMES_MS) {
             TimerManager.getInstance().schedule(() -> {
                 if (!canContinueAnimatedAttack(chr, expectedMap)
@@ -335,6 +343,7 @@ public final class MagicDamageHandler extends AbstractDealDamageHandler {
             );
         }
         List<Integer> mistDamageTemplate = adaptDamageTemplate(
+                chr,
                 sourceDamageTemplate,
                 Math.max(1, Math.min(15, mistEffect.getAttackCount())),
                 originalEffect.getDamage(),
@@ -531,6 +540,7 @@ public final class MagicDamageHandler extends AbstractDealDamageHandler {
             );
         }
         List<Integer> damageTemplate = adaptDamageTemplate(
+                chr,
                 sourceDamageTemplate,
                 replayAttackCount,
                 originalEffect.getDamage(),

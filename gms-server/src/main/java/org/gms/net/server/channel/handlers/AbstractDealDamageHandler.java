@@ -39,6 +39,7 @@ import org.gms.net.AbstractPacketHandler;
 import org.gms.net.packet.InPacket;
 import org.gms.net.server.PlayerBuffValueHolder;
 import org.gms.scripting.AbstractPlayerInteraction;
+import org.gms.server.DamageCapService;
 import org.gms.server.StatEffect;
 import org.gms.server.TimerManager;
 import org.gms.server.life.Element;
@@ -74,10 +75,7 @@ public abstract class AbstractDealDamageHandler extends AbstractPacketHandler {
     protected static final int INDEXED_DAMAGE_NUMBER_HIT_INTERVAL_MS = 120;
 
     private static int decodeClientDamage(int damage) {
-        if (damage >= 0) {
-            return damage;
-        }
-        return (int) Math.min(Integer.MAX_VALUE, (long) damage + (long) Integer.MAX_VALUE + 1L);
+        return DamageCapService.decodeClientDamage(damage);
     }
 
     protected static void showIndexedDamageNumbers(
@@ -1098,6 +1096,8 @@ public abstract class AbstractDealDamageHandler extends AbstractPacketHandler {
                     // If the skill is a crit, inverse the damage to make it show up on clients.
                     damage = -Integer.MAX_VALUE + damage - 1;
                 }
+
+                damage = DamageCapService.capEncodedClientDamage(chr, damage);
 
                 if (effect != null) {
                     int maxattack = Math.max(effect.getBulletCount(), effect.getAttackCount());

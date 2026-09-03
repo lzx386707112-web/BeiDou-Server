@@ -49,6 +49,7 @@ import org.gms.net.packet.InPacket;
 import org.gms.net.packet.Packet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.gms.server.DamageCapService;
 import org.gms.server.ItemInformationProvider;
 import org.gms.server.StatEffect;
 import org.gms.server.TimerManager;
@@ -191,7 +192,9 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
                 || skillId == Marksman.FATAL_TRIGGER;
     }
 
-    private static void scaleDamageLines(List<Integer> damage, int numerator, int denominator) {
+    private static void scaleDamageLines(
+            Character chr, List<Integer> damage, int numerator, int denominator
+    ) {
         if (damage == null || denominator <= 0) {
             return;
         }
@@ -199,7 +202,9 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
             int original = damage.get(index);
             long scaled = Math.round((double) decodeRepeatedDamage(original) * numerator / denominator);
             damage.set(index, encodeRepeatedDamage(
-                    (int) Math.min(Integer.MAX_VALUE, scaled), original < 0
+                    DamageCapService.capDamage(
+                            chr, (int) Math.min(Integer.MAX_VALUE, scaled)
+                    ), original < 0
             ));
         }
     }
@@ -209,19 +214,20 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
             return;
         }
         for (List<Integer> damage : attack.allDamage.values()) {
-            scaleDamageLines(damage, SHADOW_BITE_PASSIVE_PERCENT, 100);
+            scaleDamageLines(chr, damage, SHADOW_BITE_PASSIVE_PERCENT, 100);
         }
     }
 
-    private static void applyShadowBiteBossDamage(AttackInfo attack, MapleMap map) {
+    private static void applyShadowBiteBossDamage(AttackInfo attack, Character chr) {
         if (attack.skill != NightWalker.SHADOW_BITE) {
             return;
         }
+        MapleMap map = chr.getMap();
         for (Map.Entry<Integer, List<Integer>> entry : attack.allDamage.entrySet()) {
             Monster monster = map.getMonsterByOid(entry.getKey());
             if (monster != null && monster.isBoss()) {
                 scaleDamageLines(
-                        entry.getValue(), SHADOW_BITE_BOSS_PERCENT, SHADOW_BITE_NORMAL_PERCENT
+                        chr, entry.getValue(), SHADOW_BITE_BOSS_PERCENT, SHADOW_BITE_NORMAL_PERCENT
                 );
             }
         }
@@ -381,6 +387,7 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
     }
 
     private static List<Integer> adaptDamageTemplate(
+            Character chr,
             List<Integer> source,
             int attackCount,
             int sourcePercent,
@@ -396,7 +403,11 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
             long scaled = sourcePercent > 0
                     ? Math.round((double) decoded * targetPercent / sourcePercent)
                     : decoded;
-            result.add(encodeRepeatedDamage((int) Math.min(Integer.MAX_VALUE, scaled), original < 0));
+            result.add(encodeRepeatedDamage(
+                    DamageCapService.capDamage(
+                            chr, (int) Math.min(Integer.MAX_VALUE, scaled)
+                    ), original < 0
+            ));
         }
         return result;
     }
@@ -501,7 +512,7 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
             if (actualAttackCount != replayAttackCount) {
                 for (Map.Entry<Integer, List<Integer>> entry : damage.entrySet()) {
                     entry.setValue(adaptDamageTemplate(
-                            entry.getValue(), actualAttackCount, 1, 1
+                            chr, entry.getValue(), actualAttackCount, 1, 1
                     ));
                 }
             }
@@ -678,10 +689,12 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
             (monster.isBoss() ? additionalBossTargets : additionalNormalTargets).add(monster);
         }
         List<Integer> normalDamage = adaptDamageTemplate(
+                chr,
                 baseDamageTemplate, SHADOW_BITE_ATTACK_COUNT,
                 SHADOW_BITE_NORMAL_PERCENT, SHADOW_BITE_NORMAL_PERCENT
         );
         List<Integer> bossDamage = adaptDamageTemplate(
+                chr,
                 baseDamageTemplate, SHADOW_BITE_ATTACK_COUNT,
                 SHADOW_BITE_NORMAL_PERCENT, SHADOW_BITE_BOSS_PERCENT
         );
@@ -713,9 +726,11 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
                                 monster.getPosition().distanceSq(castPosition)))
                 .orElse(null);
         List<Integer> shadowBatDamage = adaptDamageTemplate(
+                chr,
                 baseDamageTemplate, 1, SHADOW_BITE_NORMAL_PERCENT, 150
         );
         List<Integer> ravenousBatDamage = adaptDamageTemplate(
+                chr,
                 baseDamageTemplate, 2, SHADOW_BITE_NORMAL_PERCENT, 480
         );
         TimerManager.getInstance().schedule(() -> {
@@ -768,6 +783,7 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
             );
         }
         List<Integer> damageTemplate = adaptDamageTemplate(
+                chr,
                 sourceDamageTemplate,
                 replayAttackCount,
                 originalEffect.getDamage(),
@@ -963,7 +979,7 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
             int previousHits = targetHitCounts.getOrDefault(target.getObjectId(), 0);
             if (previousHits > 0) {
                 scaleDamageLines(
-                        projectileDamage, MERCILESS_WINDS_REPEATED_TARGET_PERCENT, 100
+                        chr, projectileDamage, MERCILESS_WINDS_REPEATED_TARGET_PERCENT, 100
                 );
             }
             targetHitCounts.put(target.getObjectId(), previousHits + 1);
@@ -1015,12 +1031,14 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
             );
         }
         List<Integer> damageTemplate = adaptDamageTemplate(
+                chr,
                 sourceDamageTemplate,
                 replayAttackCount,
                 originalEffect.getDamage(),
                 replayEffect.getDamage()
         );
         List<Integer> dotDamageTemplate = adaptDamageTemplate(
+                chr,
                 sourceDamageTemplate,
                 1,
                 originalEffect.getDamage(),
@@ -1158,6 +1176,7 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
                     1, Math.min(15, replayEffect.getAttackCount())
             );
             damageTemplates.add(adaptDamageTemplate(
+                    chr,
                     sourceDamageTemplate,
                     replayAttackCounts[spiritType],
                     originalEffect.getDamage(),
@@ -1288,7 +1307,7 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
         List<Integer> shadowBiteDamageTemplate = attack.skill == NightWalker.SHADOW_BITE
                 ? copyDamageTemplate(attack)
                 : Collections.emptyList();
-        applyShadowBiteBossDamage(attack, chr.getMap());
+        applyShadowBiteBossDamage(attack, chr);
 
         if (chr.getBuffEffect(BuffStat.MORPH) != null) {
             if (chr.getBuffEffect(BuffStat.MORPH).isMorphWithoutAttack()) {

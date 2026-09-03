@@ -92,6 +92,7 @@ public class CharacterService {
     private final ServerQueueMapper serverQueueMapper;
     private final NameChangeService nameChangeService;
     private final WorldTransferService worldTransferService;
+    private final LinkSystemService linkSystemService;
 
     public CharactersDO findById(int id) {
         return charactersMapper.selectOneById(id);
@@ -493,6 +494,7 @@ public class CharacterService {
             accountStorage = world.getAccountStorage(charactersDO.getAccountid());
         }
         chr.setStorage(accountStorage);
+        chr.setLinkBonus(linkSystemService.loadBonus(chr));
         chr.reapplyLocalStats();
         chr.changeHpMp(charactersDO.getHp(), charactersDO.getMp(), true);
         return chr;

@@ -205,4 +205,7 @@ public class CharactersDO implements Serializable {
     @Column("fishLevel")
     private Integer fishLevel;
 
+    @Column("damageCap")
+    private Integer damageCap;
+
 }

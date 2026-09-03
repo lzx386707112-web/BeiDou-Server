@@ -67,6 +67,7 @@ import org.gms.server.partyquest.MonsterCarnival;
 import org.gms.server.partyquest.Pyramid;
 import org.gms.server.partyquest.Pyramid.PyramidMode;
 import org.gms.service.MentorshipService;
+import org.gms.service.LinkSystemService;
 import org.gms.util.PacketCreator;
 
 import java.awt.*;
@@ -94,6 +95,7 @@ public class NPCConversationManager extends AbstractPlayerInteraction {
     private static final GachaponService gachaponService = ServerManager.getApplicationContext().getBean(GachaponService.class);
     private static final PlayerGachaponStatsService playerGachaponStatsService = ServerManager.getApplicationContext().getBean(PlayerGachaponStatsService.class);
     private static final MentorshipService mentorshipService = ServerManager.getApplicationContext().getBean(MentorshipService.class);
+    private static final LinkSystemService linkSystemService = ServerManager.getApplicationContext().getBean(LinkSystemService.class);
 
     private final Map<Integer, String> npcDefaultTalks = new HashMap<>();
     @Getter
@@ -143,6 +145,32 @@ public class NPCConversationManager extends AbstractPlayerInteraction {
 
     public int getDamageSkinId() {
         return DamageSkinService.getSkinId(getPlayer().getId());
+    }
+
+    public String useDamageCapBreakthroughStone() {
+        Character player = getPlayer();
+        int stoneId = getItemId();
+        if (!DamageCapService.isBreakthroughStone(stoneId) || !haveItem(stoneId, 1)) {
+            return "突破石不存在，无法使用。";
+        }
+
+        DamageCapService.BreakthroughResult result;
+        synchronized (player) {
+            if (!haveItem(stoneId, 1)) {
+                return "突破石不存在，无法使用。";
+            }
+            result = DamageCapService.attempt(player, stoneId);
+            gainItem(stoneId, (short) -1, false);
+        }
+        player.saveCharToDB(false);
+
+        if (!result.success()) {
+            return "突破失败，当前伤害上限仍为 " + result.currentCap() + "。";
+        }
+        if (!result.changed()) {
+            return "突破成功，但增加后会超过 2,147,483,647，当前伤害上限未变化。";
+        }
+        return "突破成功，伤害上限提升至 " + result.currentCap() + "。";
     }
 
     public boolean setDamageSkin(int skinId) {
@@ -473,6 +501,14 @@ public class NPCConversationManager extends AbstractPlayerInteraction {
 
     public int getTotalGachaponCount() {
         return playerGachaponStatsService.getTotalCount(getPlayer().getId());
+    }
+
+    public String linkSystemOverview() {
+        return linkSystemService.getOverview(getPlayer());
+    }
+
+    public String linkSystemAdd(int sourceCharacterId) {
+        return linkSystemService.addLink(getPlayer(), sourceCharacterId);
     }
 
     public int getGachaponCount() {

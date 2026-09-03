@@ -208,6 +208,8 @@ public class Character extends AbstractCharacterObject {
     @Getter
     @Setter
     private int vanquisherKills;
+    @Getter
+    private int damageCap = DamageCapService.INITIAL_CAP;
     private float expRate = 1;
     private float mesoRate = 1;
     private float dropRate = 1;
@@ -245,6 +247,7 @@ public class Character extends AbstractCharacterObject {
     private transient int localstr, localdex, localluk, localint_, localmagic, localwatk;
     private transient int equipmaxhp, equipmaxmp, equipstr, equipdex, equipluk, equipint_, equipmagic, equipwatk, localchairhp, localchairmp;
     private transient SetItemManager.Bonus setItemBonus = SetItemManager.Bonus.NONE;
+    private transient volatile LinkSystemService.Bonus linkBonus = LinkSystemService.Bonus.NONE;
     private int localchairrate;
     @Getter
     private boolean hidden;
@@ -4867,7 +4870,7 @@ public class Character extends AbstractCharacterObject {
             return 1;
         }
 
-        return expRate * (100 + setItemBonus.get("ExpRate")) / 100.0f;
+        return expRate * (100 + setItemBonus.get("ExpRate")) / 100.0f * linkBonus.expMultiplier();
     }
 
     public float getLevelExpRate() {
@@ -5210,6 +5213,26 @@ public class Character extends AbstractCharacterObject {
         return setItemBonus.get(key);
     }
 
+    public LinkSystemService.Bonus getLinkBonus() {
+        return linkBonus;
+    }
+
+    public void setLinkBonus(LinkSystemService.Bonus bonus) {
+        linkBonus = bonus == null ? LinkSystemService.Bonus.NONE : bonus;
+    }
+
+    public void refreshLinkBonus(LinkSystemService.Bonus bonus) {
+        setLinkBonus(bonus);
+        updateLocalStats();
+        sendPacket(PacketCreator.updatePlayerStats(List.of(
+                new Pair<>(Stat.MAXHP, clientMaxHp),
+                new Pair<>(Stat.MAXMP, clientMaxMp)
+        ), true, this));
+        if (getMap() != null) {
+            getMap().broadcastMessage(PacketCreator.nameplatePowerUpdate(this));
+        }
+    }
+
     public void refreshSetItemBonuses() {
         updateLocalStats();
         sendPacket(PacketCreator.setItemUpdate(this));
@@ -5252,6 +5275,10 @@ public class Character extends AbstractCharacterObject {
 
     public int getMerchantMeso() {
         return merchantmeso;
+    }
+
+    public void setDamageCap(Integer damageCap) {
+        this.damageCap = DamageCapService.normalizeCap(damageCap);
     }
 
     public int getMerchantNetMeso() {
@@ -6709,6 +6736,7 @@ public class Character extends AbstractCharacterObject {
         ret.jobRank = this.getJobRank();
         ret.jobRankMove = this.getJobRankMove();
         ret.fishLevel = this.getFishLevel();
+        ret.damageCap = this.getDamageCap();
         return ret;
     }
 
@@ -6750,6 +6778,7 @@ public class Character extends AbstractCharacterObject {
         chr.setHasMerchant(charactersDO.getHasmerchant());
         chr.setRemainingAp(charactersDO.getAp());
         chr.setFishLevel(charactersDO.getFishLevel());
+        chr.setDamageCap(charactersDO.getDamageCap());
         int[] remainingSps = new int[10];
         Arrays.fill(remainingSps, 0);
         if (!RequireUtil.isEmpty(charactersDO.getSp())) {
@@ -7003,6 +7032,7 @@ public class Character extends AbstractCharacterObject {
         cdo.setSetupslots((int) chr.getSlots(2));
         cdo.setEtcslots((int) chr.getSlots(3));
         cdo.setFishLevel(chr.getFishLevel());
+        cdo.setDamageCap(chr.getDamageCap());
         // todo 未完成
         return cdo;
     }
@@ -7337,6 +7367,18 @@ public class Character extends AbstractCharacterObject {
             localmagic += setItemBonus.get("MAD");
             localmagic += setItemBonus.get("INT");
 
+            localMaxHp += linkBonus.hp();
+            localMaxMp += linkBonus.mp();
+            int linkStatPercent = linkBonus.allStatPercent();
+            int linkedInt = addPercent(localint_, linkStatPercent);
+            localstr = addPercent(localstr, linkStatPercent);
+            localdex = addPercent(localdex, linkStatPercent);
+            localluk = addPercent(localluk, linkStatPercent);
+            localmagic += linkedInt - localint_;
+            localint_ = linkedInt;
+            clientMaxHp = cappedHpMp((long) getMaxHp() + linkBonus.hp());
+            clientMaxMp = cappedHpMp((long) getMaxMp() + linkBonus.mp());
+
             localmagic = Math.min(localmagic, 2000);
 
             Integer hbhp = getBuffedValue(BuffStat.HYPERBODYHP);
@@ -7447,6 +7489,14 @@ public class Character extends AbstractCharacterObject {
             chrLock.unlock();
             effLock.unlock();
         }
+    }
+
+    private static int addPercent(int value, int percent) {
+        return (int) Math.min(Integer.MAX_VALUE, value + (long) value * percent / 100L);
+    }
+
+    private static int cappedHpMp(long value) {
+        return (int) Math.min(30000L, Math.max(0L, value));
     }
 
     public List<Pair<Stat, Integer>> recalcLocalStats() {
@@ -7931,7 +7981,7 @@ public class Character extends AbstractCharacterObject {
             con.setTransactionIsolation(Connection.TRANSACTION_READ_UNCOMMITTED);
 
             try {
-                try (PreparedStatement ps = con.prepareStatement("UPDATE characters SET level = ?, fame = ?, str = ?, dex = ?, luk = ?, `int` = ?, exp = ?, gachaexp = ?, hp = ?, mp = ?, maxhp = ?, maxmp = ?, sp = ?, ap = ?, gm = ?, skincolor = ?, gender = ?, job = ?, hair = ?, face = ?, map = ?, meso = ?, hpMpUsed = ?, spawnpoint = ?, party = ?, buddyCapacity = ?, messengerid = ?, messengerposition = ?, mountlevel = ?, mountexp = ?, mounttiredness= ?, equipslots = ?, useslots = ?, setupslots = ?, etcslots = ?,  monsterbookcover = ?, vanquisherStage = ?, dojoPoints = ?, lastDojoStage = ?, finishedDojoTutorial = ?, vanquisherKills = ?, matchcardwins = ?, matchcardlosses = ?, matchcardties = ?, omokwins = ?, omoklosses = ?, omokties = ?, dataString = ?, fquest = ?, jailexpire = ?, partnerId = ?, marriageItemId = ?, lastExpGainTime = ?, ariantPoints = ?, partySearch = ?, fishLevel = ? WHERE id = ?", Statement.RETURN_GENERATED_KEYS)) {
+                try (PreparedStatement ps = con.prepareStatement("UPDATE characters SET level = ?, fame = ?, str = ?, dex = ?, luk = ?, `int` = ?, exp = ?, gachaexp = ?, hp = ?, mp = ?, maxhp = ?, maxmp = ?, sp = ?, ap = ?, gm = ?, skincolor = ?, gender = ?, job = ?, hair = ?, face = ?, map = ?, meso = ?, hpMpUsed = ?, spawnpoint = ?, party = ?, buddyCapacity = ?, messengerid = ?, messengerposition = ?, mountlevel = ?, mountexp = ?, mounttiredness= ?, equipslots = ?, useslots = ?, setupslots = ?, etcslots = ?,  monsterbookcover = ?, vanquisherStage = ?, dojoPoints = ?, lastDojoStage = ?, finishedDojoTutorial = ?, vanquisherKills = ?, matchcardwins = ?, matchcardlosses = ?, matchcardties = ?, omokwins = ?, omoklosses = ?, omokties = ?, dataString = ?, fquest = ?, jailexpire = ?, partnerId = ?, marriageItemId = ?, lastExpGainTime = ?, ariantPoints = ?, partySearch = ?, fishLevel = ?, damageCap = ? WHERE id = ?", Statement.RETURN_GENERATED_KEYS)) {
                     ps.setInt(1, level);    // thanks CanIGetaPR for noticing an unnecessary "level" limitation when persisting DB data
                     ps.setInt(2, fame);
 
@@ -8046,7 +8096,8 @@ public class Character extends AbstractCharacterObject {
                     ps.setInt(54, ariantPoints);
                     ps.setBoolean(55, canRecvPartySearchInvite);
                     ps.setInt(56, fishLevel);
-                    ps.setInt(57, id);
+                    ps.setInt(57, damageCap);
+                    ps.setInt(58, id);
 
                     int updateRows = ps.executeUpdate();
                     if (updateRows < 1) {

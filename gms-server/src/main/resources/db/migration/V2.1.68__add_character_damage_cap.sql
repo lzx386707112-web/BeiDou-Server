@@ -1,0 +1,2 @@
+ALTER TABLE `characters`
+    ADD COLUMN `damageCap` INT NOT NULL DEFAULT 19999999;

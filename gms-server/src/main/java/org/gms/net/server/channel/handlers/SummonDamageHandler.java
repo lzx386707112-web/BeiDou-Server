@@ -38,6 +38,7 @@ import org.gms.constants.skills.Outlaw;
 import org.gms.net.packet.InPacket;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.gms.server.DamageCapService;
 import org.gms.server.ItemInformationProvider;
 import org.gms.server.StatEffect;
 import org.gms.server.life.Monster;
@@ -106,7 +107,7 @@ public final class SummonDamageHandler extends AbstractDealDamageHandler {
         for (int x = 0; x < numAttacked; x++) {
             int monsterOid = p.readInt(); // attacked oid
             p.skip(18);
-            int damage = p.readInt();
+            int damage = DamageCapService.capDamage(player, p.readInt());
             allDamage.add(new SummonAttackEntry(monsterOid, damage));
         }
         player.getMap().broadcastMessage(player, PacketCreator.summonAttack(player.getId(), summon.getObjectId(), direction, allDamage), summon.getPosition());

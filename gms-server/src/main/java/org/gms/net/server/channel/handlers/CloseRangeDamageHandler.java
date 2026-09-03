@@ -45,6 +45,7 @@ import org.gms.constants.skills.ThunderBreaker;
 import org.gms.constants.skills.WindArcher;
 import org.gms.net.packet.InPacket;
 import org.gms.net.packet.Packet;
+import org.gms.server.DamageCapService;
 import org.gms.server.StatEffect;
 import org.gms.server.TimerManager;
 import org.gms.server.life.Monster;
@@ -318,6 +319,7 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
     }
 
     private static List<Integer> adaptDamageTemplate(
+            Character chr,
             List<Integer> source,
             int attackCount,
             int sourcePercent,
@@ -334,7 +336,9 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
                     ? Math.round((double) decoded * targetPercent / sourcePercent)
                     : decoded;
             result.add(encodeRepeatedDamage(
-                    (int) Math.min(Integer.MAX_VALUE, scaled), original < 0
+                    DamageCapService.capDamage(
+                            chr, (int) Math.min(Integer.MAX_VALUE, scaled)
+                    ), original < 0
             ));
         }
         return result;
@@ -818,6 +822,7 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
         int mobCount = Math.max(1, Math.min(15, effect.getMobCount()));
         List<Integer> sourceDamageTemplate = copyCapturedDamageTemplate(attack);
         List<Integer> damageTemplate = adaptDamageTemplate(
+                chr,
                 sourceDamageTemplate,
                 attackCount,
                 effect.getDamage(),
@@ -882,6 +887,7 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
         int mobCount = Math.max(1, Math.min(15, replayEffect.getMobCount()));
         List<Integer> sourceDamageTemplate = copyCapturedDamageTemplate(attack);
         List<Integer> damageTemplate = adaptDamageTemplate(
+                chr,
                 sourceDamageTemplate,
                 replayAttackCount,
                 originalEffect.getDamage(),
@@ -944,6 +950,7 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
             );
         }
         List<Integer> damageTemplate = adaptDamageTemplate(
+                chr,
                 sourceDamageTemplate,
                 Math.max(1, Math.min(15, thunderEffect.getAttackCount())),
                 originalEffect.getDamage(),
@@ -1016,6 +1023,7 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
             int replayAttackCount = Math.max(1, Math.min(15, replayEffect.getAttackCount()));
             int mobCount = Math.max(1, Math.min(15, replayEffect.getMobCount()));
             List<Integer> damageTemplate = adaptDamageTemplate(
+                    chr,
                     sourceDamageTemplate,
                     replayAttackCount,
                     originalEffect.getDamage(),

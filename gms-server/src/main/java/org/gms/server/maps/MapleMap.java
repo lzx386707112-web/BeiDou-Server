@@ -55,6 +55,7 @@ import org.gms.server.BossDamageGrowth;
 import org.gms.server.SetItemManager;
 import org.gms.server.StatEffect;
 import org.gms.server.TimerManager;
+import org.gms.service.LinkSystemService;
 import org.gms.server.events.gm.Coconut;
 import org.gms.server.events.gm.Fitness;
 import org.gms.server.events.gm.Ola;
@@ -1496,8 +1497,9 @@ public class MapleMap {
             }
         }
         if (monster.isAlive()) {
-            int actualDamage = SetItemManager.applyDamage(chr, monster,
-                    BossDamageGrowth.apply(chr, monster, damage));
+            int actualDamage = LinkSystemService.applyDamage(chr, monster,
+                    SetItemManager.applyDamage(chr, monster,
+                            BossDamageGrowth.apply(chr, monster, damage)));
             boolean killed = monster.damage(chr, actualDamage, false);
 
             selfDestruction selfDestr = monster.getStats().selfDestruction();
