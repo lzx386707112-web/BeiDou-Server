@@ -10,6 +10,13 @@ constexpr uintptr_t kEquipTooltip = 0x008ECA0C;
 constexpr uintptr_t kClearTooltip = 0x008E6E23;
 constexpr uintptr_t kMakeLayer = 0x008F3141;
 constexpr uintptr_t kTooltipConstructor = 0x008E49B5;
+constexpr uintptr_t kItemInfo = 0x00BE78D8;
+constexpr uintptr_t kGetEquipItem = 0x005CA785;
+constexpr uintptr_t kGetSecureInt = 0x00416563;
+constexpr size_t kEquipReqLevelOffset = 0x60;
+constexpr size_t kEquipOwnerOffset = 0xE0;
+constexpr uintptr_t kEquipOwnerTextCall = 0x008E8D16;
+constexpr uintptr_t kAssignString = 0x00414617;
 constexpr uintptr_t kEquipMakeLayer1 = 0x008E7E5E;
 constexpr uintptr_t kEquipMakeLayer2 = 0x008E97C3;
 constexpr uintptr_t kEquipMakeLayer3 = 0x008E97E7;
@@ -114,6 +121,7 @@ SetData gDecoded[kMaxSets] = {};
 int gSetCount = 0;
 void* gHoveredTip = nullptr;
 int gPendingItem = -1;
+int gPendingCurrentStars = 0;
 
 using ProcessPacketFn = void(__thiscall*)(void*, PacketView*);
 using EquipTooltipFn = void(__thiscall*)(void*, void*);
@@ -123,6 +131,9 @@ using SetDamageSkinFn = void(__cdecl*)(int);
 using RefreshNameplateFn = void(__thiscall*)(void*);
 using MakeNameplateFn = int(__thiscall*)(void*, const char*, void*, void*, int, int, int, int, int, int);
 using FindUserFn = void*(__thiscall*)(void*, int);
+using GetEquipItemFn = void*(__thiscall*)(void*, int);
+using GetSecureIntFn = int(__cdecl*)(const void*, int);
+using AssignStringFn = void(__thiscall*)(void*, const char*, int);
 ProcessPacketFn gRealProcessPacket = nullptr;
 using PacketExtensionFn = BOOL(WINAPI*)(void*);
 PVOID volatile gPacketExtension = nullptr;
@@ -133,6 +144,9 @@ SetDamageSkinFn gSetDamageSkin = nullptr;
 RefreshNameplateFn gRealRefreshNameplate = nullptr;
 MakeNameplateFn gMakeNameplate = reinterpret_cast<MakeNameplateFn>(kMakeNameplate);
 FindUserFn gFindUser = reinterpret_cast<FindUserFn>(kFindUser);
+GetEquipItemFn gGetEquipItem = reinterpret_cast<GetEquipItemFn>(kGetEquipItem);
+GetSecureIntFn gGetSecureInt = reinterpret_cast<GetSecureIntFn>(kGetSecureInt);
+AssignStringFn gAssignString = reinterpret_cast<AssignStringFn>(kAssignString);
 
 size_t TextLength(const char* text) {
     size_t length = 0;
@@ -192,6 +206,52 @@ bool SetContains(const SetData& set, int itemId) {
         }
     }
     return false;
+}
+
+bool IsWeaponItem(int itemId) {
+    return itemId >= 1302000 && itemId < 1493000;
+}
+
+int RequiredLevelForItem(int itemId) {
+    void* itemInfo = *reinterpret_cast<void**>(kItemInfo);
+    void* equipItem = itemInfo ? gGetEquipItem(itemInfo, itemId) : nullptr;
+    if (!equipItem || IsBadReadPtr(
+            static_cast<unsigned char*>(equipItem) + kEquipReqLevelOffset, 12)) return -1;
+    unsigned char* requiredLevel =
+            static_cast<unsigned char*>(equipItem) + kEquipReqLevelOffset;
+    return gGetSecureInt(requiredLevel, *reinterpret_cast<int*>(requiredLevel + 0x08));
+}
+
+int StarCapacityForLevel(int requiredLevel) {
+    if (requiredLevel < 0) return 0;
+    if (requiredLevel <= 94) return 5;
+    if (requiredLevel <= 107) return 8;
+    if (requiredLevel <= 117) return 10;
+    if (requiredLevel <= 127) return 15;
+    if (requiredLevel <= 137) return 20;
+    return 25;
+}
+
+int ParseStarMarker(const unsigned char* owner, int capacity) {
+    if (!owner || capacity <= 0) return -1;
+    if (IsBadReadPtr(owner, 1) || owner[0] < '0' || owner[0] > '9') return -1;
+
+    int stars = owner[0] - '0';
+    int digits = 1;
+    if (!IsBadReadPtr(owner + 1, 1) && owner[1] >= '0' && owner[1] <= '9') {
+        stars = stars * 10 + owner[1] - '0';
+        digits = 2;
+    }
+    const unsigned char* marker = owner + digits;
+    if (IsBadReadPtr(marker, 3) || marker[0] != 0xA1 || marker[1] != 0xEF
+            || marker[2] != 0) return -1;
+    return stars <= capacity ? stars : -1;
+}
+
+int ReadStarMarker(void* equip, int capacity) {
+    if (!equip) return -1;
+    return ParseStarMarker(
+            static_cast<unsigned char*>(equip) + kEquipOwnerOffset, capacity);
 }
 
 void DecodeSetPacket(PacketView* packet) {
@@ -310,6 +370,9 @@ void GbkToWide(const char* text, wchar_t* out, int capacity) {
 
 constexpr int kNativePanelWidth = 236;
 constexpr int kNativeLineHeight = 16;
+constexpr int kStarLineHeight = 15;
+constexpr int kStarAdvance = 9;
+constexpr int kStarGroupGap = 4;
 constexpr int kPanelLeft = 8;
 constexpr int kStatLeft = 16;
 constexpr int kPanelRight = kNativePanelWidth - 8;
@@ -325,6 +388,15 @@ void* gNativeFontTitle = nullptr;
 void* gNativeFontActive = nullptr;
 void* gNativeFontLabel = nullptr;
 void* gNativeFontDim = nullptr;
+alignas(16) unsigned char gStarTip[0x2000] = {};
+bool gStarTipInitialized = false;
+bool gStarPanelActive = false;
+int gStarPanelItem = -1;
+int gStarPanelCapacity = 0;
+int gStarPanelCurrentStars = 0;
+void* gStarCanvas = nullptr;
+void* gStarFontLit = nullptr;
+void* gStarFontDim = nullptr;
 
 void* ComMethod(void* object, int index) {
     return object ? (*reinterpret_cast<void***>(object))[index] : nullptr;
@@ -382,6 +454,11 @@ bool EnsureNativeFonts() {
             && CreateNativeFont(gNativeFontDim, 0xFF90949D);
 }
 
+bool EnsureStarFonts() {
+    return CreateNativeFont(gStarFontLit, 0xFFFFD83D)
+            && CreateNativeFont(gStarFontDim, 0xFF737B86);
+}
+
 void DrawNativeText(void* canvas, void* font, int x, int y, const wchar_t* text) {
     if (!canvas || !font || !text || !text[0]) return;
     BSTR value = SysAllocString(text);
@@ -407,6 +484,19 @@ int CenteredTextX(const wchar_t* text) {
 int RightAlignedTextX(const wchar_t* text) {
     int x = kPanelRight - EstimateTextWidth(text);
     return x > kPanelLeft ? x : kPanelLeft;
+}
+
+int StarRowWidth(int count) {
+    if (count <= 0) return 0;
+    return count * kStarAdvance + ((count - 1) / 5) * kStarGroupGap;
+}
+
+int StarRowCount(int capacity) {
+    return capacity > 15 ? 2 : 1;
+}
+
+int StarCountInRow(int capacity, int row) {
+    return row == 0 ? (capacity > 15 ? 15 : capacity) : capacity - 15;
 }
 
 void TrimTextToWidth(wchar_t* text, int maxWidth) {
@@ -725,6 +815,87 @@ void HideNativePanel() {
     gNativePanelItem = -1;
 }
 
+void HideStarPanel() {
+    if (!gStarTipInitialized) return;
+    void* layer = *reinterpret_cast<void**>(gStarTip + 0x10);
+    LayerVisible(layer, 0);
+    if (gStarPanelActive && gRealClearTooltip) gRealClearTooltip(gStarTip);
+    if (gStarCanvas) {
+        ComRelease(gStarCanvas);
+        gStarCanvas = nullptr;
+    }
+    gStarPanelActive = false;
+    gStarPanelItem = -1;
+    gStarPanelCapacity = 0;
+    gStarPanelCurrentStars = 0;
+}
+
+void RenderStarPanel(void* canvas, int width, int capacity, int currentStars) {
+    int y = 6;
+    for (int row = 0; row < StarRowCount(capacity); row++) {
+        int count = StarCountInRow(capacity, row);
+        int x = (width - StarRowWidth(count)) / 2;
+        int firstStar = row * 15;
+        for (int column = 0; column < count; column++) {
+            if (column && column % 5 == 0) x += kStarGroupGap;
+            void* font = firstStar + column < currentStars ? gStarFontLit : gStarFontDim;
+            DrawNativeText(canvas, font, x, y, L"★");
+            x += kStarAdvance;
+        }
+        y += kStarLineHeight;
+    }
+}
+
+void ShowStarPanel(int itemId, int currentStars, void* nativeTip, int left, int top,
+        int nativeWidth, int doubleOutline, unsigned int color) {
+    if (!IsWeaponItem(itemId)) { HideStarPanel(); return; }
+    int requiredLevel = RequiredLevelForItem(itemId);
+    int capacity = StarCapacityForLevel(requiredLevel);
+    if (!capacity || !EnsureStarFonts()) { HideStarPanel(); return; }
+    if (!gStarTipInitialized) {
+        MemoryZero(gStarTip, sizeof(gStarTip));
+        reinterpret_cast<void(__thiscall*)(void*)>(kTooltipConstructor)(gStarTip);
+        gStarTipInitialized = true;
+    }
+    void* nativeLayer = *reinterpret_cast<void**>(static_cast<unsigned char*>(nativeTip) + 0x10);
+    int height = StarRowCount(capacity) * kStarLineHeight + 12;
+    int y = top - height;
+    if (gStarPanelActive && gStarPanelItem == itemId && gStarPanelCapacity == capacity
+            && gStarPanelCurrentStars == currentStars) {
+        AlignNativeLayer(nativeLayer, *reinterpret_cast<void**>(gStarTip + 0x10), left, y);
+        return;
+    }
+    HideStarPanel();
+    *reinterpret_cast<int*>(gStarTip + 0x08) = height;
+    *reinterpret_cast<int*>(gStarTip + 0x0C) = nativeWidth;
+    void* canvas = nullptr;
+    gRealMakeLayer(gStarTip, &canvas, left, y, doubleOutline, 0, 0, color);
+    void* starLayer = *reinterpret_cast<void**>(gStarTip + 0x10);
+    if (!canvas || !starLayer) {
+        if (canvas) ComRelease(canvas);
+        Log("ERROR: star panel MakeLayer failed");
+        return;
+    }
+    gStarCanvas = canvas;
+    void* drawCanvas = LayerCanvas(starLayer);
+    if (!drawCanvas) {
+        HideStarPanel();
+        Log("ERROR: star panel canvas[0] missing");
+        return;
+    }
+    RenderStarPanel(drawCanvas, nativeWidth, capacity, currentStars);
+    ComRelease(drawCanvas);
+    gStarPanelActive = true;
+    gStarPanelItem = itemId;
+    gStarPanelCapacity = capacity;
+    gStarPanelCurrentStars = currentStars;
+    AlignNativeLayer(nativeLayer, starLayer, left, y);
+    char logLine[112];
+    wsprintfA(logLine, "OK: star panel shown item=%d level=%d stars=%d capacity=%d",
+            itemId, requiredLevel, currentStars, capacity);
+    Log(logLine);
+}
+
 void ShowNativePanel(int itemId, void* nativeTip, int left, int top, int nativeWidth,
         int doubleOutline, unsigned int color) {
     SetData* set = FindSetForItem(itemId);
@@ -815,15 +986,31 @@ void __fastcall HookRefreshNameplate(void* self, void*) {
     if (state) CreatePowerLayer(self, *state);
 }
 
+void __fastcall HookEquipOwnerText(void* self, void*, const char* text, int length) {
+    const char* visibleText = ParseStarMarker(
+            reinterpret_cast<const unsigned char*>(text), 25) >= 0 ? "" : text;
+    gAssignString(self, visibleText, length);
+}
+
 void __fastcall HookEquipTooltip(void* self, void*, void* equip) {
-    gRealEquipTooltip(self, equip);
     int itemId = DecodeSecureItemId(equip);
+    int capacity = IsWeaponItem(itemId) ? StarCapacityForLevel(RequiredLevelForItem(itemId)) : 0;
+    int markerStars = ReadStarMarker(equip, capacity);
+    int currentStars = markerStars >= 0 ? markerStars : 0;
+    unsigned char* owner = markerStars >= 0
+            ? static_cast<unsigned char*>(equip) + kEquipOwnerOffset
+            : nullptr;
+    unsigned char ownerFirst = owner ? owner[0] : 0;
+    if (owner) owner[0] = 0;
+    gRealEquipTooltip(self, equip);
+    if (owner) owner[0] = ownerFirst;
     if (!gHoveredTip) {
         char line[96];
         wsprintfA(line, "INFO: equipment tooltip item=%d sets=%d", itemId, gSetCount);
         Log(line);
         gHoveredTip = self;
         gPendingItem = itemId;
+        gPendingCurrentStars = currentStars;
     }
 }
 
@@ -832,7 +1019,9 @@ void __fastcall HookClearTooltip(void* self, void*) {
     if (self == gHoveredTip) {
         gHoveredTip = nullptr;
         gPendingItem = -1;
+        gPendingCurrentStars = 0;
         HideNativePanel();
+        HideStarPanel();
     }
 }
 
@@ -841,11 +1030,14 @@ void* __fastcall HookMakeLayer(void* self, void*, void** result, int left, int t
     void* out = gRealMakeLayer(self, result, left, top, doubleOutline, login, characterTooltip, color);
     if (self == gHoveredTip) {
         if (gPendingItem >= 0) {
+            int nativeWidth = *reinterpret_cast<int*>(static_cast<unsigned char*>(self) + 0x0C);
+            ShowStarPanel(gPendingItem, gPendingCurrentStars, self, left, top,
+                    nativeWidth, doubleOutline, color);
             ShowNativePanel(gPendingItem, self, left, top,
-                    *reinterpret_cast<int*>(static_cast<unsigned char*>(self) + 0x0C),
-                    doubleOutline, color);
+                    nativeWidth, doubleOutline, color);
         } else {
             HideNativePanel();
+            HideStarPanel();
         }
     }
     return out;
@@ -905,7 +1097,7 @@ bool PatchCall(uintptr_t address, void* replacement) {
 }
 
 DWORD WINAPI Install(LPVOID instance) {
-    Log("LOAD: BeiDouSetItemCompat v12 native-power-nameplate");
+    Log("LOAD: BeiDouSetItemCompat v13 star-force-tooltip");
     if (reinterpret_cast<uintptr_t>(GetModuleHandleA(nullptr)) != kImageBase) {
         Log("ERROR: unexpected image base");
         return 1;
@@ -928,6 +1120,7 @@ DWORD WINAPI Install(LPVOID instance) {
             || !CanInstallHook(kEquipTooltip, equipBytes, sizeof(equipBytes))
             || !CanInstallHook(kClearTooltip, clearBytes, sizeof(clearBytes))
             || !CanInstallHook(kRefreshNameplate, nameplateBytes, sizeof(nameplateBytes))
+            || !CanPatchCall(kEquipOwnerTextCall, kAssignString)
             || !CanPatchCall(kEquipMakeLayer1, kMakeLayer)
             || !CanPatchCall(kEquipMakeLayer2, kMakeLayer)
             || !CanPatchCall(kEquipMakeLayer3, kMakeLayer)) {
@@ -948,6 +1141,7 @@ DWORD WINAPI Install(LPVOID instance) {
             reinterpret_cast<void*>(&HookRefreshNameplate)));
     gRealMakeLayer = reinterpret_cast<MakeLayerFn>(kMakeLayer);
     if (!gRealProcessPacket || !gRealEquipTooltip || !gRealClearTooltip || !gRealRefreshNameplate
+            || !PatchCall(kEquipOwnerTextCall, reinterpret_cast<void*>(&HookEquipOwnerText))
             || !PatchCall(kEquipMakeLayer1, reinterpret_cast<void*>(&HookMakeLayer))
             || !PatchCall(kEquipMakeLayer2, reinterpret_cast<void*>(&HookMakeLayer))
             || !PatchCall(kEquipMakeLayer3, reinterpret_cast<void*>(&HookMakeLayer))) {

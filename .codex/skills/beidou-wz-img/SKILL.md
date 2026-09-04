@@ -77,6 +77,25 @@ before editing. It defines the evidence gate, reserved packet markers, native
 8. State what offline checks proved and what still needs a real old-client
    launch or in-game test.
 
+## Compatibility DLL build and delivery
+
+When the user explicitly requests a rebuilt or delivered compatibility DLL,
+source and static checks alone are not completion. After they pass:
+
+1. Run the DLL's checked-in project build script; do not substitute an ad hoc
+   command that may omit its linker or compatibility flags.
+2. Verify that the output is the expected 32-bit Windows DLL and inspect its
+   final repository status and SHA-256 hash.
+3. Copy only that DLL to `/Users/lizixian/Downloads/路西德/`, preserving its
+   repository-relative path (for example `clien/BeiDouSetItemCompat.dll`).
+4. Compare source and delivered SHA-256 hashes and require an exact match.
+5. Report the build result, delivery path, matching hash, and remaining
+   real-client checks.
+
+Do not leave an older delivery copy in place after reporting success. If the
+user has not explicitly authorized a build or delivery, stop after the required
+static checks as described above.
+
 ## Stopping conditions
 
 Stop before writing when the baseline, region/key, target record, source chain,

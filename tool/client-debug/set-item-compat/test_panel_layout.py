@@ -33,5 +33,67 @@ class SetItemPanelLayoutTest(unittest.TestCase):
         self.require("TrimTextToWidth(wide, typeX - kPanelLeft - 6);")
         self.require("DrawNativeText(canvas, font, typeX, y, line);")
 
+    def test_star_panel_is_limited_to_weapons(self) -> None:
+        self.require("return itemId >= 1302000 && itemId < 1493000;")
+        self.require("if (!IsWeaponItem(itemId)) { HideStarPanel(); return; }")
+
+    def test_star_capacity_level_boundaries(self) -> None:
+        expected = (
+            "if (requiredLevel <= 94) return 5;",
+            "if (requiredLevel <= 107) return 8;",
+            "if (requiredLevel <= 117) return 10;",
+            "if (requiredLevel <= 127) return 15;",
+            "if (requiredLevel <= 137) return 20;",
+            "return 25;",
+        )
+        for fragment in expected:
+            self.require(fragment)
+
+    def test_star_panel_reads_the_client_required_level(self) -> None:
+        self.require("constexpr uintptr_t kGetEquipItem = 0x005CA785;")
+        self.require("constexpr uintptr_t kGetSecureInt = 0x00416563;")
+        self.require("constexpr size_t kEquipReqLevelOffset = 0x60;")
+        self.require("static_cast<unsigned char*>(equipItem) + kEquipReqLevelOffset")
+        self.require("*reinterpret_cast<int*>(requiredLevel + 0x08)")
+
+    def test_star_rows_are_grouped_and_centered(self) -> None:
+        self.require("constexpr int kStarAdvance = 9;")
+        self.require("constexpr int kStarGroupGap = 4;")
+        self.require("return capacity > 15 ? 2 : 1;")
+        self.require("return row == 0 ? (capacity > 15 ? 15 : capacity) : capacity - 15;")
+        self.require("((count - 1) / 5) * kStarGroupGap")
+        self.require("int x = (width - StarRowWidth(count)) / 2;")
+        self.require("if (column && column % 5 == 0) x += kStarGroupGap;")
+
+    def test_star_panel_reads_and_caches_current_stars(self) -> None:
+        self.require("constexpr size_t kEquipOwnerOffset = 0xE0;")
+        self.require("int ReadStarMarker(void* equip, int capacity)")
+        self.require("static_cast<unsigned char*>(equip) + kEquipOwnerOffset")
+        self.require("marker[0] != 0xA1 || marker[1] != 0xEF")
+        self.require("int gPendingCurrentStars = 0;")
+        self.require("int gStarPanelCurrentStars = 0;")
+        self.require("gStarPanelCurrentStars == currentStars")
+        self.require("RenderStarPanel(drawCanvas, nativeWidth, capacity, currentStars);")
+        self.assertNotIn("constexpr int kCurrentStars = 0;", SOURCE)
+        self.require("firstStar + column < currentStars ? gStarFontLit : gStarFontDim")
+        self.require("CreateNativeFont(gStarFontLit, 0xFFFFD83D)")
+        self.require("CreateNativeFont(gStarFontDim, 0xFF737B86)")
+
+    def test_internal_star_marker_is_hidden_from_native_tooltip(self) -> None:
+        self.require("constexpr uintptr_t kEquipOwnerTextCall = 0x008E8D16;")
+        self.require("constexpr uintptr_t kAssignString = 0x00414617;")
+        self.require("int ParseStarMarker(const unsigned char* owner, int capacity)")
+        self.require("void __fastcall HookEquipOwnerText")
+        self.require('>= 0 ? "" : text;')
+        self.require("CanPatchCall(kEquipOwnerTextCall, kAssignString)")
+        self.require("PatchCall(kEquipOwnerTextCall, reinterpret_cast<void*>(&HookEquipOwnerText))")
+        self.require("int markerStars = ReadStarMarker(equip, capacity);")
+        self.require("int currentStars = markerStars >= 0 ? markerStars : 0;")
+        self.require("unsigned char* owner = markerStars >= 0")
+        self.require("unsigned char ownerFirst = owner ? owner[0] : 0;")
+        self.require("if (owner) owner[0] = 0;")
+        self.require("gRealEquipTooltip(self, equip);")
+        self.require("if (owner) owner[0] = ownerFirst;")
+
 if __name__ == "__main__":
     unittest.main()
