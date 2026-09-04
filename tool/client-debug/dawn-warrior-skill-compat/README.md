@@ -71,7 +71,10 @@ HP/MP hooks:
 rtk bash tool/client-debug/dawn-warrior-skill-compat/build_hpmp_wrapper.sh
 ```
 
-Both DLL files are required at runtime in the client directory.
+Both DLL files are required at runtime in the client directory. When present,
+the wrapper also loads `BeiDouWeatherCompat.dll` after the core; a missing
+weather DLL is logged but does not prevent the existing HP/MP hooks from being
+installed. See the adjacent `weather-compat` project for its Windows-only build.
 
 Install the tiny loader after building:
 

@@ -68,6 +68,7 @@ import org.gms.net.server.task.ServerMessageTask;
 import org.gms.net.server.task.TimedMapObjectTask;
 import org.gms.net.server.task.TimeoutTask;
 import org.gms.net.server.task.WeddingReservationTask;
+import org.gms.net.server.task.WeatherTask;
 import org.gms.util.*;
 import org.gms.util.packets.Fishing;
 import org.slf4j.Logger;
@@ -221,6 +222,7 @@ public class World {
     private ScheduledFuture<?> partySearchSchedule;
     private ScheduledFuture<?> timeoutSchedule;
     private ScheduledFuture<?> hpDecSchedule;
+    private ScheduledFuture<?> weatherSchedule;
 
     public World(int world, int flag, String eventmsg, float expRate, float dropRate, float bossDropRate, float mesoRate,
                  float questRate, float travelRate, float fishingRate) {
@@ -267,6 +269,7 @@ public class World {
         partySearchSchedule = tman.register(new PartySearchTask(this), SECONDS.toMillis(10), SECONDS.toMillis(10));
         timeoutSchedule = tman.register(new TimeoutTask(this), SECONDS.toMillis(10), SECONDS.toMillis(10));
         hpDecSchedule = tman.register(new CharacterHpDecreaseTask(this), GameConfig.getServerLong("map_damage_overtime_interval"), GameConfig.getServerLong("map_damage_overtime_interval"));
+        weatherSchedule = tman.register(new WeatherTask(this), WeatherTask.INTERVAL_MS, WeatherTask.INTERVAL_MS);
 
         if (GameConfig.getServerBoolean("use_family_system")) {
             long timeLeft = Server.getTimeLeftForNextDay();
@@ -2148,6 +2151,11 @@ public class World {
         if (hpDecSchedule != null) {
             hpDecSchedule.cancel(false);
             hpDecSchedule = null;
+        }
+
+        if (weatherSchedule != null) {
+            weatherSchedule.cancel(false);
+            weatherSchedule = null;
         }
 
         players.disconnectAll();

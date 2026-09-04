@@ -33,6 +33,16 @@ const GAME: AppRouteRecordRaw = {
       },
     },
     {
+      path: 'weather',
+      name: 'WeatherConfig',
+      component: () => import('@/views/game/weather/index.vue'),
+      meta: {
+        locale: 'menu.game.weather',
+        requiresAuth: true,
+        roles: ['admin'],
+      },
+    },
+    {
       path: 'equipmentCatalog',
       name: 'EquipmentCatalog',
       component: () => import('@/views/game/equipmentCatalog/index.vue'),

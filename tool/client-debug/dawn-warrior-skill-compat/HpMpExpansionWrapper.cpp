@@ -16,6 +16,7 @@ constexpr uintptr_t kTearLongAddress = 0x004165B1;
 constexpr uintptr_t kFuseShortAddress = 0x004746DD;
 constexpr uintptr_t kFuseLongAddress = 0x00416563;
 constexpr char kCoreDllName[] = "BeiDouSkillCompatCore.dll";
+constexpr char kWeatherDllName[] = "BeiDouWeatherCompat.dll";
 
 using HpMpFuseFn = int(__cdecl*)(const int*, int);
 
@@ -312,7 +313,7 @@ bool InstallHpMpHooks() {
     return true;
 }
 
-bool LoadCompatibilityCore() {
+bool LoadSiblingDll(const char* dllName) {
     char path[MAX_PATH] = {};
     const DWORD length = GetModuleFileNameA(gInstance, path, MAX_PATH);
     if (length == 0 || length >= MAX_PATH) return false;
@@ -321,18 +322,23 @@ bool LoadCompatibilityCore() {
         if (*cursor == '\\' || *cursor == '/') fileName = cursor + 1;
     }
     const SIZE_T prefixLength = static_cast<SIZE_T>(fileName - path);
-    if (prefixLength + sizeof(kCoreDllName) > MAX_PATH) return false;
-    lstrcpyA(fileName, kCoreDllName);
+    if (prefixLength + lstrlenA(dllName) + 1 > MAX_PATH) return false;
+    lstrcpyA(fileName, dllName);
     return LoadLibraryA(path) != nullptr;
 }
 
 DWORD WINAPI InstallHooks(LPVOID) {
     LogLine("LOAD: HP/MP expansion wrapper v70");
-    if (!LoadCompatibilityCore()) {
+    if (!LoadSiblingDll(kCoreDllName)) {
         LogLine("HPMP ERROR: verified compatibility core failed to load");
         return 1;
     }
     LogLine("HPMP WRAPPER: verified compatibility core loaded");
+    if (!LoadSiblingDll(kWeatherDllName)) {
+        LogLine("WEATHER ERROR: BeiDouWeatherCompat.dll failed to load");
+    } else {
+        LogLine("WEATHER WRAPPER: visual weather compatibility loaded");
+    }
     if (reinterpret_cast<uintptr_t>(GetModuleHandleA(nullptr)) != kExpectedImageBase) {
         LogLine("HPMP ERROR: unexpected BeiDou.exe image base");
         return 2;

@@ -2810,6 +2810,7 @@ public class MapleMap {
 
         chr.receivePartyMemberHP();
         announcePlayerDiseases(chr.getClient());
+        org.gms.server.weather.WeatherPackets.sendTo(chr);
     }
 
     private static void announcePlayerDiseases(final Client c) {

@@ -14,6 +14,7 @@ import setItem from '@/views/game/setItem/locale/zh-CN';
 import equipmentCatalog from '@/views/game/equipmentCatalog/locale/zh-CN';
 import mapDetect from '@/views/game/mapDetect/locale/zh-CN';
 import questBrowse from '@/views/game/questBrowse/locale/zh-CN';
+import weather from '@/views/game/weather/locale/zh-CN';
 import baseConfig from './zh-CN/base';
 
 export default {
@@ -25,6 +26,7 @@ export default {
   'menu.game': '游戏管理',
   'menu.game.config': '参数管理',
   'menu.game.setItem': '套装属性',
+  'menu.game.weather': '天气管理',
   'menu.game.equipmentCatalog': '装备预览',
   'menu.game.npcShop': 'NPC商店',
   'menu.game.cashShop': '商城管理',
@@ -73,4 +75,5 @@ export default {
   ...equipmentCatalog,
   ...mapDetect,
   ...questBrowse,
+  ...weather,
 };

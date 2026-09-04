@@ -14,6 +14,7 @@ import setItem from '@/views/game/setItem/locale/en-US';
 import equipmentCatalog from '@/views/game/equipmentCatalog/locale/en-US';
 import mapDetect from '@/views/game/mapDetect/locale/en-US';
 import questBrowse from '@/views/game/questBrowse/locale/en-US';
+import weather from '@/views/game/weather/locale/en-US';
 import base from './en-US/base';
 
 export default {
@@ -24,6 +25,7 @@ export default {
   'menu.game': 'Game',
   'menu.game.config': 'Config',
   'menu.game.setItem': 'Set Bonuses',
+  'menu.game.weather': 'Weather',
   'menu.game.equipmentCatalog': 'Equipment Preview',
   'menu.game.npcShop': 'NPC Shop',
   'menu.game.cashShop': 'Cash Shop',
@@ -70,4 +72,5 @@ export default {
   ...equipmentCatalog,
   ...mapDetect,
   ...questBrowse,
+  ...weather,
 };

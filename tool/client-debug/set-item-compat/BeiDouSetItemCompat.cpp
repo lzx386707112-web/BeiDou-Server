@@ -124,6 +124,8 @@ using RefreshNameplateFn = void(__thiscall*)(void*);
 using MakeNameplateFn = int(__thiscall*)(void*, const char*, void*, void*, int, int, int, int, int, int);
 using FindUserFn = void*(__thiscall*)(void*, int);
 ProcessPacketFn gRealProcessPacket = nullptr;
+using PacketExtensionFn = BOOL(WINAPI*)(void*);
+PVOID volatile gPacketExtension = nullptr;
 EquipTooltipFn gRealEquipTooltip = nullptr;
 ClearTooltipFn gRealClearTooltip = nullptr;
 MakeLayerFn gRealMakeLayer = nullptr;
@@ -768,6 +770,11 @@ void ShowNativePanel(int itemId, void* nativeTip, int left, int top, int nativeW
 }
 
 void __fastcall HookProcessPacket(void* self, void*, PacketView* packet) {
+    PacketExtensionFn extension = reinterpret_cast<PacketExtensionFn>(
+            InterlockedCompareExchangePointer(&gPacketExtension, nullptr, nullptr));
+    if (extension != nullptr && extension(packet)) {
+        return;
+    }
     if (packet && packet->data && packet->offset + 2 <= packet->length) {
         const unsigned short opcode = *reinterpret_cast<unsigned short*>(packet->data + packet->offset);
         if ((opcode == kSpawnPlayer || opcode == kRemovePlayer)
@@ -951,6 +958,12 @@ DWORD WINAPI Install(LPVOID instance) {
     return 0;
 }
 
+}
+
+extern "C" __declspec(dllexport) BOOL WINAPI BDS_RegisterPacketHandler(
+        BOOL(WINAPI* handler)(void*)) {
+    InterlockedExchangePointer(&gPacketExtension, reinterpret_cast<PVOID>(handler));
+    return TRUE;
 }
 
 extern "C" BOOL WINAPI DllMain(HINSTANCE instance, DWORD reason, LPVOID) {

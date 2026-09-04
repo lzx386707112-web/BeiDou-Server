@@ -359,6 +359,8 @@ public enum SendOpcode implements Opcode {
     DAMAGE_SKIN_UPDATE(0x17B), // 本地角色伤害皮肤选择
     NAMEPLATE_POWER_UPDATE(0x17C), // 名片戒指战力行
 
+    WEATHER_SYNC(0x373D), // 世界时间与纯视觉区域天气
+
     UPDATE_HPMPAALERT(0x1000), // 更新HP/MP/EXP警报
     ;
     private int code = -2;
