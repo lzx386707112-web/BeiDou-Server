@@ -70,6 +70,13 @@
               <span v-else>{{ record.itemId }}</span>
             </template>
           </a-table-column>
+          <a-table-column title="类别" :width="100" align="center">
+            <template #cell="{ record }">
+              <a-tag :color="getCategoryColor(record.itemCategory)" size="small">
+                {{ record.itemCategory || '未知' }}
+              </a-tag>
+            </template>
+          </a-table-column>
           <a-table-column title="物品" :width="230" align="center">
             <template #cell="{ record }">
               <a-button
@@ -248,6 +255,20 @@
   };
 
   const editId = ref<number>(0);
+
+  // 获取类别对应的颜色
+  const getCategoryColor = (category: string) => {
+    const colorMap: Record<string, string> = {
+      '装备': 'red',
+      '消耗': 'blue',
+      '设置': 'green',
+      '其他': 'orange',
+      '特殊': 'purple',
+      '金币': 'gold',
+      '未知': 'gray',
+    };
+    return colorMap[category] || 'gray';
+  };
 
   const tableData = ref<DropState[]>([]);
   const loadData = async () => {

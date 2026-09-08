@@ -51,15 +51,20 @@ before editing. It defines the evidence gate, reserved packet markers, native
 - Parse independently, reject truncation or warnings, prove the raw-record
   change scope, run generators twice, and require stable SHA-256 hashes.
 - Default to static verification of the modified IMG/XML and source files. Do
-  not create temporary packed WZ files or build JAR/DLL artifacts unless the
-  user explicitly requests that output in the current task.
+  not create a temporary packed WZ, and do not build the server JAR, unless
+  the user explicitly requests that artifact.
+- Compatibility DLLs are part of delivery. If the task changed DLL source,
+  routing, or a runtime that depends on a rebuilt DLL, compile it with the
+  checked-in build script without waiting for a separate authorization.
 - Never copy unverified artifacts to Downloads or another delivery location.
-- After a requested minimal fix is verified, synchronize the minimum runtime
-  file set to
-  `/Users/lizixian/Downloads/路西德/` (or the explicitly requested delivery
-  folder), preserve each file's repository-relative path, and compare
-  SHA-256 hashes between source and destination. Do not include unrelated
-  worktree changes, baselines, backups, generated packages, or probe files.
+- After the requested fix is verified, synchronize the complete runtime file
+  set for that fix to `/Users/lizixian/Downloads/路西德/` (or the explicitly
+  requested delivery folder). Include every client file the user must replace:
+  IMGs, strings, MCV/Effect resources, and compiled DLLs. Preserve each file's
+  in-client relative path (`Data/...` under `clien/Data/`, DLLs at the `clien/`
+  root). Compare SHA-256 hashes between source and destination. Do not include
+  unrelated worktree changes, baselines, backups, generated packages, or probe
+  files.
 
 ## Work sequence
 
@@ -79,22 +84,28 @@ before editing. It defines the evidence gate, reserved packet markers, native
 
 ## Compatibility DLL build and delivery
 
-When the user explicitly requests a rebuilt or delivered compatibility DLL,
-source and static checks alone are not completion. After they pass:
+A completed client fix is not done after source and static checks if a
+compatibility DLL participates in the runtime contract. Do not wait for the
+user to authorize the DLL build.
 
-1. Run the DLL's checked-in project build script; do not substitute an ad hoc
-   command that may omit its linker or compatibility flags.
+After static gates pass:
+
+1. Run the DLL's checked-in project build script (for example
+   `tool/client-debug/set-item-compat/build.sh`). Do not substitute an ad hoc
+   compiler command that may omit linker or compatibility flags.
 2. Verify that the output is the expected 32-bit Windows DLL and inspect its
-   final repository status and SHA-256 hash.
-3. Copy only that DLL to `/Users/lizixian/Downloads/路西德/`, preserving its
-   repository-relative path (for example `clien/BeiDouSetItemCompat.dll`).
-4. Compare source and delivered SHA-256 hashes and require an exact match.
-5. Report the build result, delivery path, matching hash, and remaining
-   real-client checks.
+   repository path and SHA-256 hash.
+3. Copy the rebuilt DLL together with every other runtime file the change
+   requires to `/Users/lizixian/Downloads/路西德/`, preserving in-client paths
+   (DLL at the client root, for example `BeiDouSetItemCompat.dll`).
+4. Compare source and delivered SHA-256 hashes for every copied file and
+   require an exact match.
+5. Report the build result, the full delivery list, matching hashes, and
+   remaining real-client checks.
 
-Do not leave an older delivery copy in place after reporting success. If the
-user has not explicitly authorized a build or delivery, stop after the required
-static checks as described above.
+Do not leave an older delivery copy in place after reporting success. Do not
+omit the DLL because only IMG or Java changed if the DLL routing was also
+edited in the same task.
 
 ## Stopping conditions
 

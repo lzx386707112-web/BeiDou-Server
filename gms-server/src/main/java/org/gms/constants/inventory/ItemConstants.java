@@ -151,6 +151,10 @@ public final class ItemConstants {
     }
 
     public static int getEquipSlotType(int itemId) {
+        if (itemId == ItemId.FRENZY_TOTEM) {
+            return BodyPart.TOTEM.getValue();
+        }
+
         int itemPrefix = getItemPrefix(itemId);
 
         if (isSecondaryWeapon(itemId)) {

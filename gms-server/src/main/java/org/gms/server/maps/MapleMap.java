@@ -36,6 +36,7 @@ import org.gms.constants.game.GameConstants;
 import org.gms.constants.id.MapId;
 import org.gms.constants.id.MobId;
 import org.gms.constants.inventory.ItemConstants;
+import org.gms.constants.skills.Beginner;
 import org.gms.net.packet.Packet;
 import org.gms.net.server.Server;
 import org.gms.net.server.channel.Channel;
@@ -115,6 +116,8 @@ public class MapleMap {
     private static final List<MapObjectType> rangedMapobjectTypes = Arrays.asList(MapObjectType.SHOP, MapObjectType.ITEM, MapObjectType.NPC, MapObjectType.MONSTER, MapObjectType.DOOR, MapObjectType.SUMMON, MapObjectType.REACTOR);
     private static final double ITEM_VISIBILITY_RANGE_SQ = 722500;
     private static final long ITEM_VISIBILITY_UPDATE_INTERVAL = 200L;
+    static final long FRENZY_TOTEM_DURATION_MS = MINUTES.toMillis(10);
+    private static final double FRENZY_RESPAWN_TIME_MULTIPLIER = 0.5;
     private static final Map<Integer, Pair<Integer, Integer>> dropBoundsCache = new HashMap<>(100);
 
     private final Map<Integer, MapObject> mapobjects = new LinkedHashMap<>();
@@ -122,6 +125,8 @@ public class MapleMap {
     private final Collection<SpawnPoint> monsterSpawn = Collections.synchronizedList(new LinkedList<>());
     private final Collection<SpawnPoint> allMonsterSpawn = Collections.synchronizedList(new LinkedList<>());
     private final AtomicInteger spawnedMonstersOnMap = new AtomicInteger(0);
+    private final Set<SpawnPoint> frenzySpawnPoints = new LinkedHashSet<>();
+    private final Set<Integer> frenzySpawnedMonsterOids = new LinkedHashSet<>();
     private final Collection<Character> characters = new LinkedHashSet<>();
     private final Map<Integer, Set<Integer>> mapParty = new LinkedHashMap<>();
     private final Map<Integer, Portal> portals = new HashMap<>();
@@ -170,6 +175,10 @@ public class MapleMap {
     private ScheduledFuture<?> expireItemsTask = null;
     private ScheduledFuture<?> mobSpawnLootTask = null;
     private ScheduledFuture<?> characterStatUpdateTask = null;
+    private ScheduledFuture<?> frenzyRespawnTask = null;
+    private ScheduledFuture<?> frenzyExpireTask = null;
+    private Summon frenzyTotem = null;
+    private long frenzyTotemExpireTime = 0L;
     private short itemMonitorTimeout;
     private Pair<Integer, String> timeMob = null;
     private short mobInterval = 5000;
@@ -197,6 +206,7 @@ public class MapleMap {
     private final Lock objectWLock;
 
     private final Lock lootLock = new ReentrantLock(true);
+    private final Lock frenzyLock = new ReentrantLock(true);
 
     // due to the nature of loadMapFromWz (synchronized), sole function that calls 'generateMapDropRangeCache', this lock remains optional.
     private static final Lock bndLock = new ReentrantLock(true);
@@ -2097,6 +2107,193 @@ public class MapleMap {
         }
     }
 
+    public boolean activateFrenzyTotem(Character owner) {
+        if (owner == null || owner.getMap() != this) {
+            return false;
+        }
+
+        Point position = calcPointBelow(new Point(owner.getPosition().x, owner.getPosition().y - 1));
+        if (position == null) {
+            owner.dropMessage(5, "当前位置无法放置轮回碑石。");
+            return false;
+        }
+        position.y--;
+
+        frenzyLock.lock();
+        try {
+            if (frenzyTotem != null) {
+                owner.dropMessage(5, "该地图已经存在轮回碑石。");
+                return false;
+            }
+
+            List<SpawnPoint> originals = getMonsterSpawn();
+            originals.removeIf(spawnPoint -> spawnPoint.getMobTime() < 0);
+            for (SpawnPoint original : originals) {
+                original.setRespawnTimeMultiplier(FRENZY_RESPAWN_TIME_MULTIPLIER);
+                SpawnPoint duplicate = original.duplicate();
+                frenzySpawnPoints.add(duplicate);
+            }
+            synchronized (monsterSpawn) {
+                monsterSpawn.addAll(frenzySpawnPoints);
+            }
+
+            Summon summon = new Summon(
+                    owner, Beginner.FRENZY_TOTEM, position, SummonMovementType.STATIONARY
+            );
+            summon.setStance(owner.getStance());
+            frenzyTotem = summon;
+            frenzyTotemExpireTime = Server.getInstance().getCurrentTime()
+                    + FRENZY_TOTEM_DURATION_MS;
+            spawnSummon(summon);
+            owner.addSummon(Beginner.FRENZY_TOTEM, summon);
+
+            long respawnInterval = Math.max(1L,
+                    GameConfig.getServerLong("respawn_interval") / 2L);
+            frenzyRespawnTask = TimerManager.getInstance().register(
+                    this::runFrenzyRespawn, respawnInterval, respawnInterval
+            );
+            frenzyExpireTask = TimerManager.getInstance().schedule(
+                    () -> stopFrenzyTotem(false), FRENZY_TOTEM_DURATION_MS
+            );
+        } finally {
+            frenzyLock.unlock();
+        }
+
+        if (frenzySpawnPoints.isEmpty()) {
+            dropMessage(6, "轮回碑石已放置。当前地图没有可强化的怪物刷新点。");
+        } else {
+            dropMessage(6, "轮回碑石已生效：怪物数量与刷新速度提升，持续 10 分钟。");
+            respawn();
+        }
+        return true;
+    }
+
+    private void runFrenzyRespawn() {
+        boolean shouldStop;
+        frenzyLock.lock();
+        try {
+            Summon summon = frenzyTotem;
+            shouldStop = summon == null
+                    || Server.getInstance().getCurrentTime() >= frenzyTotemExpireTime
+                    || !hasPlayers()
+                    || summon.getOwner().getMap() != this
+                    || getMapObject(summon.getObjectId()) != summon;
+        } finally {
+            frenzyLock.unlock();
+        }
+
+        if (shouldStop) {
+            stopFrenzyTotem(false);
+        } else {
+            respawn();
+        }
+    }
+
+    private boolean hasPlayers() {
+        chrRLock.lock();
+        try {
+            return !characters.isEmpty();
+        } finally {
+            chrRLock.unlock();
+        }
+    }
+
+    private boolean isFrenzyTotemOwner(Character character) {
+        frenzyLock.lock();
+        try {
+            return frenzyTotem != null && frenzyTotem.getOwner() == character;
+        } finally {
+            frenzyLock.unlock();
+        }
+    }
+
+    private boolean spawnMonsterFromSpawnPoint(SpawnPoint spawnPoint) {
+        frenzyLock.lock();
+        try {
+            synchronized (monsterSpawn) {
+                if (!monsterSpawn.contains(spawnPoint)) {
+                    return false;
+                }
+            }
+
+            Monster monster = spawnPoint.getMonster();
+            spawnMonster(monster);
+            if (getMonsterByOid(monster.getObjectId()) != monster) {
+                return false;
+            }
+            if (frenzySpawnPoints.contains(spawnPoint)) {
+                frenzySpawnedMonsterOids.add(monster.getObjectId());
+            }
+            return true;
+        } finally {
+            frenzyLock.unlock();
+        }
+    }
+
+    private int getSpawnedMonsterCountForRespawn() {
+        return spawnedMonstersOnMap.get();
+    }
+
+    private void stopFrenzyTotem(boolean disposing) {
+        Summon summon;
+        Set<Integer> extraMonsterOids;
+        ScheduledFuture<?> respawnTask;
+        ScheduledFuture<?> expireTask;
+
+        frenzyLock.lock();
+        try {
+            if (frenzyTotem == null && frenzySpawnPoints.isEmpty()
+                    && frenzyRespawnTask == null && frenzyExpireTask == null) {
+                return;
+            }
+
+            summon = frenzyTotem;
+            respawnTask = frenzyRespawnTask;
+            expireTask = frenzyExpireTask;
+            extraMonsterOids = new LinkedHashSet<>(frenzySpawnedMonsterOids);
+
+            frenzyTotem = null;
+            frenzyTotemExpireTime = 0L;
+            frenzyRespawnTask = null;
+            frenzyExpireTask = null;
+            frenzySpawnedMonsterOids.clear();
+
+            synchronized (monsterSpawn) {
+                monsterSpawn.removeAll(frenzySpawnPoints);
+                for (SpawnPoint spawnPoint : monsterSpawn) {
+                    spawnPoint.setRespawnTimeMultiplier(1.0);
+                }
+            }
+            frenzySpawnPoints.clear();
+        } finally {
+            frenzyLock.unlock();
+        }
+
+        if (respawnTask != null) {
+            respawnTask.cancel(false);
+        }
+        if (expireTask != null) {
+            expireTask.cancel(false);
+        }
+
+        for (int oid : extraMonsterOids) {
+            Monster monster = getMonsterByOid(oid);
+            if (monster != null) {
+                killMonster(monster, null, false);
+            }
+        }
+        if (summon != null) {
+            summon.getOwner().removeSummon(Beginner.FRENZY_TOTEM, summon);
+            broadcastMessage(PacketCreator.removeSummon(summon, true));
+            removeMapObject(summon);
+            summon.getOwner().removeVisibleMapObject(summon);
+        }
+
+        if (!disposing && hasPlayers()) {
+            dropMessage(6, "轮回碑石效果已经结束。");
+        }
+    }
+
     private List<SpawnPoint> getMonsterSpawn() {
         synchronized (monsterSpawn) {
             return new ArrayList<>(monsterSpawn);
@@ -2900,6 +3097,7 @@ public class MapleMap {
         chr.unregisterChairBuff();
 
         Party party = chr.getParty();
+        boolean mapBecameEmpty;
         chrWLock.lock();
         try {
             if (party != null && party.getMemberById(chr.getId()) != null) {
@@ -2907,8 +3105,13 @@ public class MapleMap {
             }
 
             characters.remove(chr);
+            mapBecameEmpty = characters.isEmpty();
         } finally {
             chrWLock.unlock();
+        }
+
+        if (mapBecameEmpty || isFrenzyTotemOwner(chr)) {
+            stopFrenzyTotem(false);
         }
 
         if (MiniDungeonInfo.isDungeonMap(mapid)) {
@@ -3826,14 +4029,17 @@ public class MapleMap {
             return;
         }
 
-        final int numShouldSpawn = (short) ((monsterSpawn.size() - spawnedMonstersOnMap.get()));//Fking lol'd
+        final int numShouldSpawn = (short) (monsterSpawn.size()
+                - getSpawnedMonsterCountForRespawn());
         if (numShouldSpawn > 0) {
             List<SpawnPoint> randomSpawn = getMonsterSpawn();
             Collections.shuffle(randomSpawn);
             int spawned = 0;
             for (SpawnPoint spawnPoint : randomSpawn) {
                 if (spawnPoint.shouldSpawn()) {
-                    spawnMonster(spawnPoint.getMonster());
+                    if (!spawnMonsterFromSpawnPoint(spawnPoint)) {
+                        continue;
+                    }
                     spawned++;
                     if (spawned >= numShouldSpawn) {
                         break;
@@ -3848,14 +4054,17 @@ public class MapleMap {
             return;
         }
 
-        final int numShouldSpawn = (short) ((monsterSpawn.size() - spawnedMonstersOnMap.get()));//Fking lol'd
+        final int numShouldSpawn = (short) (monsterSpawn.size()
+                - getSpawnedMonsterCountForRespawn());
         if (numShouldSpawn > 0) {
             List<SpawnPoint> randomSpawn = getMonsterSpawn();
             Collections.shuffle(randomSpawn);
             int spawned = 0;
             for (SpawnPoint spawnPoint : randomSpawn) {
                 if (spawnPoint.shouldForceSpawn()) {
-                    spawnMonster(spawnPoint.getMonster());
+                    if (!spawnMonsterFromSpawnPoint(spawnPoint)) {
+                        continue;
+                    }
                     spawned++;
                     if (spawned >= numShouldSpawn) {
                         break;
@@ -3910,6 +4119,15 @@ public class MapleMap {
         return 0.70 + (0.05 * Math.min(6, numPlayers));
     }
 
+    static int calculateNumShouldSpawn(int spawnPointCount, int spawnedMonsterCount,
+                                       int numPlayers, boolean fullRespawn,
+                                       boolean frenzyTotemActive) {
+        int targetCount = fullRespawn || frenzyTotemActive
+                ? spawnPointCount
+                : (int) Math.ceil(getCurrentSpawnRate(numPlayers) * spawnPointCount);
+        return targetCount - spawnedMonsterCount;
+    }
+
     private int getNumShouldSpawn(int numPlayers) {
         /*
         System.out.println("----------------------------------");
@@ -3920,12 +4138,25 @@ public class MapleMap {
         System.out.println("----------------------------------");
         */
 
-        if (GameConfig.getServerBoolean("use_enable_full_respawn")) {
-            return (monsterSpawn.size() - spawnedMonstersOnMap.get());
+        int spawnPointCount;
+        boolean frenzyTotemActive;
+        frenzyLock.lock();
+        try {
+            frenzyTotemActive = frenzyTotem != null;
+            synchronized (monsterSpawn) {
+                spawnPointCount = monsterSpawn.size();
+            }
+        } finally {
+            frenzyLock.unlock();
         }
 
-        int maxNumShouldSpawn = (int) Math.ceil(getCurrentSpawnRate(numPlayers) * monsterSpawn.size());
-        return maxNumShouldSpawn - spawnedMonstersOnMap.get();
+        return calculateNumShouldSpawn(
+                spawnPointCount,
+                getSpawnedMonsterCountForRespawn(),
+                numPlayers,
+                GameConfig.getServerBoolean("use_enable_full_respawn"),
+                frenzyTotemActive
+        );
     }
 
     public void respawn() {
@@ -3954,7 +4185,9 @@ public class MapleMap {
             short spawned = 0;
             for (SpawnPoint spawnPoint : randomSpawn) {
                 if (spawnPoint.shouldSpawn()) {
-                    spawnMonster(spawnPoint.getMonster());
+                    if (!spawnMonsterFromSpawnPoint(spawnPoint)) {
+                        continue;
+                    }
                     spawned++;
 
                     if (spawned >= numShouldSpawn) {
@@ -4880,6 +5113,8 @@ public class MapleMap {
     }
 
     public void dispose() {
+        stopFrenzyTotem(true);
+
         for (Monster mm : this.getAllMonsters()) {
             mm.dispose();
         }

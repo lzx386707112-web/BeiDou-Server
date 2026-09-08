@@ -172,6 +172,26 @@ const GAME: AppRouteRecordRaw = {
         roles: ['admin'],
       },
     },
+    {
+      path: 'itemCatalog',
+      name: 'ItemCatalog',
+      component: () => import('@/views/game/itemCatalog/index.vue'),
+      meta: {
+        locale: 'menu.game.itemCatalog',
+        requiresAuth: true,
+        roles: ['admin'],
+      },
+    },
+    {
+      path: 'mobCatalog',
+      name: 'MobCatalog',
+      component: () => import('@/views/game/mobCatalog/index.vue'),
+      meta: {
+        locale: 'menu.game.mobCatalog',
+        requiresAuth: true,
+        roles: ['admin'],
+      },
+    },
   ],
 };
 

@@ -50,6 +50,15 @@ class WeatherCompatContract(unittest.TestCase):
         self.assertNotIn("WeatherMove_", entry)
         self.assertIn("-A Win32", (HERE / "build.ps1").read_text(encoding="utf-8"))
 
+    def test_client_master_switch_precedes_weather_installation(self):
+        wrapper = (ROOT / "tool/client-debug/dawn-warrior-skill-compat/HpMpExpansionWrapper.cpp").read_text(encoding="utf-8")
+        config = (ROOT / "clien/config.ini").read_text(encoding="utf-8")
+        install = wrapper[wrapper.index("DWORD WINAPI InstallHooks"):]
+        self.assertIn("enableWeatherSystem=true", config)
+        self.assertIn('"optional", "enableWeatherSystem", "true"', wrapper)
+        self.assertLess(install.index("IsWeatherEnabled()"),
+                        install.index("LoadSiblingDll(kWeatherDllName)"))
+
     def test_every_owned_hook_matches_verified_executable(self):
         executable = ROOT / "clien/BeiDou.exe"
         data = executable.read_bytes()

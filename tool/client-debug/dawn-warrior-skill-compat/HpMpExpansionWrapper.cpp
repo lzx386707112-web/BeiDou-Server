@@ -16,6 +16,7 @@ constexpr uintptr_t kTearLongAddress = 0x004165B1;
 constexpr uintptr_t kFuseShortAddress = 0x004746DD;
 constexpr uintptr_t kFuseLongAddress = 0x00416563;
 constexpr char kCoreDllName[] = "BeiDouSkillCompatCore.dll";
+constexpr char kSetItemDllName[] = "BeiDouSetItemCompat.dll";
 constexpr char kWeatherDllName[] = "BeiDouWeatherCompat.dll";
 
 using HpMpFuseFn = int(__cdecl*)(const int*, int);
@@ -327,6 +328,27 @@ bool LoadSiblingDll(const char* dllName) {
     return LoadLibraryA(path) != nullptr;
 }
 
+bool IsWeatherEnabled() {
+    char configPath[MAX_PATH] = {};
+    const DWORD length = GetModuleFileNameA(gInstance, configPath, MAX_PATH);
+    if (length == 0 || length >= MAX_PATH) return true;
+    char* fileName = configPath;
+    for (char* cursor = configPath; *cursor != '\0'; ++cursor) {
+        if (*cursor == '\\' || *cursor == '/') fileName = cursor + 1;
+    }
+    const SIZE_T prefixLength = static_cast<SIZE_T>(fileName - configPath);
+    if (prefixLength + sizeof("config.ini") > MAX_PATH) return true;
+    lstrcpyA(fileName, "config.ini");
+
+    char value[16] = {};
+    GetPrivateProfileStringA("optional", "enableWeatherSystem", "true",
+                             value, static_cast<DWORD>(sizeof(value)), configPath);
+    return lstrcmpiA(value, "false") != 0 &&
+           lstrcmpiA(value, "off") != 0 &&
+           lstrcmpiA(value, "no") != 0 &&
+           lstrcmpA(value, "0") != 0;
+}
+
 DWORD WINAPI InstallHooks(LPVOID) {
     LogLine("LOAD: HP/MP expansion wrapper v70");
     if (!LoadSiblingDll(kCoreDllName)) {
@@ -334,7 +356,14 @@ DWORD WINAPI InstallHooks(LPVOID) {
         return 1;
     }
     LogLine("HPMP WRAPPER: verified compatibility core loaded");
-    if (!LoadSiblingDll(kWeatherDllName)) {
+    if (!LoadSiblingDll(kSetItemDllName)) {
+        LogLine("HPMP ERROR: BeiDouSetItemCompat.dll failed to load");
+    } else {
+        LogLine("HPMP WRAPPER: equipment-slot compatibility loaded");
+    }
+    if (!IsWeatherEnabled()) {
+        LogLine("WEATHER DISABLED: enableWeatherSystem=false");
+    } else if (!LoadSiblingDll(kWeatherDllName)) {
         LogLine("WEATHER ERROR: BeiDouWeatherCompat.dll failed to load");
     } else {
         LogLine("WEATHER WRAPPER: visual weather compatibility loaded");

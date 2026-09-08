@@ -16,6 +16,7 @@ public class DropSearchRtnDTO {
     private Integer continent;
     private Integer itemId;
     private String itemName;
+    private String itemCategory;  // 物品类别：装备、消耗、设置、其他、特殊、金币
     private Integer minimumQuantity;
     private Integer maximumQuantity;
     private Integer questId;

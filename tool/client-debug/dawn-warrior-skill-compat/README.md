@@ -76,6 +76,16 @@ the wrapper also loads `BeiDouWeatherCompat.dll` after the core; a missing
 weather DLL is logged but does not prevent the existing HP/MP hooks from being
 installed. See the adjacent `weather-compat` project for its Windows-only build.
 
+The client-side weather master switch is in `config.ini`:
+
+```ini
+[optional]
+enableWeatherSystem=true
+```
+
+Set it to `false` (also accepts `0`, `off`, or `no`) to skip loading
+`BeiDouWeatherCompat.dll` entirely. A missing key defaults to enabled.
+
 Install the tiny loader after building:
 
 ```bash

@@ -38,6 +38,7 @@ public class Beginner {
     public static final int POWER_EXPLOSION = 1011;
     public static final int SPACESHIP = 1013;
     public static final int SPACE_DASH = 1014;
+    public static final int FRENZY_TOTEM = 1016;
     public static final int YETI_MOUNT1 = 1017;
     public static final int YETI_MOUNT2 = 1018;
     public static final int WITCH_BROOMSTICK = 1019;

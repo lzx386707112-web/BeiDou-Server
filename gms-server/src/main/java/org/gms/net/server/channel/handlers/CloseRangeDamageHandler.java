@@ -394,12 +394,15 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
             Rectangle attackBounds,
             int mobCount,
             List<Integer> damageTemplate,
-            StatEffect fallbackEffect,
             LocalDamageNumberMode damageNumberMode,
             int damageNumberHitIntervalMs
     ) {
         if (!canContinueAnimatedAttack(chr, expectedMap)) {
             return -1;
+        }
+        // Normal attacks only settle damage supplied by a client attack packet.
+        if (damageTemplate.isEmpty()) {
+            return 0;
         }
         Map<Integer, List<Integer>> liveDamage = collectAnimatedAttackTargets(
                 attack,
@@ -411,15 +414,6 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
         if (liveDamage.isEmpty()) {
             return 0;
         }
-        if (damageTemplate.isEmpty()) {
-            List<Integer> fallbackDamage = createFallbackCloseDamageTemplate(
-                    chr, fallbackEffect, Math.max(1, Math.min(15, fallbackEffect.getAttackCount()))
-            );
-            liveDamage.replaceAll(
-                    (objectId, ignored) -> new ArrayList<>(fallbackDamage)
-            );
-        }
-
         int packedCount = (Math.min(15, liveDamage.size()) << 4) | (attack.numDamage & 0xF);
         Packet repeatedAttack = PacketCreator.closeRangeAttack(
                 chr,
@@ -842,7 +836,7 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
             if (tickIndex == 0) {
                 showCapturedIndexedDamageNumbers(attack, chr, expectedMap);
                 applyAttack(attack, chr, effect.getAttackCount());
-            } else {
+            } else if (!damageTemplate.isEmpty()) {
                 repeatTrackingCloseAttack(
                         attack,
                         chr,
@@ -1206,7 +1200,6 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
                             attackBounds,
                             mobCount,
                             damageTemplate,
-                            effect,
                             damageNumberMode,
                             damageNumberHitIntervalMs
                     );

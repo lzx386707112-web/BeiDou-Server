@@ -2,6 +2,21 @@
 #include <stdint.h>
 #include <string.h>
 
+extern "C" {
+uintptr_t gTotemAccessoryResumeAddress = 0;
+uintptr_t gTotemAccessoryExtendedAddress = 0;
+uintptr_t gTotemDrawResumeAddress = 0;
+uintptr_t gTotemDrawContinueAddress = 0;
+uintptr_t gTotemKeyboardDispatchAddress = 0;
+uintptr_t gTotemActiveSkillDispatchAddress = 0;
+uintptr_t gTotemEquipStoreAddress = 0;
+uintptr_t gTotemEquipLookupAddress = 0;
+uintptr_t gTotemEquipLoginStoreAddress = 0;
+uintptr_t gTotemEquipLoginResetAddress = 0;
+uintptr_t gTotemEquipDrawLoopAddress = 0;
+void* gTotemEquippedItem = nullptr;
+}
+
 namespace {
 
 constexpr uintptr_t kImageBase = 0x00400000;
@@ -24,6 +39,46 @@ constexpr uintptr_t kRefreshNameplate = 0x00942DCC;
 constexpr uintptr_t kMakeNameplate = 0x005F0334;
 constexpr uintptr_t kFindUser = 0x009716ED;
 constexpr uintptr_t kUserPool = 0x00BEBFA8;
+constexpr char kCoreDllName[] = "BeiDouSkillCompatCore.dll";
+constexpr uintptr_t kBodyPartLookupHookSite = 0x004606A0;
+constexpr uintptr_t kAccessoryDataPathHookSite = 0x005C9734;
+constexpr uintptr_t kDrawItemIconHookSite = 0x005D6458;
+constexpr uintptr_t kEquipSlotHitTestHookSite = 0x007FEC32;
+constexpr uintptr_t kEquipRequirementHookSite = 0x00460358;
+constexpr uintptr_t kKeyboardDispatchHookSite = 0x0094F89E;
+constexpr uintptr_t kActiveSkillDispatchHookSite = 0x009678F9;
+constexpr uintptr_t kCoreKeyboardDispatchOffset = 0x1425;
+constexpr uintptr_t kCoreActiveSkillDispatchOffset = 0x149A;
+constexpr uintptr_t kCoreBodyPartLookupOffset = 0x1B67;
+constexpr uintptr_t kCoreAccessoryDataPathOffset = 0x1BFB;
+constexpr uintptr_t kCoreAccessoryDataPathResumeOffset = 0x1C05;
+constexpr uintptr_t kCoreAccessoryDataPathExtendedOffset = 0x1C17;
+constexpr uintptr_t kCoreDrawItemIconOffset = 0x1D26;
+constexpr uintptr_t kCoreDrawItemIconResumeOffset = 0x1D2A;
+constexpr uintptr_t kCoreDrawItemIconContinueOffset = 0x1F47;
+constexpr uintptr_t kCoreEquipSlotHitTestOffset = 0x2015;
+constexpr uintptr_t kCoreEquipRequirementOffset = 0x2CC2;
+constexpr uintptr_t kEquipStoreHookSite = 0x0047B088;
+constexpr uintptr_t kEquipLookupHookSite = 0x0042831E;
+constexpr uintptr_t kEquipLoginResetHookSite = 0x004E5CBD;
+constexpr uintptr_t kEquipLoginStoreHookSite = 0x004E5D03;
+constexpr uintptr_t kEquipDrawLoopHookSite = 0x007FEE79;
+constexpr uintptr_t kCoreEquipStoreOffset = 0x1C32;
+constexpr uintptr_t kCoreEquipLookupOffset = 0x1CA2;
+constexpr uintptr_t kCoreEquipLoginResetOffset = 0x1C5F;
+constexpr uintptr_t kCoreEquipLoginStoreOffset = 0x1C75;
+constexpr uintptr_t kCoreEquipDrawLoopOffset = 0x1CCE;
+constexpr uintptr_t kReleaseClientItemAddress = 0x00428A50;
+constexpr uintptr_t kEquipStoreSuccessAddress = 0x0047B152;
+constexpr uintptr_t kEquipLookupSuccessAddress = 0x004283F3;
+constexpr uintptr_t kEquipLoginStoreResumeAddress = 0x004E5D0A;
+constexpr uintptr_t kEquipDrawLoopContinueAddress = 0x007FEEEC;
+static_assert(kEquipStoreSuccessAddress == 0x0047B152);
+static_assert(kEquipLookupSuccessAddress == 0x004283F3);
+static_assert(kEquipLoginStoreResumeAddress == 0x004E5D0A);
+static_assert(kEquipDrawLoopContinueAddress == 0x007FEEEC);
+constexpr int kFrenzyTotemItemId = 1189999;
+constexpr int kFrenzyTotemBodyPart = 53;
 constexpr unsigned short kSetItemUpdate = 0x017A;
 constexpr unsigned short kDamageSkinUpdate = 0x017B;
 constexpr unsigned short kNameplatePowerUpdate = 0x017C;
@@ -134,6 +189,9 @@ using FindUserFn = void*(__thiscall*)(void*, int);
 using GetEquipItemFn = void*(__thiscall*)(void*, int);
 using GetSecureIntFn = int(__cdecl*)(const void*, int);
 using AssignStringFn = void(__thiscall*)(void*, const char*, int);
+using BodyPartLookupFn = int(__cdecl*)(int, int, int*, int);
+using EquipRequirementFn = int(__cdecl*)(int, int, int);
+using EquipSlotHitTestFn = int(__stdcall*)(int, int);
 ProcessPacketFn gRealProcessPacket = nullptr;
 using PacketExtensionFn = BOOL(WINAPI*)(void*);
 PVOID volatile gPacketExtension = nullptr;
@@ -147,6 +205,9 @@ FindUserFn gFindUser = reinterpret_cast<FindUserFn>(kFindUser);
 GetEquipItemFn gGetEquipItem = reinterpret_cast<GetEquipItemFn>(kGetEquipItem);
 GetSecureIntFn gGetSecureInt = reinterpret_cast<GetSecureIntFn>(kGetSecureInt);
 AssignStringFn gAssignString = reinterpret_cast<AssignStringFn>(kAssignString);
+BodyPartLookupFn gRealBodyPartLookup = nullptr;
+EquipRequirementFn gRealEquipRequirement = nullptr;
+EquipSlotHitTestFn gRealEquipSlotHitTest = nullptr;
 
 size_t TextLength(const char* text) {
     size_t length = 0;
@@ -176,6 +237,51 @@ void Log(const char* line) {
     WriteFile(file, line, static_cast<DWORD>(TextLength(line)), &written, nullptr);
     WriteFile(file, "\r\n", 2, &written, nullptr);
     CloseHandle(file);
+}
+
+void AddRefClientItem(void* item) {
+    if (!item) return;
+    InterlockedIncrement(reinterpret_cast<long*>(static_cast<unsigned char*>(item) + 4));
+}
+
+void ReleaseClientItem(void* item) {
+    if (!item) return;
+    void* zref[2];
+    zref[0] = nullptr;
+    zref[1] = item;
+    __asm__ __volatile__(
+        "pushl $0\n"
+        "movl %0, %%ecx\n"
+        "movl %1, %%eax\n"
+        "call *%%eax\n"
+        :
+        : "r"(zref), "i"(kReleaseClientItemAddress)
+        : "eax", "ecx", "edx", "memory");
+}
+
+extern "C" void TotemReplaceEquippedItem(void* item) {
+    void* previous = gTotemEquippedItem;
+    if (item) AddRefClientItem(item);
+    gTotemEquippedItem = item;
+    if (previous && previous != item) ReleaseClientItem(previous);
+    char line[96];
+    wsprintfA(line, "EQUIP EXTENDED STORE: slot=%d item=%08X", kFrenzyTotemBodyPart,
+            static_cast<unsigned int>(reinterpret_cast<uintptr_t>(item)));
+    Log(line);
+}
+
+extern "C" void TotemCopyEquippedItem(void* destination) {
+    if (!destination) return;
+    void* item = gTotemEquippedItem;
+    *reinterpret_cast<void**>(static_cast<unsigned char*>(destination) + 4) = item;
+    if (item) AddRefClientItem(item);
+}
+
+extern "C" void TotemResetEquippedItem() {
+    void* previous = gTotemEquippedItem;
+    gTotemEquippedItem = nullptr;
+    if (previous) ReleaseClientItem(previous);
+    Log("EQUIP EXTENDED RESET: totem slot 53");
 }
 
 int DecodeSecureItemId(void* equip) {
@@ -1043,6 +1149,171 @@ void* __fastcall HookMakeLayer(void* self, void*, void** result, int left, int t
     return out;
 }
 
+int __cdecl HookTotemBodyPartLookup(int itemId, int gender, int* bodyPart, int unknown) {
+    if (itemId == kFrenzyTotemItemId) {
+        if (bodyPart != nullptr) *bodyPart = kFrenzyTotemBodyPart;
+        return 1;
+    }
+    return gRealBodyPartLookup(itemId, gender, bodyPart, unknown);
+}
+
+int __cdecl HookTotemEquipRequirement(int itemId, int bodyPart, int job) {
+    if (itemId == kFrenzyTotemItemId) return bodyPart == kFrenzyTotemBodyPart;
+    return gRealEquipRequirement(itemId, bodyPart, job);
+}
+
+int __stdcall HookTotemEquipSlotHitTest(int x, int y) {
+    if (x >= 138 && x <= 168 && y >= 198 && y <= 228) {
+        return kFrenzyTotemBodyPart;
+    }
+    return gRealEquipSlotHitTest(x, y);
+}
+
+extern "C" __attribute__((naked, noinline)) void HookTotemAccessoryDataPath() {
+    __asm__ __volatile__(
+        ".intel_syntax noprefix\n"
+        "cmp eax, 0x76\n"
+        "je 1f\n"
+        "cmp eax, 0x77\n"
+        "je 1f\n"
+        "jmp dword ptr [_gTotemAccessoryResumeAddress]\n"
+        "1:\n"
+        "jmp dword ptr [_gTotemAccessoryExtendedAddress]\n"
+        ".att_syntax prefix\n");
+}
+
+extern "C" __attribute__((naked, noinline)) void HookTotemDrawItemIcon() {
+    __asm__ __volatile__(
+        ".intel_syntax noprefix\n"
+        "mov eax, dword ptr [esp+0x08]\n"
+        "cmp eax, 1189999\n"
+        "jne 1f\n"
+        "cmp dword ptr [esp+0x0C], 0x47\n"
+        "je 2f\n"
+        "cmp dword ptr [esp+0x0C], 0x89\n"
+        "jne 1f\n"
+        "cmp dword ptr [esp+0x10], 0xE8\n"
+        "jne 1f\n"
+        "jmp 3f\n"
+        "2:\n"
+        "cmp dword ptr [esp+0x10], 0x85\n"
+        "jne 1f\n"
+        "3:\n"
+        "mov dword ptr [esp+0x0C], 0x89\n"
+        "mov dword ptr [esp+0x10], 0xE5\n"
+        "jmp dword ptr [_gTotemDrawContinueAddress]\n"
+        "1:\n"
+        "jmp dword ptr [_gTotemDrawResumeAddress]\n"
+        ".att_syntax prefix\n");
+}
+
+extern "C" __attribute__((naked, noinline)) void HookTotemKeyboardDispatch() {
+    __asm__ __volatile__(
+        ".intel_syntax noprefix\n"
+        "mov ecx, dword ptr [esi+1]\n"
+        "cmp ecx, 1016\n"
+        "jne 1f\n"
+        "mov edi, 10000\n"
+        "push 0x0094FA20\n"
+        "ret\n"
+        "1:\n"
+        "jmp dword ptr [_gTotemKeyboardDispatchAddress]\n"
+        ".att_syntax prefix\n");
+}
+
+extern "C" __attribute__((naked, noinline)) void HookTotemActiveSkillDispatch() {
+    __asm__ __volatile__(
+        ".intel_syntax noprefix\n"
+        "cmp esi, 1016\n"
+        "jne 1f\n"
+        "push 0x009691AC\n"
+        "ret\n"
+        "1:\n"
+        "jmp dword ptr [_gTotemActiveSkillDispatchAddress]\n"
+        ".att_syntax prefix\n");
+}
+
+extern "C" __attribute__((naked, noinline)) void HookTotemEquipStore() {
+    __asm__ __volatile__(
+        ".intel_syntax noprefix\n"
+        "mov eax, dword ptr [ebp+0x0C]\n"
+        "cmp eax, -53\n"
+        "jne 1f\n"
+        "pushad\n"
+        "push dword ptr [ebp+0x14]\n"
+        "call _TotemReplaceEquippedItem\n"
+        "add esp, 4\n"
+        "popad\n"
+        "push 0x0047B152\n"
+        "ret\n"
+        "1:\n"
+        "jmp dword ptr [_gTotemEquipStoreAddress]\n"
+        ".att_syntax prefix\n");
+}
+
+extern "C" __attribute__((naked, noinline)) void HookTotemEquipLookup() {
+    __asm__ __volatile__(
+        ".intel_syntax noprefix\n"
+        "mov eax, dword ptr [ebp+0x10]\n"
+        "cmp eax, -53\n"
+        "jne 1f\n"
+        "push dword ptr [ebp+0x08]\n"
+        "call _TotemCopyEquippedItem\n"
+        "add esp, 4\n"
+        "mov eax, dword ptr [ebp+0x08]\n"
+        "push 0x004283F3\n"
+        "ret\n"
+        "1:\n"
+        "jmp dword ptr [_gTotemEquipLookupAddress]\n"
+        ".att_syntax prefix\n");
+}
+
+extern "C" __attribute__((naked, noinline)) void HookTotemEquipLoginReset() {
+    __asm__ __volatile__(
+        ".intel_syntax noprefix\n"
+        "pushad\n"
+        "call _TotemResetEquippedItem\n"
+        "popad\n"
+        "jmp dword ptr [_gTotemEquipLoginResetAddress]\n"
+        ".att_syntax prefix\n");
+}
+
+extern "C" __attribute__((naked, noinline)) void HookTotemEquipLoginStore() {
+    __asm__ __volatile__(
+        ".intel_syntax noprefix\n"
+        "cmp esi, 53\n"
+        "jne 1f\n"
+        "pushad\n"
+        "push dword ptr [ebp-0x28]\n"
+        "call _TotemReplaceEquippedItem\n"
+        "add esp, 4\n"
+        "popad\n"
+        "cmp esi, 1\n"
+        "mov byte ptr [ebp-0x04], 7\n"
+        "push 0x004E5D0A\n"
+        "ret\n"
+        "1:\n"
+        "jmp dword ptr [_gTotemEquipLoginStoreAddress]\n"
+        ".att_syntax prefix\n");
+}
+
+extern "C" __attribute__((naked, noinline)) void HookTotemEquipDrawLoop() {
+    __asm__ __volatile__(
+        ".intel_syntax noprefix\n"
+        "mov eax, dword ptr [ebp+0x08]\n"
+        "cmp eax, 53\n"
+        "jne 1f\n"
+        "mov esi, dword ptr [_gTotemEquippedItem]\n"
+        "xor edi, edi\n"
+        "mov dword ptr [ebp-0x1C], 1\n"
+        "mov dword ptr [ebp-0x18], edi\n"
+        "push 0x007FEEEC\n"
+        "ret\n"
+        "1:\n"
+        "jmp dword ptr [_gTotemEquipDrawLoopAddress]\n"
+        ".att_syntax prefix\n");
+}
+
 void* InstallHook(uintptr_t address, const unsigned char* expected, size_t patchSize,
         void* replacement) {
     unsigned char* site = reinterpret_cast<unsigned char*>(address);
@@ -1076,6 +1347,55 @@ bool CanInstallHook(uintptr_t address, const unsigned char* expected, size_t siz
     return site[0] == 0xE9 || BytesEqual(site, expected, size);
 }
 
+uintptr_t JumpTarget(uintptr_t address) {
+    const unsigned char* site = reinterpret_cast<const unsigned char*>(address);
+    if (site[0] != 0xE9) return 0;
+    return address + 5 + *reinterpret_cast<const int32_t*>(site + 1);
+}
+
+bool CoreHooksReady(uintptr_t coreBase) {
+    return JumpTarget(kKeyboardDispatchHookSite) == coreBase + kCoreKeyboardDispatchOffset
+            && JumpTarget(kActiveSkillDispatchHookSite)
+                    == coreBase + kCoreActiveSkillDispatchOffset
+            && JumpTarget(kBodyPartLookupHookSite) == coreBase + kCoreBodyPartLookupOffset
+            && JumpTarget(kAccessoryDataPathHookSite)
+                    == coreBase + kCoreAccessoryDataPathOffset
+            && JumpTarget(kDrawItemIconHookSite) == coreBase + kCoreDrawItemIconOffset
+            && JumpTarget(kEquipSlotHitTestHookSite)
+                    == coreBase + kCoreEquipSlotHitTestOffset
+            && JumpTarget(kEquipRequirementHookSite)
+                    == coreBase + kCoreEquipRequirementOffset
+            && JumpTarget(kEquipStoreHookSite) == coreBase + kCoreEquipStoreOffset
+            && JumpTarget(kEquipLookupHookSite) == coreBase + kCoreEquipLookupOffset
+            && JumpTarget(kEquipLoginResetHookSite)
+                    == coreBase + kCoreEquipLoginResetOffset
+            && JumpTarget(kEquipLoginStoreHookSite)
+                    == coreBase + kCoreEquipLoginStoreOffset
+            && JumpTarget(kEquipDrawLoopHookSite) == coreBase + kCoreEquipDrawLoopOffset;
+}
+
+bool WaitForCoreHooks(uintptr_t coreBase) {
+    for (int attempt = 0; attempt < 500; attempt++) {
+        if (CoreHooksReady(coreBase)) return true;
+        Sleep(10);
+    }
+    return false;
+}
+
+void* InstallChainedHook(uintptr_t address, uintptr_t expectedTarget, void* replacement) {
+    unsigned char* site = reinterpret_cast<unsigned char*>(address);
+    if (JumpTarget(address) != expectedTarget) return nullptr;
+    DWORD oldProtection = 0;
+    if (!VirtualProtect(site, 5, PAGE_EXECUTE_READWRITE, &oldProtection)) return nullptr;
+    site[0] = 0xE9;
+    *reinterpret_cast<int32_t*>(site + 1) = static_cast<int32_t>(
+            reinterpret_cast<unsigned char*>(replacement) - site - 5);
+    FlushInstructionCache(GetCurrentProcess(), site, 5);
+    DWORD ignored = 0;
+    VirtualProtect(site, 5, oldProtection, &ignored);
+    return reinterpret_cast<void*>(expectedTarget);
+}
+
 bool CanPatchCall(uintptr_t address, uintptr_t expectedTarget) {
     const unsigned char* site = reinterpret_cast<const unsigned char*>(address);
     if (site[0] != 0xE8) return false;
@@ -1097,12 +1417,41 @@ bool PatchCall(uintptr_t address, void* replacement) {
 }
 
 DWORD WINAPI Install(LPVOID instance) {
-    Log("LOAD: BeiDouSetItemCompat v13 star-force-tooltip");
+    Log("LOAD: BeiDouSetItemCompat v22 frenzy-totem-1013-dispatch");
     if (reinterpret_cast<uintptr_t>(GetModuleHandleA(nullptr)) != kImageBase) {
         Log("ERROR: unexpected image base");
         return 1;
     }
     (void)instance;
+    HMODULE coreModule = LoadLibraryA(kCoreDllName);
+    if (coreModule == nullptr) {
+        Log("ERROR: compatibility core failed to load before set-item hooks");
+        return 2;
+    }
+    const uintptr_t coreBase = reinterpret_cast<uintptr_t>(coreModule);
+    const uintptr_t bodyPartLookup = coreBase + kCoreBodyPartLookupOffset;
+    const uintptr_t accessoryDataPath = coreBase + kCoreAccessoryDataPathOffset;
+    const uintptr_t drawItemIcon = coreBase + kCoreDrawItemIconOffset;
+    const uintptr_t equipSlotHitTest = coreBase + kCoreEquipSlotHitTestOffset;
+    const uintptr_t equipRequirement = coreBase + kCoreEquipRequirementOffset;
+    const uintptr_t keyboardDispatch = coreBase + kCoreKeyboardDispatchOffset;
+    const uintptr_t activeSkillDispatch = coreBase + kCoreActiveSkillDispatchOffset;
+    gTotemAccessoryResumeAddress = coreBase + kCoreAccessoryDataPathResumeOffset;
+    gTotemAccessoryExtendedAddress = coreBase + kCoreAccessoryDataPathExtendedOffset;
+    gTotemDrawResumeAddress = coreBase + kCoreDrawItemIconResumeOffset;
+    gTotemDrawContinueAddress = coreBase + kCoreDrawItemIconContinueOffset;
+    gTotemKeyboardDispatchAddress = keyboardDispatch;
+    gTotemActiveSkillDispatchAddress = activeSkillDispatch;
+    gTotemEquipStoreAddress = coreBase + kCoreEquipStoreOffset;
+    gTotemEquipLookupAddress = coreBase + kCoreEquipLookupOffset;
+    gTotemEquipLoginResetAddress = coreBase + kCoreEquipLoginResetOffset;
+    gTotemEquipLoginStoreAddress = coreBase + kCoreEquipLoginStoreOffset;
+    gTotemEquipDrawLoopAddress = coreBase + kCoreEquipDrawLoopOffset;
+    if (!WaitForCoreHooks(coreBase)) {
+        Log("ERROR: verified core hooks were not ready");
+        return 3;
+    }
+
     HMODULE damageSkins = LoadLibraryA("BeiDouDamageSkinCompat.dll");
     if (damageSkins != nullptr) {
         FARPROC selector = GetProcAddress(damageSkins, "BDS_SetSkin");
@@ -1125,8 +1474,44 @@ DWORD WINAPI Install(LPVOID instance) {
             || !CanPatchCall(kEquipMakeLayer2, kMakeLayer)
             || !CanPatchCall(kEquipMakeLayer3, kMakeLayer)) {
         Log("ERROR: hook byte mismatch; no set-item hooks installed");
-        return 2;
+        return 4;
     }
+    gRealBodyPartLookup = reinterpret_cast<BodyPartLookupFn>(InstallChainedHook(
+            kBodyPartLookupHookSite, bodyPartLookup,
+            reinterpret_cast<void*>(&HookTotemBodyPartLookup)));
+    gRealEquipSlotHitTest = reinterpret_cast<EquipSlotHitTestFn>(InstallChainedHook(
+            kEquipSlotHitTestHookSite, equipSlotHitTest,
+            reinterpret_cast<void*>(&HookTotemEquipSlotHitTest)));
+    gRealEquipRequirement = reinterpret_cast<EquipRequirementFn>(InstallChainedHook(
+            kEquipRequirementHookSite, equipRequirement,
+            reinterpret_cast<void*>(&HookTotemEquipRequirement)));
+    void* accessoryDataPathHook = InstallChainedHook(
+            kAccessoryDataPathHookSite, accessoryDataPath,
+            reinterpret_cast<void*>(&HookTotemAccessoryDataPath));
+    void* drawItemIconHook = InstallChainedHook(
+            kDrawItemIconHookSite, drawItemIcon,
+            reinterpret_cast<void*>(&HookTotemDrawItemIcon));
+    void* keyboardDispatchHook = InstallChainedHook(
+            kKeyboardDispatchHookSite, keyboardDispatch,
+            reinterpret_cast<void*>(&HookTotemKeyboardDispatch));
+    void* activeSkillDispatchHook = InstallChainedHook(
+            kActiveSkillDispatchHookSite, activeSkillDispatch,
+            reinterpret_cast<void*>(&HookTotemActiveSkillDispatch));
+    void* equipStoreHook = InstallChainedHook(
+            kEquipStoreHookSite, gTotemEquipStoreAddress,
+            reinterpret_cast<void*>(&HookTotemEquipStore));
+    void* equipLookupHook = InstallChainedHook(
+            kEquipLookupHookSite, gTotemEquipLookupAddress,
+            reinterpret_cast<void*>(&HookTotemEquipLookup));
+    void* equipLoginResetHook = InstallChainedHook(
+            kEquipLoginResetHookSite, gTotemEquipLoginResetAddress,
+            reinterpret_cast<void*>(&HookTotemEquipLoginReset));
+    void* equipLoginStoreHook = InstallChainedHook(
+            kEquipLoginStoreHookSite, gTotemEquipLoginStoreAddress,
+            reinterpret_cast<void*>(&HookTotemEquipLoginStore));
+    void* equipDrawLoopHook = InstallChainedHook(
+            kEquipDrawLoopHookSite, gTotemEquipDrawLoopAddress,
+            reinterpret_cast<void*>(&HookTotemEquipDrawLoop));
     gRealProcessPacket = reinterpret_cast<ProcessPacketFn>(InstallHook(
             kProcessPacket, processBytes, sizeof(processBytes),
             reinterpret_cast<void*>(&HookProcessPacket)));
@@ -1140,15 +1525,22 @@ DWORD WINAPI Install(LPVOID instance) {
             kRefreshNameplate, nameplateBytes, sizeof(nameplateBytes),
             reinterpret_cast<void*>(&HookRefreshNameplate)));
     gRealMakeLayer = reinterpret_cast<MakeLayerFn>(kMakeLayer);
-    if (!gRealProcessPacket || !gRealEquipTooltip || !gRealClearTooltip || !gRealRefreshNameplate
+    if (!gRealBodyPartLookup || !gRealEquipSlotHitTest || !gRealEquipRequirement
+            || !accessoryDataPathHook || !drawItemIconHook
+            || !keyboardDispatchHook || !activeSkillDispatchHook
+            || !equipStoreHook || !equipLookupHook || !equipLoginResetHook
+            || !equipLoginStoreHook || !equipDrawLoopHook
+            || !gRealProcessPacket || !gRealEquipTooltip || !gRealClearTooltip
+            || !gRealRefreshNameplate
             || !PatchCall(kEquipOwnerTextCall, reinterpret_cast<void*>(&HookEquipOwnerText))
             || !PatchCall(kEquipMakeLayer1, reinterpret_cast<void*>(&HookMakeLayer))
             || !PatchCall(kEquipMakeLayer2, reinterpret_cast<void*>(&HookMakeLayer))
             || !PatchCall(kEquipMakeLayer3, reinterpret_cast<void*>(&HookMakeLayer))) {
         Log("ERROR: hook installation failed");
-        return 3;
+        return 5;
     }
-    Log("OK: set item, damage skin, and power nameplate hooks installed");
+    Log("OK: Frenzy Totem slot 53 store/draw chained; core keeps 54/55/56");
+    Log("OK: set item, Frenzy Totem render/cast, damage skin, and power nameplate hooks installed");
     return 0;
 }
 

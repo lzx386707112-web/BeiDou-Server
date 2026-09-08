@@ -37,10 +37,12 @@ rtk git diff --check
 Run broader contracts when feasible. Report unrelated pre-existing failures;
 do not restore unrelated work or weaken assertions to obtain a green result.
 
-Do not run WZ packing, Maven packaging, or DLL builds as part of the default
-workflow. Run them only when the user explicitly requests that artifact in the
-current task. Static verification must operate on the canonical IMG/XML/source
-files and must not depend on a generated package.
+Do not run WZ packing or Maven packaging as part of the default workflow.
+Rebuild the server JAR only when the user explicitly requests that artifact.
+If the task changed a compatibility DLL or its routing, compile that DLL with
+its checked-in build script before delivery; do not wait for a separate
+authorization. Static verification of IMG/XML still operates on the canonical
+source files and must not depend on a packed WZ.
 
 ## Final review
 
@@ -57,7 +59,10 @@ Before reporting completion:
 
 ## Delivery
 
-Validate locally first. Copy only explicitly requested runtime files, preserve
-names and relative layout, compare source/destination SHA-256 for every copy,
-and report the exact directory. Do not copy temporary baselines, backups,
-verification WZ files, probe builds, or unrelated dirty-worktree files.
+Validate locally first, including any required DLL rebuild. Copy the complete
+runtime file set for the fix (client IMG/string/MCV/Effect files and compiled
+DLLs), preserve in-client names and layout under
+`/Users/lizixian/Downloads/路西德/`, compare source/destination SHA-256 for
+every copy, and report the exact directory. Do not copy temporary baselines,
+backups, verification WZ files, probe builds, or unrelated dirty-worktree
+files.

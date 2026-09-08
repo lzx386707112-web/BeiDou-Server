@@ -89,6 +89,9 @@ public class ItemId {
     public static final int SOFT_WHITE_BUN = 2022186;
     public static final int AIR_BUBBLE = 2022040;
 
+    // Equipment
+    public static final int FRENZY_TOTEM = 1189999;
+
     // Chair
     public static final int RELAXER = 3010000;
     private static final int CHAIR_MIN = RELAXER;

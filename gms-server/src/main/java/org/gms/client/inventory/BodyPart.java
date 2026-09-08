@@ -62,6 +62,7 @@ public enum BodyPart {
     BELT(50),
     SHOULDER(20),
     SECONDARY_WEAPON(51),
+    TOTEM(53),
     ROBOT_HEART(54),
     BADGE(55),
     EMBLEM(56),

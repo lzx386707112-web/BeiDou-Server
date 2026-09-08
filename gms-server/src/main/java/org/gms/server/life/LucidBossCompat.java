@@ -30,7 +30,9 @@ public final class LucidBossCompat {
     private static final int PHASE_THREE = 3;
     private static final int LUCID_P1 = 8880140;
     private static final int LUCID_P2 = 8880141;
-    private static final int LUCID_P3 = 8880142;
+    private static final int LUCID_P3 = 8880152;
+    private static final int LUCID_FURY_SUCCESS = 8880153;
+    private static final int LUCID_FURY_FAIL = 8880154;
     private static final int MUSHROOM_P1 = 8880164;
     private static final int GOLEM_P1 = 8880161;
     private static final int BUTTERFLY_P1 = 8880165;
@@ -38,22 +40,22 @@ public final class LucidBossCompat {
     private static final int BUTTERFLY_P2 = 8880175;
     private static final int SEDUCE_SKILL_ID = 128;
     private static final int SEDUCE_P1_P2_LEVEL = 16;
-    private static final int SEDUCE_P3_LEVEL = 10;
     private static final int CONTROL_EFFECT_COOLDOWN_MS = 60_000;
     private static final int BUTTERFLY_CAPACITY = 40;
-    private static final int MAX_VISIBLE_BUTTERFLIES = 12;
     private static final int MAX_GOLEMS = 15;
     private static final int MAX_MUSHROOMS = 4;
     private static final int PHANTOM_BARRAGE_PREPARE_MS = 2400;
     private static final int PHANTOM_BARRAGE_HIT_INTERVAL_MS = 1000;
     private static final int PHANTOM_BARRAGE_HIT_COUNT = 12;
     private static final long DRAGON_BREATH_DAMAGE_MS = 6300;
-    private static final long BUTTERFLY_RETURN_DURATION_MS = 3960;
+    private static final long BUTTERFLY_BURST_IMPACT_MS = 1800;
     private static final long RUSH_DURATION_MS = 3000;
     private static final long RUSH_HIT_INTERVAL_MS = 100;
     private static final long CONTROLLER_TICK_MS = 250;
     private static final long FURY_LIMIT_MS = 45_000;
-    private static final long FURY_FAIL_DELAY_MS = FURY_LIMIT_MS + 4320;
+    private static final long FURY_FAIL_IMPACT_DELAY_MS = 3000;
+    private static final long FURY_FAIL_RESUMMON_DELAY_MS = 10_000;
+    private static final int FURY_RESUMMON_HP_PERCENT = 16;
 
     private static final String EFFECT_ROOT = "customSkill/lucid/";
     private static final String DRAGON_P1_EFFECT = EFFECT_ROOT + "dragonP1VideoLayer";
@@ -62,6 +64,7 @@ public final class LucidBossCompat {
     private static final String PHANTOM_BARRAGE_EFFECT = EFFECT_ROOT + "phantomBarrageVideoLayer";
     private static final String RUSH_EFFECT = EFFECT_ROOT + "rushVideoLayer";
     private static final String FURY_EFFECT = EFFECT_ROOT + "furyVideoLayer";
+    private static final String FURY_STOP_EFFECT = EFFECT_ROOT + "furyStopVideoLayer";
     private static final String BUTTERFLY_BURST_EFFECT = EFFECT_ROOT + "butterflyBurstVideoLayer";
     private static final String BOMB_EFFECT = EFFECT_ROOT + "bombVideoLayer";
     private static final String[] STAINED_GLASS_EFFECTS = {
@@ -83,6 +86,7 @@ public final class LucidBossCompat {
     };
     private static final Point RUSH_BODY_LT = new Point(-47, -135);
     private static final Point RUSH_BODY_RB = new Point(76, 14);
+    private static final Point FURY_RESUMMON_POSITION = new Point(711, -786);
 
     private static final Rectangle[] STAINED_GLASS_AREAS = {
             new Rectangle(127, -225, 370, 200),
@@ -95,6 +99,8 @@ public final class LucidBossCompat {
 
     private static final Set<Integer> SUPPORT_MOBS = Set.of(
             MUSHROOM_P1, GOLEM_P1, BUTTERFLY_P1, GOLEM_P2, BUTTERFLY_P2);
+    private static final Set<Integer> FURY_TRANSITION_MOBS = Set.of(
+            LUCID_FURY_SUCCESS, LUCID_FURY_FAIL);
     private static final ConcurrentMap<MapleMap, Encounter> ENCOUNTERS =
             new ConcurrentHashMap<>();
 
@@ -131,8 +137,7 @@ public final class LucidBossCompat {
     static long skillCooldownMillis(int mobId, int skillId, int level, long fallback) {
         boolean phaseOneOrTwoSeduce = (mobId == LUCID_P1 || mobId == LUCID_P2)
                 && level == SEDUCE_P1_P2_LEVEL;
-        boolean phaseThreeSeduce = mobId == LUCID_P3 && level == SEDUCE_P3_LEVEL;
-        if (skillId == SEDUCE_SKILL_ID && (phaseOneOrTwoSeduce || phaseThreeSeduce)) {
+        if (skillId == SEDUCE_SKILL_ID && phaseOneOrTwoSeduce) {
             return CONTROL_EFFECT_COOLDOWN_MS;
         }
         return fallback;
@@ -213,7 +218,24 @@ public final class LucidBossCompat {
         if (encounter != null) {
             encounter.stop(true);
         } else {
-            cleanupSupportMobs(map);
+            cleanupAuxiliaryMobs(map);
+        }
+    }
+
+    public static void finishFurySuccess(MapleMap map) {
+        if (map == null) {
+            return;
+        }
+        Encounter encounter = ENCOUNTERS.remove(map);
+        if (encounter != null) {
+            encounter.stop(false);
+        }
+        map.broadcastMessage(PacketCreator.showEffect(FURY_STOP_EFFECT));
+    }
+
+    public static void protectFurySuccessMob(Monster monster) {
+        if (monster != null && monster.getId() == LUCID_FURY_SUCCESS) {
+            monster.setDamageBlockedUntil(System.currentTimeMillis() + 5000);
         }
     }
 
@@ -259,8 +281,8 @@ public final class LucidBossCompat {
             nextSummon = now + 7000;
             nextDragon = now + (phase == PHASE_ONE ? 20_000 : 28_000);
             nextLaser = now + 12_000;
-            nextShoot = now + (phase == PHASE_THREE ? 8000 : 25_000);
-            nextRush = now + (phase == PHASE_THREE ? 12_000 : 18_000);
+            nextShoot = now + 25_000;
+            nextRush = now + 18_000;
             nextBomb = now + (phase == PHASE_ONE ? 12_000 : 15_000);
             nextStainedGlass = now + 10_000;
             nextHurdleDamage = now + 1000;
@@ -271,12 +293,7 @@ public final class LucidBossCompat {
                 map.broadcastMessage(PacketCreator.showEffect(FURY_EFFECT));
                 map.dropMessage(5, "[Lucid] Lucid has become enraged!");
                 map.dropMessage(5, "[Lucid] The nightmare fog will close in after 45 seconds.");
-                TimerManager.getInstance().schedule(() -> {
-                    if (active && !furyFailed && isCurrentBossAlive()) {
-                        furyFailed = true;
-                        applyFullMapDamage(100, "fury-fail");
-                    }
-                }, FURY_FAIL_DELAY_MS);
+                TimerManager.getInstance().schedule(this::failFury, FURY_LIMIT_MS);
             }
             task = TimerManager.getInstance().register(this, CONTROLLER_TICK_MS, 1000);
             log.info("[LucidCompat] started map={} phase={} boss={} oid={}",
@@ -289,6 +306,9 @@ public final class LucidBossCompat {
                 return;
             }
             if (!isCurrentBossAlive()) {
+                if (phase == PHASE_THREE && furyFailed) {
+                    return;
+                }
                 if (phase == PHASE_TWO) {
                     Monster phaseThree = map.getMonsterById(LUCID_P3);
                     if (phaseThree != null && phaseThree.isAlive()) {
@@ -308,7 +328,7 @@ public final class LucidBossCompat {
             if (phase <= PHASE_TWO && now >= nextButterfly) {
                 createButterflies(now);
             }
-            if (now >= nextDust) {
+            if (phase <= PHASE_TWO && now >= nextDust) {
                 castFairyDust();
                 nextDust = now + (phase == PHASE_ONE ? 12_000 : 10_000);
             }
@@ -320,15 +340,15 @@ public final class LucidBossCompat {
                 castDragon();
                 nextDragon = now + (phase == PHASE_ONE ? 35_000 : 38_000);
             }
-            if (phase >= PHASE_TWO && now >= nextLaser) {
+            if (phase == PHASE_TWO && now >= nextLaser) {
                 castLaserRain();
                 nextLaser = now + 30_000;
             }
-            if (phase >= PHASE_TWO && now >= nextShoot) {
+            if (phase == PHASE_TWO && now >= nextShoot) {
                 castPhantomBarrage();
                 nextShoot = now + 45_000;
             }
-            if (phase >= PHASE_TWO && now >= nextRush) {
+            if (phase == PHASE_TWO && now >= nextRush) {
                 castRush();
                 nextRush = now + 20_000;
             }
@@ -340,7 +360,7 @@ public final class LucidBossCompat {
                 applyHurdleDamage();
                 nextHurdleDamage = now + 1000;
             }
-            if (now >= nextBomb) {
+            if (phase <= PHASE_TWO && now >= nextBomb) {
                 castContagiousBomb();
                 nextBomb = now + 25_000;
             }
@@ -353,7 +373,9 @@ public final class LucidBossCompat {
 
         private void createButterflies(long now) {
             int hpPercent = hpPercent();
-            int created = butterflyCreateCount(hpPercent);
+            int created = Math.min(
+                    butterflyCreateCount(hpPercent),
+                    BUTTERFLY_CAPACITY - butterflyGauge);
             butterflyGauge += created;
             if (!butterflyWarningIssued && butterflyGauge >= BUTTERFLY_CAPACITY / 2) {
                 butterflyWarningIssued = true;
@@ -363,7 +385,7 @@ public final class LucidBossCompat {
                     ? PHASE_ONE_BUTTERFLY_POSITIONS : PHASE_TWO_BUTTERFLY_POSITIONS;
             int butterflyId = phase == PHASE_ONE ? BUTTERFLY_P1 : BUTTERFLY_P2;
             int visible = countMobs(butterflyId);
-            int toSpawn = Math.min(Math.min(created, 4), MAX_VISIBLE_BUTTERFLIES - visible);
+            int toSpawn = Math.min(created, BUTTERFLY_CAPACITY - visible);
             for (int index = 0; index < toSpawn; index++) {
                 Point position = positions[butterflyPosition++ % positions.length];
                 Monster butterfly = LifeFactory.getMonster(butterflyId);
@@ -374,15 +396,57 @@ public final class LucidBossCompat {
                 butterflyGauge = 0;
                 butterflyWarningIssued = false;
                 map.dropMessage(5, "[Lucid] Lucid has become enraged!");
+                removeMobs(Set.of(BUTTERFLY_P1, BUTTERFLY_P2));
                 map.broadcastMessage(PacketCreator.showEffect(BUTTERFLY_BURST_EFFECT));
-                scheduleDamage(1350, 30, null, "butterfly-burst");
-                TimerManager.getInstance().schedule(() -> {
-                    if (active && isCurrentBossAlive()) {
-                        removeMobs(Set.of(BUTTERFLY_P1, BUTTERFLY_P2));
-                    }
-                }, BUTTERFLY_RETURN_DURATION_MS);
+                scheduleDamage(BUTTERFLY_BURST_IMPACT_MS, 30, null, "butterfly-burst");
             }
             nextButterfly = now + butterflyIntervalMillis(hpPercent);
+        }
+
+        private void failFury() {
+            if (!active || furyFailed || !isCurrentBossAlive()) {
+                return;
+            }
+            furyFailed = true;
+            Point position = new Point(boss.getPosition());
+            int foothold = boss.getFh();
+            map.killMonster(boss, null, false);
+
+            Monster failMob = LifeFactory.getMonster(LUCID_FURY_FAIL);
+            failMob.setPosition(position);
+            failMob.setFh(foothold);
+            failMob.setDamageBlockedUntil(
+                    System.currentTimeMillis() + FURY_FAIL_RESUMMON_DELAY_MS);
+            map.spawnMonster(failMob);
+            int failObjectId = failMob.getObjectId();
+
+            TimerManager.getInstance().schedule(() -> {
+                if (active && furyFailed && ENCOUNTERS.get(map) == this
+                        && map.getMonsterByOid(failObjectId) == failMob) {
+                    applyDamage(100, null, "fury-fail", failMob);
+                }
+            }, FURY_FAIL_IMPACT_DELAY_MS);
+            TimerManager.getInstance().schedule(
+                    () -> resummonPhaseTwo(failMob), FURY_FAIL_RESUMMON_DELAY_MS);
+        }
+
+        private void resummonPhaseTwo(Monster failMob) {
+            if (!active || !furyFailed || ENCOUNTERS.get(map) != this) {
+                return;
+            }
+            if (failMob.isAlive() && failMob.getMap() == map) {
+                map.killMonster(failMob, null, false);
+            }
+            Monster resummoned = LifeFactory.getMonster(LUCID_P2);
+            resummoned.setPosition(new Point(FURY_RESUMMON_POSITION));
+            long targetHp = Math.max(
+                    1, resummoned.getMaxHp() * FURY_RESUMMON_HP_PERCENT / 100);
+            resummoned.addHp(targetHp - resummoned.getHp());
+            map.spawnMonster(resummoned);
+            if (map.getEventInstance() != null) {
+                map.getEventInstance().setIntProperty("phase", PHASE_TWO);
+            }
+            LucidBossCompat.startPhase(map, resummoned, PHASE_TWO);
         }
 
         private void castFairyDust() {
@@ -522,30 +586,37 @@ public final class LucidBossCompat {
             }, delay);
         }
 
-        private void applyFullMapDamage(int percent, String skill) {
-            applyDamage(percent, null, skill);
+        private void applyDamage(int percent, Rectangle range, String skill) {
+            applyDamage(percent, range, skill, boss);
         }
 
-        private void applyDamage(int percent, Rectangle range, String skill) {
+        private void applyDamage(
+                int percent, Rectangle range, String skill, Monster damageSource) {
             for (Character character : alivePlayers()) {
                 if (range == null || range.contains(character.getPosition())) {
-                    damageCharacter(character, percent, skill);
+                    damageCharacter(character, percent, skill, damageSource);
                 }
             }
         }
 
         private void damageCharacter(Character character, int percent, String skill) {
+            damageCharacter(character, percent, skill, boss);
+        }
+
+        private void damageCharacter(
+                Character character, int percent, String skill, Monster damageSource) {
             int damage = Math.max(1, (int) ((long) character.getMaxHp() * percent / 100));
             character.addHP(-damage);
             map.broadcastMessage(
                     character,
                     PacketCreator.damagePlayer(
-                            0, boss.getId(), character.getId(), damage, 0, 0,
-                            false, 0, true, boss.getObjectId(), 0, 0),
+                            0, damageSource.getId(), character.getId(), damage, 0, 0,
+                            false, 0, true, damageSource.getObjectId(), 0, 0),
                     false);
             log.info("[LucidSkillTrace] map={} phase={} skill={} mob={} oid={} chr={} "
                             + "damagePercent={} damage={} hpAfter={}",
-                    map.getId(), phase, skill, boss.getId(), boss.getObjectId(),
+                    map.getId(), phase, skill, damageSource.getId(),
+                    damageSource.getObjectId(),
                     character.getName(), percent, damage, character.getHp());
         }
 
@@ -599,7 +670,7 @@ public final class LucidBossCompat {
             active = false;
             TimerManager.getInstance().stop(task);
             if (cleanup) {
-                cleanupSupportMobs(map);
+                cleanupAuxiliaryMobs(map);
             }
             log.info("[LucidCompat] stopped map={} phase={} boss={} oid={}",
                     map.getId(), phase, boss.getId(), bossObjectId);
@@ -638,6 +709,15 @@ public final class LucidBossCompat {
     private static void cleanupSupportMobs(MapleMap map) {
         for (Monster monster : map.getAllMonsters()) {
             if (SUPPORT_MOBS.contains(monster.getId())) {
+                map.killMonster(monster, null, false);
+            }
+        }
+    }
+
+    private static void cleanupAuxiliaryMobs(MapleMap map) {
+        for (Monster monster : map.getAllMonsters()) {
+            if (SUPPORT_MOBS.contains(monster.getId())
+                    || FURY_TRANSITION_MOBS.contains(monster.getId())) {
                 map.killMonster(monster, null, false);
             }
         }

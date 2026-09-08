@@ -61,16 +61,16 @@ total separately, call `aggroMonsterDamage()` once, and call
 
 ## Empty-cast damage template
 
-For a duration or scheduled replay skill, an empty initial target list is not a
-damage event and must not eagerly create a maximum-damage singleton template.
-Keep the schedule alive and scan the current attack bounds on every tick. If a
-tick still has no live target, return before creating a packet, damage-number
-packet, aggro, or HP settlement. Only after a later tick finds at least one live
-target may the handler create a fallback damage template, and that template
-must contain one independently generated value per hit instead of copying one
-fixed maximum into every hit slot. Generate this fallback for the current tick;
-do not cache it across later ticks. A captured non-empty client damage template
-continues to take precedence.
+For a client-owned duration or scheduled replay skill, an empty initial target
+list is not a damage event. Keep the schedule alive, but skip every replay tick
+that has no captured client damage template before creating a packet,
+damage-number packet, aggro, or HP settlement. A later client attack packet is
+parsed independently by the normal attack handler; the original `AttackInfo`
+does not become populated asynchronously. Do not manufacture a fallback from
+the character's server-side damage range unless a separately verified legacy
+skill is explicitly server-authoritative. Dawn Warrior's four scheduled V/VI
+attacks must never substitute an estimated value such as `500000` for missing
+client damage.
 
 ## Skill integration
 

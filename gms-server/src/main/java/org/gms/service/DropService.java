@@ -9,6 +9,8 @@ import org.gms.dao.mapper.DropDataGlobalMapper;
 import org.gms.dao.mapper.DropDataMapper;
 import org.gms.model.dto.DropSearchReqDTO;
 import org.gms.model.dto.DropSearchRtnDTO;
+import org.gms.constants.inventory.ItemConstants;
+import org.gms.client.inventory.InventoryType;
 import org.gms.server.ItemInformationProvider;
 import org.gms.server.life.MonsterInformationProvider;
 import org.gms.server.quest.Quest;
@@ -54,6 +56,7 @@ public class DropService {
                                     .continent(record.getContinent())
                                     .itemId(record.getItemid())
                                     .itemName(getItemName(record.getItemid()))
+                                    .itemCategory(getItemCategory(record.getItemid()))
                                     .minimumQuantity(record.getMinimumQuantity())
                                     .maximumQuantity(record.getMaximumQuantity())
                                     .questId(record.getQuestid())
@@ -109,6 +112,7 @@ public class DropService {
                                     .dropperName(getMobName(record.getDropperid()))
                                     .itemId(record.getItemid())
                                     .itemName(getItemName(record.getItemid()))
+                                    .itemCategory(getItemCategory(record.getItemid()))
                                     .minimumQuantity(record.getMinimumQuantity())
                                     .maximumQuantity(record.getMaximumQuantity())
                                     .questId(record.getQuestid())
@@ -164,11 +168,53 @@ public class DropService {
         return itemId == null ? null : ItemInformationProvider.getInstance().getName(itemId);
     }
 
+    private String getItemCategory(Integer itemId) {
+        if (itemId == null || itemId == 0) {
+            return "金币";
+        }
+        InventoryType type = ItemConstants.getInventoryType(itemId);
+        return switch (type) {
+            case EQUIP -> "装备";
+            case USE -> "消耗";
+            case SETUP -> "设置";
+            case ETC -> "其他";
+            case CASH -> "特殊";
+            default -> "未知";
+        };
+    }
+
     private String getMobName(Integer mobId) {
         return mobId == null ? null : MonsterInformationProvider.getInstance().getMobNameFromId(mobId);
     }
 
     private String getQuestName(Integer questId) {
         return questId == null ? null : Quest.getInstance(questId).getName();
+    }
+
+    /**
+     * 根据怪物ID获取掉落物列表
+     */
+    public List<DropSearchRtnDTO> getDropsByMobId(int mobId) {
+        DropDataDO query = new DropDataDO();
+        query.setDropperid(mobId);
+        QueryWrapper queryWrapper = QueryWrapper.create(query);
+        queryWrapper.orderBy(DropDataDO::getId);
+
+        List<DropDataDO> records = dropDataMapper.selectListByQuery(queryWrapper);
+        return records.stream()
+                .map(record -> DropSearchRtnDTO.builder()
+                        .id(record.getId())
+                        .dropperId(record.getDropperid())
+                        .dropperName(getMobName(record.getDropperid()))
+                        .itemId(record.getItemid())
+                        .itemName(getItemName(record.getItemid()))
+                        .itemCategory(getItemCategory(record.getItemid()))
+                        .minimumQuantity(record.getMinimumQuantity())
+                        .maximumQuantity(record.getMaximumQuantity())
+                        .questId(record.getQuestid())
+                        .questName(getQuestName(record.getQuestid()))
+                        .chance(record.getChance())
+                        .build())
+                .toList();
     }
 }

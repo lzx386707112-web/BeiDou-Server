@@ -66,12 +66,20 @@ PROTECTED_SHA256 = {
     "clien/Data/Map/Obj/Lacheln.img": "9d6deecfdda4dc9bce211cad3915b52516df8d12306a3cdb169e05fe79307f4c",
     "clien/Data/Map/Tile/allblackTile.img": "8783edc9438e46ef03da2ce558329f4af80f1300b1c831fa7284f79d67cca78c",
     "clien/Data/Map/MapHelper.img": "e78b66855c14d8f771690a3ae6cccdb2879a0b23a6c21cd42660fb7a85be9a7e",
-    "clien/Data/Mob/8880140.img": "19eb3e121d1b7db402cc46da14c037f81e9b4f30e41e026b786a48fa1083b700",
-    "clien/Data/Mob/8880141.img": "1c2b02408e9d6d725376b9ea31726e052b6080664bb29b9b11f8ebbbbff63721",
+    "clien/Data/Mob/8880140.img": {
+        "19eb3e121d1b7db402cc46da14c037f81e9b4f30e41e026b786a48fa1083b700",
+        "abef92e5c44380bb29b806935ee7b424fb172e211e43bc744f150414e1e2eb32",
+    },
+    "clien/Data/Mob/8880141.img": {
+        "1c2b02408e9d6d725376b9ea31726e052b6080664bb29b9b11f8ebbbbff63721",
+        "05fb18cb34aa3b45edbb84a879a84cf5b4877401d52bdda16084dfcdec3e24b2",
+    },
     "clien/Data/Mob/8880142.img": "a69fc75492e3dd7e9dbae37528f6868f8a4d3aafb024bac12b7f3afe3c7d2312",
     "clien/Data/String/Mob.img": {
         "f552f842a7ae23734f2bbdcb9ebe235870b28314932ca967c8c41c20d2ac6612",
         "5281366e4e50094c940c4fb77086e3cba12c250cdb2917b0a2606f3fddda2112",
+        "76fd7bdd56ad3cc158a5e100429d81f081858887944bd6082dfa9907ca31462d",
+        "ad43ce10639b37525e9f361a836e618be324d5e4e15f6b979b881b503f3fa5c0",
     },
 }
 

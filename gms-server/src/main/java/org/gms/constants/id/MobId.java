@@ -4,7 +4,6 @@ public class MobId {
     public static final int ARPQ_BOMB = 9300166;
     public static final int GIANT_CAKE = 9400606;
     public static final int TRANSPARENT_ITEM = 9300216;
-
     public static final int GREEN_MUSHROOM = 1110100;
     public static final int DEJECTED_GREEN_MUSHROOM = 1110130;
     public static final int GREEN_MUSHROOM_QUEST = 9101000;
@@ -103,7 +102,7 @@ public class MobId {
 
     public static final int LUCID_PHASE_1 = 8880140;
     public static final int LUCID_PHASE_2 = 8880141;
-    public static final int LUCID_PHASE_3 = 8880142;
+    public static final int LUCID_PHASE_3 = 8880152;
 
     public static boolean isDeadHorntailPart(int mobId) {
         return mobId >= DEAD_HORNTAIL_MIN && mobId <= DEAD_HORNTAIL_MAX;

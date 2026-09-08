@@ -38,6 +38,17 @@ DRAGON_BREATH_START_MS = 6300
 DRAGON_ENTRY_END_MS = 4650
 DRAGON_EXIT_START_MS = 10050
 FLOWER_EXPLOSION_DAMAGE_MS = 1080
+LUCID_PHASE_TWO_VR = (-37, -1100, 1960, 0)
+LUCID_PHASE_TWO_BUTTERFLY_POSITIONS = (
+    (-61, -978), (900, -300), (203, -1042), (400, -1014), (595, -1014),
+    (570, -1011), (740, -922), (924, -961), (1107, -908), (1398, -796),
+    (388, -651), (771, -617), (-200, -347), (155, -390), (634, -327),
+    (1022, -424), (1295, -305), (1461, -331), (-13, -40), (403, -227),
+    (604, -288), (683, -309), (810, -375), (1242, -253), (1356, -253),
+    (895, -200), (-1, -20), (252, 9), (760, -80), (939, -23),
+    (1161, -34), (1461, -18), (1245, -219), (1148, 42), (555, -645),
+    (210, -368), (252, -39), (8, -483), (1130, -408), (618, -1062),
+)
 
 # The legacy video layer cannot rotate sprites at playback time.  Four
 # deterministic MCV variants preserve reproducible assets while the event
@@ -224,6 +235,10 @@ SCENES = (
         "flowerExplosion3VideoLayer", 18, 2000, 90,
     ),
 )
+FURY_STOP_MARKER = LucidSceneSpec(
+    "fury-stop", "", "furyStopVideoLayer", 19, MARKER_DURATION_MS,
+)
+MARKERS = (*SCENES, FURY_STOP_MARKER)
 
 
 def load_images() -> tuple[WzImage, WzImage]:
@@ -317,6 +332,15 @@ def rush_screen_path() -> tuple[tuple[int, int, int], ...]:
         screen_y = round((y + 850) * HEIGHT / 900) - HEIGHT // 2
         output.append((timestamp, screen_x, screen_y))
     return tuple(output)
+
+
+def butterfly_screen_position(position: tuple[int, int]) -> tuple[int, int]:
+    left, top, right, bottom = LUCID_PHASE_TWO_VR
+    x, y = position
+    return (
+        round((x - left) * WIDTH / (right - left)) - WIDTH // 2,
+        round((y - top) * HEIGHT / (bottom - top)) - HEIGHT // 2,
+    )
 
 
 def scene_layers(
@@ -508,23 +532,26 @@ def scene_layers(
         glass = sequence(f"StainedGlass/BreakEffect/{glass_index}", 90)
         return (TimelineLayer(glass, 0, scene.duration_ms),)
     if scene.key == "butterfly-burst":
-        # TMS uses nine phase-2 butterfly variants.  They fly back toward
-        # Lucid, transform into the eye-like prepare rings seen in the source
-        # video, then erase upward.  The old fly/bomb pair was a different
-        # stationary explosion and could not reproduce this mechanic.
-        return_paths = (
-            (0, (-520, -250), (-330, -310), (-125, -105)),
-            (2, (-390, 180), (-280, 260), (-80, 35)),
-            (3, (-150, -300), (-80, -360), (-25, -80)),
-            (5, (180, 250), (110, 310), (35, 20)),
-            (7, (410, -250), (300, -330), (90, -100)),
-            (8, (530, 150), (350, 230), (130, 45)),
+        # At maxButterfly=40 TMS returns all field positions through all nine
+        # phase-2 visual variants. The legacy video projects those exact field
+        # positions to screen space before change/prepare/erase playback.
+        end_positions = (
+            (-150, -105), (-112, -30), (-80, 45),
+            (-38, -82), (0, 12), (38, 78),
+            (80, -72), (112, 0), (150, 55),
         )
         layers = []
         fly_end = 540
         change_end = fly_end + 1260
         prepare_end = change_end + 1350
-        for variant, start, control, end in return_paths:
+        for index, field_position in enumerate(LUCID_PHASE_TWO_BUTTERFLY_POSITIONS):
+            variant = index % 9
+            start = butterfly_screen_position(field_position)
+            end = end_positions[variant]
+            control = (
+                round((start[0] + end[0]) * 0.55),
+                round((start[1] + end[1]) * 0.55) + (-90 if index % 2 else 90),
+            )
             root = f"Butterfly/butterflies/{variant}"
             layers.extend((
                 TimelineLayer(
@@ -769,7 +796,7 @@ def encode_scene(
 
 
 def marker_pixels(marker_code: int) -> list[tuple[int, int, int, int]]:
-    if marker_code < 1 or marker_code > 18:
+    if marker_code < 1 or marker_code > 19:
         raise RuntimeError(f"invalid Lucid marker code: {marker_code}")
     red_code = marker_code if marker_code <= 15 else marker_code - 15
     green_code = 4 if marker_code <= 15 else 5
@@ -929,17 +956,17 @@ def verify_markers(selected: tuple[LucidSceneSpec, ...]) -> None:
 
 def selected_scenes(key: str) -> tuple[LucidSceneSpec, ...]:
     if key == "all":
-        return SCENES
+        return MARKERS
     if key == "flowers":
         return tuple(scene for scene in SCENES if scene.key.startswith("flower-explosion"))
-    return tuple(scene for scene in SCENES if scene.key == key)
+    return tuple(scene for scene in MARKERS if scene.key == key)
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output-directory", type=Path, default=DEFAULT_OUTPUT_DIRECTORY)
     parser.add_argument(
-        "--scene", choices=("all", "flowers", *(scene.key for scene in SCENES)),
+        "--scene", choices=("all", "flowers", *(scene.key for scene in MARKERS)),
         default="all",
     )
     parser.add_argument("--markers-only", action="store_true")
@@ -951,7 +978,8 @@ def main() -> int:
     if not args.markers_only:
         proxy, _ = load_images()
         for scene in selected:
-            encode_scene(proxy, scene, args.output_directory)
+            if scene.output_name:
+                encode_scene(proxy, scene, args.output_directory)
     if not args.videos_only:
         install_markers(selected)
         verify_markers(selected)

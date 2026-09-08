@@ -147,7 +147,7 @@ class IndexedDamageNumberContractTest(unittest.TestCase):
         self.assertEqual(1, replay.count("monster.aggroMonsterDamage(chr, damage);"))
         self.assertIn("damageNumberMode == LocalDamageNumberMode.TOTAL", replay)
 
-    def test_empty_cast_defers_fallback_damage_until_a_later_tick_has_targets(self) -> None:
+    def test_dawn_warrior_empty_cast_never_generates_fallback_damage(self) -> None:
         close_handler = (
             ROOT
             / "gms-server/src/main/java/org/gms/net/server/channel/handlers/CloseRangeDamageHandler.java"
@@ -165,6 +165,9 @@ class IndexedDamageNumberContractTest(unittest.TestCase):
         ]
         self.assertNotIn("createFallbackCloseDamageTemplate(", cosmos)
         self.assertNotIn("Collections.singletonList", cosmos)
+        empty_guard = cosmos.index("else if (!damageTemplate.isEmpty())")
+        replay = cosmos.index("repeatTrackingCloseAttack(")
+        self.assertLess(empty_guard, replay)
 
         scheduled_tracking = close_handler[
             close_handler.index("void scheduleTrackingCloseAttacks", close_handler.index("private void scheduleCosmosAttacks")) :
@@ -189,12 +192,13 @@ class IndexedDamageNumberContractTest(unittest.TestCase):
             close_handler.index("private static int repeatCapturedAttack") :
             close_handler.index("private static void showCapturedDamageNumbers")
         ]
-        no_targets = animated.index("if (liveDamage.isEmpty())")
-        lazy_fallback = animated.index("if (damageTemplate.isEmpty())", no_targets)
-        packet = animated.index("Packet repeatedAttack =", lazy_fallback)
-        self.assertLess(no_targets, lazy_fallback)
-        self.assertLess(lazy_fallback, packet)
-        self.assertIn("liveDamage.replaceAll(", animated)
+        empty_template = animated.index("if (damageTemplate.isEmpty())")
+        target_collection = animated.index("collectAnimatedAttackTargets(")
+        packet = animated.index("Packet repeatedAttack =")
+        self.assertLess(empty_template, target_collection)
+        self.assertLess(target_collection, packet)
+        self.assertNotIn("createFallbackCloseDamageTemplate(", animated)
+        self.assertNotIn("liveDamage.replaceAll(", animated)
 
         tracking_collector = close_handler[
             close_handler.index("private static Map<Integer, List<Integer>> collectTrackingCloseTargets") :

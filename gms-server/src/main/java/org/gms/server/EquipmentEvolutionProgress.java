@@ -28,7 +28,7 @@ public final class EquipmentEvolutionProgress {
                     8600003, 100, 8600004, 100, 8600005, 100, 8600006, 100,
                     8610005, 100, 8610006, 100, 8610007, 100, 8610008, 100, 8610009, 100,
                     8610010, 100, 8610011, 100, 8610012, 100, 8610013, 100, 8610014, 100),
-            requirements(8880142, 1)
+            requirements(8880152, 1)
     );
 
     private EquipmentEvolutionProgress() {

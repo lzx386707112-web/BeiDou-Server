@@ -38,6 +38,7 @@ public class SpawnPoint {
     private final Point pos;
     private long nextPossibleSpawn;
     private int mobInterval = 5000;
+    private volatile double respawnTimeMultiplier = 1.0;
     private final AtomicInteger spawnedMonsters = new AtomicInteger(0);
     private final boolean immobile;
     private boolean denySpawn = false;
@@ -77,6 +78,39 @@ public class SpawnPoint {
         return mobTime >= 0 && spawnedMonsters.get() <= 0;
     }
 
+    public SpawnPoint duplicate() {
+        SpawnPoint copy = new SpawnPoint(
+                monster, pos, immobile, mobTime, mobInterval, team, fh, f
+        );
+        copy.denySpawn = denySpawn;
+        copy.respawnTimeMultiplier = respawnTimeMultiplier;
+        return copy;
+    }
+
+    private SpawnPoint(int monster, Point pos, boolean immobile, int mobTime,
+                       int mobInterval, int team, int fh, int f) {
+        this.monster = monster;
+        this.pos = new Point(pos);
+        this.mobTime = mobTime;
+        this.team = team;
+        this.fh = fh;
+        this.f = f;
+        this.immobile = immobile;
+        this.mobInterval = mobInterval;
+        this.nextPossibleSpawn = Server.getInstance().getCurrentTime();
+    }
+
+    public void setRespawnTimeMultiplier(double multiplier) {
+        if (multiplier <= 0.0) {
+            throw new IllegalArgumentException("respawn multiplier must be positive");
+        }
+        respawnTimeMultiplier = multiplier;
+    }
+
+    long scaleRespawnDelay(long delay) {
+        return Math.max(0L, Math.round(delay * respawnTimeMultiplier));
+    }
+
     public Monster getMonster() {
         Monster mob = new Monster(LifeFactory.getMonster(monster));
         mob.setPosition(new Point(pos));
@@ -89,9 +123,9 @@ public class SpawnPoint {
             public void monsterKilled(int aniTime) {
                 nextPossibleSpawn = Server.getInstance().getCurrentTime();
                 if (mobTime > 0) {
-                    nextPossibleSpawn += SECONDS.toMillis(mobTime);
+                    nextPossibleSpawn += scaleRespawnDelay(SECONDS.toMillis(mobTime));
                 } else {
-                    nextPossibleSpawn += aniTime;
+                    nextPossibleSpawn += scaleRespawnDelay(aniTime);
                 }
                 spawnedMonsters.decrementAndGet();
             }
@@ -103,7 +137,8 @@ public class SpawnPoint {
             public void monsterHealed(int trueHeal) {}
         });
         if (mobTime == 0) {
-            nextPossibleSpawn = Server.getInstance().getCurrentTime() + mobInterval;
+            nextPossibleSpawn = Server.getInstance().getCurrentTime()
+                    + scaleRespawnDelay(mobInterval);
         }
         return mob;
     }

@@ -74,7 +74,7 @@ def check_ui_semantics() -> None:
     pixels = decode_canvas(canvas, region="GMS").convert("RGBA")
     require(pixels.size == (175, 304), f"unexpected Equip background size: {pixels.size}")
     require(slots_are_present(pixels), "extended equipment slots are missing")
-    require(len(SLOT_SPECS) == 5, "unexpected extended slot count")
+    require(len(SLOT_SPECS) == 6, "unexpected extended slot count")
 
 
 def check_source_contract() -> None:
@@ -86,6 +86,8 @@ def check_source_contract() -> None:
     require("SECONDARY_WEAPON(51)" in body_part, "server secondary-weapon body part is not 51")
     require('SECONDARY_WEAPON("Sw", -51)' in slots,
             "server secondary-weapon slot is not -51")
+    require("TOTEM(53)" in body_part, "server totem body part is not 53")
+    require('TOTEM("Po", -53)' in slots, "server Po slot is not -53")
     require('ROBOT_HEART("Ht", -54)' in slots, "server robot-heart slot is not -54")
     require('BADGE("Ba", -55)' in slots, "server badge slot is not -55")
     require('EMBLEM("Em", -56)' in slots, "server emblem slot is not -56")

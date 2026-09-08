@@ -29,15 +29,16 @@ class LucidBossCompatTest {
     void onlyTheThreeEncounterBossesAreClassifiedAsLucid() {
         assertTrue(LucidBossCompat.isLucidBoss(8880140));
         assertTrue(LucidBossCompat.isLucidBoss(8880141));
-        assertTrue(LucidBossCompat.isLucidBoss(8880142));
+        assertTrue(LucidBossCompat.isLucidBoss(8880152));
+        assertFalse(LucidBossCompat.isLucidBoss(8880142));
         assertFalse(LucidBossCompat.isLucidBoss(8880164));
     }
 
     @Test
-    void seduceCooldownIsOneMinuteForAllThreePhases() {
+    void seduceCooldownIsOneMinuteOnlyForTheTwoRegularPhases() {
         assertEquals(60_000, LucidBossCompat.skillCooldownMillis(8880140, 128, 16, 20_000));
         assertEquals(60_000, LucidBossCompat.skillCooldownMillis(8880141, 128, 16, 20_000));
-        assertEquals(60_000, LucidBossCompat.skillCooldownMillis(8880142, 128, 10, 50_000));
+        assertEquals(50_000, LucidBossCompat.skillCooldownMillis(8880152, 128, 10, 50_000));
         assertEquals(20_000, LucidBossCompat.skillCooldownMillis(8880140, 128, 15, 20_000));
         assertEquals(20_000, LucidBossCompat.skillCooldownMillis(8880140, 127, 16, 20_000));
     }
@@ -48,7 +49,7 @@ class LucidBossCompatTest {
         assertTrue(LucidBossCompat.usesAttackCooldown(8880141, 2));
         assertFalse(LucidBossCompat.usesAttackCooldown(8880140, 0));
         assertFalse(LucidBossCompat.usesAttackCooldown(8880141, 1));
-        assertFalse(LucidBossCompat.usesAttackCooldown(8880142, 1));
+        assertFalse(LucidBossCompat.usesAttackCooldown(8880152, 1));
 
         assertEquals(60_000, LucidBossCompat.attackCooldownMillis(8880140, 1, 1200));
         assertEquals(60_000, LucidBossCompat.attackCooldownMillis(8880141, 2, 1200));

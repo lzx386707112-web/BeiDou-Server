@@ -2050,6 +2050,9 @@ public class ItemInformationProvider {
             case 167 -> EquipSlot.ROBOT_HEART;
             default -> null;
         };
+        if (id == ItemId.FRENZY_TOTEM) {
+            extendedSlot = EquipSlot.TOTEM;
+        }
         if (extendedSlot != null && !extendedSlot.isAllowed(dst, false)) {
             equip.wear(false);
             chr.dropMessage(5, "该装备只能装备到对应的专用栏位。");

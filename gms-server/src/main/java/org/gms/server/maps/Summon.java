@@ -24,6 +24,7 @@ package org.gms.server.maps;
 import org.gms.client.Character;
 import org.gms.client.Client;
 import org.gms.client.SkillFactory;
+import org.gms.constants.skills.Beginner;
 import org.gms.constants.skills.Bishop;
 import org.gms.util.PacketCreator;
 
@@ -83,7 +84,8 @@ public class Summon extends AbstractAnimatedMapObject {
 
     public boolean isStationary() {
         return (skill == 3111002 || skill == 3211002 || skill == 5211001
-                || skill == 13111004 || skill == Bishop.FOUNTAIN_FOR_ANGEL_VI);
+                || skill == 13111004 || skill == Bishop.FOUNTAIN_FOR_ANGEL_VI
+                || skill == Beginner.FRENZY_TOTEM);
     }
 
     public byte getSkillLevel() {
@@ -103,5 +105,9 @@ public class Summon extends AbstractAnimatedMapObject {
                 return true;
         }
         return false;
+    }
+
+    public boolean canAttack() {
+        return !isPuppet();
     }
 }

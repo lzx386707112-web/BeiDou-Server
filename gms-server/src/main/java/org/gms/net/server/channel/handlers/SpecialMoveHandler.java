@@ -25,7 +25,12 @@ import org.gms.client.Character;
 import org.gms.client.Client;
 import org.gms.client.Skill;
 import org.gms.client.SkillFactory;
+import org.gms.client.inventory.BodyPart;
+import org.gms.client.inventory.InventoryType;
+import org.gms.client.inventory.Item;
 import org.gms.config.GameConfig;
+import org.gms.constants.id.ItemId;
+import org.gms.constants.skills.Beginner;
 import org.gms.constants.skills.Brawler;
 import org.gms.constants.skills.Corsair;
 import org.gms.constants.skills.DarkKnight;
@@ -75,6 +80,11 @@ public final class SpecialMoveHandler extends AbstractPacketHandler {
             c.sendPacket(PacketCreator.serverNotice(5, "As you used the secret skill, your energy bar has been reset."));
         }
         if (skillLevel == 0 || skillLevel != __skillLevel) {
+            return;
+        }
+
+        if (skillid == Beginner.FRENZY_TOTEM) {
+            useFrenzyTotem(chr, c);
             return;
         }
 
@@ -158,5 +168,39 @@ public final class SpecialMoveHandler extends AbstractPacketHandler {
         } else {
             c.sendPacket(PacketCreator.enableActions());
         }
+    }
+
+    static boolean useFrenzyTotem(Character chr, Client c) {
+        Item equippedTotem = chr.getInventory(InventoryType.EQUIPPED)
+                .getItem((short) -BodyPart.TOTEM.getValue());
+        if (equippedTotem == null || equippedTotem.getItemId() != ItemId.FRENZY_TOTEM) {
+            chr.dropMessage(5, "请先装备轮回碑石。");
+            c.sendPacket(PacketCreator.enableActions());
+            return false;
+        }
+        if (chr.skillIsCooling(Beginner.FRENZY_TOTEM)) {
+            c.sendPacket(PacketCreator.enableActions());
+            return false;
+        }
+        if (!chr.getMap().activateFrenzyTotem(chr)) {
+            c.sendPacket(PacketCreator.enableActions());
+            return false;
+        }
+
+        chr.sendPacket(PacketCreator.showOwnBuffEffect(Beginner.FRENZY_TOTEM, 1));
+        chr.getMap().broadcastMessage(
+                chr,
+                PacketCreator.showBuffEffect(chr.getId(), Beginner.FRENZY_TOTEM, 1),
+                false
+        );
+        int cooldownSeconds = (int) java.util.concurrent.TimeUnit.MINUTES.toSeconds(20);
+        c.sendPacket(PacketCreator.skillCooldown(Beginner.FRENZY_TOTEM, cooldownSeconds));
+        chr.addCooldown(
+                Beginner.FRENZY_TOTEM,
+                currentServerTime(),
+                SECONDS.toMillis(cooldownSeconds)
+        );
+        c.sendPacket(PacketCreator.enableActions());
+        return true;
     }
 }

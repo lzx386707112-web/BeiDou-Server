@@ -11,10 +11,12 @@ import org.gms.model.dto.SetItemDefinitionCreateDTO;
 import org.gms.model.dto.SetItemEnabledDTO;
 import org.gms.model.dto.SetItemEquipmentDTO;
 import org.gms.model.dto.EquipmentCatalogPageDTO;
+import org.gms.model.dto.ItemCatalogPageDTO;
 import org.gms.model.dto.SetItemUpdateDTO;
 import org.gms.model.dto.SubmitBody;
 import org.gms.service.SetItemConfigService;
 import org.gms.service.EquipmentCatalogService;
+import org.gms.service.ItemCatalogService;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -33,6 +35,7 @@ import java.util.List;
 public class SetItemController {
     private final SetItemConfigService setItemConfigService;
     private final EquipmentCatalogService equipmentCatalogService;
+    private final ItemCatalogService itemCatalogService;
 
     @Tag(name = "/setItem/" + ApiConstant.LATEST)
     @Operation(summary = "获取全部套装及当前档位属性")
@@ -64,6 +67,18 @@ public class SetItemController {
             @RequestParam(required = false) Integer maxLevel) {
         return ResultBody.success(equipmentCatalogService.catalog(
                 keyword, category, pageNo, pageSize, cash, weaponType, job, minLevel, maxLevel));
+    }
+
+    @Tag(name = "/setItem/" + ApiConstant.LATEST)
+    @Operation(summary = "分类分页预览物品及其属性")
+    @GetMapping("/" + ApiConstant.LATEST + "/item/catalog")
+    public ResultBody<ItemCatalogPageDTO> itemCatalog(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String category,
+            @RequestParam(required = false) Integer pageNo,
+            @RequestParam(required = false) Integer pageSize) {
+        return ResultBody.success(itemCatalogService.catalog(
+                keyword, category, pageNo, pageSize));
     }
 
     @Tag(name = "/setItem/" + ApiConstant.LATEST)

@@ -17,20 +17,24 @@ from wzpy.canvas import decode_canvas  # noqa: E402
 
 
 KEY = WzKey.for_region("GMS")
-MAIN_IDS = (8880140, 8880141, 8880142)
+MAIN_IDS = (8880140, 8880141, 8880152)
+TRANSITION_IDS = (8880153, 8880154)
 SUPPORT_IDS = (8880161, 8880164, 8880165, 8880171, 8880175)
-LUCID_IDS = MAIN_IDS + SUPPORT_IDS
-EXPECTED_REVIVE = {8880140: 8880141, 8880141: 8880142}
+LUCID_IDS = MAIN_IDS + TRANSITION_IDS + SUPPORT_IDS
+EXPECTED_REVIVE = {8880140: 8880141, 8880141: 8880152, 8880152: 8880153}
 EXPECTED_SERVER_HP = {
-    8880140: "250000000000",
-    8880141: "5000000000",
-    8880142: "5000000000",
+    8880140: "6000000000",
+    8880141: "12000000000",
+    8880152: "5000000000",
+    8880153: "5000000000",
+    8880154: "5000000000",
 }
 EXPECTED_SKILLS = {
     8880140: ((145, 2, 2), (128, 16, 3), (131, 13, 4), (185, 1, 1)),
     8880141: ((145, 5, 1), (145, 2, 2), (128, 16, 3), (125, 9, 4)),
-    8880142: ((145, 2, 1), (126, 2, 2), (128, 10, 3)),
+    8880152: (),
 }
+EXPECTED_FIXED_DAMAGE = {8880152: 1, 8880153: 30, 8880154: 100}
 SUPPORTED_MOB_SKILL_TYPES = {
     100, 101, 102, 103, 110, 111, 112, 113, 114, 115,
     120, 121, 122, 123, 124, 125, 126, 127, 128, 129,
@@ -93,9 +97,16 @@ def main() -> int:
         except ET.ParseError as exc:
             errors.append(f"invalid server XML {mob_id}: {exc}")
         img = load_img(client_path)
+        if img.truncated or img.parse_warnings:
+            errors.append(
+                f"malformed client Mob {mob_id}: "
+                f"truncated={img.truncated} warnings={img.parse_warnings}"
+            )
         mobs[mob_id] = img
         for canvas in walk_canvas(img.root):
             canvas_count += 1
+            if (int(canvas.format), int(canvas.format2)) != (1, 0):
+                errors.append(f"non-ARGB4444 canvas {mob_id}/{canvas.name}")
             try:
                 decode_canvas(canvas, region="GMS")
             except Exception as exc:
@@ -109,8 +120,15 @@ def main() -> int:
         node = root.find('./imgdir[@name="info"]/imgdir[@name="revive"]/int[@name="0"]')
         if node is None or int(node.attrib["value"]) != target:
             errors.append(f"server revive {mob_id}: expected {target}")
-    if mobs[8880142].root.get("info/revive") is not None:
-        errors.append("8880142 must not revive")
+    for mob_id in TRANSITION_IDS:
+        if mobs[mob_id].root.get("info/revive") is not None:
+            errors.append(f"{mob_id} must not revive")
+    for mob_id, expected in EXPECTED_FIXED_DAMAGE.items():
+        actual = value(mobs[mob_id].root.get("attack1/info/fixDamR"))
+        if actual != expected:
+            errors.append(f"client fixDamR {mob_id}: expected {expected}, got {actual}")
+        if mobs[mob_id].root.get("info/selfDestruction") is not None:
+            errors.append(f"{mob_id}: legacy-unsafe selfDestruction remains")
 
     client_mobskill = load_img(ROOT / "clien/Data/Skill/MobSkill.img")
     server_mobskill = ET.parse(ROOT / "gms-server/wz/Skill.wz/MobSkill.img.xml").getroot()
@@ -163,6 +181,15 @@ def main() -> int:
             if unsupported in text:
                 errors.append(f"{mob_id}: unsupported {unsupported} still present")
 
+    for mob_id in TRANSITION_IDS:
+        root = ET.parse(ROOT / f"gms-server/wz/Mob.wz/{mob_id}.img.xml").getroot()
+        info = server_info(root)
+        hp = server_direct_child(info, "string", "maxHP")
+        if hp is None or hp.attrib.get("value") != EXPECTED_SERVER_HP[mob_id]:
+            errors.append(f"server maxHP {mob_id}: expected string {EXPECTED_SERVER_HP[mob_id]}")
+        if server_direct_child(info, "imgdir", "selfDestruction") is not None:
+            errors.append(f"server {mob_id}: legacy-unsafe selfDestruction remains")
+
     strings = load_img(ROOT / "clien/Data/String/Mob.img")
     for mob_id in LUCID_IDS:
         if strings.root.get(f"{mob_id}/name") is None:
@@ -174,7 +201,7 @@ def main() -> int:
             errors.append(f"MobSkillType enum missing {skill}")
 
     ui = load_img(ROOT / "clien/Data/UI/UIWindow.img")
-    for mob_id in MAIN_IDS:
+    for mob_id in (8880140, 8880141):
         if ui.root.get(f"MobGage/Mob/{mob_id}") is None:
             errors.append(f"missing Lucid boss gauge icon {mob_id}")
 

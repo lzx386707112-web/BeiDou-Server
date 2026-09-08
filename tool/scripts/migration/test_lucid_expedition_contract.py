@@ -193,7 +193,7 @@ def test_lucid_expedition_contract_is_wired_end_to_end():
     ).read_text(encoding="utf-8")
     assert "LUCID(1, 30, 220, 255, 5)" in expedition_type
     assert "LUCID(1, 1, false)" in boss_log
-    for phase, mob_id in enumerate((8880140, 8880141, 8880142), start=1):
+    for phase, mob_id in enumerate((8880140, 8880141, 8880152), start=1):
         constant = f"LUCID_PHASE_{phase}"
         assert f"{constant} = {mob_id}" in mob_ids
         assert f"MobId.{constant}" in expedition
@@ -206,7 +206,10 @@ def test_lucid_expedition_contract_is_wired_end_to_end():
         assert 'eim.schedule("advanceToPhaseTwo", 2500)' in event
         assert "phaseOneMap.killAllMonsters()" in event
         assert "LifeFactory.getMonster(8880141)" in event
-        assert "mob.getId() == 8880142" in event
+        assert "mob.getId() == 8880152" in event
+        assert "mob.getId() == 8880153" in event
+        assert "furySuccessMoveDelay = 5000" in event
+        assert "LucidBossCompat.finishFurySuccess" in event
         assert "if (!hasKiller)" in event
         assert "var maxDeaths = 50" in event
         assert "var reviveMap = eim.getInstanceMap(mapId)" in event
@@ -244,7 +247,7 @@ def test_lucid_tms_map_analysis_stays_documented():
     assert "450004100 -> 450004150 -> 450004200 -> 450004250 -> 450004300" in text
     assert "450004400 -> 450004450 -> 450004500 -> 450004550 -> 450004600" in text
     assert "450004700 -> 450004750 -> 450004800 -> 450004850 -> 450004900" in text
-    assert re.search(r"8880140.*8880141.*8880142", text, re.S)
+    assert re.search(r"8880140.*8880141.*8880152.*8880153.*8880154", text, re.S)
 
 
 def main() -> int:

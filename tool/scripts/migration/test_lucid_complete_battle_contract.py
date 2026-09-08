@@ -201,12 +201,17 @@ def test_butterflies_return_to_lucid_with_the_tms_phase_two_sequences():
     proxy, _ = exporter.load_images()
     layers = exporter.scene_layers(proxy, exporter.arc.CanvasMaterializer(), scene)
     assert scene.duration_ms == 3960
-    assert len(layers) == 24
-    assert all(layers[index].motion is not None for index in range(0, 24, 4))
+    assert len(exporter.LUCID_PHASE_TWO_BUTTERFLY_POSITIONS) == 40
+    assert len(layers) == 160
+    assert all(layers[index].motion is not None for index in range(0, 160, 4))
     assert all(
         layers[index].motion[-1] == layers[index + 1].offsets[0]
-        for index in range(0, 24, 4)
+        for index in range(0, 160, 4)
     )
+    assert [layers[index].motion[0] for index in range(0, 160, 4)] == [
+        exporter.butterfly_screen_position(position)
+        for position in exporter.LUCID_PHASE_TWO_BUTTERFLY_POSITIONS
+    ]
     source = (ROOT / "tool/client-video/export_lucid_boss_mcvs.py").read_text(
         encoding="utf-8"
     )
@@ -255,7 +260,7 @@ def test_all_six_tms_stained_glass_animations_have_distinct_scenes():
 def test_lucid_field_effect_markers_are_argb4444_and_distinct():
     image = load_img(ROOT / "clien/Data/Map/Effect.img")
     signatures = set()
-    for scene in exporter.SCENES:
+    for scene in exporter.MARKERS:
         frame = image.root.get(
             f"customSkill/lucid/{scene.marker_name}/0"
         )
@@ -267,7 +272,7 @@ def test_lucid_field_effect_markers_are_argb4444_and_distinct():
         decoded.close()
         assert signature == tuple(exporter.marker_pixels(scene.marker_code))[:5]
         signatures.add(signature)
-    assert len(signatures) == len(exporter.SCENES)
+    assert len(signatures) == len(exporter.MARKERS)
 
 
 def test_lucid_mushroom_is_materialized_for_the_legacy_client():
@@ -332,11 +337,14 @@ def test_server_controller_covers_tms_lucid_mechanics_and_timing():
     source = (
         ROOT / "gms-server/src/main/java/org/gms/server/life/LucidBossCompat.java"
     ).read_text(encoding="utf-8")
-    for mob_id in (8880140, 8880141, 8880142, 8880161, 8880164, 8880165, 8880171, 8880175):
+    for mob_id in (
+            8880140, 8880141, 8880152, 8880153, 8880154,
+            8880161, 8880164, 8880165, 8880171, 8880175):
         assert str(mob_id) in source
     for effect in (
         "dragonP1VideoLayer", "dragonP2VideoLayer", "laserRainVideoLayer",
         "phantomBarrageVideoLayer", "rushVideoLayer", "furyVideoLayer",
+        "furyStopVideoLayer",
         "butterflyBurstVideoLayer", "bombVideoLayer", "stainedGlassVideoLayer",
         "stainedGlass1VideoLayer", "stainedGlass2VideoLayer",
         "stainedGlass3VideoLayer", "stainedGlass4VideoLayer",
@@ -351,12 +359,21 @@ def test_server_controller_covers_tms_lucid_mechanics_and_timing():
     assert "nextStainedGlass = now + 10_000" in source
     assert "scheduleDamage(1260, 20, area, \"stained-glass\")" in source
     assert "FURY_LIMIT_MS = 45_000" in source
-    assert "FURY_FAIL_DELAY_MS = FURY_LIMIT_MS + 4320" in source
+    assert "FURY_FAIL_IMPACT_DELAY_MS = 3000" in source
+    assert "FURY_FAIL_RESUMMON_DELAY_MS = 10_000" in source
+    assert "FURY_RESUMMON_HP_PERCENT = 16" in source
+    assert "new Point(711, -786)" in source
+    assert "schedule(this::failFury, FURY_LIMIT_MS)" in source
+    assert "LifeFactory.getMonster(LUCID_FURY_FAIL)" in source
+    assert "LifeFactory.getMonster(LUCID_P2)" in source
+    assert "resummoned.getMaxHp() * FURY_RESUMMON_HP_PERCENT / 100" in source
     assert "DRAGON_BREATH_DAMAGE_MS = 6300" in source
     assert "scheduleDamage(DRAGON_BREATH_DAMAGE_MS, 100" in source
     assert "scheduleDamage(1260, 18" in source
-    assert "BUTTERFLY_RETURN_DURATION_MS = 3960" in source
-    assert "}, BUTTERFLY_RETURN_DURATION_MS);" in source
+    assert "BUTTERFLY_BURST_IMPACT_MS = 1800" in source
+    assert "scheduleDamage(BUTTERFLY_BURST_IMPACT_MS, 30" in source
+    assert "Math.min(created, 4)" not in source
+    assert "MAX_VISIBLE_BUTTERFLIES" not in source
     assert "phase == PHASE_TWO && isCurrentBossAlive()" in source
     assert "spawnGroundMob(GOLEM_P2, randomGroundPoint(PHASE_TWO))" in source
     assert "character.changeMap" not in source
@@ -373,7 +390,11 @@ def test_server_controller_covers_tms_lucid_mechanics_and_timing():
     assert 'damageCharacter(character, 20, "hurdle-area")' in source
     assert "Lucid has summoned a powerful nightmare" in source
     assert "Lucid is gathering power" in source
-    assert "applyFullMapDamage(100, \"fury-fail\")" in source
+    assert "applyDamage(100, null, \"fury-fail\", failMob)" in source
+    assert "phase == PHASE_TWO && now >= nextLaser" in source
+    assert "phase == PHASE_TWO && now >= nextShoot" in source
+    assert "phase == PHASE_TWO && now >= nextRush" in source
+    assert "phase <= PHASE_TWO && now >= nextBomb" in source
     assert "forceTeleport()" not in source
     assert "character.changeMap(map, destination)" not in source
     assert "skillId == 238" not in source
@@ -462,7 +483,7 @@ def test_lucid_control_effects_have_boss_specific_cooldowns():
     ).read_text(encoding="utf-8")
 
     assert "CONTROL_EFFECT_COOLDOWN_MS = 60_000" in compat
-    assert "mobId == LUCID_P3 && level == SEDUCE_P3_LEVEL" in compat
+    assert "SEDUCE_P3_LEVEL" not in compat
     assert "mobId == LUCID_P1 && attackPosition == 1" in compat
     assert "mobId == LUCID_P2 && attackPosition == 2" in compat
     assert "LucidBossCompat.skillCooldownMillis(" in monster
@@ -476,8 +497,11 @@ def test_event_scripts_start_stop_and_transition_the_controller():
         assert "Java.type('org.gms.server.life.LucidBossCompat')" in source
         assert "LucidBossCompat.startPhase(phaseOneMap, phaseOneBoss, 1)" in source
         assert "LucidBossCompat.startPhase(targetMap, phaseTwoBoss, 2)" in source
-        assert "mob.getId() == 8880142" in source
+        assert "mob.getId() == 8880152" in source
         assert "LucidBossCompat.startPhase(eim.getInstanceMap(phaseTwoMap), mob, 3)" in source
+        assert "mob.getId() == 8880153" in source
+        assert "LucidBossCompat.finishFurySuccess" in source
+        assert 'eim.schedule("completeFurySuccess", furySuccessMoveDelay)' in source
         assert source.count("stopLucidCompat(eim)") >= 3
         revive = source[
             source.index("function playerRevive"):
@@ -496,8 +520,11 @@ def test_unified_client_hook_routes_all_lucid_scene_markers():
     assert "DetectLucidA8R8G8B8" in source
     assert "0xF124" in source
     assert "DecodeLucidMarkerCode" in source
-    assert "greenCode == 5 && redCode <= 3" in source
-    assert "kMarkerCodeCount = 33" in source
+    assert "greenCode == 5 && redCode <= 4" in source
+    assert "kMarkerCodeCount = 34" in source
+    assert "kLucidFuryStopMarker = 33" in source
+    assert 'LoadFunction<StopChannelFn>(module, "BDV_StopChannel")' in source
+    assert "gStopChannel(BDV_CHANNEL_BOSS_SCENE)" in source
     for code, scene in enumerate(exporter.SCENES, start=15):
         path = scene.output_name.replace("/", "\\")
         assert f'{{{code}, "Data\\\\Video\\\\{path}"}}' in source

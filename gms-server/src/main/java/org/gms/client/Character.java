@@ -9795,9 +9795,16 @@ public class Character extends AbstractCharacterObject {
     }
 
     public void equippedItem(Equip equip) {
-        int itemid = equip.getItemId();
+        equippedItem(equip.getItemId());
+    }
 
-        if (itemid == ItemId.PENDANT_OF_THE_SPIRIT) {
+    void equippedItem(int itemid) {
+        if (itemid == ItemId.FRENZY_TOTEM) {
+            Skill skill = SkillFactory.getSkill(Beginner.FRENZY_TOTEM);
+            if (skill != null && getSkillLevel(skill) == 0) {
+                changeSkillLevel(skill, (byte) 1, 1, -1);
+            }
+        } else if (itemid == ItemId.PENDANT_OF_THE_SPIRIT) {
             this.equipPendantOfSpirit();
         } else if (itemid == ItemId.MESO_MAGNET) {
             equippedMesoMagnet = true;
@@ -9809,8 +9816,10 @@ public class Character extends AbstractCharacterObject {
     }
 
     public void unequippedItem(Equip equip) {
-        int itemid = equip.getItemId();
+        unequippedItem(equip.getItemId());
+    }
 
+    void unequippedItem(int itemid) {
         if (itemid == ItemId.PENDANT_OF_THE_SPIRIT) {
             this.unequipPendantOfSpirit();
         } else if (itemid == ItemId.MESO_MAGNET) {

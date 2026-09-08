@@ -27,6 +27,7 @@ public enum EquipSlot {
     SADDLE("Sd", -19),
     SHOULDER("Sh", -20),
     SECONDARY_WEAPON("Sw", -51),
+    TOTEM("Po", -53),
     ROBOT_HEART("Ht", -54),
     BADGE("Ba", -55),
     EMBLEM("Em", -56),

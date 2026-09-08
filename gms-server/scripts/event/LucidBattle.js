@@ -19,6 +19,7 @@ var flowerExplosionEffects = [
 ];
 var fallRecoveryPollInterval = 100;
 var fallRecoveryY = 180;
+var furySuccessMoveDelay = 5000;
 
 const maxLobbies = 1;
 const LifeFactory = Java.type('org.gms.server.life.LifeFactory');
@@ -165,7 +166,7 @@ function leftParty(eim, player) {}
 function disbandParty(eim) {}
 
 function monsterValue(eim, mobId) {
-    return mobId == 8880140 || mobId == 8880141 || mobId == 8880142 ? 1 : 0;
+    return mobId == 8880140 || mobId == 8880141 || mobId == 8880152 ? 1 : 0;
 }
 
 function castFlowerExplosion(eim) {
@@ -250,8 +251,11 @@ function monsterKilled(mob, eim, hasKiller) {
         eim.setIntProperty("phase", 2);
         eim.dropMessage(5, "[Expedition] Lucid has escaped into the collapsing clocktower.");
         eim.schedule("advanceToPhaseTwo", 2500);
-    } else if (mob.getId() == 8880142 && !eim.isEventCleared()) {
-        clearPQ(eim);
+    } else if (mob.getId() == 8880152 && !eim.isEventCleared()) {
+        eim.setIntProperty("phase", 4);
+        eim.setProperty("canJoin", "0");
+        LucidBossCompat.finishFurySuccess(eim.getInstanceMap(phaseTwoMap));
+        eim.schedule("completeFurySuccess", furySuccessMoveDelay);
     }
 }
 
@@ -272,9 +276,18 @@ function advanceToPhaseTwo(eim) {
 
 function allMonstersDead(eim, hasKiller) {}
 function monsterRevive(eim, mob) {
-    if (mob.getId() == 8880142) {
+    if (mob.getId() == 8880152) {
         eim.setIntProperty("phase", 3);
         LucidBossCompat.startPhase(eim.getInstanceMap(phaseTwoMap), mob, 3);
+    } else if (mob.getId() == 8880153) {
+        LucidBossCompat.protectFurySuccessMob(mob);
+    }
+}
+
+function completeFurySuccess(eim) {
+    if (!eim.isEventDisposed() && !eim.isEventCleared()
+            && eim.getIntProperty("phase") == 4) {
+        clearPQ(eim);
     }
 }
 

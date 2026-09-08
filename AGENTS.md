@@ -210,8 +210,9 @@ skill-resource work must include all of the following:
    ordinary verification unless the user explicitly requests packaging.
 8. Generator idempotence: run twice and compare SHA-256 hashes.
 9. Relevant MCV header, frame-count, duration, alpha, and visible-tail checks.
-10. Run targeted static/source checks when DLL source or routing is involved;
-    rebuild the DLL only when the user explicitly requests it.
+10. Run targeted static/source checks when DLL source or routing is involved,
+    then rebuild that DLL with its checked-in build script before delivery. Do
+    not wait for a separate authorization.
 11. Run targeted static/source checks when server code is involved; rebuild the
     server JAR only when the user explicitly requests it.
 12. Run `git diff --check` and inspect the final diff and change set.
@@ -229,8 +230,11 @@ effect, movement, other-player view, map transition, and repeated casting.
 ## Delivery Rules
 
 - Never sync an unverified artifact to `/Users/lizixian/Downloads`.
-- Run the required static validation locally first. Build or package only when
-  the user explicitly requests it.
+- Run the required static validation locally first.
+- If the change includes a compatibility DLL, compile it with the project's
+  build script and include it in the delivery set. Do not wait for a separate
+  authorization.
+- Rebuild or package the server JAR only when the user explicitly requests it.
 - Preserve every delivery filename and requested directory layout.
 - Do not rename files, add version suffixes, or include temporary baselines,
   backups, probe builds, or verification WZ packages.
@@ -249,7 +253,8 @@ only when:
 - the change set is minimal and explicitly bounded;
 - untouched binary records are proven unchanged;
 - relevant client, server, DLL, scripts, and grant paths agree;
-- required static validation gates and any explicitly requested builds pass;
+- required static validation gates pass, and any required compatibility DLL is
+  rebuilt and delivered;
 - the generator is idempotent;
 - verified delivery files are synchronized with matching hashes; and
 - remaining real-client risks are stated plainly.

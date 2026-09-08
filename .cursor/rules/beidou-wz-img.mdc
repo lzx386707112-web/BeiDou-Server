@@ -1,0 +1,14 @@
+---
+description: BeiDou WZ/IMG compatibility workflow — treat client IMG files as binary artifacts and follow the Codex skill before any resource or DLL edit.
+alwaysApply: true
+---
+
+# BeiDou WZ/IMG
+
+For any task that diagnoses, reads, changes, migrates, verifies, or delivers client WZ/IMG resources, matching server XML, compatibility DLLs, or old-client "incorrect game data" failures:
+
+1. Read and follow `.cursor/skills/beidou-wz-img/SKILL.md` (same contract as `.codex/skills/beidou-wz-img/SKILL.md`).
+2. Read `references/wzskill.md` and `references/verification.md` before editing.
+3. Never full-serialize an existing client IMG to change a few nodes.
+4. Preserve the worktree; do not revert unrelated user changes.
+5. Deliver only after static gates pass. Auto-compile any required compatibility DLL. Copy the complete runtime file set to `/Users/lizixian/Downloads/路西德/` with matching SHA-256 hashes.

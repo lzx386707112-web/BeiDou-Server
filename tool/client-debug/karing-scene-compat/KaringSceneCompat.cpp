@@ -17,13 +17,15 @@ constexpr size_t kDrawPrimitiveUpVtableIndex = 72;
 constexpr size_t kDrawIndexedPrimitiveUpVtableIndex = 73;
 constexpr UINT kMarkerWidth = 7;
 constexpr UINT kMarkerHeight = 5;
-constexpr int kMarkerCodeCount = 33;
+constexpr int kMarkerCodeCount = 34;
+constexpr int kLucidFuryStopMarker = 33;
 constexpr DWORD kAttachRetryMilliseconds = 100;
 constexpr int kAttachRetryCount = 600;
 constexpr int kMarkerRearmFrames = 10;
 
 using GetAttachedDeviceFn = void*(__stdcall*)();
 using PlayFileExFn = int(__stdcall*)(uint32_t, const char*);
+using StopChannelFn = void(__stdcall*)(uint32_t);
 using RenderAllFn = void(__stdcall*)();
 using GetStatusExFn = int(__stdcall*)(uint32_t, BdvStatus*);
 using GetLastErrorExFn = void(__stdcall*)(uint32_t, char*, uint32_t);
@@ -84,6 +86,7 @@ constexpr SceneMapping kScenes[] = {
 
 GetAttachedDeviceFn gGetAttachedDevice = nullptr;
 PlayFileExFn gPlayFileEx = nullptr;
+StopChannelFn gStopChannel = nullptr;
 RenderAllFn gRenderAll = nullptr;
 GetStatusExFn gGetStatusEx = nullptr;
 GetLastErrorExFn gGetLastErrorEx = nullptr;
@@ -192,7 +195,7 @@ int DecodeLucidMarkerCode(int redCode, int greenCode) {
     if (greenCode == 4) {
         return redCode;
     }
-    if (greenCode == 5 && redCode <= 3) {
+    if (greenCode == 5 && redCode <= 4) {
         return 15 + redCode;
     }
     return -1;
@@ -310,6 +313,20 @@ bool StartScene(int markerCode) {
     return true;
 }
 
+bool StopScene(int markerCode) {
+    if (!CanStartScene(markerCode) || gStopChannel == nullptr) {
+        return false;
+    }
+    gStopChannel(BDV_CHANNEL_BOSS_SCENE);
+    gMarkerStarted[markerCode] = true;
+    gFramesWithoutMarker[markerCode] = 0;
+    gPendingMarkerCode = 0;
+    gScenePlaying = false;
+    gRenderedThisFrame = false;
+    LogLine("OK: Lucid fury scene stopped");
+    return true;
+}
+
 void RenderScene() {
     if (!gScenePlaying || gRenderAll == nullptr || gRenderingScene
             || gRenderedThisFrame) {
@@ -324,6 +341,10 @@ void RenderScene() {
 bool ConsumeMarkerDraw() {
     if (gRenderingScene || !gMarkerBound || gBoundMarkerCode <= 0) {
         return false;
+    }
+    if (gBoundMarkerCode == kLucidFuryStopMarker) {
+        StopScene(gBoundMarkerCode);
+        return true;
     }
     if (CanStartScene(gBoundMarkerCode)) {
         if (!gScenePlaying) {
@@ -474,10 +495,12 @@ bool PatchDevice(IDirect3DDevice8* device) {
 bool LoadVideoApi(HMODULE module) {
     gGetAttachedDevice = LoadFunction<GetAttachedDeviceFn>(module, "BDV_GetAttachedDevice");
     gPlayFileEx = LoadFunction<PlayFileExFn>(module, "BDV_PlayFileEx");
+    gStopChannel = LoadFunction<StopChannelFn>(module, "BDV_StopChannel");
     gRenderAll = LoadFunction<RenderAllFn>(module, "BDV_RenderAll");
     gGetStatusEx = LoadFunction<GetStatusExFn>(module, "BDV_GetStatusEx");
     gGetLastErrorEx = LoadFunction<GetLastErrorExFn>(module, "BDV_GetLastErrorEx");
     return gGetAttachedDevice != nullptr && gPlayFileEx != nullptr
+        && gStopChannel != nullptr
         && gRenderAll != nullptr && gGetStatusEx != nullptr
         && gGetLastErrorEx != nullptr;
 }
