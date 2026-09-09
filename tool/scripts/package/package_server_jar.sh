@@ -190,7 +190,28 @@ else
   echo "跳过 gms-ui 构建，仅打包服务端。"
 fi
 
-args=(-pl gms-server -am clean package)
+# Maven clean 会在 IDE/JDT 回写 class 时失败：删除 target/classes/org/gms
+# 时目录被重新填满。前端构建期间尤其容易发生。改由脚本先重试删除，再 package。
+remove_dir_retry() {
+  local dir="$1"
+  local max_attempts="${2:-15}"
+  local attempt
+  [[ -e "$dir" ]] || return 0
+  echo "正在删除 $dir ..."
+  for ((attempt = 1; attempt <= max_attempts; attempt++)); do
+    chmod -R u+w "$dir" 2>/dev/null || true
+    rm -rf "$dir" || true
+    if [[ ! -e "$dir" ]]; then
+      return 0
+    fi
+    sleep 0.4
+  done
+  echo "警告: 未能完全删除 $dir（可能被 IDE/Java 语言服务占用），将跳过 Maven clean 继续打包。" >&2
+}
+
+remove_dir_retry "$SERVER_DIR/target"
+
+args=(-pl gms-server -am package)
 if [[ "$skip_tests" -eq 1 ]]; then
   args+=(-Dmaven.test.skip=true)
 fi

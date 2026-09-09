@@ -12992,26 +12992,26 @@
     </imgdir>
   </imgdir>
   <imgdir name="3404">
-    <imgdir name="0">
-      <imgdir name="item">
-        <imgdir name="0">
-          <int name="count" value="1" />
-          <int name="id" value="4031100" />
-        </imgdir>
+  <imgdir name="0">
+    <imgdir name="item">
+      <imgdir name="0">
+        <int name="count" value="1" />
+        <int name="id" value="4031100" />
       </imgdir>
-    </imgdir>
-    <imgdir name="1">
-      <int name="exp" value="4500" />
-      <imgdir name="item">
-        <imgdir name="0">
-          <int name="count" value="-1" />
-          <int name="id" value="4031100" />
-        </imgdir>
-      </imgdir>
-      <int name="money" value="12000" />
-      <int name="pop" value="2" />
     </imgdir>
   </imgdir>
+  <imgdir name="1">
+    <int name="exp" value="4500" />
+    <int name="money" value="12000" />
+    <int name="pop" value="2" />
+    <imgdir name="item">
+      <imgdir name="0">
+        <int name="count" value="-1" />
+        <int name="id" value="4031100" />
+      </imgdir>
+    </imgdir>
+  </imgdir>
+</imgdir>
   <imgdir name="3405">
     <imgdir name="0">
     </imgdir>
@@ -13149,6 +13149,10 @@
         <imgdir name="1">
           <int name="count" value="100" />
           <int name="id" value="2020008" />
+        </imgdir>
+        <imgdir name="2">
+          <int name="count" value="2"/>
+          <int name="id" value="4000695"/>
         </imgdir>
       </imgdir>
     </imgdir>

@@ -60,6 +60,7 @@ TMS_DATA = Path("/Users/lizixian/Documents/mxd/TMS/MapleStory-IMG/Data")
 APPLICATION_CONFIG = ROOT / "gms-server" / "src" / "main" / "resources" / "application.yml"
 
 REGION_NAMES = {
+    # 基础区域（wz 顶层节点）
     "victoria": "金银岛", "ossyria": "神秘岛", "elin": "艾琳森林",
     "china": "东方神州", "jp": "日本", "thai": "泰国",
     "singapore": "新加坡·马来西亚", "maple": "彩虹岛",
@@ -67,6 +68,56 @@ REGION_NAMES = {
     "HalloweenGL": "万圣节", "Episode1GL": "剧情活动",
     "event": "活动地图", "etc": "其他", "grandis": "格兰蒂斯",
     "unknown": "未定位",
+    # ossyria 细分
+    "ludibrium": "玩具城", "leafre": "神木村", "orbis": "天空之城",
+    "elnath": "冰雪岛", "aquaroad": "水下世界", "omega": "地球防御部",
+    "mulung": "武陵", "herbtown": "百草堂", "ariant": "阿里安特",
+    "magatia": "玛加提亚", "ellin": "童话村",
+    "temple_of_time": "时间神殿", "lioncastle": "狮子王之城",
+    "future_henesys": "未来之城", "twilight_perion": "黄昏勇士村",
+    "kerning_tower": "卡帕莱特研究所", "romeo_juliet": "莎翁小镇",
+    "kristonia": "蒙特鸠研究所",
+    # victoria 细分
+    "mushroom_castle": "蘑菇城", "nautilus": "诺特勒斯号",
+    # china 细分
+    "taiwan": "福尔摩沙", "haunted_house": "闹鬼宅邸",
+    # etc 细分
+    "mulung_dojo": "武陵道场",
+    # jp 细分
+    "future_tokyo": "未来东京", "showa": "昭和村", "edo": "江户村",
+    # grandis 细分
+    "arcana": "阿尔卡娜", "chewchew": "嚼嚼爱尔兰",
+    "reverse_city": "反转城市", "limen": "利曼",
+    "cernium": "赛拉斯", "morass": "魔菈斯",
+    "tenebris": "泰涅布利斯", "moonbridge": "月之桥",
+    "espera": "艾斯佩拉",
+}
+
+# streetName → 细分 region 映射（仅包含需要从父 region 拆出的街道）
+STREET_TO_REGION = {
+    # ossyria 细分
+    "玩具城": "ludibrium", "神木村": "leafre", "天空之城": "orbis",
+    "冰雪岛": "elnath", "水下世界": "aquaroad", "地球防御本部": "omega",
+    "武陵": "mulung", "百草堂": "herbtown", "阿里安特": "ariant",
+    "玛加提亚": "magatia", "童话村": "ellin",
+    "时间领主": "temple_of_time", "狮子王之城": "lioncastle",
+    "未来之城": "future_henesys", "黃昏的勇士之村": "twilight_perion",
+    "卡帕莱特研究所": "kerning_tower", "莎翁小镇": "romeo_juliet",
+    "蒙特鸠研究所": "kristonia",
+    # victoria 细分
+    "蘑菇城": "mushroom_castle", "诺特勒斯号": "nautilus",
+    # china 细分
+    "福爾摩沙": "taiwan", "闹鬼宅邸": "haunted_house",
+    # etc 细分
+    "武陵道场": "mulung_dojo",
+    # jp 细分
+    "未来东京": "future_tokyo", "昭和村": "showa", "江戶村": "edo",
+    # grandis 细分
+    "阿爾卡娜": "arcana", "嚼嚼艾爾蘭": "chewchew",
+    "反轉城市": "reverse_city", "利曼": "limen",
+    "賽拉斯": "cernium", "魔菈斯": "morass",
+    "泰涅布利斯": "tenebris", "月之橋": "moonbridge",
+    "艾斯佩拉": "espera",
 }
 
 app = Flask(__name__, template_folder=str(HERE / "templates"), static_folder=str(HERE / "static"))
@@ -556,10 +607,17 @@ def _npc_map_details() -> dict[str, list[dict[str, str]]]:
     metadata = _map_metadata()
     result: dict[str, list[dict[str, str]]] = {}
     for npc, map_ids in _npc_map_ids().items():
-        result[npc] = [{
-            "id": map_id, "region": location[0], "regionName": REGION_NAMES.get(location[0], location[0]),
-            "street": location[1], "name": location[2],
-        } for map_id in map_ids for location in [metadata.get(map_id, ("unknown", "(未知街道)", "(未知地图)"))]]
+        details = []
+        for map_id in map_ids:
+            location = metadata.get(map_id, ("unknown", "(未知街道)", "(未知地图)"))
+            region = location[0]
+            street = location[1]
+            region = STREET_TO_REGION.get(street, region)
+            details.append({
+                "id": map_id, "region": region, "regionName": REGION_NAMES.get(region, region),
+                "street": street, "name": location[2],
+            })
+        result[npc] = details
     return result
 
 
@@ -580,6 +638,7 @@ def _catalog() -> dict[str, Any]:
         parent = str(_value(info, "parent", ""))
         order = _value(info, "order")
         region, town = locations.get(start_npc, ("unknown", "(未知街道)"))
+        region = STREET_TO_REGION.get(town, region)
         for npc in {start_npc, end_npc} - {""}:
             npc_counts[npc] = npc_counts.get(npc, 0) + 1
         region_counts[region] = region_counts.get(region, 0) + 1
@@ -825,6 +884,7 @@ def _detail(quest_id: str) -> dict[str, Any]:
     mob_names = _mob_names()
     parent = _value(info, "parent", "")
     location = _npc_locations().get(start_npc, ("unknown", "(未知街道)"))
+    region = STREET_TO_REGION.get(location[1], location[0])
     catalog = _catalog()
     quest_names = {row["id"]: str(row["name"]) for row in catalog["quests"]}
     requirements = _quest_requirements(start_check, quest_names)
@@ -842,7 +902,7 @@ def _detail(quest_id: str) -> dict[str, Any]:
         "order": _value(info, "order"), "startNpc": start_npc, "endNpc": end_npc,
         "startNpcName": names.get(start_npc, start_npc), "endNpcName": names.get(end_npc, end_npc),
         "startNpcMaps": npc_maps.get(start_npc, []), "endNpcMaps": npc_maps.get(end_npc, []),
-        "region": location[0], "regionName": REGION_NAMES.get(location[0], location[0]), "town": location[1],
+        "region": region, "regionName": REGION_NAMES.get(region, region), "town": location[1],
         "chain": chain, "requirements": requirements,
         "levelMin": _value(start_check, "lvmin"), "levelMax": _value(start_check, "lvmax"),
         "rewardExp": _value(complete_act, "exp"), "rewardMeso": _value(complete_act, "money"),

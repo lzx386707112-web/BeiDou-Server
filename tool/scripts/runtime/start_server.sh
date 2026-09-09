@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 SERVER_DIR="$ROOT/gms-server"
 DEFAULT_JAR="$SERVER_DIR/BeiDou.jar"
+TARGET_JAR="$SERVER_DIR/target/BeiDou.jar"
 DEFAULT_PID_FILE="$SERVER_DIR/BeiDou.pid"
 DEFAULT_LOG_FILE="$SERVER_DIR/logs/BeiDou.out.log"
 
@@ -15,7 +16,8 @@ usage() {
   rtk tool/scripts/runtime/start_server.sh --config gms-server/application.yml
   rtk tool/scripts/runtime/start_server.sh -- --server.port=8687
 
-启动当前服务端。优先运行 BeiDou.jar；如果 jar 不存在，则用 Spring Boot Maven 插件从源码启动。
+启动当前服务端。优先运行 gms-server/BeiDou.jar；若没有则使用
+gms-server/target/BeiDou.jar；两者都不存在时，才用 Spring Boot Maven 插件从源码启动。
 
 选项:
   --jar PATH       指定 jar，默认: gms-server/BeiDou.jar
@@ -250,12 +252,18 @@ fi
 
 run_mode="jar"
 if [[ ! -f "$jar" ]]; then
-  run_mode="spring_boot"
-  echo "找不到 jar: $jar"
-  echo "改用 Spring Boot Maven 插件从源码启动。"
-  if ! command -v mvn >/dev/null 2>&1; then
-    echo "找不到 mvn，无法从源码启动。请先安装 Maven 或执行打包脚本生成 jar。" >&2
-    exit 2
+  if [[ "$jar" == "$DEFAULT_JAR" && -f "$TARGET_JAR" ]]; then
+    echo "找不到 jar: $jar"
+    echo "改用已打包产物: $TARGET_JAR"
+    jar="$TARGET_JAR"
+  else
+    run_mode="spring_boot"
+    echo "找不到 jar: $jar"
+    echo "改用 Spring Boot Maven 插件从源码启动。"
+    if ! command -v mvn >/dev/null 2>&1; then
+      echo "找不到 mvn，无法从源码启动。请先安装 Maven 或执行打包脚本生成 jar。" >&2
+      exit 2
+    fi
   fi
 fi
 

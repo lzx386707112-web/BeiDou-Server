@@ -68,6 +68,12 @@ def main() -> int:
     alias = (ROOT / "gms-server/scripts/npc/mParkShop.js").read_text(encoding="utf-8")
     if "4007000" not in alias or "1152108" not in alias:
         errors.append("mParkShop alias is out of date")
+    if "1190300" not in shop or "1190555" not in shop:
+        errors.append("9071001 emblem stock is still the short list")
+    if "1182004" not in shop or "1182285" not in shop:
+        errors.append("9071001 badge stock is still the short list")
+    if "1672017" not in shop or "1672095" not in shop:
+        errors.append("9071001 heart stock is still the short list")
     final = (ROOT / "gms-server/scripts/portal/mPark_final.js").read_text(encoding="utf-8")
     if "MPARK_BASIC" not in final or "return 20" not in final:
         errors.append("mPark_final is missing per-door coin rewards")
