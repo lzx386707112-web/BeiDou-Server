@@ -18,6 +18,11 @@ public class MobId {
     public static final int JOYFUL_ERDA_QUEST = 9101085;
     public static final int RAGING_ERDA = 8641006;
     public static final int RAGING_ERDA_QUEST = 9101086;
+    public static final int TWILIGHT_DREAM_CONTROLLER_QUEST = 9100043;
+
+    public static boolean isTwilightPerionMob(int mobId) {
+        return (mobId >= 8620000 && mobId <= 8620011) || (mobId >= 8620028 && mobId <= 8620031);
+    }
 
     public static final int PAPULATUS_CLOCK = 8500001;
     public static final int HIGH_DARKSTAR = 8500003;

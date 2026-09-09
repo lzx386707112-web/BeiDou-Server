@@ -76108,4 +76108,963 @@
       </imgdir>
     </imgdir>
   </imgdir>
+  <imgdir name="31900">
+    <imgdir name="0"></imgdir>
+    <imgdir name="1"></imgdir>
+  </imgdir>
+  <imgdir name="31901">
+    <imgdir name="0">
+      <imgdir name="no">
+        <string name="0" value="這是楓之谷世界的實力者才能負責的任務。\r若你不忙的話，請再來跟我交談。"/>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <string name="0" value="你是從#b聯合#k來的嗎？"/>
+      <imgdir name="yes">
+        <string name="0" value="剛好來了啊。你來的正好。本來就有很多事情要說。該從何說起呢…. 我整理一下思緒後再跟我說話一次。"/>
+      </imgdir>
+      <imgdir name="stop">
+        <imgdir name="npc">
+          <string name="0" value="在#b勇士聖殿#k見到勇士之村的賢者#b武術教練#k的話，他會說明發生的事情。請去打聽他們發生的事情。"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="31902">
+    <imgdir name="0">
+      <string name="0" value="勇士之村的居民們是無所畏懼的勇猛戰士們。但是，如果再做幾天同樣內容的惡夢，情況就不一樣了。"/>
+      <string name="1" value="當然我們也聽到了聯盟的警告。說不定會偷到一些關於女皇的負面謠言。 但是我們看到的惡夢不是這樣的內容。你問我是什麼？"/>
+      <string name="2" value="夢中的勇士之村畫面慘不忍睹。太陽不再明亮溫暖，大自然離我們而去。 在黑魔法師的統治下，我們在寒冷、黑暗和飢餓中艱難維持著生活。"/>
+      <imgdir name="stop"></imgdir>
+      <imgdir name="yes">
+        <string name="0" value="拜託了。讓居民們舒適安心。"/>
+      </imgdir>
+      <imgdir name="no">
+        <string name="0" value="以你的力量是不可能的事嗎？如果得到聯盟的幫助，會有可能嗎？不知道。再考慮一下。"/>
+      </imgdir>
+      <string name="3" value="雖然聽到那是被操縱的未來，但不安感並沒有消失。 真的是捏造的嗎？ 那麼生動的夢嗎? 哈啊…我不知道。"/>
+      <string name="4" value="如果這一切真的是捏造的，你能證明嗎？ 哪怕是那樣，我也想從惡夢中被解放出來。"/>
+    </imgdir>
+    <imgdir name="1">
+      <string name="0" value="#h0#？打聽勇士之村的情況了嗎？"/>
+      <imgdir name="yes">
+        <string name="0" value="嗯….原來如此。逐漸崩潰的勇士之村的面貌出現在他們的夢中…只能說就是場惡夢。"/>
+      </imgdir>
+      <imgdir name="stop">
+        <imgdir name="npc">
+          <string name="0" value="如果能證明這一切都是假象就好了。哪怕是如此，我也想從惡夢中解放出來。"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="31903">
+    <imgdir name="0">
+      <imgdir name="no">
+        <string name="0" value="你有要忙的事情嗎？如果你事情忙完了，請再來與我對話。"/>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <string name="0" value="咳，咳…. 照這樣做下去，明天死掉也不奇怪。你是誰？ 找我有事嗎？"/>
+      <imgdir name="yes">
+        <string name="0" value="等一下，給我點喘息的時間。呼呼…."/>
+      </imgdir>
+      <imgdir name="stop">
+        <imgdir name="npc">
+          <string name="0" value="到底是誰讓這種惡夢在楓之谷世界擴散呢...？"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="31904">
+    <imgdir name="0">
+      <string name="0" value="嗯？你問這村子到底發生了什麼事情？你不知道才問的嗎？黑魔法師的…. 呃！不不不，這裡成為了建造#r偉大黑魔法師的石像#k大工程的現場。"/>
+      <string name="1" value="看得到遠處正在建造的巨大石像嗎？完工後，到處都可以看到。因為勇士之村是維多利亞島最高的區域。"/>
+      <string name="2" value="已經有成千上百的勇士之村原住民在那裡工作。我雖然本來是探險家….但現在不認真工作，就活不下去了。因為不工作的人沒飯吃。"/>
+      <string name="3" value="還有什麼好奇的？再和你說話，會被罵偷懶的。還有什麼好奇的就去找別人吧。"/>
+      <imgdir name="stop"></imgdir>
+      <imgdir name="no">
+        <string name="0" value="嗯？你打算一直煩我到什麼時候呢？"/>
+      </imgdir>
+      <imgdir name="yesEx">
+        <imgdir name="0">
+          <string name="msg" value="#b(好像很難再問吉米什麼問題了。 試著和在黃昏的勇士之村的其他人搭話。)"/>
+          <int name="userSay" value="1"/>
+          <int name="imgPos" value="1"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <string name="0" value="沒看過的臉啊。來這麼貧瘠偏僻的地方有什麼事嗎？"/>
+      <imgdir name="yes">
+        <string name="0" value="勇士之村的戰士們？聽你這麼說，你大概還記得這裡曾是戰士之城的時候吧….咳咳，咳咳！可以等等再跟我說話嗎？"/>
+      </imgdir>
+      <imgdir name="stop">
+        <imgdir name="npcEx">
+          <imgdir name="0">
+            <string name="msg" value="#b(好像很難再問吉米什麼問題了。 試著和在黃昏的勇士之村的其他人搭話。)"/>
+            <int name="userSay" value="1"/>
+            <int name="imgPos" value="1"/>
+          </imgdir>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="31905">
+    <imgdir name="0">
+      <string name="0" value="真抱歉。突然人有點不舒服….剛剛說到哪裡了？啊對，自從#r黑魔法師#k統治楓之谷世界後，#b勇士之村#k的戰士們一直堅持戰鬥到最後。"/>
+      <string name="1" value="作為始終不屈不撓的代價，留在勇士之村的所有原住民都揹負了殘酷的勞役…. 倖存者中大多數為了建造#r黑魔法師的石像#k而做粗工，一部分人則生活在#b避難處#k，艱難地延續勇士之村的文化。"/>
+      <string name="2" value="嗯，你說什麼？你認識勇士之村的賢者#b武術教練#k嗎？他在最後一場戰鬥中陣亡了。#b他的後代#k雖然還活著，但是還太年輕了。去曾經的勇士聖殿，應該就能看到他。"/>
+      <imgdir name="stop"></imgdir>
+      <imgdir name="no">
+        <string name="0" value="嗯？還有話要跟我說嗎？"/>
+      </imgdir>
+      <imgdir name="yesEx">
+        <imgdir name="0">
+          <string name="msg" value="確實很神奇。 你的年紀看起來還沒有老到會記得武術教練...總之，再見。"/>
+        </imgdir>
+        <imgdir name="1">
+          <string name="msg" value="#b(讓我們去戰士聖殿所在地，見一見武術教練的後代吧。)#k"/>
+          <int name="userSay" value="1"/>
+          <int name="imgPos" value="1"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <string name="0" value="有什麼事嗎？我沒有話要對黑魔法師的走狗說，所以請你退下吧。"/>
+      <imgdir name="yes">
+        <string name="0" value="是旅行者嗎...？失禮了。已經很久沒聽到先祖的姓名了。你來找我是想知道些什麼呢？"/>
+      </imgdir>
+      <imgdir name="stop">
+        <imgdir name="npcEx">
+          <imgdir name="0">
+            <string name="msg" value="#b(讓我們去戰士聖殿所在地，見一見武術教練的後代吧。)#k"/>
+            <int name="userSay" value="1"/>
+            <int name="imgPos" value="1"/>
+          </imgdir>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="31906">
+    <imgdir name="0">
+      <string name="0" value="他們佔領了勇士之村之後，第一時間關閉了勇士聖殿。如你所見，這裡面什麼都沒有。"/>
+      <string name="1" value="我沒有守住勇士聖殿，也沒有機會光榮的戰鬥而死……. 所以就這樣維持這條羞恥的命。他們也知道，比起除掉我，讓我這樣可恥地活下去更有利。"/>
+      <imgdir name="stop"></imgdir>
+      <imgdir name="no">
+        <string name="0" value="你不就是想知道這件事嗎？"/>
+      </imgdir>
+      <imgdir name="yesEx">
+        <imgdir name="0">
+          <string name="msg" value="我說的#r'他們'#k是誰，只要在村莊裡稍微繞繞就知道了。"/>
+        </imgdir>
+        <imgdir name="1">
+          <string name="msg" value="#b(到底勇士之村是怎麼變成這樣的呢？ 讓我們來了解一下統治村莊的勢力是誰吧。)"/>
+          <int name="userSay" value="1"/>
+          <int name="imgPos" value="1"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <string name="0" value="嗯？看來你並非這邊的勞動者。為何會來這個未開化的地方呢？"/>
+      <imgdir name="yes">
+        <string name="0" value="#b末日反抗軍#k？呼呼…. 也有過曾經被這樣稱呼的時候。但是時代的需求不是經常改變的嗎？現在乾脆叫我們開拓者好了。"/>
+      </imgdir>
+      <imgdir name="stop">
+        <imgdir name="npcEx">
+          <imgdir name="0">
+            <string name="msg" value="#b(到底勇士之村是怎麼變成這樣的呢？ 讓我們來了解一下統治村莊的勢力是誰吧。)"/>
+            <int name="userSay" value="1"/>
+            <int name="imgPos" value="1"/>
+          </imgdir>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="31907">
+    <imgdir name="0">
+      <string name="0" value="偉大的黑魔法師佔領楓之谷世界後，世界正在變得更好。就像文明無法觸及的這個未開化的地方，變成這樣一樣。"/>
+      <imgdir name="stop"></imgdir>
+      <imgdir name="yes">
+        <string name="0" value="你看那些老得卑劣的工人！相反地，我們不是這樣保持年輕嗎？呼呼…."/>
+      </imgdir>
+      <imgdir name="no">
+        <string name="0" value="如果不想對話，為什麼要跟我說話？"/>
+      </imgdir>
+      <string name="1" value="因為我們迅速退出了#b聯盟#k，站在了#r黑魔法師#k這邊，所以得到了很多特惠。 聽懂了嗎？"/>
+    </imgdir>
+    <imgdir name="1">
+      <imgdir name="stop">
+        <imgdir name="npc">
+          <string name="0" value="你看那些老得卑劣的工人！相反地，我們不是這樣保持年輕嗎？呼呼…."/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="31908">
+    <imgdir name="0">
+      <string name="0" value="#b(村外是什麼情況？被破壞的弓箭手村一樣，怪物們變得兇暴了嗎？最後來確認一下村外的情況吧。)"/>
+      <imgdir name="stop"></imgdir>
+      <imgdir name="yes">
+        <string name="0" value="#b(到村外看看吧。首先，狩獵#r變形木妖20隻#k#b左右就可以了。)"/>
+      </imgdir>
+      <imgdir name="no">
+        <string name="0" value="#b(休息一會兒再考慮吧？)"/>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <string name="0" value="#b(被被破壞的弓箭手村一樣，原本的怪物變得異常殘暴….)#k"/>
+      <imgdir name="yes">
+        <string name="0" value="#b(在未來的勇士之村，村裡是站在黑魔法師那邊的末日反抗軍，村外則有兇暴的怪物….)"/>
+        <string name="1" value="#b(如果這個樣子每天都在惡夢中出現，勇士之村的居民們感到不安也不奇怪。)"/>
+      </imgdir>
+      <imgdir name="stop"></imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="31909">
+    <imgdir name="0"></imgdir>
+    <imgdir name="1">
+      <int name="ask" value="1"/>
+      <string name="0" value="你來了呢。…嗯？你說要猜我們惡夢的內容？好，現在開始，我會問幾個問題。\r\n#L0##b好。#l\n#k"/>
+      <string name="1" value="在未來的勇士之村裡，好像正在建造某種巨大的東西。那是什麼呢？\r\n#L0##b巨大的豬像#l\n#L1#巨大的攻城兵器#l\n#L2#巨大的黑魔法師石像#l\n#k"/>
+      <string name="2" value="戰士之殿怎麼樣了呢？\r\n#L0##b已經封閉了。#l\n#L1#已經擴充了。#l\n#L2#黑魔法師的部下佔領了。#l\n#k"/>
+      <string name="3" value="我留下的子孫是男孩，還是女孩呢？\r\n#L0##b男孩#l\n#L1#女孩#l\n#k"/>
+      <string name="4" value="最後…佔勇領士之村，鎮壓我們的人們到底是誰？\r\n#L0##b末日反抗軍#l\n#L1#黑色翅膀#l\n#L2#軍團長#l\n#k"/>
+      <string name="5" value="很準阿…. 跟我們之前做的惡夢內容完全一致。雖然懷疑與弓箭手村的情況不同，但聽說是你親自確認的，好像是對的。惡夢不是真實的，而是編造的未來…."/>
+      <imgdir name="yes">
+        <string name="0" value="既然知道這場惡夢是假的，那就可以讓村民安心了。但是，如果惡夢始終沒有消失，還是會成為不安的導火線。如果有完全消除惡夢的方法就好了…."/>
+      </imgdir>
+      <imgdir name="stop">
+        <imgdir name="0">
+          <int name="answer" value="1"/>
+        </imgdir>
+        <imgdir name="1">
+          <int name="answer" value="3"/>
+          <string name="0" value="這是怎回事？沒有和惡夢的內容不同嗎？"/>
+          <string name="1" value="這是怎回事？沒有和惡夢的內容不同嗎？"/>
+        </imgdir>
+        <imgdir name="2">
+          <int name="answer" value="1"/>
+          <string name="1" value="這是怎回事？沒有和惡夢的內容不同嗎？"/>
+          <string name="2" value="這是怎回事？沒有和惡夢的內容不同嗎？"/>
+        </imgdir>
+        <imgdir name="3">
+          <int name="answer" value="1"/>
+          <string name="1" value="這是怎回事？沒有和惡夢的內容不同嗎？"/>
+        </imgdir>
+        <imgdir name="4">
+          <int name="answer" value="1"/>
+          <string name="1" value="這是怎回事？沒有和惡夢的內容不同嗎？"/>
+          <string name="2" value="這是怎回事？沒有和惡夢的內容不同嗎？"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="31910">
+    <imgdir name="0"></imgdir>
+    <imgdir name="1"></imgdir>
+  </imgdir>
+  <imgdir name="31911">
+    <imgdir name="0"></imgdir>
+    <imgdir name="1">
+      <string name="0" value="收集完8個夢的材質了嗎？"/>
+      <imgdir name="yes">
+        <string name="0" value="謝謝，只要有這個，就能治好夢中毒了。"/>
+        <string name="1" value="但歸根究底，這也只是暫時的方法，並不能完全斷絕與惡夢的關係。要想完全根除，得找別的辦法啊….但我也還不知道有什麼辦法。"/>
+        <string name="2" value="如果能多打聽操縱夢境的人，也許會有辦法… 但因為不是軍團長或黑色翅膀，所以沒有什麼特別的線索。"/>
+        <string name="3" value="究竟是什麼樣的人在操縱夢…操縱夢的人…#控制夢想並操縱無意識之人#k…等一下，無意識？ 應該會有辦法。"/>
+      </imgdir>
+      <imgdir name="stop">
+        <imgdir name="item">
+          <string name="0" value="自由行動時，在黃昏的勇士之村內收集#b夢的材質#k。 收集#b8個#k左右就可以了。"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="31912">
+    <imgdir name="0">
+      <imgdir name="stop"></imgdir>
+      <imgdir name="yesEx">
+        <imgdir name="0">
+          <string name="msg" value="#b(從黃昏的勇士之村附近的怪物那裡收集#e無意識的碎片8個#n吧)#k"/>
+          <int name="imgPos" value="1"/>
+          <int name="userSay" value="1"/>
+        </imgdir>
+        <imgdir name="1">
+          <string name="msg" value="謝謝！#b無意識的碎片#k全部收集起來後，讓我搭話吧。"/>
+        </imgdir>
+      </imgdir>
+      <imgdir name="noEx">
+        <imgdir name="0">
+          <string name="msg" value="你正在忙嗎？如果改變想法再來找我吧。"/>
+          <int name="npcID" value="1105004"/>
+          <int name="imgPos" value="1"/>
+        </imgdir>
+      </imgdir>
+      <string name="0" value="據說夢是潛意識投影而成的。舉個例子吧，如果小時候經歷過一件可怕的事，那麼今天看到的麻雀若喚起了當時的記憶，那麼今晚的夢裡怪物麻雀將以可怕的樣子現身。"/>
+      <string name="1" value="那麼未來之門地區會怎麼樣呢？ 如果是夢之世界，是不是也蘊含著創造夢想者的無意識呢？從那無意識的碎片中，我們就能掌握敵人的真實身份了！"/>
+      <string name="2" value="那麼，能夠再麻煩你一次嗎？這次把#b無意識的碎片8個#k收集起來。同樣可以從黃昏的勇士之村怪物那裡獲得。"/>
+    </imgdir>
+    <imgdir name="1">
+      <string name="0" value="#b無意識的碎片#k8個都收集完成了嗎？"/>
+      <imgdir name="yes">
+        <string name="0" value="很好，我收到了。從現在開始先合成無意識的碎片做出記憶的碎片吧。"/>
+      </imgdir>
+      <imgdir name="stop">
+        <imgdir name="item">
+          <string name="0" value="向黃昏的勇士之村附近的怪物收集#b無意識的碎片8個#k吧。"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="31913">
+    <imgdir name="0">
+      <string name="0" value="好，已經合成#b無意識碎片#k製作成 #b記憶碎片#k了。使用這個後，就能夠窺視敵人的片段記憶。"/>
+      <imgdir name="stop"></imgdir>
+      <imgdir name="no">
+        <string name="0" value="準備好的話，就再和我說一聲。"/>
+      </imgdir>
+      <imgdir name="yesEx">
+        <imgdir name="0">
+          <string name="msg" value="無論如何都要小心。 接近別人的無意識是很危險的。 當我凝視深淵的時候，深淵也在凝視我是必然的道理。"/>
+        </imgdir>
+        <imgdir name="1">
+          <string name="msg" value="#b(打開道具欄，試著使用記憶碎片。)"/>
+          <int name="userSay" value="1"/>
+          <int name="imgPos" value="1"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <string name="0" value="你見過夢的操控者的記憶嗎？怎麼樣？究竟是什麼人在操控夢呢？"/>
+      <imgdir name="stop">
+        <imgdir name="quest">
+          <string name="0" value="無論如何請務必小心。接近別人的無意識是很危險的方式。我窺探深淵，深淵也同時在窺探我。"/>
+        </imgdir>
+      </imgdir>
+      <imgdir name="lost">
+        <string name="0" value="需要記憶碎片嗎？"/>
+        <imgdir name="yes">
+          <string name="0" value="那是能夠掌握敵人真實身分的重要物品，千萬別流出。"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="31914">
+    <imgdir name="0">
+      <imgdir name="no">
+        <string name="0" value="很忙嗎？如果情況整理好了，請再與我對話。"/>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <string name="0" value="…沒想到會有人來找我。你肯定不是夢境中的居民。但是，怎麼會來到這裡呢？"/>
+      <imgdir name="stop">
+        <imgdir name="npcEx">
+          <imgdir name="0">
+            <string name="msg" value="#b(六條岔道分明有通往奇幻村的路。 也許那裡有什麼？ 讓我們從未來之門前往奇幻村吧。)"/>
+            <int name="userSay" value="1"/>
+            <int name="imgPos" value="1"/>
+          </imgdir>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="31915">
+    <imgdir name="0"></imgdir>
+    <imgdir name="1"></imgdir>
+  </imgdir>
+  <imgdir name="31916">
+    <imgdir name="0">
+      <string name="0" value="最近經常發生 #r怪物#k們襲擊居民住處 #r的#k情況。我必須阻止這件事，但是卻被扣留，這樣根本什麼事情都做不了。若是可以的話，你要不要去 #r消滅怪物#k嗎？"/>
+      <imgdir name="stop"></imgdir>
+      <imgdir name="yes">
+        <string name="0" value="對不起，我把自己該做的事交給你。消滅#r#o8620002##k掉#b100隻#k左右就可以了。"/>
+      </imgdir>
+      <imgdir name="no">
+        <string name="0" value="我不能夠親自行動，而要請你幫忙，對於這樣的我，真感到生氣。"/>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <string name="0" value="把所有#b變形斧木妖#k都消滅了嗎？#k真希望村民們能安穩地生活。"/>
+      <imgdir name="yes">
+        <string name="0" value="謝謝你！ 託你的福，大大減輕了村民的擔憂。但是目前的問題還沒有解決。因為還有#r更危險的怪物#k。"/>
+      </imgdir>
+      <imgdir name="stop">
+        <imgdir name="mob">
+          <string name="0" value="為了居民的安全。是#r#o8620002##k#b100隻#k。拜託了。"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="31917">
+    <imgdir name="0">
+      <string name="0" value="有比變形的木妖更敏捷且#r兇惡的怪物#k。那就是#r變形的肥肥#k。他們可是比變形的木妖還要危險許多。你可以代替無能力的我去擊退肥肥嗎？"/>
+      <imgdir name="stop"></imgdir>
+      <imgdir name="yes">
+        <string name="0" value="真是抱歉呢。只要消滅#r變形黑肥肥#k#b100隻#k左右就行了。"/>
+      </imgdir>
+      <imgdir name="no">
+        <string name="0" value="如果我能用自己的能力做後盾。就不需要拜託你了。"/>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <string name="0" value="已經把所有的#r變形的黑肥肥#k都消滅掉了嗎？據說他們比木妖還要有危險性呢！"/>
+      <imgdir name="yes">
+        <string name="0" value="真的非常感謝。我沒能做到的事，多虧有你幫忙。"/>
+      </imgdir>
+      <imgdir name="stop">
+        <imgdir name="mob">
+          <string name="0" value="他們是具威脅性的存在。是#r變形黑肥肥#k #b100隻#k。拜託你了。"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="31918">
+    <imgdir name="0">
+      <int name="ask" value="1"/>
+      <string name="0" value="現在不是責怪自己無能的時候。為了#b居民的安全#k，應該想一想能做的事情。偉大的祖先#b武術教練#k知道保護#r居民免受怪物侵害的特別方法#k。但在#r最後的戰鬥#k中，這種方法失傳了。只要能知道那個方法…. 居民們應該就不用受苦了。\r\n#L0##b(被破壞的弓箭手 村長老應該知道吧？)#l\n#k"/>
+      <string name="1" value="#b那個年代#k的戰士們還在的話... 應該能得到一些意見的…"/>
+      <imgdir name="stop">
+        <imgdir name="0">
+          <int name="answer" value="1"/>
+          <int name="flip" value="1"/>
+        </imgdir>
+      </imgdir>
+      <imgdir name="yes">
+        <string name="0" value="到底是什麼方法呢…\r\n#e#b(去找被破壞的弓箭手村的長老阿勒斯吧。)#k"/>
+      </imgdir>
+      <imgdir name="no">
+        <string name="0" value="你在嘲笑我嗎？雖然失去了自尊心，不過替居民著想的心是一樣的，你不曉得嗎？"/>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <string name="0" value="好久不見了！ 什麼事？"/>
+      <imgdir name="stop">
+        <imgdir name="npc">
+          <string name="0" value="武術教練使用了 #b哪種方法#k呢？若是#r那個時期的戰士#k都還在就好了..."/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="31919">
+    <imgdir name="0">
+      <string name="0" value="過去勇士之村的#b武術教練#k？當然知道啊！他是真正的戰士。但消息斷絕後，不知道怎麼樣了。嗯？他使用過的保護#r居民免受怪物侵害的特別方法#k？這個嘛…."/>
+      <imgdir name="stop"></imgdir>
+      <imgdir name="yes">
+        <string name="0" value="因為是我很小的時候見過的人，所以#b不太清楚#k…. 但#r爸爸#k應該會知道....很可惜，沒能幫上忙。"/>
+      </imgdir>
+      <imgdir name="no">
+        <string name="0" value="抱歉沒幫上忙。是小時候的事了。"/>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <string name="0" value="有什麼事嗎？看你的表情，好像想要問些什麼。"/>
+      <imgdir name="yes">
+        <string name="0" value="武術教練？當然知道。他是#b真正的戰士#k。"/>
+      </imgdir>
+      <imgdir name="stop">
+        <imgdir name="npc">
+          <string name="0" value="如果#r父親#k還在他一定會幫我。"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="31920">
+    <imgdir name="0">
+      <int name="ask" value="1"/>
+      <string name="0" value="這種驕傲的戰士，也會留名後代。\r你對這位朋友的什麼感興趣呢？\r\n#L0##b我想知道武術教練生前守護居民免受怪物攻擊的特別方法。#l\n#k"/>
+      <string name="1" value="啊啊….想起來了。"/>
+      <imgdir name="stop">
+        <imgdir name="0">
+          <int name="answer" value="1"/>
+          <int name="flip" value="1"/>
+        </imgdir>
+      </imgdir>
+      <imgdir name="yes">
+        <string name="0" value="拜訪勇士之村時，怪物們突然 #r攻進村子#k。正巧戰士們外出狩獵，情況非常危險。\r\n"/>
+        <string name="1" value="但是武術教練突然拿出#e#r笛子#k#n。吹完那個之後#b怪物們開始撤退了#k。\r該怎麼表達當時的感情呢？那是激動人心的瞬間。\r\n#e#b(向黃昏的勇士之村的修行者講述笛子的故事吧。)#k"/>
+      </imgdir>
+      <imgdir name="no">
+        <string name="0" value="咦？不想聽嗎？"/>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <int name="ask" value="1"/>
+      <string name="0" value="偉大的先祖呀！ 請賜予我智慧。\r\n#L0##b已經查出武術教練保護居民的方法了！#l\n#k"/>
+      <string name="1" value="什麼？那是真的嗎？"/>
+      <imgdir name="yes">
+        <string name="0" value="終於能夠保護居民們 #b了嗎？"/>
+      </imgdir>
+      <imgdir name="stop">
+        <imgdir name="0">
+          <int name="answer" value="1"/>
+          <int name="flip" value="1"/>
+        </imgdir>
+        <imgdir name="npc">
+          <string name="0" value="好像聽到了崇高戰士呼喚出的靈魂聲音。"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="31921">
+    <imgdir name="0">
+      <string name="0" value="樹笛啊…. 有做為#b部落的寶物#k傳承的#b帕查媽媽的樹笛#k。沒想到有那種力量…. 但是有點問題啊。現在部落的寶物，因為#r變形樹妖王#k的襲擊全部遺失了。能幫幫我忙嗎？"/>
+      <imgdir name="stop"></imgdir>
+      <imgdir name="yes">
+        <string name="0" value="消滅#r變形的樹妖王#k收集 #b帕恰媽媽的木笛#k。請幫助村民過安寧的生活。"/>
+      </imgdir>
+      <imgdir name="no">
+        <string name="0" value="如果可以的話，你大概不知道我想要行動的想法吧。別再讓我變悲慘了。"/>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <string name="0" value="你帶回了#b帕恰媽媽的木笛#k嗎？"/>
+      <imgdir name="yes">
+        <string name="0" value="謝謝你！ 現在我們村民終於安全的脫離怪物入侵了。多虧有你啊。"/>
+      </imgdir>
+      <imgdir name="stop">
+        <imgdir name="item">
+          <string name="0" value="去#b#m273020400##k消滅 #r變形的樹妖王#k之後幫我找到 #b帕恰媽媽的木笛#k吧。"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="31922">
+    <imgdir name="0">
+      <string name="0" value=" 可以再幫忙我一件 #b事#k嗎？其實這個地方可以抵抗怪物的入侵，#r算是比較安全#k。很諷刺的是，監視我們的人在抵抗怪物造成的威脅。所以，我認為帕恰媽媽的木笛應該要放在比這個地方 #r更加危險的地方#k。"/>
+      <imgdir name="stop"></imgdir>
+      <imgdir name="yes">
+        <string name="0" value="那裡是 #r原住民避難處#k。就是那些無法在這裡承擔勞役的 #b弱小者#k避難所到之處。這支 #b木笛#k應該在那裡更有用處。請把這笛子交給原住民避難處的 #b義安#k吧。"/>
+      </imgdir>
+      <imgdir name="no">
+        <string name="0" value="若是你不幫忙的話，那邊的人就得每天生活在危險當中。請你幫忙吧。"/>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <string name="0" value="嗯？冒險者？有什麼事情要跟我說嗎?"/>
+      <imgdir name="yes">
+        <string name="0" value="勇士之村的寶物 #b帕恰媽媽的笛子#k交給我們...謝謝。正好這個地方對 #r怪物的侵入#k沒有任何應對措施，所以讓人相當擔心，謝謝。"/>
+      </imgdir>
+      <imgdir name="stop">
+        <imgdir name="npc">
+          <string name="0" value="原住民的避難處只要過了 #r#m273020300##k就能到達。去那邊找照顧難民的 #b義安#k，然後將 #b帕恰媽媽的木笛#k交給他。"/>
+        </imgdir>
+        <imgdir name="item">
+          <string name="0" value="這種偏僻地方竟然會有旅行者...這個地方是無法承擔勇士之村勞役的人聚集的 #b原住民避難處#k...不過，來這邊有什麼事呢？有沒有要 #b交給我的物品#k呢？"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="31923">
+    <imgdir name="0">
+      <string name="0" value="咳。咳…. #r口渴#k….#r口好渴#k…. 交代的事情還沒做完呢。但身體完全使不出力…不求藥水… 但只要能潤潤嗓子，什麼都好…"/>
+      <string name="1" value="#b變形黑木妖的大型樹汁#k….應該多少能夠解渴吧…"/>
+      <imgdir name="stop"></imgdir>
+      <imgdir name="yes">
+        <string name="0" value="拜，拜託了…#b大型樹液#k25個….能解渴的話…今天應該能…. 更早結束…."/>
+      </imgdir>
+      <imgdir name="no">
+        <string name="0" value="好吧…? 沒有辦法….那我繼續忍著…反正也習慣了，所以沒關係…."/>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <string name="0" value="難道那個…就是#b大型樹液#k嗎？看著就覺得解渴…. 快點…"/>
+      <imgdir name="yes">
+        <string name="0" value="哈哈…. 謝謝，要努力完成剩下的工作了…."/>
+        <string name="1" value="不過…。感覺比以前好多了…為什麼呢？ 其實沒什麼變化的說…我偷偷地有什麼變化嗎…？"/>
+      </imgdir>
+      <imgdir name="stop">
+        <imgdir name="item">
+          <string name="0" value="還沒…啊…？沒關係…我還能等… 能夠喝#b大型樹液25個#k....這點程度的等待不算什麼…."/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="31924">
+    <imgdir name="0">
+      <string name="0" value="好冷啊…. 自從黑魔法師統治楓之谷世界後，勇士之村#b開始變冷#k了。"/>
+      <string name="1" value="白天工作再累也睡不著。要是能睡個好覺就好了…. 能為我們帶來#b柴火#k嗎？"/>
+      <imgdir name="stop"></imgdir>
+      <imgdir name="yes">
+        <string name="0" value="謝謝你，只要消滅#r#o8620001##k、#r#o8620002##k，就能獲得#b巨大木材#k。有很多人，至少要有#b25個#k左右。"/>
+      </imgdir>
+      <imgdir name="no">
+        <string name="0" value="不行嗎？那我們就這樣生活下去吧…."/>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <string name="0" value="找來#b巨大木材#k25個了嗎？謝謝。託您的福，我能睡個好覺了。"/>
+      <imgdir name="yes">
+        <string name="0" value="但願能有一個完全沒做夢的安穩夜晚。其實因為連做夢也好累。哪怕夢境中出現的是和平時期的勇士之村。"/>
+      </imgdir>
+      <imgdir name="stop">
+        <imgdir name="item">
+          <string name="0" value="有很多人，#r一兩個不夠#k。\r至少要有#b巨大木材25個#k。\r幫助我睡覺時間能好好休息。"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="31925">
+    <imgdir name="0">
+      <string name="0" value="真擔心避難處的原住民，聽說他們也需要更多#b巨大木柴#k．．．"/>
+      <string name="1" value="#r變形的火肥肥#k在這麼酷寒的土地仍然在自己身上點燃。有了#r變形的火肥肥#k的 #b燃燒的鬃毛#k就能點燃我們的木柴了吧？"/>
+      <imgdir name="stop"></imgdir>
+      <imgdir name="yes">
+        <string name="0" value="謝謝你！#b巨大木柴 50個#k應該就夠了！"/>
+      </imgdir>
+      <imgdir name="no">
+        <string name="0" value="你願意幫助避難處的原住民，讓他們可以溫暖點嗎．．．"/>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <string name="0" value="你拿#b巨大木柴 50個#k來了嗎？"/>
+      <imgdir name="yes">
+        <string name="0" value="謝謝你！ 多虧你的努力，大家今天應該可以好好睡一覺了。\r\n去找#b修行者#k吧！\r\n他正在找能夠除掉威脅居民的怪物的人。"/>
+      </imgdir>
+      <imgdir name="stop">
+        <imgdir name="item">
+          <string name="0" value="還沒有全部找到嗎？如果有#b巨大木柴 50個#k應該就可以了．．．"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="31926">
+    <imgdir name="0">
+      <string name="0" value="你是冒險者嗎？村子變成這樣子，沒有什麼能招待您的。因為負責村裡的餐點，所以很了解村裡的情況。我們連吃的都沒有。"/>
+      <string name="1" value="每天在辛苦的勞動中#r連三餐都不能溫飽#k，人們的表情失去了活力。那又能怎麼樣呢，總不能死吧。無論如何都要活下去。"/>
+      <string name="2" value="所以說，能不能幫我弄點糧食，讓村民們打起勁來？消滅村外可以看到的 #r變形的黑肥肥、變形的鋼之肥肥#k，就能獲得#b看起來很巨大的肉#k。"/>
+      <imgdir name="stop"></imgdir>
+      <imgdir name="yes">
+        <string name="0" value="大家都會很開心的。如果有#b25個看起來很巨大的肉#k，應該能吃很飽吧？"/>
+      </imgdir>
+      <imgdir name="no">
+        <string name="0" value="就當作是可以拯救很多人，請你幫幫忙吧。"/>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <string name="0" value="#b看起來很巨大的肉25個#k全都湊齊了嗎？"/>
+      <imgdir name="yes">
+        <string name="0" value="果然天無絕人之路。託您的福，村民們好像得到了生活的力量。"/>
+      </imgdir>
+      <imgdir name="stop">
+        <imgdir name="item">
+          <string name="0" value="想要讓大家都填飽肚子，就必須準備#b25個看起來很巨大的肉#k。你不是答應幫忙了嗎？事到如今不能反悔！"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="31927">
+    <imgdir name="0">
+      <string name="0" value="距離這邊比較遠的地方，有無法承擔勞力的人們所聚集的 #r避難處#k。他們無法承擔辛苦的工作，才會決定離開勇士之村。就連能夠勞動的我們也這麼#b辛苦#k，更何況是避難處的人呢？ 如果能把#b巨大肥肥的肉#k交給避難處的人們，#b難民一定會很開心的#k。"/>
+      <imgdir name="stop"></imgdir>
+      <imgdir name="yes">
+        <string name="0" value="請拿#b大肥肥的肉50個#k過來。"/>
+      </imgdir>
+      <imgdir name="no">
+        <string name="0" value="雖然我們想將肉送去避難處，但是目前勇士之村勞動的人根本就處於無法填飽肚子的狀態。"/>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <string name="0" value="已經順利取得#b大肥肥的肉#k了嗎？"/>
+      <imgdir name="yes">
+        <string name="0" value="謝謝你！畢竟避難處是個#r什麼都缺的地方#k嘛。多虧有你暫時可以不用擔心糧食了。"/>
+      </imgdir>
+      <imgdir name="stop">
+        <imgdir name="item">
+          <string name="0" value="必須要有#b大肥肥的肉50個#k才行。"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="31928">
+    <imgdir name="0">
+      <string name="0" value="這裡太危險了。還有比這更大的問題。#r周邊兇猛的怪物#k們不知道什麼時候會襲擊這裡。只能每天生活在恐懼之中。"/>
+      <string name="1" value="雖然想立起保護這裡的木頭柵欄，但也沒有足夠的力量和樹木。能幫幫忙嗎？如果可以消滅附近的#r變形木面怪人#k獲得#b不吉利的巨大木板#k的話，至少可以暫時守護這個地方。"/>
+      <imgdir name="stop"></imgdir>
+      <imgdir name="yes">
+        <string name="0" value="謝謝。我絕對不會忘記您為這個一無所有的地方所做出的承諾。如果能獲得#b不吉利的巨大木板20個#k的話，應該能守住這裡吧？"/>
+      </imgdir>
+      <imgdir name="no">
+        <string name="0" value="一點都不驚訝。又不是一天兩天這樣了。無論如何都要試試看！"/>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <string name="0" value="保護這個地方所需要的#b不吉利的巨大木板20個#k已經湊齊了嗎？"/>
+      <imgdir name="yes">
+        <string name="0" value="謝謝…. 託您的福，這裡的人們可以安心生活了。"/>
+      </imgdir>
+      <imgdir name="stop">
+        <imgdir name="item">
+          <string name="0" value="#b20個不吉利的巨大木板#k還沒準備好嗎？\r雖然我很清楚這是很為難的請求．．．因為我實在太不安了．．．"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="31929">
+    <imgdir name="0">
+      <string name="0" value="這裡連木頭柵欄都沒有，至今能安然無恙，都是多虧了幽靈之地入口的#b麥吉#k。雖然他很木訥，但為了幽靈之地入口避難處的安全，費了不少心思。最近都沒見到他，不知道他有沒有按時吃飯。"/>
+      <imgdir name="stop"></imgdir>
+      <imgdir name="yes">
+        <string name="0" value="謝謝。#b麥吉#k在#b幽靈之地入口#k。"/>
+      </imgdir>
+      <imgdir name="no">
+        <string name="0" value="在忙嗎？那之後再拜託務必幫我向#b麥吉#k問好。"/>
+      </imgdir>
+      <string name="1" value="請問能見一下麥吉，轉達#b問候#k嗎？"/>
+    </imgdir>
+    <imgdir name="1">
+      <string name="0" value="是誰？來這裡有什麼事？"/>
+      <imgdir name="yes">
+        <string name="0" value="義安嗎？真是瞎操心呢…."/>
+      </imgdir>
+      <imgdir name="stop">
+        <imgdir name="npc">
+          <string name="0" value="#b麥吉#k在#b幽靈之地入口#k。"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="31960">
+    <imgdir name="0">
+      <string name="0" value="這裡是#b夢的背後#k。 尚未形成的夢的世界。如果是夢的居民，就不會發現這裡，也不會靠近這裡。 來到這裡意味著已經不是夢中的居民了。"/>
+      <string name="1" value="問為什麼這裡是這個樣子？ 因為創造這個#b夢想的世界最終不過是人而已。 不可能創造所有的世界。 只有非常一小部分，甚至把別人的無意識都引來顯現。 #r夢的背後是這樣不完整#k的。"/>
+      <string name="2" value="我？我也是#b夢的居民#k沒錯。 不是所有的居民都不知道這裡是夢境。 也許是一種自覺夢，又或許是從外部流進來的無意識的表現。 恐怕這種存在不止我一個人。"/>
+      <string name="3" value="能走到今天，說明你也有#b願望#k吧。 因為夢裡也有實現不了的東西，難道已經到達夢的背後？ 來，說說看。 想要什麼？"/>
+      <imgdir name="stop"></imgdir>
+      <imgdir name="no">
+        <string name="0" value="難道你什麼願望都沒有嗎？ 嗯。真不敢相信。 再考慮一下。"/>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <string name="0" value="…嗯，想切斷夢和現實的連結…是個好主意。這是為了我們大家。"/>
+      <string name="1" value="現實中的惡夢越大，夢也就越頹廢。 不只是現實受到夢的影響，夢也受到現實的影響。 如果能消除夢想和現實的連結，我們所有人都會迎來和平。"/>
+      <string name="2" value="夢和現實是連在一起的，是不可分割的。 但是，即使不一定要把兩者分開，也能削弱連結。 那就是#b忘卻#k。 在夢裡無論發生什麼事情，到了早上不都會像迷霧一樣淡忘嗎？"/>
+      <string name="3" value="是啊。夢和現實之間存在著讓人忘記的#b忘卻迷霧#k。 可如今此地，卻看不到忘卻迷霧。 所以夢才會影響現實。"/>
+      <string name="4" value="只要有忘卻迷霧，人們就會慢慢忘記惡夢。 一定要找到忘卻迷霧，讓現實中的人們忘記惡夢。"/>
+      <imgdir name="yes">
+        <string name="0" value="問能在哪裡得到忘卻迷霧？ 這個嘛… 為了忘記，確實需要#b時間#k。"/>
+      </imgdir>
+      <imgdir name="stop"></imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="31961">
+    <imgdir name="0">
+      <string name="0" value="#b(怎樣才能找到忘卻迷霧呢？ 說為了忘記，需要時間…)"/>
+      <string name="1" value="#b(時間…如果是時間的話，會不會和時間神殿有關呢？ 去問問神殿管理人有關忘卻迷霧吧。 如果是他的話，說不定知道些什麼。)"/>
+      <imgdir name="stop"></imgdir>
+      <imgdir name="yes">
+        <string name="0" value="#b(回到時間神殿，見見神殿管理人。)"/>
+      </imgdir>
+      <imgdir name="no">
+        <string name="0" value="#b(再考慮一下吧。)"/>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <string name="0" value="好像好久沒見了。 聽說你調查了未來之門。 你說未來之門還沒有打開，一切都是造假的夢境？"/>
+      <imgdir name="yes">
+        <string name="0" value="我們不是女神。只不過是必死之人的我們，看未來時，其影響是無法預測的。 在神聖的神殿裡有人用陰謀詭計，雖然很讓人不高興，但另一方面，#b未來之門沒有被打開，真是萬幸#k。"/>
+        <string name="1" value="順便問一下，找我有什麼事？ 嗯？問我知不知道忘卻迷霧？"/>
+      </imgdir>
+      <imgdir name="stop"></imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="31962">
+    <imgdir name="0"></imgdir>
+    <imgdir name="1">
+      <string name="0" value="來找我有什麼事？ 需要魔法的提煉嗎？"/>
+      <string name="1" value="嗯？需要忘卻迷霧嗎？ 恩，如果是那個的話，已經有了。 需要多少？ 如果你幫助我研究的話，我可以分給你一些…。"/>
+      <imgdir name="yes">
+        <string name="0" value="什麼？需要能覆蓋幾個村莊的迷霧？ 就算是國家，也沒有那麼多強力的忘卻迷霧。 到底要用在哪裡? 有那麼多事情想忘記嗎？"/>
+      </imgdir>
+      <imgdir name="stop">
+        <imgdir name="npc">
+          <string name="0" value="在過去的大門的那邊#b忘卻之路#k上有#b魔法提煉師#k。 如果說能創造出有魔法的東西，他是專業的。 再加上如果是跟忘卻有關的東西他接觸過很多次，應該很容易就能做出來。"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="31963">
+    <imgdir name="0">
+      <string name="0" value="說要用於夢的世界？呼哦…恩…那樣的話可以理解。 但是什麼都有。 要想製造出如此強大的忘卻迷霧，就必須從頭再提煉。 如果要從那裡開始做的話，可以做給你。"/>
+      <imgdir name="stop"></imgdir>
+      <imgdir name="yes">
+        <string name="0" value="好，那就提煉一下忘卻迷霧吧。 去我的提煉室吧。"/>
+        <string name="1" value="問我去那裡要做什麼？ 那個親自去試試就知道了。 快點動起來吧。 我的#b提煉室就在左邊#k。"/>
+      </imgdir>
+      <imgdir name="no">
+        <string name="0" value="不願意幫我提煉了？ 放棄用錢可以買任何東西的想法。"/>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <string name="0" value="不錯不錯。 你果然有用。 多虧了你，我才能進行有趣的研究。"/>
+      <imgdir name="yes">
+        <string name="0" value="啊，當然不是只有我的研究結束了。 我還做了你想要的忘卻精華。等我一下，我幫你裝進珠子裡。"/>
+      </imgdir>
+      <imgdir name="stop">
+        <imgdir name="default">
+          <string name="0" value="問我去那裡要做什麼？ 那個親自去試試就知道了。 快點動起來吧。 我的#b提煉室就在左邊#k。"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="31964">
+    <imgdir name="0">
+      <string name="0" value="來，這是一顆提煉為最上級含有忘卻精華的珠子。這種程度的話，可以充分達到你想要的效果吧？ 拿走吧。"/>
+      <imgdir name="stop"></imgdir>
+      <imgdir name="yesEx">
+        <imgdir name="0">
+          <string name="msg" value="#b(魔法提煉師送來了蘊含忘卻精華的珠子。 現在再次去尋找夢的背後的記憶者吧。)"/>
+          <int name="userSay" value="1"/>
+          <int name="imgPos" value="1"/>
+        </imgdir>
+      </imgdir>
+      <imgdir name="no">
+        <string name="0" value="什麼啊？不需要忘卻精華嗎？ 那我拿走了？"/>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1"></imgdir>
+  </imgdir>
+  <imgdir name="31965">
+    <imgdir name="0"></imgdir>
+    <imgdir name="1">
+      <string name="0" value="至此&lt;虛假的未來&gt;事件告一段落。但是，一切還沒有結束。 因為創造夢的世界的黑色魔法師的新軍團長仍然存在。"/>
+      <string name="1" value="我們組成了#b聯盟#k，#b西格諾斯女皇#k覺醒後得到了力量。 可是敵人也不容小覷。 #r黑魔法師#k正在紮紮實實地鞏固自己的勢力。 也就是說，在現有的軍團長的基礎上，以#r新軍團長#k們開始完成戰力。"/>
+      <string name="2" value="這個 #r新軍團長#k是何方神聖，聯盟會另外進行調查。多虧了#b#h0##k，對於描繪敵人輪廓有相當大的幫助。謝謝你。"/>
+      <imgdir name="yes">
+        <string name="0" value="辛苦了，休息一下吧。 要不繼續修煉也行。 如果還有別的事情發生，我再以聯盟給予任務。先告辭了。"/>
+      </imgdir>
+      <imgdir name="stop">
+        <imgdir name="npc">
+          <string name="0" value="切斷與惡夢的連結了嗎？ 哦哦，真讓人吃驚。 怎麼做的，你能不能來說明一下？ 我會在聯盟會議場和大家一起等你。"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="31093">
+    <imgdir name="0">
+      <string name="0" value="如果什麼都沒辦法做的時候，看著周圍村民受到痛苦，比想像中還要難受喔。"/>
+      <string name="1" value="對於代替無力的我，幫助在勇士之村受到痛苦的村民，對你真心的表示感謝。"/>
+      <imgdir name="stop"></imgdir>
+      <imgdir name="yes">
+        <string name="0" value="請稍等。\r\n#b(再次向修行者搭話吧。)#k\r\n"/>
+      </imgdir>
+      <imgdir name="no">
+        <string name="0" value="真可惜，如果想法變了，就再跟我說吧。"/>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <string name="0" value="謝謝你的等候。"/>
+      <string name="1" value="這是我認可你是戰士的證明。"/>
+      <imgdir name="stop"></imgdir>
+      <imgdir name="yes">
+        <string name="0" value="這是證明你充分具有劍士資格的標誌。\r\n真的謝謝你。"/>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="15177">
+    <imgdir name="0"></imgdir>
+    <imgdir name="1"></imgdir>
+  </imgdir>
+  <imgdir name="15196">
+    <imgdir name="0">
+      <string name="0" value="為了紀念怪物公園重新裝修，我們準備了#b星期勳章#k的服務。如果在一周的各天完成怪物公園#b30次#k或終極怪物公園#b3次#k，就會贈予該日的#b怪物公園星期勳章#k！"/>
+      <string name="1" value="#b星期勳章#k是一個特殊的勳章而在相關星期時，會發動 #b隱藏的效果喔#k。怎麼樣，很神奇吧？有沒有感覺到湧出一些很想擁有的心情嗎？呵呵。"/>
+      <string name="2" value="只要滿足完成怪物公園#b30次#k或完成終極怪物公園#b3次#k其中之一就行了，這樣的難度應該還行吧？哈哈！如何，要挑戰看看嗎？ "/>
+      <imgdir name="stop"></imgdir>
+      <imgdir name="yes">
+        <string name="0" value="若獲得了 #b所有星期勳章#k的話，雖然沒有很特別而一點都不有趣，可是給你 #b更好的勳章#k吧。那麼請多多使用全新的怪物公園吧！哈哈哈！"/>
+      </imgdir>
+      <imgdir name="no">
+        <string name="0" value="反正要進行怪物公園的話，接受一下應該會比較好吧？\n若不喜歡的話，就沒辦法了！呵呵。"/>
+      </imgdir>
+    </imgdir>
+    <imgdir name="1">
+      <string name="0" value="喔喔，收集了#b所有星期勳章#k的優良客戶呢！\n我認定為你是#b#e&lt;七耀的怪物公園er&gt;#n#k吧！哈哈哈！"/>
+      <imgdir name="stop">
+        <imgdir name="default">
+          <string name="0" value="在一周的各天完成怪物公園#b30次#k或終極怪物公園#b3次#k，收集#b7個星期勳章#k吧！"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="15181">
+    <imgdir name="0"></imgdir>
+    <imgdir name="1">
+      <string name="0" value="你成功挑戰怪物公園#b星期一勳章#k了！恭喜你！"/>
+      <imgdir name="stop">
+        <imgdir name="default">
+          <string name="0" value="若想獲得星期一勳章，就要在星期一完成怪物公園#b30次#k，或完成終極怪物公園#b3次#k次。你目前才各完成#b#R15179Ex1Ref15181#次#k與#b#R15179Exex1Ref15181#次#k而已，呵呵。"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="15182">
+    <imgdir name="0"></imgdir>
+    <imgdir name="1">
+      <string name="0" value="你成功挑戰怪物公園#b星期二勳章#k了！恭喜你！"/>
+      <imgdir name="stop">
+        <imgdir name="default">
+          <string name="0" value="若想獲得星期二勳章，就要在星期二完成怪物公園#b30次#k，或完成終極怪物公園#b3次#k次。你目前才各完成#b#R15179Ex2Ref15182#次#k與#b#R15179Exex2Ref15182#次#k而已，呵呵。"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="15183">
+    <imgdir name="0"></imgdir>
+    <imgdir name="1">
+      <string name="0" value="你成功挑戰怪物公園#b星期三勳章#k了！恭喜你！"/>
+      <imgdir name="stop">
+        <imgdir name="default">
+          <string name="0" value="若想獲得星期三勳章，就要在星期三完成怪物公園#b30次#k，或完成終極怪物公園#b3次#k次。你目前才各完成#b#R15179Ex3Ref15183#次#k與#b#R15179Exex3Ref15183#次#k而已，呵呵。"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="15184">
+    <imgdir name="0"></imgdir>
+    <imgdir name="1">
+      <string name="0" value="你成功挑戰怪物公園#b星期四勳章#k了！恭喜你！"/>
+      <imgdir name="stop">
+        <imgdir name="default">
+          <string name="0" value="若想獲得星期四勳章，就要在星期四完成怪物公園#b30次#k，或完成終極怪物公園#b3次#k次。你目前才各完成#b#R15179Ex4Ref15184#次#k與#b#R15179Exex4Ref15184#次#k而已，呵呵。"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="15185">
+    <imgdir name="0"></imgdir>
+    <imgdir name="1">
+      <string name="0" value="你成功挑戰怪物公園#b星期五勳章#k了！恭喜你！"/>
+      <imgdir name="stop">
+        <imgdir name="default">
+          <string name="0" value="若想獲得星期五勳章，就要在星期五完成怪物公園#b30次#k，或完成終極怪物公園#b3次#k次。你目前才各完成#b#R15179Ex5Ref15185#次#k與#b#R15179Exex5Ref15185#次#k而已，呵呵。"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="15186">
+    <imgdir name="0"></imgdir>
+    <imgdir name="1">
+      <string name="0" value="你成功挑戰怪物公園#b星期六勳章#k了！恭喜你！"/>
+      <imgdir name="stop">
+        <imgdir name="default">
+          <string name="0" value="若想獲得星期六勳章，就要在星期六完成怪物公園#b30次#k，或完成終極怪物公園#b3次#k次。你目前才各完成#b#R15179Ex6Ref15186#次#k與#b#R15179Exex6Ref15186#次#k而已，呵呵。"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="15187">
+    <imgdir name="0"></imgdir>
+    <imgdir name="1">
+      <string name="0" value="你成功挑戰怪物公園#b星期天勳章#k了！恭喜你！"/>
+      <imgdir name="stop">
+        <imgdir name="default">
+          <string name="0" value="若想獲得星期天勳章，就要在星期天完成怪物公園#b30次#k，或完成終極怪物公園#b3次#k次。你目前才各完成#b#R15179Ex0Ref15187#次#k與#b#R15179Exex0Ref15187#次#k而已，呵呵。"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="15188">
+    <imgdir name="0"></imgdir>
+    <imgdir name="1"></imgdir>
+  </imgdir>
 </imgdir>

@@ -20,7 +20,9 @@ Then read only the references matching the requested surface:
 - Quest IMG, quest XML, quest scripts, or Workbench task-platform changes:
   [references/quest.md](references/quest.md).
 - Maps, life nodes, NPCs, mobs, bosses, or their String records:
-  [references/map-npc-mob.md](references/map-npc-mob.md).
+  [references/map-npc-mob.md](references/map-npc-mob.md). When migrating
+  maps or mobs, that file’s gap / `connect` rope / ballistic sections are
+  required, not optional.
 - Items, icons, Etc/String records, quest drops, or inventory-facing resources:
   [references/item-string.md](references/item-string.md).
 
@@ -57,14 +59,9 @@ before editing. It defines the evidence gate, reserved packet markers, native
   routing, or a runtime that depends on a rebuilt DLL, compile it with the
   checked-in build script without waiting for a separate authorization.
 - Never copy unverified artifacts to Downloads or another delivery location.
-- After the requested fix is verified, synchronize the complete runtime file
-  set for that fix to `/Users/lizixian/Downloads/路西德/` (or the explicitly
-  requested delivery folder). Include every client file the user must replace:
-  IMGs, strings, MCV/Effect resources, and compiled DLLs. Preserve each file's
-  in-client relative path (`Data/...` under `clien/Data/`, DLLs at the `clien/`
-  root). Compare SHA-256 hashes between source and destination. Do not include
-  unrelated worktree changes, baselines, backups, generated packages, or probe
-  files.
+- After the requested fix is verified, deliver **only this task's modified
+  runtime files** to `/Users/lizixian/Downloads/路西德/` (or the explicitly
+  requested delivery folder). See [Delivery scope](#delivery-scope).
 
 ## Work sequence
 
@@ -95,17 +92,36 @@ After static gates pass:
    compiler command that may omit linker or compatibility flags.
 2. Verify that the output is the expected 32-bit Windows DLL and inspect its
    repository path and SHA-256 hash.
-3. Copy the rebuilt DLL together with every other runtime file the change
-   requires to `/Users/lizixian/Downloads/路西德/`, preserving in-client paths
-   (DLL at the client root, for example `BeiDouSetItemCompat.dll`).
+3. If this task rebuilt the DLL, copy that DLL with the other files this
+   task modified to `/Users/lizixian/Downloads/路西德/`, preserving in-client
+   paths (DLL at the client root, for example `BeiDouSetItemCompat.dll`).
 4. Compare source and delivered SHA-256 hashes for every copied file and
    require an exact match.
-5. Report the build result, the full delivery list, matching hashes, and
-   remaining real-client checks.
+5. Report the build result, the delivery list for **this task only**, matching
+   hashes, and remaining real-client checks.
 
-Do not leave an older delivery copy in place after reporting success. Do not
-omit the DLL because only IMG or Java changed if the DLL routing was also
-edited in the same task.
+Do not omit the DLL because only IMG or Java changed if the DLL routing was
+also edited in the same task.
+
+## Delivery scope
+
+Each delivery is a delta for the current user request, not a recap of the
+feature or of earlier turns in the same chat.
+
+- Recreate `/Users/lizixian/Downloads/路西德/` (or empty it) so the folder
+  contains only this task's payload. Do not leave a previous drop mixed in.
+- Copy only runtime files this task created or modified after static gates
+  pass: client IMGs/strings/MCV/Effect/DLLs, matching server XML, and scripts
+  that actually changed. Preserve in-client relative paths (`Data/...` under
+  `clien/Data/`, DLLs at the `clien/` root, server files under `gms-server/`).
+- Do not re-copy files that this task did not change, even if they belong to
+  the same map, skill, NPC, course, or a prior delivery in this conversation.
+- Do not copy unchanged siblings from the same directory.
+- Do not include unrelated worktree changes, baselines, backups, generated
+  packages, probe files, or verification WZ packages.
+- Compare SHA-256 hashes between source and destination for every copied file.
+- Report the exact file list. If the user later asks to sync again without new
+  edits, say there is nothing new to deliver.
 
 ## Stopping conditions
 

@@ -37,6 +37,11 @@ rtk git diff --check
 Run broader contracts when feasible. Report unrelated pre-existing failures;
 do not restore unrelated work or weaken assertions to obtain a green result.
 
+For migrated maps and mobs, also require the gap / `connect` / ballistic
+checks in [map-npc-mob.md](map-npc-mob.md): `0..max` object names, modern
+`l1` remapped only when outside `0–4`, and `ball` attacks with `type=2`,
+`bulletSpeed`, and `hit/attach=1`.
+
 Do not run WZ packing or Maven packaging as part of the default workflow.
 Rebuild the server JAR only when the user explicitly requests that artifact.
 If the task changed a compatibility DLL or its routing, compile that DLL with
@@ -59,10 +64,11 @@ Before reporting completion:
 
 ## Delivery
 
-Validate locally first, including any required DLL rebuild. Copy the complete
-runtime file set for the fix (client IMG/string/MCV/Effect files and compiled
-DLLs), preserve in-client names and layout under
-`/Users/lizixian/Downloads/路西德/`, compare source/destination SHA-256 for
-every copy, and report the exact directory. Do not copy temporary baselines,
-backups, verification WZ files, probe builds, or unrelated dirty-worktree
-files.
+Validate locally first, including any required DLL rebuild for files this
+task changed. Recreate `/Users/lizixian/Downloads/路西德/` so it contains
+**only this task's created or modified runtime files**. Preserve in-client
+names and layout. Do not re-copy unchanged files from earlier tasks, even
+when they share a feature, map, or conversation. Compare
+source/destination SHA-256 for every copy, and report the exact file list.
+Do not copy temporary baselines, backups, verification WZ files, probe
+builds, or unrelated dirty-worktree files.

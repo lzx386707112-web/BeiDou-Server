@@ -76,15 +76,19 @@ the wrapper also loads `BeiDouWeatherCompat.dll` after the core; a missing
 weather DLL is logged but does not prevent the existing HP/MP hooks from being
 installed. See the adjacent `weather-compat` project for its Windows-only build.
 
-The client-side weather master switch is in `config.ini`:
+The client-side weather master switch is in `config.ini` next to `BeiDou.exe`:
 
 ```ini
 [optional]
-enableWeatherSystem=true
+enableWeatherSystem=false
 ```
 
 Set it to `false` (also accepts `0`, `off`, or `no`) to skip loading
 `BeiDouWeatherCompat.dll` entirely. A missing key defaults to enabled.
+This key is read by `DawnWarriorSkillCompat.dll`, not by `ijl15.dll`.
+Other `config.ini` options continuing to work does not mean this switch was
+applied. The wrapper reads the file with the same `CreateFile` path used for
+its log, then skips `LoadLibrary` when the value is disabled.
 
 Install the tiny loader after building:
 

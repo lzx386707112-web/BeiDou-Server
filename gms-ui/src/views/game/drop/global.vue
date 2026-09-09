@@ -70,14 +70,14 @@
               <span v-else>{{ record.itemId }}</span>
             </template>
           </a-table-column>
-          <a-table-column title="类别" :width="100" align="center">
+          <a-table-column title="类别" :width="80" align="center">
             <template #cell="{ record }">
               <a-tag :color="getCategoryColor(record.itemCategory)" size="small">
                 {{ record.itemCategory || '未知' }}
               </a-tag>
             </template>
           </a-table-column>
-          <a-table-column title="物品" :width="230" align="center">
+          <a-table-column title="物品" :width="250" align="center">
             <template #cell="{ record }">
               <a-button
                 v-if="record.itemId === 0"

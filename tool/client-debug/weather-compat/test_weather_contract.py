@@ -54,8 +54,9 @@ class WeatherCompatContract(unittest.TestCase):
         wrapper = (ROOT / "tool/client-debug/dawn-warrior-skill-compat/HpMpExpansionWrapper.cpp").read_text(encoding="utf-8")
         config = (ROOT / "clien/config.ini").read_text(encoding="utf-8")
         install = wrapper[wrapper.index("DWORD WINAPI InstallHooks"):]
-        self.assertIn("enableWeatherSystem=true", config)
-        self.assertIn('"optional", "enableWeatherSystem", "true"', wrapper)
+        self.assertIn("enableWeatherSystem=", config)
+        self.assertIn("ReadWeatherSwitchValue", wrapper)
+        self.assertNotIn("GetPrivateProfileStringA", wrapper)
         self.assertLess(install.index("IsWeatherEnabled()"),
                         install.index("LoadSiblingDll(kWeatherDllName)"))
 

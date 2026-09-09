@@ -12258,4 +12258,30 @@
       <int name="price" value="180" />
       <int name="lv" value="120" />
     </imgdir>
-  </imgdir></imgdir>
+  </imgdir>  <imgdir name="04000828">
+    <imgdir name="info">
+      <canvas name="icon" width="31" height="28" format="1">
+        <vector name="origin" x="0" y="28"/>
+      </canvas>
+      <canvas name="iconRaw" width="31" height="27" format="1">
+        <vector name="origin" x="0" y="28"/>
+      </canvas>
+      <int name="slotMax" value="200"/>
+      <int name="lv" value="192"/>
+      <int name="autoPrice" value="1"/>
+    </imgdir>
+  </imgdir>
+  <imgdir name="04000832">
+    <imgdir name="info">
+      <canvas name="icon" width="32" height="33" format="1">
+        <vector name="origin" x="0" y="33"/>
+      </canvas>
+      <canvas name="iconRaw" width="32" height="33" format="1">
+        <vector name="origin" x="0" y="33"/>
+      </canvas>
+      <int name="slotMax" value="200"/>
+      <int name="lv" value="194"/>
+      <int name="autoPrice" value="1"/>
+    </imgdir>
+  </imgdir>
+</imgdir>

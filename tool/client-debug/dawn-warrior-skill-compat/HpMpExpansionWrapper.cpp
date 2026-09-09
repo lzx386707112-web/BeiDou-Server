@@ -328,29 +328,100 @@ bool LoadSiblingDll(const char* dllName) {
     return LoadLibraryA(path) != nullptr;
 }
 
-bool IsWeatherEnabled() {
-    char configPath[MAX_PATH] = {};
-    const DWORD length = GetModuleFileNameA(gInstance, configPath, MAX_PATH);
-    if (length == 0 || length >= MAX_PATH) return true;
-    char* fileName = configPath;
-    for (char* cursor = configPath; *cursor != '\0'; ++cursor) {
-        if (*cursor == '\\' || *cursor == '/') fileName = cursor + 1;
+bool JoinSiblingPath(HMODULE module, const char* fileName, char* path, DWORD pathSize) {
+    const DWORD length = GetModuleFileNameA(module, path, pathSize);
+    if (length == 0 || length >= pathSize) return false;
+    char* name = path;
+    for (char* cursor = path; *cursor != '\0'; ++cursor) {
+        if (*cursor == '\\' || *cursor == '/') name = cursor + 1;
     }
-    const SIZE_T prefixLength = static_cast<SIZE_T>(fileName - configPath);
-    if (prefixLength + sizeof("config.ini") > MAX_PATH) return true;
-    lstrcpyA(fileName, "config.ini");
+    if (static_cast<SIZE_T>(name - path) + lstrlenA(fileName) + 1 > pathSize) return false;
+    lstrcpyA(name, fileName);
+    return true;
+}
 
-    char value[16] = {};
-    GetPrivateProfileStringA("optional", "enableWeatherSystem", "true",
-                             value, static_cast<DWORD>(sizeof(value)), configPath);
-    return lstrcmpiA(value, "false") != 0 &&
-           lstrcmpiA(value, "off") != 0 &&
-           lstrcmpiA(value, "no") != 0 &&
-           lstrcmpA(value, "0") != 0;
+void TrimSpaces(char* text) {
+    char* start = text;
+    while (*start == ' ' || *start == '\t' || *start == '\r') ++start;
+    char* end = start + lstrlenA(start);
+    while (end > start && (end[-1] == ' ' || end[-1] == '\t' || end[-1] == '\r')) --end;
+    *end = '\0';
+    if (start == text) return;
+    char* dest = text;
+    while (*start != '\0') *dest++ = *start++;
+    *dest = '\0';
+}
+
+bool ReadWeatherSwitchValue(const char* path, char* value, DWORD valueSize) {
+    HANDLE file = CreateFileA(path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE,
+                              nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+    if (file == INVALID_HANDLE_VALUE) return false;
+    char buffer[8192];
+    DWORD read = 0;
+    const BOOL ok = ReadFile(file, buffer, sizeof(buffer) - 1, &read, nullptr);
+    CloseHandle(file);
+    if (!ok || read == 0) return false;
+    buffer[read] = '\0';
+    char* cursor = buffer;
+    if (static_cast<unsigned char>(cursor[0]) == 0xEF &&
+        static_cast<unsigned char>(cursor[1]) == 0xBB &&
+        static_cast<unsigned char>(cursor[2]) == 0xBF) {
+        cursor += 3;
+    }
+    bool found = false;
+    while (*cursor != '\0') {
+        char* line = cursor;
+        while (*cursor != '\0' && *cursor != '\n') ++cursor;
+        if (*cursor == '\n') {
+            *cursor = '\0';
+            ++cursor;
+        }
+        char* comment = line;
+        while (*comment != '\0' && *comment != ';' && *comment != '#') ++comment;
+        *comment = '\0';
+        TrimSpaces(line);
+        if (line[0] == '\0' || line[0] == '[') continue;
+        char* equals = line;
+        while (*equals != '\0' && *equals != '=') ++equals;
+        if (*equals != '=') continue;
+        *equals = '\0';
+        char* key = line;
+        char* rawValue = equals + 1;
+        TrimSpaces(key);
+        TrimSpaces(rawValue);
+        if (lstrcmpiA(key, "enableWeatherSystem") != 0) continue;
+        lstrcpynA(value, rawValue, static_cast<int>(valueSize));
+        found = true;
+    }
+    return found;
+}
+
+bool IsDisabledWeatherValue(const char* value) {
+    return lstrcmpiA(value, "false") == 0 ||
+           lstrcmpiA(value, "off") == 0 ||
+           lstrcmpiA(value, "no") == 0 ||
+           lstrcmpA(value, "0") == 0;
+}
+
+bool IsWeatherEnabled() {
+    char value[32] = "true";
+    char path[MAX_PATH] = {};
+    char logged[MAX_PATH + 64] = {};
+    bool haveValue = false;
+    if (JoinSiblingPath(nullptr, "config.ini", path, MAX_PATH)) {
+        haveValue = ReadWeatherSwitchValue(path, value, sizeof(value));
+    }
+    if (!haveValue && JoinSiblingPath(gInstance, "config.ini", path, MAX_PATH)) {
+        haveValue = ReadWeatherSwitchValue(path, value, sizeof(value));
+    }
+    wsprintfA(logged, "WEATHER CONFIG: enableWeatherSystem=%s path=%s",
+              haveValue ? value : "true(default)", haveValue ? path : "(missing)");
+    LogLine(logged);
+    return !IsDisabledWeatherValue(value);
 }
 
 DWORD WINAPI InstallHooks(LPVOID) {
-    LogLine("LOAD: HP/MP expansion wrapper v70");
+    LogLine("LOAD: HP/MP expansion wrapper v71");
     if (!LoadSiblingDll(kCoreDllName)) {
         LogLine("HPMP ERROR: verified compatibility core failed to load");
         return 1;

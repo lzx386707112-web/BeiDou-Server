@@ -426,6 +426,41 @@ async function refreshComparisonAfterCopy(path) {
   await loadPreview(loadSequence);
 }
 
+async function refreshTreeAfterDelete(parentPath) {
+  const tree = $("tree");
+  const scrollTop = tree.scrollTop;
+  const loadSequence = ++state.loadSequence;
+  const data = await post("/api/compare", {
+    kind: state.kind,
+    leftPath: state.leftPath,
+    rightPath: state.rightPath,
+  });
+  if (loadSequence !== state.loadSequence) return;
+  state.rows = data.nodes;
+  state.leftPath = data.leftPath;
+  state.rightPath = data.rightPath;
+  state.leftInfo = data.leftInfo;
+  state.rightInfo = data.rightInfo;
+  state.compatibility = data.compatibility;
+  if (state.kind === "mob" && state.mobSources) renderMobSources(state.mobSources);
+  buildTreeIndex();
+  for (let parent = parentPath; parent; parent = parent.includes("/") ? parent.slice(0, parent.lastIndexOf("/")) : "") {
+    state.expanded.add(parent);
+  }
+  state.expanded.add("");
+  $("nodeCount").textContent = `${data.nodes.length} 节点`;
+  $("changedCount").textContent = data.counts.changed;
+  $("leftOnlyCount").textContent = data.counts.leftOnly;
+  $("rightOnlyCount").textContent = data.counts.rightOnly;
+  renderCompatibility(data.compatibility);
+  renderTree();
+  tree.scrollTop = scrollTop;
+  $("nodeActions").hidden = false;
+  if (state.rowByPath.has(parentPath)) selectNode(parentPath); else updateNodeActions();
+  // selectNode may call renderTree() again, so restore scroll again
+  tree.scrollTop = scrollTop;
+}
+
 async function loadPreview(loadSequence = state.loadSequence) {
   try {
     if (state.kind === "map") {
@@ -1364,13 +1399,12 @@ async function deleteNode() {
   if (!state.selectedPath) return;
   const deletedPath = state.selectedPath;
   const parentPath = deletedPath.includes("/") ? deletedPath.slice(0, deletedPath.lastIndexOf("/")) : "";
-  if (!confirm(`删除节点 ${state.selectedPath}？`)) return;
   try {
     const syncServer = $("syncServer").checked;
     const data = await post("/api/delete", {sourcePath: state.leftPath, path: deletedPath, dryRun: false, backup: true, syncServer});
     const targetText = syncServer ? "客户端与服务端" : "客户端";
     const resultText = `${targetText}删除完成，左侧节点已重新加载\n${JSON.stringify(data, null, 2)}`;
-    await loadComparison();
+    await refreshTreeAfterDelete(parentPath);
     revealNode(parentPath);
     showResult(resultText);
   } catch (error) {

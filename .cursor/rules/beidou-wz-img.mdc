@@ -9,6 +9,8 @@ For any task that diagnoses, reads, changes, migrates, verifies, or delivers cli
 
 1. Read and follow `.cursor/skills/beidou-wz-img/SKILL.md` (same contract as `.codex/skills/beidou-wz-img/SKILL.md`).
 2. Read `references/wzskill.md` and `references/verification.md` before editing.
-3. Never full-serialize an existing client IMG to change a few nodes.
-4. Preserve the worktree; do not revert unrelated user changes.
-5. Deliver only after static gates pass. Auto-compile any required compatibility DLL. Copy the complete runtime file set to `/Users/lizixian/Downloads/路西德/` with matching SHA-256 hashes.
+3. Map/mob migrations must follow `references/map-npc-mob.md` for numeric
+   `obj`/`back` gaps, `connect` ropes, and `ball` projectile fields.
+4. Never full-serialize an existing client IMG to change a few nodes.
+5. Preserve the worktree; do not revert unrelated user changes.
+6. Deliver only after static gates pass. Auto-compile any required compatibility DLL. Copy **only this task's modified runtime files** to `/Users/lizixian/Downloads/路西德/` with matching SHA-256 hashes. Do not re-deliver unchanged files from earlier tasks.

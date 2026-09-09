@@ -83,4 +83,18 @@
       <int name="slotMax" value="1000"/>
     </imgdir>
   </imgdir>
+  <imgdir name="04310020">
+    <imgdir name="info">
+      <canvas name="icon" width="32" height="32" format="1">
+        <vector name="origin" x="-3" y="30"/>
+      </canvas>
+      <canvas name="iconRaw" width="32" height="32" format="1">
+        <vector name="origin" x="-3" y="30"/>
+      </canvas>
+      <int name="notSale" value="1"/>
+      <int name="price" value="1"/>
+      <int name="slotMax" value="1000"/>
+      <int name="tradeBlock" value="1"/>
+    </imgdir>
+  </imgdir>
 </imgdir>

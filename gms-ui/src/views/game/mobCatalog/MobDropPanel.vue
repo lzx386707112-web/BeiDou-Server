@@ -265,6 +265,7 @@
     border: 1px solid var(--color-neutral-3);
     border-radius: 6px;
     background: var(--color-bg-2);
+    min-width: 0;
 
     &:hover {
       border-color: var(--color-primary-light-4);
@@ -285,6 +286,8 @@
     .item-name {
       font-weight: 500;
       color: var(--color-text-1);
+      flex: 1;
+      min-width: 0;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
@@ -306,6 +309,7 @@
     gap: 16px;
     font-size: 13px;
     color: var(--color-text-2);
+    flex-shrink: 0;
 
     span {
       white-space: nowrap;

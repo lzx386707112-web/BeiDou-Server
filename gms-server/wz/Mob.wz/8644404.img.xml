@@ -108,6 +108,7 @@
   </imgdir>
   <imgdir name="attack1">
     <imgdir name="info">
+      <int name="type" value="2"/>
       <int name="attackAfter" value="840"/>
       <imgdir name="range">
         <int name="r" value="300"/>
@@ -138,6 +139,7 @@
           <vector name="origin" x="70" y="72"/>
           <int name="z" value="0"/>
         </canvas>
+        <int name="attach" value="1"/>
       </imgdir>
       <imgdir name="ball">
         <canvas name="0" width="123" height="77" format="1">
@@ -153,6 +155,7 @@
           <int name="z" value="0"/>
         </canvas>
       </imgdir>
+      <int name="bulletSpeed" value="300"/>
     </imgdir>
     <canvas name="0" width="111" height="108" format="1">
       <vector name="origin" x="46" y="108"/>

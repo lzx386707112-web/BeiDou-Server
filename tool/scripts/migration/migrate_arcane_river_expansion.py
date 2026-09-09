@@ -308,6 +308,7 @@ OBJ_UNSUPPORTED = {
     "SN0", "SN_count", "dynamic", "move", "name", "piece", "spineAni",
     "questex", "tags", "timeScale",
     "cantThrough", "fadeName", "fadeType", "groupName", "quest", "sideType",
+    "r",
 }
 BACK_UNSUPPORTED = {"backTags", "w", "wx", "wy", "spineAni", "flowX", "flowY"}
 LIFE_UNSUPPORTED = {"hold", "nofoothold"}
@@ -323,6 +324,7 @@ MOB_INFO_UNSUPPORTED = {
     "passive", "publicReward", "showNotRemoteDam", "skill", "stalking",
     "trans", "useReaction", "revive",
     "mobJobCategory", "opacityLayer",
+    "charismaEXP", "partyBonusMob", "HPgaugeHide",
 }
 NPC_INFO_UNSUPPORTED = {"condition1", "miniMapType", "sayFlip"}
 NPC_ROOT_UNSUPPORTED_PREFIX = "condition"
@@ -347,7 +349,10 @@ LEGACY_BALLISTIC_ATTACKS = {
     8644007: (2, 300),
     8644008: (1, 300),
     8644010: (1, 300),
-    8644709: (1, None),
+    8644412: (1, 300),
+    8644709: (1, 300),
+    8620002: (3, 300),
+    8620005: (3, 300),
 }
 
 
@@ -1032,6 +1037,11 @@ def sanitize_mob(root: WzSubProperty, mob_id: int) -> None:
     project_legacy_mob_attack_info(root, mob_id)
     for name in MOB_INFO_UNSUPPORTED:
         remove_child(info, name)
+    mob_type = info.child("mobType")
+    if isinstance(mob_type, WzStringProperty):
+        # Old-client combat reads integer mobType. TMS strings such as "10N"
+        # make the legacy client miss or crash when the mob first-attacks.
+        remove_child(info, "mobType")
     for name, value in OLD_MOB_FIELDS.items():
         if info.child(name) is None:
             set_int(info, name, value)

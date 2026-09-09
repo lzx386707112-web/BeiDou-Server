@@ -143,6 +143,16 @@ an incremental path before modifying the production IMG.
   visible frame before declaring an effect complete.
 - A valid Canvas header is not enough. Decode the payload and check that the
   expected frames contain visible pixels.
+- When migrating maps, scan `back` and each layer `obj` for numeric name
+  gaps (`0..max`). The old client walks that range; holes after stripping
+  modern `connect` crash or drop geometry. Fill by raw-inserting sibling
+  clones. Do not full-serialize. See skill `references/map-npc-mob.md`.
+- Project TMS `connect` ropes onto `connect/{rope|ladder}/0/{0-4}`. Remap
+  only modern `l1` values outside `0-4`. Do not rewrite working GMS town
+  ropes that already use `l1=1..4`.
+- Mobs with `attack*/info/ball` must match the `8641002` type=2 contract:
+  `type=2`, `bulletSpeed`, and `hit/attach=1` when `hit` exists. Insert
+  those scalars incrementally on existing Mob IMGs.
 
 ## Runtime Hooks And Playback Evidence
 
@@ -231,17 +241,21 @@ effect, movement, other-player view, map transition, and repeated casting.
 
 - Never sync an unverified artifact to `/Users/lizixian/Downloads`.
 - Run the required static validation locally first.
-- If the change includes a compatibility DLL, compile it with the project's
-  build script and include it in the delivery set. Do not wait for a separate
-  authorization.
+- If this task changed a compatibility DLL, compile it with the project's
+  build script and include that rebuilt DLL in the delivery set. Do not wait
+  for a separate authorization.
 - Rebuild or package the server JAR only when the user explicitly requests it.
+- Recreate `/Users/lizixian/Downloads/路西德/` so the drop contains only this
+  task's payload. Do not mix in a previous delivery.
+- Copy only runtime files this task created or modified. Do not re-deliver
+  unchanged files from earlier work, even if they are part of the same
+  feature or conversation.
 - Preserve every delivery filename and requested directory layout.
 - Do not rename files, add version suffixes, or include temporary baselines,
   backups, probe builds, or verification WZ packages.
-- Copy only the runtime files required for the requested change.
 - Compare source and delivery SHA-256 hashes for every copied file.
-- Report the exact delivery directory and any verification that still requires
-  the user's runtime environment.
+- Report the exact delivery directory, the file list for this task, and any
+  verification that still requires the user's runtime environment.
 
 ## Definition Of Done
 
@@ -256,5 +270,6 @@ only when:
 - required static validation gates pass, and any required compatibility DLL is
   rebuilt and delivered;
 - the generator is idempotent;
-- verified delivery files are synchronized with matching hashes; and
+- verified delivery files for **this task only** are synchronized with matching
+  hashes; and
 - remaining real-client risks are stated plainly.

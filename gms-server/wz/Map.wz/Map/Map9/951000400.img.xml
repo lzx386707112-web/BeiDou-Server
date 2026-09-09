@@ -1,0 +1,1086 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<imgdir name="951000400.img">
+  <imgdir name="info">
+    <int name="version" value="10"/>
+    <int name="cloud" value="0"/>
+    <int name="town" value="0"/>
+    <int name="swim" value="0"/>
+    <int name="returnMap" value="951000400"/>
+    <int name="forcedReturn" value="951000400"/>
+    <float name="mobRate" value="4.999997138977051"/>
+    <string name="bgm" value="Bgm58/Warning! Unknown Area"/>
+    <string name="mapMark" value="MonsterPark"/>
+    <int name="fly" value="0"/>
+    <int name="hideMinimap" value="1"/>
+    <int name="fieldLimit" value="35485948"/>
+    <int name="VRTop" value="-1000"/>
+    <int name="VRLeft" value="-2084"/>
+    <int name="VRBottom" value="109"/>
+    <int name="VRRight" value="519"/>
+    <int name="noPsychicGrab" value="1"/>
+  </imgdir>
+  <imgdir name="back">
+    <imgdir name="0">
+      <string name="bS" value="monsterparkEX"/>
+      <int name="front" value="0"/>
+      <int name="ani" value="0"/>
+      <int name="no" value="19"/>
+      <int name="f" value="0"/>
+      <int name="x" value="0"/>
+      <int name="y" value="0"/>
+      <int name="rx" value="0"/>
+      <int name="ry" value="0"/>
+      <int name="type" value="3"/>
+      <int name="cx" value="60"/>
+      <int name="cy" value="60"/>
+      <int name="a" value="255"/>
+    </imgdir>
+    <imgdir name="4">
+      <string name="bS" value="monsterparkEX"/>
+      <int name="front" value="0"/>
+      <int name="ani" value="0"/>
+      <int name="no" value="2"/>
+      <int name="f" value="0"/>
+      <int name="x" value="-1365"/>
+      <int name="y" value="-1087"/>
+      <int name="rx" value="-100"/>
+      <int name="ry" value="-100"/>
+      <int name="type" value="0"/>
+      <int name="cx" value="0"/>
+      <int name="cy" value="0"/>
+      <int name="a" value="255"/>
+    </imgdir>
+    <imgdir name="3">
+      <string name="bS" value="monsterparkEX"/>
+      <int name="front" value="1"/>
+      <int name="ani" value="0"/>
+      <int name="no" value="17"/>
+      <int name="f" value="0"/>
+      <int name="x" value="-539"/>
+      <int name="y" value="-75"/>
+      <int name="rx" value="-100"/>
+      <int name="ry" value="-100"/>
+      <int name="type" value="1"/>
+      <int name="cx" value="0"/>
+      <int name="cy" value="0"/>
+      <int name="a" value="255"/>
+    </imgdir>
+    <imgdir name="2">
+      <string name="bS" value="monsterparkEX"/>
+      <int name="front" value="1"/>
+      <int name="ani" value="0"/>
+      <int name="no" value="10"/>
+      <int name="f" value="0"/>
+      <int name="x" value="157"/>
+      <int name="y" value="-47"/>
+      <int name="rx" value="-95"/>
+      <int name="ry" value="-100"/>
+      <int name="type" value="1"/>
+      <int name="cx" value="800"/>
+      <int name="cy" value="0"/>
+      <int name="a" value="255"/>
+    </imgdir>
+    <imgdir name="5">
+      <string name="bS" value="monsterparkEX"/>
+      <int name="front" value="0"/>
+      <int name="ani" value="0"/>
+      <int name="no" value="3"/>
+      <int name="f" value="0"/>
+      <int name="x" value="-2188"/>
+      <int name="y" value="-1089"/>
+      <int name="rx" value="-100"/>
+      <int name="ry" value="-100"/>
+      <int name="type" value="0"/>
+      <int name="cx" value="0"/>
+      <int name="cy" value="0"/>
+      <int name="a" value="255"/>
+    </imgdir>
+    <imgdir name="6">
+      <string name="bS" value="monsterparkEX"/>
+      <int name="front" value="0"/>
+      <int name="ani" value="0"/>
+      <int name="no" value="4"/>
+      <int name="f" value="0"/>
+      <int name="x" value="-588"/>
+      <int name="y" value="-1119"/>
+      <int name="rx" value="-100"/>
+      <int name="ry" value="-100"/>
+      <int name="type" value="0"/>
+      <int name="cx" value="0"/>
+      <int name="cy" value="0"/>
+      <int name="a" value="255"/>
+    </imgdir>
+    <imgdir name="7">
+      <string name="bS" value="monsterparkEX"/>
+      <int name="front" value="0"/>
+      <int name="ani" value="0"/>
+      <int name="no" value="0"/>
+      <int name="f" value="0"/>
+      <int name="x" value="-1124"/>
+      <int name="y" value="-529"/>
+      <int name="rx" value="-100"/>
+      <int name="ry" value="-100"/>
+      <int name="type" value="0"/>
+      <int name="cx" value="0"/>
+      <int name="cy" value="0"/>
+      <int name="a" value="255"/>
+    </imgdir>
+    <imgdir name="1">
+      <string name="bS" value="monsterparkEX"/>
+      <int name="front" value="1"/>
+      <int name="ani" value="0"/>
+      <int name="no" value="9"/>
+      <int name="f" value="0"/>
+      <int name="x" value="-339"/>
+      <int name="y" value="-122"/>
+      <int name="rx" value="-100"/>
+      <int name="ry" value="-100"/>
+      <int name="type" value="1"/>
+      <int name="cx" value="800"/>
+      <int name="cy" value="0"/>
+      <int name="a" value="255"/>
+    </imgdir>
+  </imgdir>
+  <imgdir name="life"></imgdir>
+  <imgdir name="reactor"></imgdir>
+  <imgdir name="0">
+    <imgdir name="info"></imgdir>
+    <imgdir name="tile"></imgdir>
+    <imgdir name="obj">
+      <imgdir name="1">
+        <string name="oS" value="monsterparkEX"/>
+        <string name="l0" value="foothold"/>
+        <string name="l1" value="basefoothold"/>
+        <string name="l2" value="base"/>
+        <int name="x" value="-1874"/>
+        <int name="y" value="39"/>
+        <int name="z" value="13"/>
+        <int name="f" value="0"/>
+        <int name="zM" value="13"/>
+        <int name="r" value="0"/>
+      </imgdir>
+      <imgdir name="2">
+        <string name="oS" value="monsterparkEX"/>
+        <string name="l0" value="foothold"/>
+        <string name="l1" value="basefoothold"/>
+        <string name="l2" value="base"/>
+        <int name="x" value="-1435"/>
+        <int name="y" value="39"/>
+        <int name="z" value="19"/>
+        <int name="f" value="0"/>
+        <int name="zM" value="14"/>
+        <int name="r" value="0"/>
+      </imgdir>
+      <imgdir name="3">
+        <string name="oS" value="monsterparkEX"/>
+        <string name="l0" value="foothold"/>
+        <string name="l1" value="basefoothold"/>
+        <string name="l2" value="base"/>
+        <int name="x" value="-128"/>
+        <int name="y" value="39"/>
+        <int name="z" value="10"/>
+        <int name="f" value="0"/>
+        <int name="zM" value="12"/>
+        <int name="r" value="0"/>
+      </imgdir>
+      <imgdir name="4">
+        <string name="oS" value="monsterparkEX"/>
+        <string name="l0" value="foothold"/>
+        <string name="l1" value="basefoothold"/>
+        <string name="l2" value="base"/>
+        <int name="x" value="-565"/>
+        <int name="y" value="39"/>
+        <int name="z" value="10"/>
+        <int name="f" value="0"/>
+        <int name="zM" value="12"/>
+        <int name="r" value="0"/>
+      </imgdir>
+      <imgdir name="5">
+        <string name="oS" value="monsterparkEX"/>
+        <string name="l0" value="foothold"/>
+        <string name="l1" value="basefoothold"/>
+        <string name="l2" value="base"/>
+        <int name="x" value="-996"/>
+        <int name="y" value="39"/>
+        <int name="z" value="10"/>
+        <int name="f" value="0"/>
+        <int name="zM" value="12"/>
+        <int name="r" value="0"/>
+      </imgdir>
+      <imgdir name="0">
+        <string name="oS" value="monsterparkEX"/>
+        <string name="l0" value="foothold"/>
+        <string name="l1" value="basefoothold"/>
+        <string name="l2" value="base"/>
+        <int name="x" value="310"/>
+        <int name="y" value="39"/>
+        <int name="z" value="10"/>
+        <int name="f" value="0"/>
+        <int name="zM" value="12"/>
+        <int name="r" value="0"/>
+      </imgdir>
+      <imgdir name="6">
+        <string name="oS" value="monsterparkEX"/>
+        <string name="l0" value="object"/>
+        <string name="l1" value="weed"/>
+        <string name="l2" value="0"/>
+        <int name="x" value="-2096"/>
+        <int name="y" value="-332"/>
+        <int name="z" value="9"/>
+        <int name="f" value="0"/>
+        <int name="zM" value="0"/>
+        <int name="r" value="0"/>
+      </imgdir>
+      <imgdir name="7">
+        <string name="oS" value="monsterparkEX"/>
+        <string name="l0" value="object"/>
+        <string name="l1" value="weed"/>
+        <string name="l2" value="1"/>
+        <int name="x" value="-1386"/>
+        <int name="y" value="-258"/>
+        <int name="z" value="9"/>
+        <int name="f" value="0"/>
+        <int name="zM" value="0"/>
+        <int name="r" value="0"/>
+      </imgdir>
+      <imgdir name="8">
+        <string name="oS" value="monsterparkEX"/>
+        <string name="l0" value="object"/>
+        <string name="l1" value="weed"/>
+        <string name="l2" value="2"/>
+        <int name="x" value="-520"/>
+        <int name="y" value="-337"/>
+        <int name="z" value="9"/>
+        <int name="f" value="0"/>
+        <int name="zM" value="0"/>
+        <int name="r" value="0"/>
+      </imgdir>
+      <imgdir name="9">
+        <string name="oS" value="monsterparkEX"/>
+        <string name="l0" value="object"/>
+        <string name="l1" value="weed"/>
+        <string name="l2" value="3"/>
+        <int name="x" value="-604"/>
+        <int name="y" value="-248"/>
+        <int name="z" value="9"/>
+        <int name="f" value="0"/>
+        <int name="zM" value="0"/>
+        <int name="r" value="0"/>
+      </imgdir>
+      <imgdir name="10">
+        <string name="oS" value="monsterparkEX"/>
+        <string name="l0" value="object"/>
+        <string name="l1" value="weed"/>
+        <string name="l2" value="1"/>
+        <int name="x" value="2"/>
+        <int name="y" value="-255"/>
+        <int name="z" value="9"/>
+        <int name="f" value="0"/>
+        <int name="zM" value="0"/>
+        <int name="r" value="0"/>
+      </imgdir>
+      <imgdir name="11">
+        <string name="oS" value="monsterparkEX"/>
+        <string name="l0" value="object"/>
+        <string name="l1" value="object"/>
+        <string name="l2" value="teleport"/>
+        <int name="x" value="-725"/>
+        <int name="y" value="-127"/>
+        <int name="z" value="9"/>
+        <int name="f" value="0"/>
+        <int name="zM" value="0"/>
+        <int name="r" value="0"/>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="1">
+    <imgdir name="info"></imgdir>
+    <imgdir name="tile"></imgdir>
+    <imgdir name="obj">
+      <imgdir name="0">
+        <string name="oS" value="monsterparkEX"/>
+        <string name="l0" value="foothold"/>
+        <string name="l1" value="basefoothold"/>
+        <string name="l2" value="plant"/>
+        <int name="x" value="-2429"/>
+        <int name="y" value="69"/>
+        <int name="z" value="9"/>
+        <int name="f" value="0"/>
+        <int name="zM" value="15"/>
+        <int name="r" value="0"/>
+      </imgdir>
+      <imgdir name="1">
+        <string name="oS" value="monsterparkEX"/>
+        <string name="l0" value="foothold"/>
+        <string name="l1" value="basefoothold"/>
+        <string name="l2" value="plant"/>
+        <int name="x" value="-2241"/>
+        <int name="y" value="69"/>
+        <int name="z" value="9"/>
+        <int name="f" value="0"/>
+        <int name="zM" value="15"/>
+        <int name="r" value="0"/>
+      </imgdir>
+      <imgdir name="2">
+        <string name="oS" value="monsterparkEX"/>
+        <string name="l0" value="foothold"/>
+        <string name="l1" value="basefoothold"/>
+        <string name="l2" value="plant"/>
+        <int name="x" value="-2053"/>
+        <int name="y" value="69"/>
+        <int name="z" value="9"/>
+        <int name="f" value="0"/>
+        <int name="zM" value="15"/>
+        <int name="r" value="0"/>
+      </imgdir>
+      <imgdir name="3">
+        <string name="oS" value="monsterparkEX"/>
+        <string name="l0" value="foothold"/>
+        <string name="l1" value="basefoothold"/>
+        <string name="l2" value="plant"/>
+        <int name="x" value="-1864"/>
+        <int name="y" value="69"/>
+        <int name="z" value="9"/>
+        <int name="f" value="0"/>
+        <int name="zM" value="16"/>
+        <int name="r" value="0"/>
+      </imgdir>
+      <imgdir name="4">
+        <string name="oS" value="monsterparkEX"/>
+        <string name="l0" value="foothold"/>
+        <string name="l1" value="basefoothold"/>
+        <string name="l2" value="plant"/>
+        <int name="x" value="-1676"/>
+        <int name="y" value="69"/>
+        <int name="z" value="9"/>
+        <int name="f" value="0"/>
+        <int name="zM" value="16"/>
+        <int name="r" value="0"/>
+      </imgdir>
+      <imgdir name="5">
+        <string name="oS" value="monsterparkEX"/>
+        <string name="l0" value="foothold"/>
+        <string name="l1" value="basefoothold"/>
+        <string name="l2" value="plant"/>
+        <int name="x" value="-1488"/>
+        <int name="y" value="69"/>
+        <int name="z" value="9"/>
+        <int name="f" value="0"/>
+        <int name="zM" value="16"/>
+        <int name="r" value="0"/>
+      </imgdir>
+      <imgdir name="6">
+        <string name="oS" value="monsterparkEX"/>
+        <string name="l0" value="foothold"/>
+        <string name="l1" value="basefoothold"/>
+        <string name="l2" value="plant"/>
+        <int name="x" value="-1299"/>
+        <int name="y" value="69"/>
+        <int name="z" value="9"/>
+        <int name="f" value="0"/>
+        <int name="zM" value="17"/>
+        <int name="r" value="0"/>
+      </imgdir>
+      <imgdir name="7">
+        <string name="oS" value="monsterparkEX"/>
+        <string name="l0" value="foothold"/>
+        <string name="l1" value="basefoothold"/>
+        <string name="l2" value="plant"/>
+        <int name="x" value="-1111"/>
+        <int name="y" value="69"/>
+        <int name="z" value="9"/>
+        <int name="f" value="0"/>
+        <int name="zM" value="17"/>
+        <int name="r" value="0"/>
+      </imgdir>
+      <imgdir name="8">
+        <string name="oS" value="monsterparkEX"/>
+        <string name="l0" value="foothold"/>
+        <string name="l1" value="basefoothold"/>
+        <string name="l2" value="plant"/>
+        <int name="x" value="-923"/>
+        <int name="y" value="69"/>
+        <int name="z" value="9"/>
+        <int name="f" value="0"/>
+        <int name="zM" value="17"/>
+        <int name="r" value="0"/>
+      </imgdir>
+      <imgdir name="9">
+        <string name="oS" value="monsterparkEX"/>
+        <string name="l0" value="foothold"/>
+        <string name="l1" value="basefoothold"/>
+        <string name="l2" value="plant"/>
+        <int name="x" value="-734"/>
+        <int name="y" value="69"/>
+        <int name="z" value="9"/>
+        <int name="f" value="0"/>
+        <int name="zM" value="18"/>
+        <int name="r" value="0"/>
+      </imgdir>
+      <imgdir name="10">
+        <string name="oS" value="monsterparkEX"/>
+        <string name="l0" value="foothold"/>
+        <string name="l1" value="basefoothold"/>
+        <string name="l2" value="plant"/>
+        <int name="x" value="-546"/>
+        <int name="y" value="69"/>
+        <int name="z" value="9"/>
+        <int name="f" value="0"/>
+        <int name="zM" value="18"/>
+        <int name="r" value="0"/>
+      </imgdir>
+      <imgdir name="11">
+        <string name="oS" value="monsterparkEX"/>
+        <string name="l0" value="foothold"/>
+        <string name="l1" value="basefoothold"/>
+        <string name="l2" value="plant"/>
+        <int name="x" value="-358"/>
+        <int name="y" value="69"/>
+        <int name="z" value="9"/>
+        <int name="f" value="0"/>
+        <int name="zM" value="18"/>
+        <int name="r" value="0"/>
+      </imgdir>
+      <imgdir name="12">
+        <string name="oS" value="monsterparkEX"/>
+        <string name="l0" value="foothold"/>
+        <string name="l1" value="basefoothold"/>
+        <string name="l2" value="plant"/>
+        <int name="x" value="-169"/>
+        <int name="y" value="69"/>
+        <int name="z" value="9"/>
+        <int name="f" value="0"/>
+        <int name="zM" value="23"/>
+        <int name="r" value="0"/>
+      </imgdir>
+      <imgdir name="13">
+        <string name="oS" value="monsterparkEX"/>
+        <string name="l0" value="foothold"/>
+        <string name="l1" value="basefoothold"/>
+        <string name="l2" value="plant"/>
+        <int name="x" value="19"/>
+        <int name="y" value="69"/>
+        <int name="z" value="9"/>
+        <int name="f" value="0"/>
+        <int name="zM" value="23"/>
+        <int name="r" value="0"/>
+      </imgdir>
+      <imgdir name="14">
+        <string name="oS" value="monsterparkEX"/>
+        <string name="l0" value="foothold"/>
+        <string name="l1" value="basefoothold"/>
+        <string name="l2" value="plant"/>
+        <int name="x" value="207"/>
+        <int name="y" value="69"/>
+        <int name="z" value="9"/>
+        <int name="f" value="0"/>
+        <int name="zM" value="23"/>
+        <int name="r" value="0"/>
+      </imgdir>
+      <imgdir name="15">
+        <string name="oS" value="monsterparkEX"/>
+        <string name="l0" value="foothold"/>
+        <string name="l1" value="basefoothold"/>
+        <string name="l2" value="plant"/>
+        <int name="x" value="396"/>
+        <int name="y" value="69"/>
+        <int name="z" value="9"/>
+        <int name="f" value="0"/>
+        <int name="zM" value="24"/>
+        <int name="r" value="0"/>
+      </imgdir>
+      <imgdir name="16">
+        <string name="oS" value="monsterparkEX"/>
+        <string name="l0" value="foothold"/>
+        <string name="l1" value="basefoothold"/>
+        <string name="l2" value="plant"/>
+        <int name="x" value="584"/>
+        <int name="y" value="69"/>
+        <int name="z" value="9"/>
+        <int name="f" value="0"/>
+        <int name="zM" value="24"/>
+        <int name="r" value="0"/>
+      </imgdir>
+      <imgdir name="17">
+        <string name="oS" value="monsterparkEX"/>
+        <string name="l0" value="foothold"/>
+        <string name="l1" value="basefoothold"/>
+        <string name="l2" value="plant"/>
+        <int name="x" value="772"/>
+        <int name="y" value="69"/>
+        <int name="z" value="9"/>
+        <int name="f" value="0"/>
+        <int name="zM" value="24"/>
+        <int name="r" value="0"/>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="2">
+    <imgdir name="info"></imgdir>
+    <imgdir name="tile"></imgdir>
+    <imgdir name="obj">
+      <imgdir name="0">
+        <string name="oS" value="monsterparkEX"/>
+        <string name="l0" value="foothold"/>
+        <string name="l1" value="basefoothold"/>
+        <string name="l2" value="water"/>
+        <int name="x" value="-2303"/>
+        <int name="y" value="69"/>
+        <int name="z" value="9"/>
+        <int name="f" value="0"/>
+        <int name="zM" value="32"/>
+        <int name="r" value="0"/>
+      </imgdir>
+      <imgdir name="1">
+        <string name="oS" value="monsterparkEX"/>
+        <string name="l0" value="foothold"/>
+        <string name="l1" value="basefoothold"/>
+        <string name="l2" value="water"/>
+        <int name="x" value="-1903"/>
+        <int name="y" value="69"/>
+        <int name="z" value="9"/>
+        <int name="f" value="0"/>
+        <int name="zM" value="25"/>
+        <int name="r" value="0"/>
+      </imgdir>
+      <imgdir name="2">
+        <string name="oS" value="monsterparkEX"/>
+        <string name="l0" value="foothold"/>
+        <string name="l1" value="basefoothold"/>
+        <string name="l2" value="water"/>
+        <int name="x" value="-1504"/>
+        <int name="y" value="69"/>
+        <int name="z" value="9"/>
+        <int name="f" value="0"/>
+        <int name="zM" value="25"/>
+        <int name="r" value="0"/>
+      </imgdir>
+      <imgdir name="3">
+        <string name="oS" value="monsterparkEX"/>
+        <string name="l0" value="foothold"/>
+        <string name="l1" value="basefoothold"/>
+        <string name="l2" value="water"/>
+        <int name="x" value="-1104"/>
+        <int name="y" value="69"/>
+        <int name="z" value="9"/>
+        <int name="f" value="0"/>
+        <int name="zM" value="26"/>
+        <int name="r" value="0"/>
+      </imgdir>
+      <imgdir name="4">
+        <string name="oS" value="monsterparkEX"/>
+        <string name="l0" value="foothold"/>
+        <string name="l1" value="basefoothold"/>
+        <string name="l2" value="water"/>
+        <int name="x" value="-704"/>
+        <int name="y" value="69"/>
+        <int name="z" value="9"/>
+        <int name="f" value="0"/>
+        <int name="zM" value="27"/>
+        <int name="r" value="0"/>
+      </imgdir>
+      <imgdir name="5">
+        <string name="oS" value="monsterparkEX"/>
+        <string name="l0" value="foothold"/>
+        <string name="l1" value="basefoothold"/>
+        <string name="l2" value="water"/>
+        <int name="x" value="-304"/>
+        <int name="y" value="69"/>
+        <int name="z" value="9"/>
+        <int name="f" value="0"/>
+        <int name="zM" value="28"/>
+        <int name="r" value="0"/>
+      </imgdir>
+      <imgdir name="6">
+        <string name="oS" value="monsterparkEX"/>
+        <string name="l0" value="foothold"/>
+        <string name="l1" value="basefoothold"/>
+        <string name="l2" value="water"/>
+        <int name="x" value="95"/>
+        <int name="y" value="69"/>
+        <int name="z" value="9"/>
+        <int name="f" value="0"/>
+        <int name="zM" value="28"/>
+        <int name="r" value="0"/>
+      </imgdir>
+      <imgdir name="7">
+        <string name="oS" value="monsterparkEX"/>
+        <string name="l0" value="foothold"/>
+        <string name="l1" value="basefoothold"/>
+        <string name="l2" value="water"/>
+        <int name="x" value="495"/>
+        <int name="y" value="69"/>
+        <int name="z" value="9"/>
+        <int name="f" value="0"/>
+        <int name="zM" value="30"/>
+        <int name="r" value="0"/>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="3">
+    <imgdir name="info"></imgdir>
+    <imgdir name="tile"></imgdir>
+    <imgdir name="obj">
+      <imgdir name="0">
+        <string name="oS" value="monsterparkEX"/>
+        <string name="l0" value="foothold"/>
+        <string name="l1" value="basefoothold"/>
+        <string name="l2" value="warter 02"/>
+        <int name="x" value="-2304"/>
+        <int name="y" value="72"/>
+        <int name="z" value="9"/>
+        <int name="f" value="0"/>
+        <int name="zM" value="9"/>
+        <int name="r" value="0"/>
+      </imgdir>
+      <imgdir name="1">
+        <string name="oS" value="monsterparkEX"/>
+        <string name="l0" value="foothold"/>
+        <string name="l1" value="basefoothold"/>
+        <string name="l2" value="warter 02"/>
+        <int name="x" value="-1904"/>
+        <int name="y" value="72"/>
+        <int name="z" value="9"/>
+        <int name="f" value="0"/>
+        <int name="zM" value="10"/>
+        <int name="r" value="0"/>
+      </imgdir>
+      <imgdir name="2">
+        <string name="oS" value="monsterparkEX"/>
+        <string name="l0" value="foothold"/>
+        <string name="l1" value="basefoothold"/>
+        <string name="l2" value="warter 02"/>
+        <int name="x" value="-1504"/>
+        <int name="y" value="72"/>
+        <int name="z" value="9"/>
+        <int name="f" value="0"/>
+        <int name="zM" value="11"/>
+        <int name="r" value="0"/>
+      </imgdir>
+      <imgdir name="3">
+        <string name="oS" value="monsterparkEX"/>
+        <string name="l0" value="foothold"/>
+        <string name="l1" value="basefoothold"/>
+        <string name="l2" value="warter 02"/>
+        <int name="x" value="-1158"/>
+        <int name="y" value="72"/>
+        <int name="z" value="9"/>
+        <int name="f" value="0"/>
+        <int name="zM" value="11"/>
+        <int name="r" value="0"/>
+      </imgdir>
+      <imgdir name="4">
+        <string name="oS" value="monsterparkEX"/>
+        <string name="l0" value="foothold"/>
+        <string name="l1" value="basefoothold"/>
+        <string name="l2" value="warter 02"/>
+        <int name="x" value="-758"/>
+        <int name="y" value="72"/>
+        <int name="z" value="9"/>
+        <int name="f" value="0"/>
+        <int name="zM" value="0"/>
+        <int name="r" value="0"/>
+      </imgdir>
+      <imgdir name="5">
+        <string name="oS" value="monsterparkEX"/>
+        <string name="l0" value="foothold"/>
+        <string name="l1" value="basefoothold"/>
+        <string name="l2" value="warter 02"/>
+        <int name="x" value="-358"/>
+        <int name="y" value="72"/>
+        <int name="z" value="9"/>
+        <int name="f" value="0"/>
+        <int name="zM" value="1"/>
+        <int name="r" value="0"/>
+      </imgdir>
+      <imgdir name="6">
+        <string name="oS" value="monsterparkEX"/>
+        <string name="l0" value="foothold"/>
+        <string name="l1" value="basefoothold"/>
+        <string name="l2" value="warter 02"/>
+        <int name="x" value="41"/>
+        <int name="y" value="71"/>
+        <int name="z" value="9"/>
+        <int name="f" value="0"/>
+        <int name="zM" value="1"/>
+        <int name="r" value="0"/>
+      </imgdir>
+      <imgdir name="7">
+        <string name="oS" value="monsterparkEX"/>
+        <string name="l0" value="foothold"/>
+        <string name="l1" value="basefoothold"/>
+        <string name="l2" value="warter 02"/>
+        <int name="x" value="441"/>
+        <int name="y" value="71"/>
+        <int name="z" value="9"/>
+        <int name="f" value="0"/>
+        <int name="zM" value="29"/>
+        <int name="r" value="0"/>
+      </imgdir>
+      <imgdir name="8">
+        <string name="oS" value="monsterparkEX"/>
+        <string name="l0" value="foothold"/>
+        <string name="l1" value="basefoothold"/>
+        <string name="l2" value="warter 02"/>
+        <int name="x" value="841"/>
+        <int name="y" value="71"/>
+        <int name="z" value="9"/>
+        <int name="f" value="0"/>
+        <int name="zM" value="2"/>
+        <int name="r" value="0"/>
+      </imgdir>
+      <imgdir name="9">
+        <string name="oS" value="monsterparkEX"/>
+        <string name="l0" value="foothold"/>
+        <string name="l1" value="basefoothold"/>
+        <string name="l2" value="warter 02"/>
+        <int name="x" value="1241"/>
+        <int name="y" value="73"/>
+        <int name="z" value="9"/>
+        <int name="f" value="0"/>
+        <int name="zM" value="3"/>
+        <int name="r" value="0"/>
+      </imgdir>
+      <imgdir name="10">
+        <string name="oS" value="monsterparkEX"/>
+        <string name="l0" value="foothold"/>
+        <string name="l1" value="basefoothold"/>
+        <string name="l2" value="warter 02"/>
+        <int name="x" value="1639"/>
+        <int name="y" value="73"/>
+        <int name="z" value="9"/>
+        <int name="f" value="0"/>
+        <int name="zM" value="3"/>
+        <int name="r" value="0"/>
+      </imgdir>
+      <imgdir name="11">
+        <string name="oS" value="monsterparkEX"/>
+        <string name="l0" value="foothold"/>
+        <string name="l1" value="basefoothold"/>
+        <string name="l2" value="warter 02"/>
+        <int name="x" value="2039"/>
+        <int name="y" value="73"/>
+        <int name="z" value="9"/>
+        <int name="f" value="0"/>
+        <int name="zM" value="4"/>
+        <int name="r" value="0"/>
+      </imgdir>
+      <imgdir name="12">
+        <string name="oS" value="monsterparkEX"/>
+        <string name="l0" value="foothold"/>
+        <string name="l1" value="basefoothold"/>
+        <string name="l2" value="warter 02"/>
+        <int name="x" value="2385"/>
+        <int name="y" value="73"/>
+        <int name="z" value="9"/>
+        <int name="f" value="0"/>
+        <int name="zM" value="4"/>
+        <int name="r" value="0"/>
+      </imgdir>
+      <imgdir name="13">
+        <string name="oS" value="monsterparkEX"/>
+        <string name="l0" value="foothold"/>
+        <string name="l1" value="basefoothold"/>
+        <string name="l2" value="warter 02"/>
+        <int name="x" value="2785"/>
+        <int name="y" value="73"/>
+        <int name="z" value="9"/>
+        <int name="f" value="0"/>
+        <int name="zM" value="5"/>
+        <int name="r" value="0"/>
+      </imgdir>
+      <imgdir name="14">
+        <string name="oS" value="monsterparkEX"/>
+        <string name="l0" value="foothold"/>
+        <string name="l1" value="basefoothold"/>
+        <string name="l2" value="warter 02"/>
+        <int name="x" value="3185"/>
+        <int name="y" value="73"/>
+        <int name="z" value="9"/>
+        <int name="f" value="0"/>
+        <int name="zM" value="6"/>
+        <int name="r" value="0"/>
+      </imgdir>
+      <imgdir name="15">
+        <string name="oS" value="monsterparkEX"/>
+        <string name="l0" value="foothold"/>
+        <string name="l1" value="basefoothold"/>
+        <string name="l2" value="warter 02"/>
+        <int name="x" value="3584"/>
+        <int name="y" value="72"/>
+        <int name="z" value="9"/>
+        <int name="f" value="0"/>
+        <int name="zM" value="6"/>
+        <int name="r" value="0"/>
+      </imgdir>
+      <imgdir name="16">
+        <string name="oS" value="monsterparkEX"/>
+        <string name="l0" value="foothold"/>
+        <string name="l1" value="basefoothold"/>
+        <string name="l2" value="warter 02"/>
+        <int name="x" value="3984"/>
+        <int name="y" value="72"/>
+        <int name="z" value="9"/>
+        <int name="f" value="0"/>
+        <int name="zM" value="19"/>
+        <int name="r" value="0"/>
+      </imgdir>
+      <imgdir name="17">
+        <string name="oS" value="monsterparkEX"/>
+        <string name="l0" value="foothold"/>
+        <string name="l1" value="basefoothold"/>
+        <string name="l2" value="warter 02"/>
+        <int name="x" value="4384"/>
+        <int name="y" value="72"/>
+        <int name="z" value="9"/>
+        <int name="f" value="0"/>
+        <int name="zM" value="20"/>
+        <int name="r" value="0"/>
+      </imgdir>
+      <imgdir name="18">
+        <string name="oS" value="monsterparkEX"/>
+        <string name="l0" value="foothold"/>
+        <string name="l1" value="basefoothold"/>
+        <string name="l2" value="warter 02"/>
+        <int name="x" value="4783"/>
+        <int name="y" value="72"/>
+        <int name="z" value="9"/>
+        <int name="f" value="0"/>
+        <int name="zM" value="20"/>
+        <int name="r" value="0"/>
+      </imgdir>
+      <imgdir name="19">
+        <string name="oS" value="monsterparkEX"/>
+        <string name="l0" value="foothold"/>
+        <string name="l1" value="basefoothold"/>
+        <string name="l2" value="warter 02"/>
+        <int name="x" value="5183"/>
+        <int name="y" value="72"/>
+        <int name="z" value="9"/>
+        <int name="f" value="0"/>
+        <int name="zM" value="21"/>
+        <int name="r" value="0"/>
+      </imgdir>
+      <imgdir name="20">
+        <string name="oS" value="monsterparkEX"/>
+        <string name="l0" value="foothold"/>
+        <string name="l1" value="basefoothold"/>
+        <string name="l2" value="warter 02"/>
+        <int name="x" value="5583"/>
+        <int name="y" value="72"/>
+        <int name="z" value="9"/>
+        <int name="f" value="0"/>
+        <int name="zM" value="22"/>
+        <int name="r" value="0"/>
+      </imgdir>
+      <imgdir name="21">
+        <string name="oS" value="monsterparkEX"/>
+        <string name="l0" value="foothold"/>
+        <string name="l1" value="basefoothold"/>
+        <string name="l2" value="warter 02"/>
+        <int name="x" value="5983"/>
+        <int name="y" value="73"/>
+        <int name="z" value="9"/>
+        <int name="f" value="0"/>
+        <int name="zM" value="7"/>
+        <int name="r" value="0"/>
+      </imgdir>
+      <imgdir name="22">
+        <string name="oS" value="monsterparkEX"/>
+        <string name="l0" value="foothold"/>
+        <string name="l1" value="basefoothold"/>
+        <string name="l2" value="warter 02"/>
+        <int name="x" value="6383"/>
+        <int name="y" value="73"/>
+        <int name="z" value="9"/>
+        <int name="f" value="0"/>
+        <int name="zM" value="8"/>
+        <int name="r" value="0"/>
+      </imgdir>
+      <imgdir name="23">
+        <string name="oS" value="monsterparkEX"/>
+        <string name="l0" value="foothold"/>
+        <string name="l1" value="basefoothold"/>
+        <string name="l2" value="warter 02"/>
+        <int name="x" value="6782"/>
+        <int name="y" value="72"/>
+        <int name="z" value="9"/>
+        <int name="f" value="0"/>
+        <int name="zM" value="8"/>
+        <int name="r" value="0"/>
+      </imgdir>
+      <imgdir name="28">
+        <string name="oS" value="monsterparkEX"/>
+        <string name="l0" value="foothold"/>
+        <string name="l1" value="basefoothold"/>
+        <string name="l2" value="warter 02"/>
+        <int name="x" value="-107"/>
+        <int name="y" value="127"/>
+        <int name="z" value="9"/>
+        <int name="f" value="0"/>
+        <int name="zM" value="1"/>
+        <int name="r" value="0"/>
+      </imgdir>
+      <imgdir name="27">
+        <string name="oS" value="monsterparkEX"/>
+        <string name="l0" value="foothold"/>
+        <string name="l1" value="basefoothold"/>
+        <string name="l2" value="warter 02"/>
+        <int name="x" value="-507"/>
+        <int name="y" value="127"/>
+        <int name="z" value="9"/>
+        <int name="f" value="0"/>
+        <int name="zM" value="0"/>
+        <int name="r" value="0"/>
+      </imgdir>
+      <imgdir name="26">
+        <string name="oS" value="monsterparkEX"/>
+        <string name="l0" value="foothold"/>
+        <string name="l1" value="basefoothold"/>
+        <string name="l2" value="warter 02"/>
+        <int name="x" value="1039"/>
+        <int name="y" value="127"/>
+        <int name="z" value="9"/>
+        <int name="f" value="0"/>
+        <int name="zM" value="2"/>
+        <int name="r" value="0"/>
+      </imgdir>
+      <imgdir name="25">
+        <string name="oS" value="monsterparkEX"/>
+        <string name="l0" value="foothold"/>
+        <string name="l1" value="basefoothold"/>
+        <string name="l2" value="warter 02"/>
+        <int name="x" value="639"/>
+        <int name="y" value="127"/>
+        <int name="z" value="9"/>
+        <int name="f" value="0"/>
+        <int name="zM" value="1"/>
+        <int name="r" value="0"/>
+      </imgdir>
+      <imgdir name="24">
+        <string name="oS" value="monsterparkEX"/>
+        <string name="l0" value="foothold"/>
+        <string name="l1" value="basefoothold"/>
+        <string name="l2" value="warter 02"/>
+        <int name="x" value="293"/>
+        <int name="y" value="127"/>
+        <int name="z" value="9"/>
+        <int name="f" value="0"/>
+        <int name="zM" value="1"/>
+        <int name="r" value="0"/>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="4">
+    <imgdir name="info"></imgdir>
+    <imgdir name="tile"></imgdir>
+    <imgdir name="obj"></imgdir>
+  </imgdir>
+  <imgdir name="5">
+    <imgdir name="info"></imgdir>
+    <imgdir name="tile"></imgdir>
+    <imgdir name="obj"></imgdir>
+  </imgdir>
+  <imgdir name="6">
+    <imgdir name="info"></imgdir>
+    <imgdir name="tile"></imgdir>
+    <imgdir name="obj"></imgdir>
+  </imgdir>
+  <imgdir name="7">
+    <imgdir name="info"></imgdir>
+    <imgdir name="tile"></imgdir>
+    <imgdir name="obj"></imgdir>
+  </imgdir>
+  <imgdir name="foothold">
+    <imgdir name="0">
+      <imgdir name="12">
+        <imgdir name="1">
+          <int name="x1" value="90"/>
+          <int name="y1" value="-81"/>
+          <int name="x2" value="529"/>
+          <int name="y2" value="-81"/>
+          <int name="prev" value="2"/>
+          <int name="next" value="0"/>
+          <int name="piece" value="0"/>
+        </imgdir>
+        <imgdir name="2">
+          <int name="x1" value="-348"/>
+          <int name="y1" value="-81"/>
+          <int name="x2" value="90"/>
+          <int name="y2" value="-81"/>
+          <int name="prev" value="3"/>
+          <int name="next" value="1"/>
+          <int name="piece" value="3"/>
+        </imgdir>
+        <imgdir name="3">
+          <int name="x1" value="-785"/>
+          <int name="y1" value="-81"/>
+          <int name="x2" value="-348"/>
+          <int name="y2" value="-81"/>
+          <int name="prev" value="4"/>
+          <int name="next" value="2"/>
+          <int name="piece" value="4"/>
+        </imgdir>
+        <imgdir name="4">
+          <int name="x1" value="-1216"/>
+          <int name="y1" value="-81"/>
+          <int name="x2" value="-785"/>
+          <int name="y2" value="-81"/>
+          <int name="prev" value="6"/>
+          <int name="next" value="3"/>
+          <int name="piece" value="5"/>
+        </imgdir>
+      </imgdir>
+      <imgdir name="13">
+        <imgdir name="5">
+          <int name="x1" value="-2094"/>
+          <int name="y1" value="-81"/>
+          <int name="x2" value="-1655"/>
+          <int name="y2" value="-81"/>
+          <int name="prev" value="0"/>
+          <int name="next" value="6"/>
+          <int name="piece" value="1"/>
+        </imgdir>
+      </imgdir>
+      <imgdir name="14">
+        <imgdir name="6">
+          <int name="x1" value="-1655"/>
+          <int name="y1" value="-81"/>
+          <int name="x2" value="-1216"/>
+          <int name="y2" value="-81"/>
+          <int name="prev" value="5"/>
+          <int name="next" value="4"/>
+          <int name="piece" value="2"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="ladderRope"></imgdir>
+  <imgdir name="miniMap">
+    <canvas name="canvas" width="162" height="34" format="1"></canvas>
+    <int name="width" value="2603"/>
+    <int name="height" value="550"/>
+    <int name="centerX" value="2084"/>
+    <int name="centerY" value="441"/>
+    <int name="mag" value="4"/>
+  </imgdir>
+  <imgdir name="portal">
+    <imgdir name="0">
+      <string name="pn" value="sp"/>
+      <int name="pt" value="0"/>
+      <int name="x" value="-1334"/>
+      <int name="y" value="-95"/>
+      <int name="tm" value="999999999"/>
+      <string name="tn" value=""/>
+    </imgdir>
+    <imgdir name="1">
+      <string name="pn" value="exitPT"/>
+      <int name="x" value="-725"/>
+      <int name="y" value="-84"/>
+      <int name="tm" value="999999999"/>
+      <string name="tn" value=""/>
+      <string name="script" value="Extreme_out2"/>
+      <int name="pt" value="7"/>
+    </imgdir>
+  </imgdir>
+</imgdir>

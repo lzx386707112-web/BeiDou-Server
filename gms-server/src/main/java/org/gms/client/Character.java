@@ -7112,6 +7112,8 @@ public class Character extends AbstractCharacterObject {
             raiseQuestMobCount(MobId.JOYFUL_ERDA_QUEST);
         } else if (id == MobId.RAGING_ERDA) {
             raiseQuestMobCount(MobId.RAGING_ERDA_QUEST);
+        } else if (MobId.isTwilightPerionMob(id)) {
+            raiseQuestMobCount(MobId.TWILIGHT_DREAM_CONTROLLER_QUEST);
         }
 
         int lastQuestProcessed = 0;

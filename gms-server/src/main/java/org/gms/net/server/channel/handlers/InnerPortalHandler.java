@@ -23,6 +23,7 @@ package org.gms.net.server.channel.handlers;
 
 import org.gms.client.Character;
 import org.gms.client.Client;
+import org.gms.constants.id.MapId;
 import org.gms.net.AbstractPacketHandler;
 import org.gms.net.packet.InPacket;
 import org.gms.server.maps.MapleMap;
@@ -109,10 +110,14 @@ public final class InnerPortalHandler extends AbstractPacketHandler {
 
     private static Portal resolveValidSourcePortal(Character player, String portalName) {
         Portal sourcePortal = player.getMap().getPortal(portalName);
-        if (sourcePortal == null || sourcePortal.getType() != Portal.TELEPORT_PORTAL) {
+        if (sourcePortal == null || !isInnerPortalType(sourcePortal.getType())) {
             return null;
         }
         return sourcePortal;
+    }
+
+    private static boolean isInnerPortalType(int type) {
+        return type == Portal.TELEPORT_PORTAL || type == Portal.INNER_PORTAL;
     }
 
     private static boolean isPlayerNearPortal(Point playerPos, Portal portal) {
@@ -120,7 +125,8 @@ public final class InnerPortalHandler extends AbstractPacketHandler {
     }
 
     private static boolean isSameMapInnerTeleport(Character player, Portal sourcePortal) {
-        return sourcePortal.getTargetMapId() == player.getMapId();
+        int targetMapId = sourcePortal.getTargetMapId();
+        return targetMapId == player.getMapId() || targetMapId == MapId.NONE;
     }
 
     private static Portal resolveValidTargetPortal(Character player, Portal sourcePortal) {

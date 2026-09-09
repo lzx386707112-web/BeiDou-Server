@@ -198,6 +198,7 @@
       <vector name="rb" x="65" y="-2"/>
     </canvas>
     <imgdir name="info">
+      <int name="type" value="2"/>
       <int name="attackAfter" value="840"/>
       <imgdir name="ball">
         <canvas name="0" width="155" height="40" format="1">
@@ -233,11 +234,13 @@
           <vector name="origin" x="58" y="61"/>
           <int name="z" value="0"/>
         </canvas>
+        <int name="attach" value="1"/>
       </imgdir>
       <imgdir name="range">
         <int name="r" value="300"/>
         <vector name="sp" x="-116" y="-65"/>
       </imgdir>
+      <int name="bulletSpeed" value="300"/>
     </imgdir>
   </imgdir>
   <imgdir name="hit1">
