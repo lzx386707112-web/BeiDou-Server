@@ -165,8 +165,9 @@ def validate_item(item_data: bytes) -> None:
         raise RuntimeError("previous custom Etc 4000695 is missing")
     if names.index(ITEM_NODE) != names.index(PREVIOUS_CUSTOM) + 1:
         raise RuntimeError("4000696 is not immediately after 4000695")
-    if names[names.index(ITEM_NODE) + 1] != ITEM_ANCHOR:
-        raise RuntimeError("4000696 is not immediately before 04000828")
+    next_item = names[names.index(ITEM_NODE) + 1]
+    if next_item not in {ITEM_ANCHOR, "04000697"}:
+        raise RuntimeError("4000696 is not immediately before 04000828 or 4000697")
     record = item.root.child(ITEM_NODE)
     if not isinstance(record, WzSubProperty):
         raise RuntimeError(f"client item {ITEM_ID} missing after insert")
@@ -193,8 +194,9 @@ def validate_string(string_data: bytes) -> None:
     names = sibling_names(strings, ("Etc",))
     if names.index(STRING_NODE) != names.index(PREVIOUS_STRING) + 1:
         raise RuntimeError("string 4000696 is not immediately after 4000695")
-    if names[names.index(STRING_NODE) + 1] != STRING_ANCHOR:
-        raise RuntimeError("string 4000696 is not immediately before 4000828")
+    next_string = names[names.index(STRING_NODE) + 1]
+    if next_string not in {STRING_ANCHOR, "4000697"}:
+        raise RuntimeError("string 4000696 is not immediately before 4000828 or 4000697")
     text = strings.root.get(f"Etc/{STRING_NODE}")
     if not isinstance(text, WzSubProperty):
         raise RuntimeError(f"client String/Etc {ITEM_ID} missing")

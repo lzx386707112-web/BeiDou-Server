@@ -265,8 +265,12 @@ public class MobSkill {
             case SPEED -> stats.put(MonsterStatus.SPEED, x);
             case SEAL_SKILL -> stats.put(MonsterStatus.SEAL_SKILL, x);
             case AKAYRUM_SCREEN_CRACK_VISUAL -> {
-                monster.getMap().broadcastMessage(PacketCreator.showEffect("customBoss/akayrum/screenCrack"));
-                scheduleAkayrumScreenCrackDamage(monster);
+                if (MobId.isMoriRanmaruHard(monster.getId())) {
+                    applyRanmaruScreenCrack(monster);
+                } else {
+                    monster.getMap().broadcastMessage(PacketCreator.showEffect("customBoss/akayrum/screenCrack"));
+                    scheduleAkayrumScreenCrackDamage(monster);
+                }
             }
             case AKAYRUM_BLACK_HOLE_VISUAL, AKAYRUM_GREEN_ORB_VISUAL -> {
                 // Visual-only Akayrum compatibility skills; damage/rules are handled separately.
@@ -336,6 +340,18 @@ public class MobSkill {
         } else {
             banishPlayersOutput.add(player);
         }
+    }
+
+    private void applyRanmaruScreenCrack(Monster monster) {
+        // skill5 already plays Ranmaru's scene animation; do not reuse Akayrum overlay/x=999999.
+        TimerManager.getInstance().schedule(() -> {
+            if (!monster.isAlive()) {
+                return;
+            }
+            for (Character character : monster.getMap().getAllPlayers()) {
+                damageCharacterByPercent(monster, character, 35);
+            }
+        }, BOSS_COMPAT_EFFECT_DAMAGE_DELAY_MS);
     }
 
     private void scheduleAkayrumScreenCrackDamage(Monster monster) {

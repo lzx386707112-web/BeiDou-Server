@@ -91008,4 +91008,49 @@
       <int name="npc" value="9000159"/>
     </imgdir>
   </imgdir>
+  <imgdir name="57480">
+    <imgdir name="0">
+      <int name="lvmin" value="120"/>
+      <int name="npc" value="9130145"/>
+    </imgdir>
+    <imgdir name="1">
+      <int name="npc" value="9130145"/>
+      <int name="order" value="1"/>
+      <imgdir name="mob">
+        <imgdir name="0">
+          <int name="id" value="9421581"/>
+          <int name="count" value="1"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
+  <imgdir name="-8055">
+    <imgdir name="0">
+      <int name="interval" value="1440"/>
+      <int name="lvmin" value="120"/>
+      <int name="npc" value="9130000"/>
+    </imgdir>
+    <imgdir name="1">
+      <int name="npc" value="9130000"/>
+      <int name="order" value="1"/>
+      <imgdir name="mob">
+        <imgdir name="0">
+          <int name="id" value="9421511"/>
+          <int name="count" value="200"/>
+        </imgdir>
+        <imgdir name="1">
+          <int name="id" value="9421512"/>
+          <int name="count" value="200"/>
+        </imgdir>
+        <imgdir name="2">
+          <int name="id" value="9421513"/>
+          <int name="count" value="200"/>
+        </imgdir>
+        <imgdir name="3">
+          <int name="id" value="9421514"/>
+          <int name="count" value="200"/>
+        </imgdir>
+      </imgdir>
+    </imgdir>
+  </imgdir>
 </imgdir>

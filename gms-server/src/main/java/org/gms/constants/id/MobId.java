@@ -96,6 +96,13 @@ public class MobId {
     public static final int CHAOS_HORNTAIL_5 = 8810122;
     public static final int SUMMON_CHAOS_HORNTAIL = 8810130;
 
+    public static final int MORI_RANMARU = 9421581;
+    public static final int MORI_RANMARU_HARD = 9421583;
+
+    public static boolean isMoriRanmaruHard(int mobId) {
+        return mobId == MORI_RANMARU_HARD;
+    }
+
     public static final int CYGNUS_BOSS_MIN = 8850000;
     public static final int CYGNUS_BOSS_MAX = 8850013;
     public static final int CYGNUS_MIHILE = 8850000;

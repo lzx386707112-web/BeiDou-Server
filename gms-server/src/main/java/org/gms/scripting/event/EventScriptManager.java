@@ -66,7 +66,10 @@ public class EventScriptManager extends AbstractScriptManager {
     public EventScriptManager(final Channel channel, String[] scripts) {
         for (String script : scripts) {
             if (!script.isEmpty()) {
-                events.put(script, initializeEventEntry(script, channel)); // 加载并存储每个脚本
+                EventEntry entry = initializeEventEntry(script, channel);
+                if (entry != null) {
+                    events.put(script, entry);
+                }
             }
         }
 
@@ -122,7 +125,12 @@ public class EventScriptManager extends AbstractScriptManager {
         Channel channel = eventEntries.iterator().next().getValue().em.getChannelServer(); // 获取频道上下文
         for (Entry<String, EventEntry> entry : eventEntries) {
             String script = entry.getKey();
-            events.put(script, initializeEventEntry(script, channel)); // 重新加载每个脚本
+            EventEntry reloaded = initializeEventEntry(script, channel);
+            if (reloaded != null) {
+                events.put(script, reloaded);
+            } else {
+                events.remove(script);
+            }
         }
     }
 
@@ -133,11 +141,15 @@ public class EventScriptManager extends AbstractScriptManager {
      * @return 事件实体（包含 JS 引擎和事件管理器）
      */
     private EventEntry initializeEventEntry(String script, Channel channel) {
-        ScriptEngine engine = getInvocableScriptEngine("event/" + script + ".js"); // 获取 JS 引擎
-        Invocable iv = SynchronizedInvocable.of((Invocable) engine); // 包装为线程安全的调用接口
-        EventManager eventManager = new EventManager(channel, iv, script); // 创建事件管理器
-        engine.put(INJECTED_VARIABLE_NAME, eventManager); // 向 JS 引擎注入变量 "em"
-        return new EventEntry(iv, eventManager); // 返回事件实体
+        ScriptEngine engine = getInvocableScriptEngine("event/" + script + ".js");
+        if (engine == null) {
+            log.error("Failed to load event script: event/{}.js", script);
+            return null;
+        }
+        Invocable iv = SynchronizedInvocable.of((Invocable) engine);
+        EventManager eventManager = new EventManager(channel, iv, script);
+        engine.put(INJECTED_VARIABLE_NAME, eventManager);
+        return new EventEntry(iv, eventManager);
     }
 
     /**

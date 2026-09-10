@@ -196,8 +196,10 @@ public final class Channel {
             disconnectAwayPlayers();
             players.disconnectAll();
 
-            eventSM.dispose();
-            eventSM = null;
+            if (eventSM != null) {
+                eventSM.dispose();
+                eventSM = null;
+            }
 
             mapManager.dispose();
             mapManager = null;
@@ -467,7 +469,14 @@ public final class Channel {
         List<String> events = new ArrayList<>();
         try (DirectoryStream<Path> stream = Files.newDirectoryStream(actualPath)) {
             for (Path path : stream) {
+                if (!Files.isRegularFile(path)) {
+                    continue;
+                }
                 String fileName = path.getFileName().toString();
+                if (!fileName.endsWith(".js")) {
+                    log.warn("Skipping non-js event file: {}", fileName);
+                    continue;
+                }
                 events.add(fileName.substring(0, fileName.length() - 3));
             }
         } catch (IOException e) {
