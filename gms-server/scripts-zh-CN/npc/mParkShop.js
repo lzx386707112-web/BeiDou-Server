@@ -3,6 +3,7 @@
  * TMS shop=1 with no Shop.wz dump; native shops only take mesos or Perfect Pitch.
  * All goods cost 4310020. Equip prices follow reqLevel against park coin rates
  * (1 / 5 / 20 / 50 per clear). Cubes are consumable, so they sit below same-tier gear.
+ * Lionheart stock costs reqLevel * 3 coins.
  */
 
 var COIN = 4310020;
@@ -12,7 +13,7 @@ var category = -1;
 var catalog = null;
 var page = 0;
 
-var CATEGORIES = ["杂货", "魔方", "护肩", "心脏", "纹章", "徽章", "副刀"];
+var CATEGORIES = ["杂货", "魔方", "护肩", "心脏", "纹章", "徽章", "副刀", "狮心"];
 
 var STOCK = [
     [
@@ -238,6 +239,25 @@ var STOCK = [
         [1342081, 720],
         [1342111, 1200],
         [1342121, 1200]
+    ],
+    [
+        [1312065, 210],
+        [1322096, 210],
+        [1412065, 210],
+        [1422066, 210],
+        [1432086, 381],
+        [1302345, 390],
+        [1312205, 390],
+        [1322257, 390],
+        [1402261, 390],
+        [1432220, 390],
+        [1442278, 390],
+        [1302152, 420],
+        [1402095, 420],
+        [1442116, 420],
+        [1003172, 420],
+        [1072485, 420],
+        [1102275, 420]
     ]
 ];
 

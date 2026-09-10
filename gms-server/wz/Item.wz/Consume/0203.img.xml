@@ -394,4 +394,20 @@
       <int name="moveTo" value="600000000"/>
     </imgdir>
   </imgdir>
+  <imgdir name="02030021">
+    <imgdir name="info">
+      <canvas name="icon" width="35" height="29" format="1">
+        <vector name="origin" x="1" y="29"/>
+      </canvas>
+      <canvas name="iconRaw" width="35" height="27" format="1">
+        <vector name="origin" x="1" y="29"/>
+      </canvas>
+      <int name="quest" value="1"/>
+      <int name="price" value="1"/>
+      <int name="reqLevel" value="125"/>
+    </imgdir>
+    <imgdir name="spec">
+      <int name="moveTo" value="211070000"/>
+    </imgdir>
+  </imgdir>
 </imgdir>

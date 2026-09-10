@@ -7114,6 +7114,14 @@ public class Character extends AbstractCharacterObject {
             raiseQuestMobCount(MobId.RAGING_ERDA_QUEST);
         } else if (MobId.isTwilightPerionMob(id)) {
             raiseQuestMobCount(MobId.TWILIGHT_DREAM_CONTROLLER_QUEST);
+        } else if (id == MobId.FIRST_TOWER_ROOF_MOB) {
+            raiseQuestMobCount(MobId.FIRST_TOWER_GUARD_QUEST);
+        } else if (id == MobId.SECOND_TOWER_ROOF_MOB) {
+            raiseQuestMobCount(MobId.SECOND_TOWER_GUARD_QUEST);
+        } else if (id == MobId.THIRD_TOWER_ROOF_MOB) {
+            raiseQuestMobCount(MobId.THIRD_TOWER_GUARD_QUEST);
+        } else if (id == MobId.FORTRESS_GOLEM) {
+            raiseQuestMobCount(MobId.FOURTH_TOWER_GUARD_QUEST);
         }
 
         int lastQuestProcessed = 0;

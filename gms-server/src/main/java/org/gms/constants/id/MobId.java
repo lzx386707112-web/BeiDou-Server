@@ -19,6 +19,14 @@ public class MobId {
     public static final int RAGING_ERDA = 8641006;
     public static final int RAGING_ERDA_QUEST = 9101086;
     public static final int TWILIGHT_DREAM_CONTROLLER_QUEST = 9100043;
+    public static final int FIRST_TOWER_ROOF_MOB = 8840002;
+    public static final int FIRST_TOWER_GUARD_QUEST = 8210010;
+    public static final int SECOND_TOWER_ROOF_MOB = 8210006;
+    public static final int SECOND_TOWER_GUARD_QUEST = 8210011;
+    public static final int THIRD_TOWER_ROOF_MOB = 8210007;
+    public static final int THIRD_TOWER_GUARD_QUEST = 8210012;
+    public static final int FORTRESS_GOLEM = 8210005;
+    public static final int FOURTH_TOWER_GUARD_QUEST = 8210014;
 
     public static boolean isTwilightPerionMob(int mobId) {
         return (mobId >= 8620000 && mobId <= 8620011) || (mobId >= 8620028 && mobId <= 8620031);

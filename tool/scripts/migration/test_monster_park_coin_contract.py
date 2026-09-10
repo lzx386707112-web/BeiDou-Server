@@ -74,6 +74,8 @@ def main() -> int:
         errors.append("9071001 badge stock is still the short list")
     if "1672017" not in shop or "1672095" not in shop:
         errors.append("9071001 heart stock is still the short list")
+    if '"狮心"' not in shop or "[1312065, 210]" not in shop or "[1003172, 420]" not in shop:
+        errors.append("9071001 is missing Lionheart stock at reqLevel * 3")
     final = (ROOT / "gms-server/scripts/portal/mPark_final.js").read_text(encoding="utf-8")
     if "MPARK_BASIC" not in final or "return 20" not in final:
         errors.append("mPark_final is missing per-door coin rewards")

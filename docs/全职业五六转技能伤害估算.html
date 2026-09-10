@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<html lang="zh-CN" data-page-node-id="OqeLcDNj3183LYCW3NCiGs">
+<head data-page-node-id="YuDDBb3qEQ5M32fJPOstX0">
+<meta charset="UTF-8" data-page-node-id="TwgPqWGVdoPY4hdUysNYsh">
+<meta name="viewport" content="width=device-width, initial-scale=1.0" data-page-node-id="dZM5qJrqm3BNkPwK4BtQLv">
 <title>全职业 5/6 转技能 · 单怪单次总伤害估算(每族去重)</title>
 <style>
 :root{--bg:#0f1115;--panel:#171a21;--panel2:#1f232c;--border:#2a2f3a;--txt:#e6e8ec;--muted:#9aa3b2;--accent:#5aa9ff;--red:#ff4d4f;--amber:#ffcc66;--green:#3fd68a;}
@@ -50,65 +50,65 @@ tr:hover td{background:rgba(90,169,255,.06)}
 .note code{color:var(--amber)}
 </style>
 </head>
-<body>
-<h1>全职业 5/6 转技能 · 单怪单次总伤害估算（每族去重）</h1>
-<div class="sub">数据来源：服务端 <code>Skill.wz</code> 全部技能书 + <code>org.gms.constants.skills.*#V_VI_ACTIVE_ATTACKS</code>。打 1 只怪、单次施放、名义期望（未计暴击与 ±20% 浮动）。共 18 职业、129 个技能族。</div>
+<body data-page-node-id="gUnZTuUl8g6vSzwXmwjSTX">
+<h1 data-page-node-id="bI0JDUlWmu4mFUilyxHjGd">全职业 5/6 转技能 · 单怪单次总伤害估算（每族去重）</h1>
+<div class="sub" data-page-node-id="JGaOHvj2cI6ssQYVGArUPi">数据来源：服务端 <code data-page-node-id="vhswAio1dUWz2Q50EJ20As">Skill.wz</code> 全部技能书 + <code data-page-node-id="aCb38gPej5gd4Zv62YqPM3">org.gms.constants.skills.*#V_VI_ACTIVE_ATTACKS</code>。打 1 只怪、单次施放、名义期望（未计暴击与 ±20% 浮动）。共 18 职业、129 个技能族。</div>
 
-<div class="formula">
-  计算模型：<code>每段伤害 = 面板 × (damage% ÷ 100)</code> &nbsp;·&nbsp; <code>单次总伤 = 每段 × 段数(attackCount)</code><br>
-  <b>去重规则</b>：同一技能的「可见核心 + 隐藏触发/VI 子技能」归为一族（按名称前缀），单放只算一次，取 6 转增强最大伤害。避免把基底+增强+子命中重复相加。
+<div class="formula" data-page-node-id="GVXiyUZsx8U3qxGId7Wlep">
+  计算模型：<code data-page-node-id="0zfWAsQU1D2r3Q6egtoA4P">每段伤害 = 面板 × (damage% ÷ 100)</code> &nbsp;·&nbsp; <code data-page-node-id="kYAWRno5JGbBX3JnymsL1t">单次总伤 = 每段 × 段数(attackCount)</code><br data-page-node-id="Ssdm9lnjxG3LqEOo6RZh0k">
+  <b data-page-node-id="7sYWV1ty5taXK3FyJPYJIw">去重规则</b>：同一技能的「可见核心 + 隐藏触发/VI 子技能」归为一族（按名称前缀），单放只算一次，取 6 转增强最大伤害。避免把基底+增强+子命中重复相加。
 </div>
 
-<div class="controls">
-  <div class="field"><label>面板基数（单段基准）</label><input id="panel" type="number" value="100000" step="1000" oninput="recompute()"></div>
-  <div class="field"><label>阵营</label><select id="grp" onchange="syncClass();recompute()">
-    <option value="all">全部阵营</option><option value="英雄团/阿兰">英雄团/阿兰</option><option value="冒险家">冒险家</option>
+<div class="controls" data-page-node-id="KEfJ4x91T12mOzdPGFimlg">
+  <div class="field" data-page-node-id="Xj9hHYy0Z1Bvlugbf7uHuo"><label data-page-node-id="U1lBFCGtrXe0AzFckKyO2i">面板基数（单段基准）</label><input id="panel" type="number" value="100000" step="1000" oninput="recompute()" data-page-node-id="QsXHtSXCLTVbbHQV3byKsq"></div>
+  <div class="field" data-page-node-id="GuaZbX51adL5rkFG8pB6W5"><label data-page-node-id="CWZaBi81OALWbp5ko5cFGz">阵营</label><select id="grp" onchange="syncClass();recompute()" data-page-node-id="fay5c6eSNobTFdxu48v6Ux">
+    <option value="all" data-page-node-id="EG5WLc4fffjWvLeEerLvL6">全部阵营</option><option value="英雄团/阿兰" data-page-node-id="DH3E5a5rhGM3UvkMMhvnGw">英雄团/阿兰</option><option value="冒险家" data-page-node-id="TXcqkqli9HhUQjxynU6xs7">冒险家</option>
   </select></div>
-  <div class="field"><label>职业</label><select id="cls" onchange="recompute()"></select></div>
-  <div class="field"><label>视图</label><select id="view" onchange="recompute()">
-    <option value="family" selected>单放·每族取最大(推荐)</option>
-    <option value="core">可释放核心(5转基底)</option>
-    <option value="trig">含VI触发子技能</option>
-    <option value="all">全部节点(含buff/特效)</option>
+  <div class="field" data-page-node-id="GpirO0eJEId2DC06IEeisl"><label data-page-node-id="jMq8TwyclFgTZ0GM70NW2d">职业</label><select id="cls" onchange="recompute()" data-page-node-id="Nh8cPTj9srl334zOQu3rhH"></select></div>
+  <div class="field" data-page-node-id="FsrNjJCxfyClvbidoRpMwM"><label data-page-node-id="KkYDJEvzGQrx6F4oPki4Eg">视图</label><select id="view" onchange="recompute()" data-page-node-id="rgDMIypd8nh9SgtxQbnHIn">
+    <option value="family" selected data-page-node-id="t1Y48VqHIPqgT5fHDmgGtb">单放·每族取最大(推荐)</option>
+    <option value="core" data-page-node-id="HGnNhmWpy56YzRzWqdwq0d">可释放核心(5转基底)</option>
+    <option value="trig" data-page-node-id="jkRf0rUzSXNjgjZtjtCYII">含VI触发子技能</option>
+    <option value="all" data-page-node-id="STA1n7YyhFOY9Wr4qkDS5d">全部节点(含buff/特效)</option>
   </select></div>
-  <div class="field"><label>目标每段伤害(绝对)</label><input id="targetHit" type="number" placeholder="选填,如 3000000" step="100000" oninput="recompute()"></div>
-  <div class="field"><label>目标单次总伤(绝对)</label><input id="targetTotal" type="number" placeholder="选填,如 50000000" step="1000000" oninput="recompute()"></div>
-  <div class="field"><label><input type="checkbox" id="onlyMismatch" onchange="recompute()" style="width:auto;margin-right:6px;vertical-align:middle">仅看 damage≠mad</label></div>
-  <div class="stats">
-    <div class="card" style="min-width:110px"><div class="c">技能族/节点</div><div class="v" id="s_count">–</div></div>
-    <div class="card" style="min-width:150px"><div class="c">最高单次总伤</div><div class="v" id="s_max">–</div></div>
-    <div class="card" style="min-width:150px"><div class="c">合计(各放一次)</div><div class="v" id="s_sum">–</div></div>
-    <div class="card" style="min-width:190px"><div class="c">目标每段→damage 应设</div><div class="v" id="s_needhit" style="color:var(--green)">–</div></div>
+  <div class="field" data-page-node-id="KFvc2MlpguD0ckDFChaikg"><label data-page-node-id="JOM3NKkRpfby2eAIgIjyw7">目标每段伤害(绝对)</label><input id="targetHit" type="number" placeholder="选填,如 3000000" step="100000" oninput="recompute()" data-page-node-id="z4f9fXc1PRyTHbjHb1wRdl"></div>
+  <div class="field" data-page-node-id="SSpXSfec9mTsEXoGtXhbZa"><label data-page-node-id="KwHRCQoigkOGJ6nwIenzEq">目标单次总伤(绝对)</label><input id="targetTotal" type="number" placeholder="选填,如 50000000" step="1000000" oninput="recompute()" data-page-node-id="0P5Wov4RovhgsZzAUsBSME"></div>
+  <div class="field" data-page-node-id="ISg9ocleRkJvKz8IK6QUDH"><label data-page-node-id="Knxm1I28a1DF6sUba3xhjd"><input type="checkbox" id="onlyMismatch" onchange="recompute()" style="width:auto;margin-right:6px;vertical-align:middle" data-page-node-id="La9BEAK6OPyf7pnHo8cYdw">仅看 damage≠mad</label></div>
+  <div class="stats" data-page-node-id="pHjA8t3eIX4d6dUqZLFsx0">
+    <div class="card" style="min-width:110px" data-page-node-id="AgFPGXt6WbGoN0EKOEiY2W"><div class="c" data-page-node-id="apwGEkR7iGn6aiL64lRS2D">技能族/节点</div><div class="v" id="s_count" data-page-node-id="dKMHDvGLWWOaxFEio6VuBP">–</div></div>
+    <div class="card" style="min-width:150px" data-page-node-id="MMYe4EDnBphNRu9Hp4wRZ9"><div class="c" data-page-node-id="YzOfCUOZH9AK9yGTSJUuRI">最高单次总伤</div><div class="v" id="s_max" data-page-node-id="STSBjVFsYYAnRGNevOaOG1">–</div></div>
+    <div class="card" style="min-width:150px" data-page-node-id="k4rV7jplWsBcLlj4HPhtEb"><div class="c" data-page-node-id="NCpWNCb1mlcUpdco3MAw77">合计(各放一次)</div><div class="v" id="s_sum" data-page-node-id="C2wjTFVmN3e0dZjYW6F61x">–</div></div>
+    <div class="card" style="min-width:190px" data-page-node-id="0T51RfwJeFHEEdAl36D5n5"><div class="c" data-page-node-id="ajPomt5BEY7cEGEqr64PkG">目标每段→damage 应设</div><div class="v" id="s_needhit" style="color:var(--green)" data-page-node-id="KhzmBUUL6XBw0n2q5cVAdF">–</div></div>
   </div>
 </div>
 
-<div class="cards" id="cards"></div>
+<div class="cards" id="cards" data-page-node-id="Xc4XJcVw2HzXPCBnxOizkH"></div>
 
-<table id="tbl"><thead><tr>
-  <th class="l" data-k="id">技能ID</th>
-  <th class="l" data-k="name">名称</th>
-  <th class="l" data-k="cls">职业</th>
-  <th class="l" data-k="group">阵营</th>
-  <th data-k="dmg">每伤%</th>
-  <th data-k="mad">MAD%</th>
-  <th data-k="ac">段数</th>
-  <th data-k="perhit">每段伤害</th>
-  <th data-k="total">单次总伤</th>
-  <th data-k="cd">冷却(s)</th>
-  <th data-k="needHit">需改dmg%(按每段)</th>
-  <th data-k="needTotal">需改dmg%(按总伤)</th>
-  <th data-k="memberCount">成员</th>
-  <th class="l" data-k="rel">释放</th>
-</tr></thead><tbody></tbody></table>
+<table id="tbl" data-page-node-id="8Iqcx5Ab1xU2P0P8ANht1e"><thead data-page-node-id="JEjzPqcAI8PJp5k03yJ7yd"><tr data-page-node-id="awOJbacdhZUAGvW1Vj3c16">
+  <th class="l" data-k="id" data-page-node-id="gn2kh90dcVEbap1Go58aZ9">技能ID</th>
+  <th class="l" data-k="name" data-page-node-id="CCWkHBCQbsZeX7I8RZrLC3">名称</th>
+  <th class="l" data-k="cls" data-page-node-id="AIIPwxZtJ8iS6eU3gN19fZ">职业</th>
+  <th class="l" data-k="group" data-page-node-id="vWBx18NCO8OOBuH3jh0RKC">阵营</th>
+  <th data-k="dmg" data-page-node-id="5amgy5WcHsCQrYHDAGCDEJ">每伤%</th>
+  <th data-k="mad" data-page-node-id="e4faDDhIxqu2tnPfXaN3zv">MAD%</th>
+  <th data-k="ac" data-page-node-id="pC6g4q75wNlIS2OHRHX7LT">段数</th>
+  <th data-k="perhit" data-page-node-id="XPESnyo5VZvqkWtLM5jGN9">每段伤害</th>
+  <th data-k="total" data-page-node-id="44PfHjvcSM566erCrWP9sN">单次总伤</th>
+  <th data-k="cd" data-page-node-id="wvBWwN8D3Goi4Q19niqGXH">冷却(s)</th>
+  <th data-k="needHit" data-page-node-id="uf5WTP6BmfXMO5R0xkFdhZ">需改dmg%(按每段)</th>
+  <th data-k="needTotal" data-page-node-id="P1uMHIEZjWWWvhDl3YmZbm">需改dmg%(按总伤)</th>
+  <th data-k="memberCount" data-page-node-id="IrRbE92RORc6Hrk1c9lJPh">成员</th>
+  <th class="l" data-k="rel" data-page-node-id="DgZT7mcC8EGAvW33sySfNq">释放</th>
+</tr></thead><tbody data-page-node-id="5k5atFdrtGGzLfN7j613KH"></tbody></table>
 
-<div class="note">
-  <b>读数提示：</b><br>
-  · <b>每段伤害</b>=面板×damage%/100；<b>单次总伤</b>=每段×段数。名义期望，实战 ±20%（×0.8~×1.2），暴击另算。<br>
-  · <b>为何去重</b>：5/6 转技能常由「可见核心（进技能窗、玩家主动放，5 转基底，伤害较低）+ 隐藏子技能（<code>invisible=1</code>，被触发或 6 转增强，伤害更高）」组成。二者命名规律为 <code>核心名：XXX</code>。把每个 ID 都当独立招数会让"合计"虚高 5~8 倍。故默认视图每族合并、单放取最大（即 6 转增强后的真实单放）。<br>
-  · <b>视图切换</b>：<code>可释放核心(5转基底)</code>=只列可见核心；<code>含VI触发子技能</code>=只列隐藏增强（未合并，便于核对）；<code>全部节点</code>=含 buff/特效占位。<br>
-  · <b>成员列</b>=该族包含的技能 ID 数；<b>释放列</b>=取最大伤害那一层的来源（可见=5转基底 / 触发(VI)=6转增强）；家族合并行的 ID/名称取最大伤害成员。<br>
-  · <b>反向计算</b>：填「目标每段伤害」→ 顶部卡片给全技能通用应设 <code>damage%</code>（=目标÷面板×100）；「需改dmg%(按每段)」逐技能标色（绿=达标/红=需调高）。填「目标单次总伤」→「需改dmg%(按总伤)」按段数反算（=目标÷(面板×段数)×100）。<br>
-  · <b>落地</b>：把对应技能在 <code>Skill.wz</code> 的 L30 <code>damage</code> 节点改为上表整数值即可；XML 中 damage 为整数百分比。
+<div class="note" data-page-node-id="74PXgaBP43bNFc775zQ9FF">
+  <b data-page-node-id="mNB2Mu22HWQeQBRl7rxlMd">读数提示：</b><br data-page-node-id="yfk2v6sC0RS4pU5dczokFM">
+  · <b data-page-node-id="znqfu4A1C5OAP8VgVTbf8h">每段伤害</b>=面板×damage%/100；<b data-page-node-id="wUn4rj3oe9DRNICbZM53bI">单次总伤</b>=每段×段数。名义期望，实战 ±20%（×0.8~×1.2），暴击另算。<br data-page-node-id="YHbvE87zBkszUlPgbplmy1">
+  · <b data-page-node-id="3NLpi61bHZSXXv5l2AJ3Ev">为何去重</b>：5/6 转技能常由「可见核心（进技能窗、玩家主动放，5 转基底，伤害较低）+ 隐藏子技能（<code data-page-node-id="3SkOUALupbOWqaZVIFE7Jm">invisible=1</code>，被触发或 6 转增强，伤害更高）」组成。二者命名规律为 <code data-page-node-id="UjMlDvciFY3U8wkyQ1nUNH">核心名：XXX</code>。把每个 ID 都当独立招数会让"合计"虚高 5~8 倍。故默认视图每族合并、单放取最大（即 6 转增强后的真实单放）。<br data-page-node-id="897Vw5lV43y0FYlJLqwqqW">
+  · <b data-page-node-id="wfjUVij9nNuhMDbVpmfm18">视图切换</b>：<code data-page-node-id="xSCX3zqFHzM741XFAotVHL">可释放核心(5转基底)</code>=只列可见核心；<code data-page-node-id="bDe3SagonaboCEZobJRsVB">含VI触发子技能</code>=只列隐藏增强（未合并，便于核对）；<code data-page-node-id="7dcrwBRUKsfk1WqePw9p7A">全部节点</code>=含 buff/特效占位。<br data-page-node-id="4lVP90iCZtbQk8qseW2x7S">
+  · <b data-page-node-id="Pzt4x9xQ8mxDkvmDjD8SfO">成员列</b>=该族包含的技能 ID 数；<b data-page-node-id="omR8wUqJL9Wfbv0KS3um6A">释放列</b>=取最大伤害那一层的来源（可见=5转基底 / 触发(VI)=6转增强）；家族合并行的 ID/名称取最大伤害成员。<br data-page-node-id="KnFkOKnStS83MjLFrI68RB">
+  · <b data-page-node-id="f1bDDTZRVv0Vq3xysVCFex">反向计算</b>：填「目标每段伤害」→ 顶部卡片给全技能通用应设 <code data-page-node-id="86iUmz7XwXUm18eZDAkSvC">damage%</code>（=目标÷面板×100）；「需改dmg%(按每段)」逐技能标色（绿=达标/红=需调高）。填「目标单次总伤」→「需改dmg%(按总伤)」按段数反算（=目标÷(面板×段数)×100）。<br data-page-node-id="RKerYz6GBMAHjJ7RfcCDqL">
+  · <b data-page-node-id="dLy40OykNOSeckfOWXZjKH">落地</b>：把对应技能在 <code data-page-node-id="8vNtwViCjTL5p0U8PeVhsC">Skill.wz</code> 的 L30 <code data-page-node-id="PdPVqbHVOLmqliOaxQcCKI">damage</code> 节点改为上表整数值即可；XML 中 damage 为整数百分比。
 </div>
 
 <script>

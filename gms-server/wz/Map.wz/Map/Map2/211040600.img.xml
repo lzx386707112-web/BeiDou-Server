@@ -15,7 +15,7 @@
     <int name="decHP" value="10"/>
     <float name="fs" value="0.2"/>
     <int name="protectItem" value="1102109"/>
-    <int name="VRLeft" value="-402"/>
+    <int name="VRLeft" value="-500"/>
     <int name="VRRight" value="580"/>
     <int name="VRTop" value="-2100"/>
     <int name="VRBottom" value="640"/>
@@ -1672,6 +1672,14 @@
       <int name="tm" value="211040700"/>
       <string name="tn" value="under00"/>
       <string name="pn" value="top00"/>
+    </imgdir>
+    <imgdir name="8">
+      <int name="x" value="494"/>
+      <int name="y" value="-1206"/>
+      <int name="pt" value="2"/>
+      <int name="tm" value="211060000"/>
+      <string name="tn" value="out00"/>
+      <string name="pn" value="in00"/>
     </imgdir>
   </imgdir>
   <imgdir name="reactor"/>
