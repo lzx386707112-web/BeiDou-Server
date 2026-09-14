@@ -7,14 +7,14 @@
 var isPq = true;
 var minPlayers = 1, maxPlayers = 30;
 var minLevel = 125, maxLevel = 255;
-var entryMap = 105200411;
+var entryMap = 105200810;
 var entryItem = 4033611;    // 入场消耗道具
 var exitMap = 105200000;
 var recruitMap = 105200000;
 var clearMap = 105200000;
 
-var minMapId = 105200411;
-var maxMapId = 105200411;
+var minMapId = 105200810;
+var maxMapId = 105200810;
 
 var eventTime = 120;     // 120 minutes
 
@@ -94,8 +94,8 @@ function setup(channel) {
     battleMap.resetPQ(level);
     battleMap.killAllMonsters();
 
-    // 自动召唤 贝伦 BOSS (8930100)
-    var mob = LifeFactory.getMonster(8930100);
+    // 自动召唤 贝伦 BOSS (8930000)
+    var mob = LifeFactory.getMonster(8930000);
     battleMap.spawnMonsterOnGroundBelow(mob, new java.awt.Point(-192, 442));
 
     eim.startEventTimer(eventTime * 60000);
@@ -209,7 +209,7 @@ function clearPQ(eim) {
 
 function isVONBON(mob) {
     var mobid = mob.getId();
-    return (mobid == 8930100);
+    return (mobid == 8930000);
 }
 
 function monsterKilled(mob, eim) {

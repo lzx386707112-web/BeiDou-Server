@@ -49,11 +49,10 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 
 public class MapFactory {
     private static final Data nameData = DataProviderFactory.getDataProvider(WZFiles.STRING).getData("Map.img");
-    private static final Path MAP_SOURCE_PATH = WZFiles.MAP.getFile().toAbsolutePath().normalize();
     private static final DataProvider mapSource = DataProviderFactory.getDataProvider(WZFiles.MAP);
 
     private static Path getMapXmlPath(String mapName) {
-        return MAP_SOURCE_PATH.resolve(mapName + ".xml").normalize();
+        return WZFiles.MAP.resolveDataFile(mapName).toAbsolutePath().normalize();
     }
 
     private static void loadLifeFromWz(MapleMap map, Data mapData) {

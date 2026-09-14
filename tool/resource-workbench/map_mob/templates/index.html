@@ -78,6 +78,19 @@
     <span id="mobSourceStatus" class="mob-source-status"></span>
   </section>
 
+  <section id="nodeActions" class="node-actions-bar" hidden>
+    <div class="node-action-buttons">
+      <button id="createMainBtn" class="node-action-button create" type="button" hidden>新建空白主文件</button>
+      <button id="addRootBtn" class="node-action-button" type="button">＋ 添加根节点</button>
+      <button id="addChildBtn" class="node-action-button" type="button" disabled>＋ 添加子节点</button>
+      <button id="deleteBtn" class="node-action-button danger" type="button" disabled>删除节点</button>
+    </div>
+    <button id="copyTmsBtn" class="node-copy-button" type="button" disabled>复制选中的 TMS 节点到 A</button>
+    <button id="mobSkillBtn" class="mob-skill-btn" type="button" title="打开 MobSkill 编辑器">⚡ MobSkill</button>
+    <button id="exportBtn" class="node-export-button" type="button" disabled>⇩ 复制修改文件到下载目录</button>
+    <label class="toggle-label sync-toggle"><input id="syncServer" type="checkbox" checked><span>同步服务端 XML</span></label>
+  </section>
+
   <nav class="mobile-tabs" aria-label="工作区">
     <button type="button" class="active" data-panel="treePanel">节点</button>
     <button type="button" data-panel="previewPanel">预览</button>
@@ -179,18 +192,28 @@
           <h2>检查器</h2>
           <span id="selectedPath" class="panel-meta path-meta">未选择节点</span>
         </div>
-      </div>
-      <div id="nodeActions" class="node-actions" hidden>
-        <div class="node-action-buttons">
-          <button id="createMainBtn" class="node-action-button create" type="button" hidden>新建空白主文件</button>
-          <button id="addRootBtn" class="node-action-button" type="button">＋ 添加根节点</button>
-          <button id="addChildBtn" class="node-action-button" type="button" disabled>＋ 添加子节点</button>
-          <button id="deleteBtn" class="node-action-button danger" type="button" disabled>删除节点</button>
+        <div id="mobControlsInline" class="preview-controls" hidden>
+          <select id="actionSelectInline" aria-label="怪物动作"></select>
+          <button id="resetBtnInline" class="icon-button small" type="button" title="重置" aria-label="重置">⏮</button>
+          <button id="prevFrameBtnInline" class="icon-button small" type="button" title="上一帧" aria-label="上一帧" disabled>◀</button>
+          <button id="playBtnInline" class="icon-button small" type="button" title="播放或暂停" aria-label="播放或暂停">Ⅱ</button>
+          <button id="nextFrameBtnInline" class="icon-button small" type="button" title="下一帧" aria-label="下一帧" disabled>▶</button>
+          <span id="frameCounterInline" class="frame-counter-global"></span>
+          <button id="copyFrameBtoAInline" class="icon-button small copy-frame-btn" type="button" title="复制 B 到 A" aria-label="复制 B 到 A" disabled>◀◆</button>
+          <button id="copyFrameAtoBInline" class="icon-button small copy-frame-btn" type="button" title="复制 A 到 B" aria-label="复制 A 到 B" disabled>◆▶</button>
+          <button id="migrateMobActionBtnInline" class="mob-migrate-button" type="button" title="迁移 TMS 动作到 A" aria-label="迁移" disabled>→ A</button>
         </div>
-        <button id="copyTmsBtn" class="node-copy-button" type="button" disabled>复制选中的 TMS 节点到 A</button>
-        <button id="exportBtn" class="node-export-button" type="button" disabled>⇩ 复制修改文件到下载目录</button>
-        <div class="write-options">
-          <label class="toggle-label sync-toggle"><input id="syncServer" type="checkbox" checked><span>同步服务端 XML</span></label>
+      </div>
+      <div id="mobPreviewBar" class="mob-preview-bar" hidden>
+        <div class="mob-preview-bar-stage">
+          <div class="map-pane-head"><span><b class="column-badge a">A</b>主文件</span><small id="leftMobMetaInline">未加载</small></div>
+          <div class="mob-stage"><div class="mob-ground"></div><img id="leftMobImageInline" alt="A 主文件怪物动作帧"><span id="leftFrameCounterInline" class="frame-counter"></span></div>
+          <div id="leftRealResourceInline" class="real-hint"></div>
+        </div>
+        <div class="mob-preview-bar-stage secondary">
+          <div class="map-pane-head"><span><b class="column-badge b">B</b>对比文件</span><small id="rightMobMetaInline">未加载</small></div>
+          <div class="mob-stage"><div class="mob-ground"></div><img id="rightMobImageInline" alt="B 对比文件怪物动作帧"><span id="rightFrameCounterInline" class="frame-counter"></span></div>
+          <div id="rightRealResourceInline" class="real-hint"></div>
         </div>
       </div>
       <div id="compareSummary" class="summary-strip">
@@ -319,6 +342,50 @@
         </div>
       </div>
     </form>
+  </dialog>
+
+  <dialog id="mobSkillDialog" class="mob-skill-dialog">
+    <div class="mob-skill-dialog-inner">
+      <div class="dialog-head">
+        <div>
+          <h2>⚡ MobSkill 特效编辑器</h2>
+          <span class="dialog-parent-path">浏览和编辑 MobSkill.img 中的怪物技能特效</span>
+        </div>
+        <button class="icon-button small" id="mobSkillClose" aria-label="关闭">×</button>
+      </div>
+      <div class="mob-skill-layout">
+        <div class="mob-skill-sidebar">
+          <input id="mobSkillSearch" type="search" placeholder="搜索技能名称…" autocomplete="off">
+          <div id="mobSkillList" class="mob-skill-list"></div>
+        </div>
+        <div class="mob-skill-detail">
+          <div id="mobSkillDetailEmpty" class="empty-state compact">
+            <strong>选择左侧技能</strong>
+            <span>查看特效帧、参数并编辑值。</span>
+          </div>
+          <div id="mobSkillDetail" hidden>
+            <div class="mob-skill-head">
+              <strong id="mobSkillName"></strong>
+              <label>等级
+                <select id="mobSkillLevel"></select>
+              </label>
+            </div>
+            <div id="mobSkillEffectSection" class="mob-skill-section">
+              <div class="side-label">Effect 特效帧</div>
+              <div id="mobSkillEffectFrames" class="mob-skill-frames"></div>
+            </div>
+            <div id="mobSkillMobSection" class="mob-skill-section">
+              <div class="side-label">Mob 覆盖图层</div>
+              <div id="mobSkillMobFrames" class="mob-skill-frames"></div>
+            </div>
+            <div id="mobSkillFieldsSection" class="mob-skill-section">
+              <div class="side-label">参数字段</div>
+              <div id="mobSkillFields" class="mob-skill-fields"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </dialog>
 
   <script src="{{ url_for('static', filename='app.js', v=asset_version) }}"></script>

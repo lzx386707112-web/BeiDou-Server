@@ -2,13 +2,13 @@
  * @author: Ronan
  * @event: PIERRE Battle
  * @optimized: 北斗GMS083 适配优化
- * @modified: 添加三阶段变身机制 (8900100 → 8900101 → 8900102 → 8900100)
+ * @modified: 添加三阶段变身机制 (8900000 → 8900001 → 8900002 → 8900000)
  *
  * 变身流程:
- *   Phase 0: 8900100 HP <= 70% → 变身为 8900101，继承当前血量
- *   Phase 1: 8900101 HP <= 30% → 变身为 8900102，继承当前血量
- *   Phase 2: 8900102 HP <= 5%  → 变回 8900100，继承当前血量
- *   Phase 3: 8900100 死亡 → 通关
+ *   Phase 0: 8900000 HP <= 70% → 变身为 8900001，继承当前血量
+ *   Phase 1: 8900001 HP <= 30% → 变身为 8900002，继承当前血量
+ *   Phase 2: 8900002 HP <= 5%  → 变回 8900000，继承当前血量
+ *   Phase 3: 8900000 死亡 → 通关
  *
  * 技术要点:
  *   - 使用 eim.schedule() 每500ms轮询BOSS血量
@@ -21,13 +21,13 @@
 var isPq = true;
 var minPlayers = 1, maxPlayers = 30;
 var minLevel = 125, maxLevel = 255;
-var entryMap = 105200211;
+var entryMap = 105200610;
 var entryItem = 4033611;    // 入场消耗道具
 var exitMap = 105200000;
 var recruitMap = 105200000;
 var clearMap = 105200000;
-var minMapId = 105200211;
-var maxMapId = 105200211;
+var minMapId = 105200610;
+var maxMapId = 105200610;
 var eventTime = 120;     // 120 minutes
 const maxLobbies = 1;
 
@@ -39,13 +39,13 @@ if (GameConfig.getServerBoolean("use_enable_party_level_limit_lift")) {
     minLevel = 125, maxLevel = 200;
 }
 
-var bossId = 8900100;         // 皮埃尔 BOSS (初始形态 / 最终形态)
+var bossId = 8900000;         // 皮埃尔 BOSS (初始形态 / 最终形态)
 var treasureMobId = 8900103;  // 宝箱怪物
 
 // === 变身配置 ===
-var phase1MobId = 8900101;    // 第一阶段变身目标
-var phase2MobId = 8900102;    // 第二阶段变身目标
-// 第三阶段变回 bossId (8900100)
+var phase1MobId = 8900001;    // 第一阶段变身目标
+var phase2MobId = 8900002;    // 第二阶段变身目标
+// 第三阶段变回 bossId (8900000)
 
 // HP 阈值（占当前 maxHP 的比例）
 var PHASE1_THRESHOLD = 0.80;  // 80% → 触发第一次变身
@@ -110,7 +110,7 @@ function setup(channel) {
     eim.setProperty("treasureSpawned", 0);
 
     // === 变身状态初始化 ===
-    eim.setProperty("bossPhase", "0");       // 0=初始8900100, 1=8900101, 2=8900102, 3=最终8900100
+    eim.setProperty("bossPhase", "0");       // 0=初始8900000, 1=8900001, 2=8900002, 3=最终8900000
     eim.setProperty("isTransforming", "0");   // 变身标记，防止 killMonster 触发通关
 
     var level = 1;
@@ -181,10 +181,10 @@ function checkBossHp(eim) {
  * 根据阶段获取对应怪物ID
  */
 function getBossIdByPhase(phase) {
-    if (phase == 0) return bossId;       // 8900100
-    if (phase == 1) return phase1MobId;  // 8900101
-    if (phase == 2) return phase2MobId;  // 8900102
-    if (phase == 3) return bossId;       // 8900100 (最终)
+    if (phase == 0) return bossId;       // 8900000
+    if (phase == 1) return phase1MobId;  // 8900001
+    if (phase == 2) return phase2MobId;  // 8900002
+    if (phase == 3) return bossId;       // 8900000 (最终)
     return bossId;
 }
 
@@ -350,17 +350,17 @@ function isPierre(mob) {
  * 怪物被击杀回调
  *
  * 关键：变身期间 (isTransforming=1) 的 killMonster 也会触发此回调
- *       必须用 isTransforming 标记拦截，否则变身时杀8900100会误触发通关
+ *       必须用 isTransforming 标记拦截，否则变身时杀8900000会误触发通关
  *
- * 只有最终阶段(phase 3)的 8900100 被玩家击杀才触发通关
- * 初始阶段(phase 0)的 8900100 被玩家直接击杀也触发通关（玩家伤害够高，没等变身就打死）
+ * 只有最终阶段(phase 3)的 8900000 被玩家击杀才触发通关
+ * 初始阶段(phase 0)的 8900000 被玩家直接击杀也触发通关（玩家伤害够高，没等变身就打死）
  */
 function monsterKilled(mob, eim) {
     // 变身期间的 killMonster 不处理
     if (eim.getIntProperty("isTransforming") == 1) return;
 
     // BOSS击杀：触发通关 + 伤害排名
-    // 只有 8900100 的死亡触发通关（无论phase 0还是phase 3）
+    // 只有 8900000 的死亡触发通关（无论phase 0还是phase 3）
     if (isPierre(mob) && eim.getIntProperty("defeatedBoss") == 0) {
         eim.setIntProperty("defeatedBoss", 1);
         eim.showClearEffect(mob.getMap().getId());

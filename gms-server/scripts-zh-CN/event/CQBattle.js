@@ -7,14 +7,14 @@
 var isPq = true;
 var minPlayers = 1, maxPlayers = 30;
 var minLevel = 125, maxLevel = 255;
-var entryMap = 105200311;
+var entryMap = 105200710;
 var entryItem = 4033611;    // 入场消耗道具
 var exitMap = 105200000;
 var recruitMap = 105200000;
 var clearMap = 105200000;
 
-var minMapId = 105200311;
-var maxMapId = 105200311;
+var minMapId = 105200710;
+var maxMapId = 105200710;
 
 var eventTime = 120;     // 120 minutes
 
@@ -29,10 +29,10 @@ if (GameConfig.getServerBoolean("use_enable_party_level_limit_lift")) {
 }
 
 var bossId = 8920100;         // 血腥女王 BOSS
-var treasureMobId = 8920106;  // 宝箱怪物
+var treasureMobId = 8920006;  // 宝箱怪物
 
 // === 变身配置 ===
-var phase1MobId = 8920101;    // 第一阶段变身目标
+var phase1MobId = 8920000;    // 第一阶段变身目标
 var phase2MobId = 8920102;    // 第二阶段变身目标
 var phase3MobId = 8920103;	  // 第三阶段变身目标
 // 第三阶段变回 bossId (8900100)
@@ -110,7 +110,7 @@ function setup(channel) {
     eim.setProperty("treasureSpawned", 0);
 	
 	    // === 变身状态初始化 ===
-    eim.setProperty("bossPhase", "0");       // 0=初始8920100, 1=8920101, 2=8920102, 3=8920103,4=8920100
+    eim.setProperty("bossPhase", "0");       // 0=初始8920100, 1=8920000, 2=8920102, 3=8920103,4=8920100
     eim.setProperty("isTransforming", "0");   // 变身标记，防止 killMonster 触发通关
 
     var level = 1;
@@ -185,7 +185,7 @@ function checkBossHp(eim) {
  */
 function getBossIdByPhase(phase) {
     if (phase == 0) return bossId;       // 8920100
-    if (phase == 1) return phase1MobId;  // 8920101
+    if (phase == 1) return phase1MobId;  // 8920000
     if (phase == 2) return phase2MobId;  // 8920102
 	if (phase == 3) return phase3MobId;  // 8920103
     if (phase == 4) return bossId;       // 8920100 (最终)

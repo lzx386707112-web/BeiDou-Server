@@ -1483,6 +1483,27 @@ public class Monster extends AbstractLoadedLife {
         return stats.hasSkill(skillId, level);
     }
 
+    public MobSkillId resolveCastSkill(int skillId, int skillLevel, int skillActionIndex) {
+        if (hasSkill(skillId, skillLevel)) {
+            return new MobSkillId(MobSkillType.from(skillId).orElseThrow(), skillLevel);
+        }
+        for (MobSkillId skill : stats.getSkills()) {
+            if (skill.type().getId() == skillId) {
+                return skill;
+            }
+        }
+        if (skillActionIndex >= 0) {
+            int index = 0;
+            for (MobSkillId skill : stats.getSkills()) {
+                if (index == skillActionIndex) {
+                    return skill;
+                }
+                index++;
+            }
+        }
+        return null;
+    }
+
     public boolean canUseSkill(MobSkill toUse, boolean apply) {
         if (toUse == null || isBuffed(MonsterStatus.SEAL_SKILL)) {
             return false;
@@ -1546,6 +1567,8 @@ public class Monster extends AbstractLoadedLife {
         MobClearSkillService service = (MobClearSkillService) map.getChannelServer().getServiceAccess(ChannelServices.MOB_CLEAR_SKILL);
         long cooldown = KaringBossCompat.skillCooldownMillis(this, skill);
         cooldown = LucidBossCompat.skillCooldownMillis(
+                getId(), msId.type().getId(), msId.level(), cooldown);
+        cooldown = DamienBossCompat.skillCooldownMillis(
                 getId(), msId.type().getId(), msId.level(), cooldown);
         service.registerMobClearSkillAction(mmap.getId(), r, cooldown);
     }

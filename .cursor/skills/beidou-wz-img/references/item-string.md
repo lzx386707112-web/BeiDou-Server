@@ -12,7 +12,8 @@ Etc items in this project, verify rather than assume the common mapping:
   `0<item-id>`;
 - String record under `String/Etc.img/Etc` uses the plain numeric ID;
 - server String data may exist in both `gms-server/wz` and
-  `gms-server/wz-zh-CN`.
+  `gms-server/wz-zh-CN`. `wz-zh-CN` is allowed to contain only `Etc.wz`,
+  `Quest.wz`, and `String.wz`.
 
 Inspect neighboring legacy records for required `info`, price/slot/quest flags,
 icon structure, and sibling placement. Do not infer the container or padding

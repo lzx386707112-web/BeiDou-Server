@@ -21,7 +21,6 @@ public final class BotAutoSpawner {
         if (player == null || player.getClient() == null || player.getMap() == null || BotHelpers.isBot(player)) {
             return;
         }
-        EnvironmentManager.ensureMarketServiceNpcs(player.getMap());
         BotClientHandler.createBotClient(player.getClient());
 
         if (player.getMapId() != FM_ENTRANCE

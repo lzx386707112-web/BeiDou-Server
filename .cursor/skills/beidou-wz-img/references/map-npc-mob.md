@@ -154,8 +154,8 @@ missing `bulletSpeed`; `hit` present without `attach`. Example that had
    (`type=2` before `attackAfter` when that sibling exists; append
    `bulletSpeed` and `hit/attach=1`). Do not full-serialize the mob.
 3. Keep existing `ball`/`hit` canvases, delays, and attack timing.
-4. Mirror the same nodes in `gms-server/wz/Mob.wz/<id>.img.xml` (and
-   `wz-zh-CN` only if that file exists).
+4. Mirror the same nodes in `gms-server/wz/Mob.wz/<id>.img.xml`. Do not copy
+   Mob XML into `wz-zh-CN`.
 5. Prefer speeds from
    `LEGACY_BALLISTIC_ATTACKS` in
    `tool/scripts/migration/migrate_arcane_river_expansion.py`; default

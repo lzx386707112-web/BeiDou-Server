@@ -49,6 +49,9 @@ function init() {
 }
 
 function scheduleNew() {
+    if (Orbis_docked == null || Ariant_docked == null) {
+        return;
+    }
     em.setProperty("docked", "true");
     Orbis_docked.setDocked(true);
     Ariant_docked.setDocked(true);

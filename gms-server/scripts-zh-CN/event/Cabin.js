@@ -69,6 +69,9 @@ function init() {
 }
 
 function scheduleNew() {
+    if (Orbis_docked == null || Leafre_docked == null) {
+        return;
+    }
     em.setProperty("docked", "true");
     Orbis_docked.setDocked(true);
     Leafre_docked.setDocked(true);

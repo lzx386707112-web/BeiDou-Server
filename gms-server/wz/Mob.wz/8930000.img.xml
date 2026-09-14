@@ -3,19 +3,20 @@
   <imgdir name="info">
     <imgdir name="skill">
       <imgdir name="0">
-        <int name="skill" value="170" />
+        <int name="skill" value="200" />
         <int name="level" value="13" />
         <int name="action" value="1" />
       </imgdir>
       <imgdir name="1">
-        <int name="skill" value="201" />
+        <int name="skill" value="200" />
         <int name="level" value="49" />
         <int name="action" value="1" />
       </imgdir>
     </imgdir>
+    <int name="bodyAttack" value="1"/>
     <int name="firstAttack" value="1"/>
     <int name="level" value="190"/>
-    <int name="maxHP" value="200000000000"/>
+    <string name="maxHP" value="200000000000"/>
     <int name="maxMP" value="64500"/>
     <int name="PADamage" value="46000"/>
     <int name="PDRate" value="200"/>
@@ -30,7 +31,7 @@
     <int name="mpRecovery" value="1000"/>
     <int name="speed" value="140"/>
     <int name="hpRecovery" value="1000"/>
-    <int name="hideMove" value="1"/>
+    <int name="hideMove" value="0"/>
     <int name="wp" value="200"/>
     <canvas name="thumbnail" width="428" height="500" format="1">
       <vector name="origin" x="214" y="250"/>
@@ -39,8 +40,8 @@
     </canvas>
     <int name="charismaEXP" value="279"/>
     <int name="exp" value="34000000"/>
-    <int name="PDDamage" value="0"/>
-    <int name="MDDamage" value="0"/>
+    <int name="PDDamage" value="30000"/>
+    <int name="MDDamage" value="30000"/>
     <int name="mobType" value="1"/>
     <int name="boss" value="1"/>
     <int name="hpTagColor" value="1"/>

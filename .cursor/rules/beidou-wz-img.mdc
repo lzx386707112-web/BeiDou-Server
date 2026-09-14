@@ -11,6 +11,8 @@ For any task that diagnoses, reads, changes, migrates, verifies, or delivers cli
 2. Read `references/wzskill.md` and `references/verification.md` before editing.
 3. Map/mob migrations must follow `references/map-npc-mob.md` for numeric
    `obj`/`back` gaps, `connect` ropes, and `ball` projectile fields.
-4. Never full-serialize an existing client IMG to change a few nodes.
-5. Preserve the worktree; do not revert unrelated user changes.
-6. Deliver only after static gates pass. Auto-compile any required compatibility DLL. Copy **only this task's modified runtime files** to `/Users/lizixian/Downloads/路西德/` with matching SHA-256 hashes. Do not re-deliver unchanged files from earlier tasks.
+4. `gms-server/wz-zh-CN` may contain only Etc.wz, Quest.wz, and String.wz.
+   Never put Map.wz or Mob.wz there (hides the full `wz` archive).
+5. Never full-serialize an existing client IMG to change a few nodes.
+6. Preserve the worktree; do not revert unrelated user changes.
+7. Deliver only after static gates pass. Auto-compile any required compatibility DLL. Copy **only this task's modified runtime files** to `/Users/lizixian/Downloads/<本次功能中文名>/` with matching SHA-256 hashes. Name the folder after this task; do not reuse `路西德`. Do not re-deliver unchanged files from earlier tasks.

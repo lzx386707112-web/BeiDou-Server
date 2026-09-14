@@ -93,6 +93,10 @@ public class MobSkillFactory {
             }
             int effect = DataTool.getInt("summonEffect", skillData, 0);
             int hp = DataTool.getInt("hp", skillData, 100);
+            // Modern MobSkill data uses hp=0 for an unrestricted skill.
+            if (hp <= 0) {
+                hp = 100;
+            }
             int x = DataTool.getInt("x", skillData, 1);
             int y = DataTool.getInt("y", skillData, 1);
             int count = DataTool.getInt("count", skillData, 1);
@@ -113,6 +117,7 @@ public class MobSkillFactory {
 
             MobSkill loadedMobSkill = new MobSkill.Builder(type, level)
                     .mpCon(mpCon)
+                    .spawnEffect(effect)
                     .toSummon(toSummon)
                     .cooltime(cooltime)
                     .duration(duration)

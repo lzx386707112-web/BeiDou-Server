@@ -155,12 +155,11 @@ public final class KaringBossCompat {
     private static void damageCharacter(Monster monster, Character character, int percent) {
         int damage = Math.max(1, (int) ((long) character.getMaxHp() * percent / 100));
         character.addHP(-damage);
-        monster.getMap().broadcastMessage(
-                character,
-                PacketCreator.damagePlayer(
-                        0, monster.getId(), character.getId(), damage, 0, 0,
-                        false, 0, true, monster.getObjectId(), 0, 0),
-                false);
+        var packet = PacketCreator.damagePlayer(
+                0, monster.getId(), character.getId(), damage, 0, 0,
+                false, 0, true, monster.getObjectId(), 0, 0);
+        character.sendPacket(packet);
+        monster.getMap().broadcastMessage(character, packet, false);
         log.info("[KaringSkillTrace] map={} mob={} oid={} chr={} damagePercent={} damage={} hpAfter={}",
                 monster.getMap().getId(), monster.getId(), monster.getObjectId(),
                 character.getName(), percent, damage, character.getHp());

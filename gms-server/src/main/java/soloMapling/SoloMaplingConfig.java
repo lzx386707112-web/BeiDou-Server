@@ -43,7 +43,6 @@ public final class SoloMaplingConfig {
     public static final String FEATURE_OPQ_LOBBY_BOTS_ENABLED = "solo_mapling_feature_opq_lobby_bots_enabled";
     public static final String FEATURE_BLACKJACK_TABLES_ENABLED = "solo_mapling_feature_blackjack_tables_enabled";
     public static final String FEATURE_CASINO_NPC_ENABLED = "solo_mapling_feature_casino_npc_enabled";
-    public static final String FEATURE_RPS_NPC_ENABLED = "solo_mapling_feature_rps_npc_enabled";
     public static final String FEATURE_CONVERSATION_ENABLED = "solo_mapling_feature_conversation_enabled";
     public static final String FEATURE_HOT_POTATO_ENABLED = "solo_mapling_feature_hot_potato_enabled";
     public static final String FEATURE_TUTORIAL_BOT_ENABLED = "solo_mapling_feature_tutorial_bot_enabled";
@@ -209,10 +208,6 @@ public final class SoloMaplingConfig {
 
     public static boolean casinoNpcEnabled() {
         return getBoolean(FEATURE_CASINO_NPC_ENABLED, true);
-    }
-
-    public static boolean rpsNpcEnabled() {
-        return getBoolean(FEATURE_RPS_NPC_ENABLED, true);
     }
 
     public static boolean conversationEnabled() {

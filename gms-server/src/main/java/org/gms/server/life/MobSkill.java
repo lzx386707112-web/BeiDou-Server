@@ -23,6 +23,7 @@ package org.gms.server.life;
 
 import org.gms.client.Character;
 import org.gms.client.Disease;
+import org.gms.client.Stat;
 import org.gms.client.status.MonsterStatus;
 import org.gms.constants.id.MapId;
 import org.gms.constants.id.MobId;
@@ -265,7 +266,10 @@ public class MobSkill {
             case SPEED -> stats.put(MonsterStatus.SPEED, x);
             case SEAL_SKILL -> stats.put(MonsterStatus.SEAL_SKILL, x);
             case AKAYRUM_SCREEN_CRACK_VISUAL -> {
-                if (MobId.isMoriRanmaruHard(monster.getId())) {
+                if (MobId.isDamien(monster.getId())) {
+                    // 7x5 FIELD_EFFECT marker; KaringSceneCompat plays damien-scene.mcv
+                    castBossCompatEffect(monster, "customBossDemian/scene", 25);
+                } else if (MobId.isMoriRanmaruHard(monster.getId())) {
                     applyRanmaruScreenCrack(monster);
                 } else {
                     monster.getMap().broadcastMessage(PacketCreator.showEffect("customBoss/akayrum/screenCrack"));
@@ -283,14 +287,23 @@ public class MobSkill {
                 }
             }
             case MAGNUS_METEOR_STORM -> {
-                if (monster.getId() == 8910100) {
+                if (monster.getId() == 8910000 || monster.getId() == 8910100) {
+                    // Von Bon clocks are mob-attached skill2 frames. A fullscreen MCV
+                    // was composited at canvas (0,0) because TMS _Canvas has no origin.
                     summonMonsters(monster);
                 } else {
                     castBossCompatEffect(monster, "customBossMagnus/meteorStorm",
                             MAGNUS_METEOR_STORM_DAMAGE_PERCENT);
                 }
             }
-            case LUCID_DREAM_BURST -> castBossCompatEffect(monster, "customBossLucid/dreamBurst");
+            case LUCID_DREAM_BURST -> {
+                if (MobId.isDamien(monster.getId())) {
+                    // 7x5 FIELD_EFFECT marker; KaringSceneCompat plays damien-ground.mcv
+                    castBossCompatEffect(monster, "customBossDemian/groundBurst", 35);
+                } else {
+                    castBossCompatEffect(monster, "customBossLucid/dreamBurst");
+                }
+            }
             case SEREN_SACRED_BURST -> {
                 if (monster.getId() == 8900101 || monster.getId() == 8900102) {
                     summonMonsters(monster);
@@ -298,14 +311,40 @@ public class MobSkill {
                     castBossCompatEffect(monster, "customBossSeren/sacredBurst");
                 }
             }
+            case DAMAGE_CANCEL -> {
+                // TMS 214/14 is Damien's timed damage-cancel challenge. The
+                // legacy client can play the matching skill8 action, while
+                // its succeed/failed state machine remains visual-only here.
+            }
+            case MOB_CHANGE -> {
+                // TMS 215/2 and 215/4 reference Damien's alternate visual mob.
+                // The imported skill action owns playback; spawning another
+                // boss would duplicate HP, drops, and combat state.
+            }
             case SUMMON, SUMMON_170, SUMMON_186, SUMMON_188, SUMMON_189,
-                 SUMMON_190, SUMMON_191, SUMMON_201, SUMMON_202, SUMMON_203 -> summonMonsters(monster);
+                 SUMMON_190, SUMMON_191, SUMMON_201, SUMMON_202, SUMMON_203 -> {
+                if (monster.getId() == 8900000) {
+                    castBossCompatEffect(monster, "customSkill/rootAbyss/pierreVideoLayer");
+                }
+                // Queen/Vellum ultimates stay on the mob sprite (skillN / attackN).
+                // Fullscreen field-effect MCV is screen-centered, so those skills
+                // appeared in the upper-left instead of on the boss.
+                summonMonsters(monster);
+            }
         }
         if (stats.size() > 0) {
             applyMonsterBuffs(stats, skill, monster, reflection);
         }
         if (disease != null) {
-            applyDisease(disease, skill, monster, player);
+            if (MobId.isDamien(monster.getId())) {
+                for (Character character : monster.getMap().getAllPlayers()) {
+                    if (character.isAlive()) {
+                        character.giveDebuff(disease, this);
+                    }
+                }
+            } else {
+                applyDisease(disease, skill, monster, player);
+            }
         }
     }
 
@@ -425,12 +464,11 @@ public class MobSkill {
         int damagePercent = Math.max(1, Math.min(100, percent));
         int damage = Math.max(1, (int) ((long) character.getMaxHp() * damagePercent / 100));
         character.addHP(-damage);
-        monster.getMap().broadcastMessage(
-                character,
-                PacketCreator.damagePlayer(0, monster.getId(), character.getId(), damage, 0, 0, false, 0, true,
-                        monster.getObjectId(), 0, 0),
-                false
-        );
+        character.updateSingleStat(Stat.HP, character.getHp());
+        var packet = PacketCreator.damagePlayer(0, monster.getId(), character.getId(), damage, 0, 0, false, 0, true,
+                monster.getObjectId(), 0, 0);
+        character.sendPacket(packet);
+        monster.getMap().broadcastMessage(character, packet, false);
     }
 
     private void spawnMonsterMist(Monster monster) {

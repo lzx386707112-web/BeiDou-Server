@@ -16,12 +16,11 @@
     <int name="VRLeft" value="-1115"/>
     <int name="VRBottom" value="255"/>
     <int name="VRRight" value="845"/>
-    <int name="fieldType" value="9"/>
     <int name="isFixDec" value="1"/>
     <int name="decHPr" value="20"/>
     <int name="isDecView" value="1"/>
     <int name="decInterval" value="1000"/>
-    <int name="remoteEffect" value="-2"/>
+    <int name="abilityPresetBlock" value="1"/>
     <int name="genReturnMap" value="1"/>
   </imgdir>
   <imgdir name="back">
@@ -41,27 +40,27 @@
       <int name="a" value="255"/>
     </imgdir>
   </imgdir>
-  <imgdir name="life"/>
-  <imgdir name="reactor"/>
+  <imgdir name="life"></imgdir>
+  <imgdir name="reactor"></imgdir>
   <imgdir name="0">
-    <imgdir name="info"/>
-    <imgdir name="tile"/>
-    <imgdir name="obj"/>
+    <imgdir name="info"></imgdir>
+    <imgdir name="tile"></imgdir>
+    <imgdir name="obj"></imgdir>
   </imgdir>
   <imgdir name="1">
-    <imgdir name="info"/>
-    <imgdir name="tile"/>
-    <imgdir name="obj"/>
+    <imgdir name="info"></imgdir>
+    <imgdir name="tile"></imgdir>
+    <imgdir name="obj"></imgdir>
   </imgdir>
   <imgdir name="2">
-    <imgdir name="info"/>
-    <imgdir name="tile"/>
-    <imgdir name="obj"/>
+    <imgdir name="info"></imgdir>
+    <imgdir name="tile"></imgdir>
+    <imgdir name="obj"></imgdir>
   </imgdir>
   <imgdir name="3">
-    <imgdir name="info"/>
-    <imgdir name="tile"/>
-    <imgdir name="obj"/>
+    <imgdir name="info"></imgdir>
+    <imgdir name="tile"></imgdir>
+    <imgdir name="obj"></imgdir>
   </imgdir>
   <imgdir name="4">
     <imgdir name="info">
@@ -851,10 +850,6 @@
         <int name="z" value="9"/>
         <int name="f" value="0"/>
         <int name="zM" value="0"/>
-        <int name="r" value="0"/>
-        <int name="move" value="0"/>
-        <int name="dynamic" value="0"/>
-        <int name="piece" value="0"/>
       </imgdir>
       <imgdir name="1">
         <string name="oS" value="rootabyss"/>
@@ -866,10 +861,6 @@
         <int name="z" value="9"/>
         <int name="f" value="0"/>
         <int name="zM" value="0"/>
-        <int name="r" value="0"/>
-        <int name="move" value="0"/>
-        <int name="dynamic" value="0"/>
-        <int name="piece" value="1"/>
       </imgdir>
       <imgdir name="2">
         <string name="oS" value="rootabyss"/>
@@ -881,10 +872,6 @@
         <int name="z" value="9"/>
         <int name="f" value="0"/>
         <int name="zM" value="0"/>
-        <int name="r" value="0"/>
-        <int name="move" value="0"/>
-        <int name="dynamic" value="0"/>
-        <int name="piece" value="2"/>
       </imgdir>
       <imgdir name="3">
         <string name="oS" value="rootabyss"/>
@@ -896,27 +883,23 @@
         <int name="z" value="9"/>
         <int name="f" value="0"/>
         <int name="zM" value="0"/>
-        <int name="r" value="0"/>
-        <int name="move" value="0"/>
-        <int name="dynamic" value="0"/>
-        <int name="piece" value="3"/>
       </imgdir>
     </imgdir>
   </imgdir>
   <imgdir name="5">
-    <imgdir name="info"/>
-    <imgdir name="tile"/>
-    <imgdir name="obj"/>
+    <imgdir name="info"></imgdir>
+    <imgdir name="tile"></imgdir>
+    <imgdir name="obj"></imgdir>
   </imgdir>
   <imgdir name="6">
-    <imgdir name="info"/>
-    <imgdir name="tile"/>
-    <imgdir name="obj"/>
+    <imgdir name="info"></imgdir>
+    <imgdir name="tile"></imgdir>
+    <imgdir name="obj"></imgdir>
   </imgdir>
   <imgdir name="7">
-    <imgdir name="info"/>
-    <imgdir name="tile"/>
-    <imgdir name="obj"/>
+    <imgdir name="info"></imgdir>
+    <imgdir name="tile"></imgdir>
+    <imgdir name="obj"></imgdir>
   </imgdir>
   <imgdir name="foothold">
     <imgdir name="4">
@@ -1122,9 +1105,9 @@
       </imgdir>
     </imgdir>
   </imgdir>
-  <imgdir name="ladderRope"/>
+  <imgdir name="ladderRope"></imgdir>
   <imgdir name="miniMap">
-    <canvas name="canvas" width="131" height="81" format="1"/>
+    <canvas name="canvas" width="131" height="81" format="1"></canvas>
     <int name="width" value="2096"/>
     <int name="height" value="1298"/>
     <int name="centerX" value="1180"/>
@@ -1139,7 +1122,6 @@
       <int name="y" value="112"/>
       <int name="tm" value="999999999"/>
       <string name="tn" value=""/>
-      <int name="horizontalImpact" value="0"/>
     </imgdir>
     <imgdir name="1">
       <string name="pn" value="sp"/>
@@ -1148,7 +1130,6 @@
       <int name="y" value="134"/>
       <int name="tm" value="999999999"/>
       <string name="tn" value=""/>
-      <int name="horizontalImpact" value="0"/>
     </imgdir>
     <imgdir name="2">
       <string name="pn" value="sp"/>
@@ -1157,7 +1138,6 @@
       <int name="y" value="170"/>
       <int name="tm" value="999999999"/>
       <string name="tn" value=""/>
-      <int name="horizontalImpact" value="0"/>
     </imgdir>
     <imgdir name="3">
       <string name="pn" value="sp"/>
@@ -1166,7 +1146,6 @@
       <int name="y" value="161"/>
       <int name="tm" value="999999999"/>
       <string name="tn" value=""/>
-      <int name="horizontalImpact" value="0"/>
     </imgdir>
     <imgdir name="4">
       <string name="pn" value="sp"/>
@@ -1175,7 +1154,6 @@
       <int name="y" value="154"/>
       <int name="tm" value="999999999"/>
       <string name="tn" value=""/>
-      <int name="horizontalImpact" value="0"/>
     </imgdir>
   </imgdir>
 </imgdir>

@@ -17,7 +17,7 @@ constexpr size_t kDrawPrimitiveUpVtableIndex = 72;
 constexpr size_t kDrawIndexedPrimitiveUpVtableIndex = 73;
 constexpr UINT kMarkerWidth = 7;
 constexpr UINT kMarkerHeight = 5;
-constexpr int kMarkerCodeCount = 34;
+constexpr int kMarkerCodeCount = 40;
 constexpr int kLucidFuryStopMarker = 33;
 constexpr DWORD kAttachRetryMilliseconds = 100;
 constexpr int kAttachRetryCount = 600;
@@ -82,6 +82,12 @@ constexpr SceneMapping kScenes[] = {
     {30, "Data\\Video\\lucid-flower-explosion-1.mcv"},
     {31, "Data\\Video\\lucid-flower-explosion-2.mcv"},
     {32, "Data\\Video\\lucid-flower-explosion-3.mcv"},
+    {34, "Data\\Video\\root-abyss-pierre.mcv"},
+    {35, "Data\\Video\\root-abyss-vonbon.mcv"},
+    {36, "Data\\Video\\root-abyss-queen.mcv"},
+    {37, "Data\\Video\\root-abyss-vellum.mcv"},
+    {38, "Data\\Video\\damien-scene.mcv"},
+    {39, "Data\\Video\\damien-ground.mcv"},
 };
 
 GetAttachedDeviceFn gGetAttachedDevice = nullptr;
@@ -234,6 +240,68 @@ int DetectLucidA8R8G8B8(const uint32_t* pixels, bool ignoreAlpha) {
     return code > 0 ? 14 + code : -1;
 }
 
+int DetectRootAbyssA4R4G4B4(const uint16_t* pixels) {
+    if (pixels[0] != 0xF357 || pixels[1] != 0xF689
+            || pixels[2] != 0xFABC || pixels[3] != 0xFDEF) {
+        return -1;
+    }
+    if ((pixels[4] & 0xF0FF) != 0xF08E) {
+        return -1;
+    }
+    const int code = (pixels[4] >> 8) & 0x0F;
+    return code >= 1 && code <= 4 ? 33 + code : -1;
+}
+
+int DetectRootAbyssA8R8G8B8(const uint32_t* pixels, bool ignoreAlpha) {
+    const uint32_t colorMask = ignoreAlpha ? 0x00FFFFFFu : 0xFFFFFFFFu;
+    const uint32_t alpha = ignoreAlpha ? 0u : 0xFF000000u;
+    if ((pixels[0] & colorMask) != (alpha | 0x00335577u)
+            || (pixels[1] & colorMask) != (alpha | 0x00668899u)
+            || (pixels[2] & colorMask) != (alpha | 0x00AABBCCu)
+            || (pixels[3] & colorMask) != (alpha | 0x00DDEEFFu)) {
+        return -1;
+    }
+    const int red = static_cast<int>((pixels[4] >> 16) & 0xFF);
+    const int green = static_cast<int>((pixels[4] >> 8) & 0xFF);
+    const int blue = static_cast<int>(pixels[4] & 0xFF);
+    if (red % 17 != 0 || green != 136 || blue != 238) {
+        return -1;
+    }
+    const int code = red / 17;
+    return code >= 1 && code <= 4 ? 33 + code : -1;
+}
+
+int DetectDamienA4R4G4B4(const uint16_t* pixels) {
+    if (pixels[0] != 0xF146 || pixels[1] != 0xF578
+            || pixels[2] != 0xF89B || pixels[3] != 0xFBDE) {
+        return -1;
+    }
+    if ((pixels[4] & 0xF0FF) != 0xF09D) {
+        return -1;
+    }
+    const int code = (pixels[4] >> 8) & 0x0F;
+    return code >= 1 && code <= 2 ? 37 + code : -1;
+}
+
+int DetectDamienA8R8G8B8(const uint32_t* pixels, bool ignoreAlpha) {
+    const uint32_t colorMask = ignoreAlpha ? 0x00FFFFFFu : 0xFFFFFFFFu;
+    const uint32_t alpha = ignoreAlpha ? 0u : 0xFF000000u;
+    if ((pixels[0] & colorMask) != (alpha | 0x00114466u)
+            || (pixels[1] & colorMask) != (alpha | 0x00557788u)
+            || (pixels[2] & colorMask) != (alpha | 0x008899BBu)
+            || (pixels[3] & colorMask) != (alpha | 0x00BBDDEEu)) {
+        return -1;
+    }
+    const int red = static_cast<int>((pixels[4] >> 16) & 0xFF);
+    const int green = static_cast<int>((pixels[4] >> 8) & 0xFF);
+    const int blue = static_cast<int>(pixels[4] & 0xFF);
+    if (red % 17 != 0 || green != 153 || blue != 221) {
+        return -1;
+    }
+    const int code = red / 17;
+    return code >= 1 && code <= 2 ? 37 + code : -1;
+}
+
 int DetectMarker(IDirect3DBaseTexture8* baseTexture) {
     if (baseTexture == nullptr || baseTexture->GetType() != D3DRTYPE_TEXTURE) {
         return -1;
@@ -255,16 +323,38 @@ int DetectMarker(IDirect3DBaseTexture8* baseTexture) {
         if (code < 0) {
             code = DetectLucidA4R4G4B4(static_cast<const uint16_t*>(locked.pBits));
         }
+        if (code < 0) {
+            code = DetectRootAbyssA4R4G4B4(static_cast<const uint16_t*>(locked.pBits));
+        }
+        if (code < 0) {
+            code = DetectDamienA4R4G4B4(static_cast<const uint16_t*>(locked.pBits));
+        }
     } else if (description.Format == D3DFMT_A8R8G8B8 && locked.Pitch >= 20) {
         code = DetectA8R8G8B8(static_cast<const uint32_t*>(locked.pBits), false);
         if (code < 0) {
             code = DetectLucidA8R8G8B8(
                 static_cast<const uint32_t*>(locked.pBits), false);
         }
+        if (code < 0) {
+            code = DetectRootAbyssA8R8G8B8(
+                static_cast<const uint32_t*>(locked.pBits), false);
+        }
+        if (code < 0) {
+            code = DetectDamienA8R8G8B8(
+                static_cast<const uint32_t*>(locked.pBits), false);
+        }
     } else if (description.Format == D3DFMT_X8R8G8B8 && locked.Pitch >= 20) {
         code = DetectA8R8G8B8(static_cast<const uint32_t*>(locked.pBits), true);
         if (code < 0) {
             code = DetectLucidA8R8G8B8(
+                static_cast<const uint32_t*>(locked.pBits), true);
+        }
+        if (code < 0) {
+            code = DetectRootAbyssA8R8G8B8(
+                static_cast<const uint32_t*>(locked.pBits), true);
+        }
+        if (code < 0) {
+            code = DetectDamienA8R8G8B8(
                 static_cast<const uint32_t*>(locked.pBits), true);
         }
     }

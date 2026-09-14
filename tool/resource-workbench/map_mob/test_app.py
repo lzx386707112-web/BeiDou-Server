@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import hashlib
+import os
 import shutil
 import subprocess
 import tempfile
@@ -1199,6 +1200,394 @@ class CrashDiagnosticTests(unittest.TestCase):
         self.assertEqual(payload["phase"], "entity_appear")
         self.assertGreaterEqual(len(payload["isolation"]), 3)
         self.assertEqual(path.read_bytes(), before)
+
+
+class MobRealResourceTests(unittest.TestCase):
+    """TMS 怪物帧多为 1×1 占位：必须能解析回真实资源，并对真实资源执行复制。
+
+    样例固定用露希妲 8880141 —— 它是典型的跨怪引用：自身帧只有占位，
+    真实像素全在 ``Mob/_Canvas/8880140.img`` 里。
+    """
+
+    MOB_ID = "8880141"
+    CANVAS_STORE = ("Mob", "_Canvas", "8880140.img")
+
+    def _comparison(self) -> Path:
+        source = workbench.resolve_repo_path(
+            workbench.mob_source_options(self.MOB_ID)["comparisonPath"]
+        )
+        if not source.is_file():
+            self.skipTest("TMS Lucid comparison source is unavailable")
+        return source
+
+    def _canvas_store(self) -> Path:
+        store = workbench._TMS_DATA.joinpath(*self.CANVAS_STORE)
+        if not store.is_file():
+            self.skipTest("TMS Canvas store for Lucid is unavailable")
+        return store
+
+    # ── 占位帧 → 真实资源 ─────────────────────────────────────────────
+
+    def test_cross_mob_placeholder_resolves_to_the_real_canvas_store(self) -> None:
+        source = self._comparison()
+        report = workbench.describe_canvas_reference(
+            workbench.load_image(source), "stand/0", source,
+        )
+        self.assertEqual(report["state"], "linked")
+        self.assertTrue(report["placeholder"])
+        self.assertTrue(report["recovered"])
+        self.assertEqual((report["declaredWidth"], report["declaredHeight"]), (1, 1))
+        self.assertEqual(report["linkKind"], "_outlink")
+        resolved = report["resolved"]
+        self.assertEqual(resolved["path"], "stand/0")
+        self.assertEqual(resolved["absPath"], str(self._canvas_store().resolve()))
+        self.assertEqual(resolved["mobId"], "8880140")
+        self.assertTrue(resolved["visible"])
+        self.assertGreater(resolved["width"], workbench._PLACEHOLDER_MAX_SIZE)
+        self.assertGreater(resolved["height"], workbench._PLACEHOLDER_MAX_SIZE)
+        # 声明尺寸是占位，真实像素尺寸来自被引用的库文件 —— 两者必须区分开
+        self.assertNotEqual(
+            (resolved["width"], resolved["height"]),
+            (report["declaredWidth"], report["declaredHeight"]),
+        )
+        self.assertTrue(report["crossMob"])
+        self.assertEqual(report["hops"][0]["path"], "stand/0")
+
+    def test_linked_frame_summary_names_file_and_cross_mob(self) -> None:
+        source = self._comparison()
+        summary = workbench.canvas_reference_summary(
+            workbench.describe_canvas_reference(
+                workbench.load_image(source), "stand/0", source,
+            )
+        )
+        self.assertIn("占位 →", summary)
+        self.assertIn("_Canvas/8880140.img", summary)
+        self.assertIn("跨怪引用", summary)
+
+    def test_orphan_placeholder_reports_no_visible_pixel_source(self) -> None:
+        source = self._comparison()
+        report = workbench.describe_canvas_reference(
+            workbench.load_image(source), "attack1/0", source,
+        )
+        self.assertEqual(report["state"], "orphan")
+        self.assertEqual(report["linkKind"], "")
+        self.assertFalse(report["crossMob"])
+        self.assertFalse(report["recovered"])
+        self.assertFalse(report["resolved"]["visible"])
+        self.assertIn("空占位", workbench.canvas_reference_summary(report))
+
+    def test_unresolvable_frame_reports_error_instead_of_raising(self) -> None:
+        source = self._comparison()
+        report = workbench.describe_canvas_reference(
+            workbench.load_image(source), "move/0", source,
+        )
+        self.assertEqual(report["state"], "missing")
+        self.assertIsNone(report["resolved"])
+        self.assertIn("引用目标不存在", report["error"])
+
+    # ── 真实资源清单 ──────────────────────────────────────────────────
+
+    def test_manifest_aggregates_every_frame_onto_its_real_file(self) -> None:
+        source = self._comparison()
+        manifest = workbench.mob_resource_manifest(workbench.load_image(source), source)
+        self.assertEqual(manifest["sourceMobId"], self.MOB_ID)
+        self.assertGreater(manifest["frameCount"], 0)
+        self.assertEqual(manifest["frameCount"], sum(manifest["stateCounts"].values()))
+        self.assertEqual(manifest["brokenPaths"], [])
+        self.assertEqual(len(manifest["crossMobFiles"]), 1)
+        store = manifest["crossMobFiles"][0]
+        self.assertEqual(store["label"], "TMS/Data/Mob/_Canvas/8880140.img")
+        self.assertTrue(store["isCanvasStore"])
+        self.assertTrue(store["crossMob"])
+        self.assertFalse(store["inProject"])
+        self.assertEqual(store["frameCount"], manifest["stateCounts"].get("linked"))
+        # 清单的主来源必须指向跨怪库文件，而不是那只全是占位的源文件
+        self.assertEqual(manifest["primaryFile"]["absPath"], store["absPath"])
+        frame_paths = {frame["path"] for frame in manifest["frames"]}
+        self.assertTrue(set(manifest["orphanPaths"]).issubset(frame_paths))
+        by_path = {frame["path"]: frame for frame in manifest["frames"]}
+        self.assertEqual(by_path["stand/0"]["resolved"]["mobId"], "8880140")
+        self.assertEqual(by_path["attack1/0"]["state"], "orphan")
+
+    def test_manifest_scope_limits_to_one_action(self) -> None:
+        source = self._comparison()
+        manifest = workbench.mob_resource_manifest(
+            workbench.load_image(source), source, node_path="stand",
+        )
+        self.assertEqual(manifest["scope"], "stand")
+        self.assertTrue(manifest["frames"])
+        self.assertEqual({frame["action"] for frame in manifest["frames"]}, {"stand"})
+
+    def test_frame_descriptor_reports_real_pixels_for_placeholder_frames(self) -> None:
+        source = self._comparison()
+        descriptor = workbench.mob_frame_descriptor(source, "stand/0")
+        self.assertEqual(
+            (descriptor["declaredWidth"], descriptor["declaredHeight"]), (1, 1),
+        )
+        self.assertEqual(descriptor["state"], "linked")
+        self.assertTrue(descriptor["crossMob"])
+        # 舞台按真实像素对齐，否则 1×1 占位会把整只怪的动画缩成一格
+        self.assertEqual(
+            (descriptor["width"], descriptor["height"]),
+            (descriptor["resolved"]["width"], descriptor["resolved"]["height"]),
+        )
+        self.assertGreater(descriptor["width"], workbench._PLACEHOLDER_MAX_SIZE)
+        self.assertIn("/api/canvas?", descriptor["url"])
+
+    def test_canvas_reference_cache_follows_file_rewrites(self) -> None:
+        source = self._comparison()
+        first = workbench.canvas_reference(source, "stand/0")
+        self.assertEqual(first["state"], "linked")
+        workbench._canvas_reference_cached.cache_clear()
+        os.utime(source, None)
+        second = workbench.canvas_reference(source, "stand/0")
+        self.assertEqual(second["resolved"]["absPath"], first["resolved"]["absPath"])
+
+    # ── 只读 API ──────────────────────────────────────────────────────
+
+    def test_canvas_reference_api_returns_resolved_source(self) -> None:
+        source = self._comparison()
+        response = workbench.app.test_client().post(
+            "/api/canvas-reference",
+            json={"sourcePath": str(source), "path": "stand/0"},
+        )
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertTrue(payload["ok"])
+        self.assertEqual(payload["state"], "linked")
+        self.assertTrue(payload["crossMob"])
+        self.assertIn("_Canvas/8880140.img", payload["summary"])
+
+    def test_mob_resource_manifest_api_lists_real_files(self) -> None:
+        source = self._comparison()
+        response = workbench.app.test_client().post(
+            "/api/mob-resource-manifest", json={"sourcePath": str(source)},
+        )
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertTrue(payload["ok"])
+        self.assertGreater(payload["frameCount"], 0)
+        self.assertEqual(len(payload["crossMobFiles"]), 1)
+
+    def test_mob_resource_manifest_api_rejects_non_img(self) -> None:
+        xml = workbench._ROOT / "gms-server/wz/Mob.wz/8880141.img.xml"
+        if not xml.is_file():
+            self.skipTest("Lucid server XML is unavailable")
+        response = workbench.app.test_client().post(
+            "/api/mob-resource-manifest", json={"sourcePath": str(xml)},
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(response.get_json()["ok"])
+
+    # ── 变长改写限制 ──────────────────────────────────────────────────
+
+    def test_reference_hazard_flags_only_the_first_large_action(self) -> None:
+        client = workbench._ROOT / "clien/Data/Mob/8880141.img"
+        if not client.is_file():
+            self.skipTest("Lucid client baseline is unavailable")
+        data = client.read_bytes()
+        # attack1 是文件里第一个大动作，内部内联了共享属性名，变长替换会毁掉回指
+        self.assertGreater(
+            workbench.img_record_reference_hazard(data, ("attack1", "0")), 1000,
+        )
+        self.assertEqual(workbench.img_record_reference_hazard(data, ("die1", "0")), 0)
+        message = workbench.img_length_change_blocked_message("attack1/0", 1449)
+        self.assertIn("不能变长改写", message)
+        self.assertIn("1449", message)
+        self.assertIn("旧版 IMG", message)
+
+    # ── 对真实资源的复制 ──────────────────────────────────────────────
+
+    def _stage_lucid_repo(self, directory: str) -> tuple[Path, Path, Path]:
+        """在系统临时目录里搭一个假仓库，返回 (repo, client, server)。
+
+        repo 必须 resolve：`relative_path` 用 ``path.resolve().relative_to(_ROOT)``，
+        而 macOS 的 /var 是 /private/var 的符号链接；_ROOT 不 resolve 会让匹配失败，
+        路径退化成绝对路径。
+        """
+        repo = Path(directory).resolve()
+        client = repo / "clien/Data/Mob/8880141.img"
+        server = repo / "gms-server/wz/Mob.wz/8880141.img.xml"
+        client.parent.mkdir(parents=True)
+        server.parent.mkdir(parents=True)
+        client.write_bytes((workbench._ROOT / "clien/Data/Mob/8880141.img").read_bytes())
+        server.write_bytes(
+            (workbench._ROOT / "gms-server/wz/Mob.wz/8880141.img.xml").read_bytes()
+        )
+        return repo, client, server
+
+    def test_copy_frame_uses_placeholder_source_and_is_incremental(self) -> None:
+        source = self._comparison()
+        self._canvas_store()
+        if not (workbench._ROOT / "clien/Data/Mob/8880141.img").is_file():
+            self.skipTest("Lucid client baseline is unavailable")
+        if not (workbench._ROOT / "gms-server/wz/Mob.wz/8880141.img.xml").is_file():
+            self.skipTest("Lucid server baseline is unavailable")
+
+        with tempfile.TemporaryDirectory(
+            prefix="beidou-mob-frame-copy-test-",
+        ) as directory:
+            repo, client, server = self._stage_lucid_repo(directory)
+            original_root = workbench._ROOT
+            workbench._ROOT = repo
+            try:
+                before = client.read_bytes()
+                server_before = server.read_bytes()
+                plan = workbench.copy_mob_frame_with_server_sync(
+                    client, source, "stand/0", "die1", 0, dry_run=True,
+                )
+                self.assertTrue(plan["dryRun"])
+                self.assertTrue(plan["changed"])
+                # dry run 不写盘：modifiedFiles 必须为空，将要改的文件走 plannedFiles
+                self.assertEqual(plan["modifiedFiles"], [])
+                self.assertEqual(
+                    plan["plannedFiles"],
+                    [
+                        "clien/Data/Mob/8880141.img",
+                        "gms-server/wz/Mob.wz/8880141.img.xml",
+                    ],
+                )
+                # dry run 必须完全只读
+                self.assertEqual(client.read_bytes(), before)
+                self.assertEqual(server.read_bytes(), server_before)
+                # 计划里已给出占位背后的真实资源与真实像素尺寸
+                self.assertEqual(plan["sourceState"], "linked")
+                self.assertTrue(plan["sourceCrossMob"])
+                self.assertEqual((plan["declaredWidth"], plan["declaredHeight"]), (1, 1))
+                self.assertEqual(plan["canvas"]["formats"], ["1/0"])
+                self.assertGreater(plan["canvas"]["width"], workbench._PLACEHOLDER_MAX_SIZE)
+                self.assertIn("跨怪引用", plan["sourceSummary"])
+
+                written = workbench.copy_mob_frame_with_server_sync(
+                    client, source, "stand/0", "die1", 0,
+                )
+                self.assertEqual(written["clientOperation"], "replace")
+                self.assertEqual(written["serverOperation"], "replace")
+                self.assertEqual(written["canvas"]["formats"], ["1/0"])
+                self.assertEqual(written["canvas"]["visible"], 1)
+                self.assertEqual(
+                    written["modifiedFiles"],
+                    [
+                        "clien/Data/Mob/8880141.img",
+                        "gms-server/wz/Mob.wz/8880141.img.xml",
+                    ],
+                )
+
+                after = client.read_bytes()
+                self.assertGreater(written["rawScope"]["protectedRecords"], 0)
+                protected = workbench.verify_img_replace_scope(
+                    before, after, ("die1", "0"), label="帧替换",
+                )
+                self.assertEqual(protected, written["rawScope"]["protectedRecords"])
+                with self.assertRaises(ValueError) as guard:
+                    workbench.verify_img_replace_scope(
+                        before, after, ("skill4",), label="帧替换",
+                    )
+                self.assertIn("帧替换", str(guard.exception))
+                self.assertIn("die1", str(guard.exception))
+
+                # 只有 die1/0 子树与它的祖先跨度变化，其余记录逐字节不变
+                before_records, _ = workbench.arc.raw_record_state(before)
+                after_records, _ = workbench.arc.raw_record_state(after)
+                changed = {
+                    path for path in set(before_records) | set(after_records)
+                    if before_records.get(path) != after_records.get(path)
+                }
+                self.assertTrue(changed)
+                for path in changed:
+                    self.assertTrue(
+                        path[:2] == ("die1", "0") or path[:1] == ("die1",) or path == (),
+                        "/".join(path),
+                    )
+                self.assertTrue(
+                    any(path == ("die1", "0") for path in changed), sorted(changed),
+                )
+
+                # 服务端镜像同步同一帧
+                server_nodes = workbench.flatten_xml(server)[0]
+                self.assertIn("die1/0", server_nodes)
+
+                # 重复执行必须无变化（幂等）
+                first_hashes = (
+                    hashlib.sha256(client.read_bytes()).hexdigest(),
+                    hashlib.sha256(server.read_bytes()).hexdigest(),
+                )
+                repeated = workbench.copy_mob_frame_with_server_sync(
+                    client, source, "stand/0", "die1", 0,
+                )
+                self.assertFalse(repeated["changed"])
+                self.assertEqual(repeated["modifiedFiles"], [])
+                self.assertEqual(
+                    (
+                        hashlib.sha256(client.read_bytes()).hexdigest(),
+                        hashlib.sha256(server.read_bytes()).hexdigest(),
+                    ),
+                    first_hashes,
+                )
+            finally:
+                workbench._ROOT = original_root
+                workbench._load_image_cached.cache_clear()
+
+    def test_copy_frame_rejects_actions_that_cannot_change_length(self) -> None:
+        source = self._comparison()
+        if not (workbench._ROOT / "clien/Data/Mob/8880141.img").is_file():
+            self.skipTest("Lucid client baseline is unavailable")
+        with tempfile.TemporaryDirectory(
+            prefix="beidou-mob-frame-copy-blocked-test-",
+        ) as directory:
+            repo, client, _server = self._stage_lucid_repo(directory)
+            original_root = workbench._ROOT
+            workbench._ROOT = repo
+            try:
+                before = client.read_bytes()
+                with self.assertRaisesRegex(ValueError, "不能变长改写"):
+                    workbench.copy_mob_frame_with_server_sync(
+                        client, source, "stand/0", "attack1", 0,
+                    )
+                self.assertEqual(client.read_bytes(), before)
+            finally:
+                workbench._ROOT = original_root
+                workbench._load_image_cached.cache_clear()
+
+    def test_copy_frame_rejects_empty_placeholder_source(self) -> None:
+        source = self._comparison()
+        if not (workbench._ROOT / "clien/Data/Mob/8880141.img").is_file():
+            self.skipTest("Lucid client baseline is unavailable")
+        with tempfile.TemporaryDirectory(
+            prefix=".mob-frame-copy-orphan-test-", dir=workbench._HERE,
+        ) as directory:
+            repo, client, _server = self._stage_lucid_repo(directory)
+            original_root = workbench._ROOT
+            workbench._ROOT = repo
+            try:
+                before = client.read_bytes()
+                with self.assertRaisesRegex(ValueError, "空占位"):
+                    workbench.copy_mob_frame_with_server_sync(
+                        client, source, "attack1/0", "die1", 0,
+                    )
+                self.assertEqual(client.read_bytes(), before)
+            finally:
+                workbench._ROOT = original_root
+                workbench._load_image_cached.cache_clear()
+
+    def test_copy_frame_points_to_action_migration_when_action_is_missing(self) -> None:
+        source = self._comparison()
+        if not (workbench._ROOT / "clien/Data/Mob/8880141.img").is_file():
+            self.skipTest("Lucid client baseline is unavailable")
+        with tempfile.TemporaryDirectory(
+            prefix=".mob-frame-copy-noaction-test-", dir=workbench._HERE,
+        ) as directory:
+            repo, client, _server = self._stage_lucid_repo(directory)
+            original_root = workbench._ROOT
+            workbench._ROOT = repo
+            try:
+                with self.assertRaisesRegex(ValueError, "动作级迁移"):
+                    workbench.copy_mob_frame_with_server_sync(
+                        client, source, "stand/0", "notAnAction", 0,
+                    )
+            finally:
+                workbench._ROOT = original_root
+                workbench._load_image_cached.cache_clear()
 
 
 class FileBrowserTests(unittest.TestCase):

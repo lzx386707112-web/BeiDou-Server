@@ -331,8 +331,6 @@ Environment startup + platform / foothold / portal introspection + NPC spawning.
 | `startconvo` | Start Conversation Manager. |
 | `stopconvo` | Stop Conversation Manager. |
 | `spawncasinonpc` | Spawns the casino chip NPC at your position (`CasinoChipConfig.CASINO_NPC_ID`). |
-| `spawnrpsnpc` | Spawns the Rock-Paper-Scissors NPC (id 9000019) at your position. |
-| `spawncasinonpcs` | `spawnCasinoNpcs()` — spawns casino NPCs on map 100000203. |
 
 ### String + int — `!env <cmd> <count>`
 | Command | What it does |

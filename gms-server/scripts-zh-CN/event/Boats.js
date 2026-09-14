@@ -39,6 +39,9 @@ function init() {
     Orbis_docked = em.getChannelServer().getMapFactory().getMap(200000111);     //码头<开往魔法密林>
 
     // 设置码头状态为已停靠
+    if (Ellinia_docked == null || Orbis_docked == null) {
+        return;
+    }
     Ellinia_docked.setDocked(true);
     Orbis_docked.setDocked(true);
 

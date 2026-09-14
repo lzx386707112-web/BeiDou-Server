@@ -62,7 +62,7 @@ Casino setup (Wave 1, Game Zone map 100000203):
 - `CasinoChipConfig` defines chip item denominations, exchange rates, and the NPC IDs.
 - The **Casino Chip Exchange NPC** (9201066) runs `scripts/npc/9000055.js`, which opens **shop 9999001** — buy/sell chips at equal prices for lossless meso<->chip exchange. The shop rows are seeded automatically by the Liquibase migration `src/main/resources/db/data/171-casino-shop-data.sql` (reference copy: `soloMapling/Casino/casino_chip_shop_setup.sql`).
 - `WzXmlPatcher` patches WZ XML so the casino NPC data exists client-side.
-- Dev commands: `!env spawncasinonpc` (at your feet), `!env spawncasinonpcs` (proper map), `!env spawnrpsnpc` (Rock-Paper-Scissors NPC 9000019).
+- Dev command: `!env spawncasinonpc` (at your feet).
 
 ## 5. Re-running / partial population
 

@@ -65,6 +65,9 @@ function cancelSchedule() {
 
 function start() {
     var graysPrairie = em.getChannelServer().getMapFactory().getMap(MapID);
+    if (graysPrairie == null) {
+        return;
+    }
     var Timer = em.getBossTime(BossTime * 60 * 1000);  //转为毫秒并加载时间倍率修正
 
     if (graysPrairie.getMonsterById(BossID) != null) {

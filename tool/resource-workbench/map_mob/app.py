@@ -41,8 +41,8 @@ from wzpy import (  # noqa: E402
     detect_region_from_img,
 )
 from wzpy import writer as wz_writer  # noqa: E402
-from wzpy.canvas import decode_canvas  # noqa: E402
-from wzpy.incremental_img import replace_img_record  # noqa: E402
+from wzpy.canvas import decode_canvas, encode_canvas_payload  # noqa: E402
+from wzpy.incremental_img import replace_img_record, scan_img  # noqa: E402
 from wzpy.reader import WzBinaryReader  # noqa: E402
 from wzpy.properties import (  # noqa: E402
     WzCanvasProperty,
@@ -57,6 +57,7 @@ from wzpy.properties import (  # noqa: E402
     WzSubProperty,
     WzUolProperty,
     WzVectorProperty,
+    WzVideoProperty,
 )
 from . import compat as map_compat  # noqa: E402
 import migrate_arcane_river_expansion as arc  # noqa: E402
@@ -381,7 +382,7 @@ def child_value(parent: WzSubProperty | None, name: str, default: Any = None) ->
 
 def property_meta(prop: WzProperty, *, include_children: bool = True) -> dict[str, Any]:
     node_type = prop.type_name.lower()
-    if isinstance(prop, WzSubProperty) and not isinstance(prop, WzCanvasProperty):
+    if isinstance(prop, WzSubProperty) and not isinstance(prop, WzCanvasProperty) and not isinstance(prop, WzVideoProperty):
         node_type = "imgdir"
     out: dict[str, Any] = {"name": prop.name, "type": node_type}
     if include_children and isinstance(prop, WzSubProperty):
@@ -397,6 +398,11 @@ def property_meta(prop: WzProperty, *, include_children: bool = True) -> dict[st
         origin = prop.child("origin")
         if isinstance(origin, WzVectorProperty):
             out["origin"] = {"x": int(origin.x), "y": int(origin.y)}
+    elif isinstance(prop, WzVideoProperty):
+        out["type"] = "video"
+        out["videoType"] = prop.video_type
+        out["dataLength"] = prop._data_length
+        out["hasData"] = prop._data_length > 0
     elif isinstance(prop, WzVectorProperty):
         out["value"] = {"x": int(prop.x), "y": int(prop.y)}
         out["editable"] = prop._x_offset is not None and prop._y_offset is not None
@@ -903,6 +909,328 @@ def canvas_descriptor(file_path: Path, path: str) -> dict[str, Any] | None:
     }
 
 
+# ── TMS 真实资源解析 ─────────────────────────────────────────────────
+# TMS/MS 的怪物记录里，绝大多数“帧”本身只是 1×1 的占位 Canvas，真正的像素在
+# Mob/_Canvas/<怪ID>.img 里，而且经常跨到另一个怪 ID（例如 8880141 → 8880140）。
+# 下面这组函数把占位帧解析回真实资源，供界面展示与复制操作使用。
+
+_PLACEHOLDER_MAX_SIZE = 4
+_LINK_KEYS = ("_outlink", "_inlink")
+_RESOURCE_LABEL_ROOTS = (
+    (_TMS_DATA, "TMS/Data"),
+    (_MS_CACHE_ROOT, "MS缓存"),
+)
+
+
+def resource_file_label(path: Path) -> str:
+    """把资源路径转成可读标签，例如 TMS/Data/Mob/_Canvas/8880140.img。"""
+    resolved = path.resolve()
+    for root, prefix in _RESOURCE_LABEL_ROOTS + (
+        (_ROOT / "clien" / "Data", "clien/Data"),
+        (_ROOT / "gms-server" / "wz", "gms-server/wz"),
+    ):
+        try:
+            return f"{prefix}/{resolved.relative_to(root.resolve()).as_posix()}"
+        except ValueError:
+            continue
+    return str(resolved)
+
+
+def mob_id_of_resource(path: Path) -> str:
+    """从 Mob/8880141.img、Mob/_Canvas/0100007.img、Mob_8880141.img 里取出怪 ID。"""
+    stem = path.stem
+    if stem.startswith("Mob_"):
+        stem = stem[4:]
+    digits = re.sub(r"\D", "", stem)
+    return digits.lstrip("0") or digits
+
+
+def resource_owner_label(path: Path) -> str:
+    """标注资源属于项目还是 TMS 只读数据。"""
+    resolved = path.resolve()
+    if resolved.is_relative_to((_ROOT / "clien" / "Data").resolve()):
+        return "client"
+    if resolved.is_relative_to((_ROOT / "gms-server" / "wz").resolve()):
+        return "server"
+    if resolved.is_relative_to(_TMS_DATA.resolve()):
+        return "tms"
+    if resolved.is_relative_to(_MS_CACHE_ROOT.resolve()):
+        return "ms"
+    return "other"
+
+
+def _node_link(node: WzProperty | None) -> tuple[str, str]:
+    if isinstance(node, WzUolProperty):
+        return "UOL", str(node.value).replace("\\", "/")
+    if isinstance(node, WzCanvasProperty):
+        for name in _LINK_KEYS:
+            link = node.child(name)
+            if isinstance(link, WzStringProperty):
+                return name, str(link.value).replace("\\", "/")
+    return "", ""
+
+
+def _next_link_hop(
+    image: WzImage, file_path: Path, node: WzProperty, kind: str, raw: str,
+) -> tuple[WzImage, Path, str] | None:
+    """按 resolve_canvas_node 的规则算出下一跳 (image, file, path)。"""
+    if kind == "UOL":
+        target = node.parent.get(raw) if node.parent else None
+        return None if target is None else (image, file_path, property_path(target))
+    if kind == "_inlink":
+        return image, file_path, raw
+    if kind == "_outlink":
+        match = re.match(r"^(.*?\.img)/(.*)$", raw)
+        if not match:
+            return None
+        linked_file = Path(str(data_root_for(file_path) / match.group(1))).resolve()
+        if not linked_file.is_file():
+            return None
+        return load_image(linked_file), linked_file, match.group(2)
+    return None
+
+
+def describe_canvas_reference(
+    image: WzImage, path: str, file_path: Path, *, max_hops: int = 9,
+) -> dict[str, Any]:
+    """只读解析一个帧节点：它声明的像素到底来自哪个真实资源。
+
+    覆盖 TMS 常见的三种“1×1 占位”：
+      1. Canvas 带 ``_outlink``/``_inlink`` → 真实像素在别的文件（可能别的怪 ID）；
+      2. ``UOL`` → 同文件或跨文件的另一帧；
+      3. 既无链接、``Mob/_Canvas`` 里也没有同名节点 → 真的没有像素来源。
+    """
+    report: dict[str, Any] = {
+        "path": path,
+        "declaredType": "",
+        "declaredWidth": None,
+        "declaredHeight": None,
+        "placeholder": False,
+        "linkKind": "",
+        "linkRaw": "",
+        "hops": [],
+        "resolved": None,
+        "crossMob": False,
+        "recovered": False,
+        "state": "missing",
+        "error": "",
+    }
+    self_mob = mob_id_of_resource(file_path)
+    current_image, current_file, current_path = image, file_path, path
+    seen: set[tuple[str, str]] = set()
+    try:
+        for _ in range(max_hops + 1):
+            key = (str(current_file.resolve()), current_path)
+            if key in seen:
+                report["error"] = f"引用链出现循环: {current_path}"
+                break
+            seen.add(key)
+            node = current_image.root.get(current_path)
+            if node is None:
+                report["error"] = f"引用目标不存在: {current_path}"
+                break
+            if not report["declaredType"]:
+                report["declaredType"] = (
+                    "uol" if isinstance(node, WzUolProperty)
+                    else "canvas" if isinstance(node, WzCanvasProperty)
+                    else node.type_name.lower()
+                )
+            if report["declaredWidth"] is None and isinstance(node, WzCanvasProperty):
+                report["declaredWidth"] = int(node.width)
+                report["declaredHeight"] = int(node.height)
+            # 顺序必须与 resolve_canvas_node 一致：先看 _inlink/_outlink，再看本体像素。
+            # TMS 的占位 Canvas 同时带着 1×1 的 payload 和 _outlink，先判 payload 会漏掉真实资源。
+            kind, raw = _node_link(node)
+            if not kind:
+                if isinstance(node, WzCanvasProperty) and node.has_pixels():
+                    report["resolved"] = {
+                        "file": relative_path(current_file),
+                        "absPath": str(current_file.resolve()),
+                        "fileLabel": resource_file_label(current_file),
+                        "owner": resource_owner_label(current_file),
+                        "inProject": resource_owner_label(current_file) in {"client", "server"},
+                        "mobId": mob_id_of_resource(current_file),
+                        "path": current_path,
+                        "width": int(node.width),
+                        "height": int(node.height),
+                        "format": f"{int(node.format)}/{int(node.format2)}",
+                        "region": canvas_region(
+                            str(current_file), current_file.stat().st_mtime_ns, current_file.stat().st_size,
+                        ),
+                        "visible": int(node.width) > _PLACEHOLDER_MAX_SIZE
+                        or int(node.height) > _PLACEHOLDER_MAX_SIZE,
+                    }
+                    break
+                report["error"] = f"节点既无像素也没有链接: {current_path}"
+                break
+            report["linkKind"] = report["linkKind"] or kind
+            report["linkRaw"] = report["linkRaw"] or raw
+            report["hops"].append({
+                "kind": kind,
+                "raw": raw,
+                "fileLabel": resource_file_label(current_file),
+                "path": current_path,
+            })
+            hop = _next_link_hop(current_image, current_file, node, kind, raw)
+            if hop is None:
+                report["error"] = f"无法解析链接 {kind}={raw}"
+                break
+            current_image, current_file, current_path = hop
+    except Exception as exc:  # noqa: BLE001 - 解析失败必须降级为可读信息
+        report["error"] = str(exc)
+
+    declared = (report["declaredWidth"], report["declaredHeight"])
+    report["placeholder"] = bool(
+        declared[0] is not None
+        and declared[0] <= _PLACEHOLDER_MAX_SIZE
+        and declared[1] <= _PLACEHOLDER_MAX_SIZE
+    )
+    resolved = report["resolved"]
+    if resolved is None:
+        report["state"] = "broken" if report["linkKind"] else (
+            "orphan" if report["placeholder"] else "missing"
+        )
+    else:
+        relocated = (
+            resolved["file"] != relative_path(file_path) or resolved["path"] != path
+        )
+        if report["placeholder"] and resolved["visible"] and relocated:
+            report["state"] = "linked"
+            report["recovered"] = True
+        elif report["placeholder"]:
+            # 声明的就是占位，解析回来仍是占位：TMS 里这一帧确实没有可见像素
+            report["state"] = "orphan"
+        else:
+            report["state"] = "real"
+    if resolved is not None:
+        report["crossMob"] = bool(
+            self_mob and resolved["mobId"] and resolved["mobId"] != self_mob
+        )
+    return report
+
+
+def canvas_reference_summary(report: dict[str, Any]) -> str:
+    """把解析结果压成一句话，供界面与日志复用。"""
+    resolved = report.get("resolved")
+    state = report.get("state")
+    if resolved is None:
+        reason = report.get("error") or "没有像素来源"
+        return f"无可解析资源（{reason}）"
+    if state == "orphan":
+        return (
+            f"{report['declaredWidth']}×{report['declaredHeight']} 空占位，"
+            "TMS 里该帧确实没有可见像素"
+        )
+    if state != "linked":
+        return f"{resolved['width']}×{resolved['height']} ← {resolved['fileLabel']}/{resolved['path']}"
+    cross = "（跨怪引用）" if report.get("crossMob") else ""
+    return (
+        f"{report['declaredWidth']}×{report['declaredHeight']} 占位 → "
+        f"{resolved['width']}×{resolved['height']} ← "
+        f"{resolved['fileLabel']}/{resolved['path']}{cross}"
+    )
+
+
+def mob_frame_entries(image: WzImage) -> list[tuple[str, str, WzProperty]]:
+    """产出 (动作名, 帧路径, 帧节点)。识别规则与 mob_preview 一致：
+    根下非 info 的 imgdir 里，数字名的 Canvas/UOL 子节点就是帧。"""
+    entries: list[tuple[str, str, WzProperty]] = []
+    for action in image.root.children():
+        if not isinstance(action, WzSubProperty) or action.name == "info":
+            continue
+        for child in sorted(action.children(), key=lambda node: natural_key(node.name)):
+            if child.name.isdigit() and isinstance(child, (WzCanvasProperty, WzUolProperty)):
+                entries.append((action.name, f"{action.name}/{child.name}", child))
+    return entries
+
+
+def mob_resource_manifest(
+    image: WzImage, file_path: Path, node_path: str = "",
+) -> dict[str, Any]:
+    """列出这个 IMG 里全部帧的真实资源来源。
+
+    这是「不要只看到 1×1 占位」的核心：把每一帧解析到真实文件/节点，
+    按文件聚合，并标出跨怪引用、无源占位与项目内/只读来源。
+    """
+    scope = node_path.strip("/")
+    entries = mob_frame_entries(image)
+    if scope:
+        entries = [
+            entry for entry in entries
+            if entry[1] == scope or entry[1].startswith(f"{scope}/")
+        ]
+    self_mob = mob_id_of_resource(file_path)
+    frames: list[dict[str, Any]] = []
+    files: dict[str, dict[str, Any]] = {}
+    orphan_paths: list[str] = []
+    broken: list[dict[str, str]] = []
+    for action, path, node in entries:
+        report = describe_canvas_reference(image, path, file_path)
+        resolved = report["resolved"]
+        frames.append({
+            "action": action,
+            "path": path,
+            "state": report["state"],
+            "placeholder": report["placeholder"],
+            "declaredWidth": report["declaredWidth"],
+            "declaredHeight": report["declaredHeight"],
+            "linkKind": report["linkKind"],
+            "crossMob": report["crossMob"],
+            "resolved": resolved,
+            "error": report["error"],
+            "summary": canvas_reference_summary(report),
+        })
+        if report["state"] == "orphan":
+            orphan_paths.append(path)
+        if report["state"] == "broken":
+            broken.append({"path": path, "error": report["error"]})
+        if resolved is None:
+            continue
+        bucket = files.setdefault(resolved["absPath"], {
+            "file": resolved["file"],
+            "absPath": resolved["absPath"],
+            "label": resolved["fileLabel"],
+            "owner": resolved["owner"],
+            "inProject": resolved["inProject"],
+            "mobId": resolved["mobId"],
+            "crossMob": bool(
+                self_mob and resolved["mobId"] and resolved["mobId"] != self_mob
+            ),
+            "isCanvasStore": "_Canvas" in Path(resolved["absPath"]).parts,
+            "frameCount": 0,
+            "actions": [],
+            "framePaths": [],
+            "sizes": [],
+        })
+        bucket["frameCount"] += 1
+        if action not in bucket["actions"]:
+            bucket["actions"].append(action)
+        bucket["framePaths"].append(resolved["path"])
+        if resolved["visible"]:
+            bucket["sizes"].append(f"{resolved['width']}×{resolved['height']}")
+    ordered = sorted(files.values(), key=lambda item: (-item["frameCount"], item["label"]))
+    for bucket in ordered:
+        bucket["actions"].sort(key=natural_key)
+    states = Counter(frame["state"] for frame in frames)
+    primary = next((bucket for bucket in ordered if bucket["crossMob"]), None) or (
+        ordered[0] if ordered else None
+    )
+    return {
+        "sourceFile": relative_path(file_path),
+        "sourceLabel": resource_file_label(file_path),
+        "sourceMobId": self_mob,
+        "scope": scope,
+        "frameCount": len(frames),
+        "stateCounts": dict(states),
+        "realFiles": ordered,
+        "crossMobFiles": [bucket for bucket in ordered if bucket["crossMob"]],
+        "orphanPaths": orphan_paths,
+        "brokenPaths": broken,
+        "primaryFile": primary,
+        "frames": frames,
+    }
+
+
 def find_resource(folder: str, name: str, source_path: Path) -> Path | None:
     base = data_root_for(source_path) / "Map" / folder
     direct = base / f"{name}.img"
@@ -921,6 +1249,73 @@ def iter_subtree(node: WzSubProperty | None) -> Iterable[WzProperty]:
             yield from iter_subtree(child)
 
 
+@lru_cache(maxsize=8192)
+def _canvas_reference_cached(
+    path_text: str, mtime_ns: int, size: int, node_path: str,
+) -> dict[str, Any]:
+    del mtime_ns, size
+    file_path = Path(path_text)
+    return describe_canvas_reference(load_image(file_path), node_path, file_path)
+
+
+def canvas_reference(file_path: Path, node_path: str) -> dict[str, Any]:
+    """带缓存的帧资源解析。缓存键含 mtime+size，文件改写后自动失效。"""
+    stat = file_path.stat()
+    return _canvas_reference_cached(
+        str(file_path.resolve()), stat.st_mtime_ns, stat.st_size, node_path,
+    )
+
+
+def mob_frame_descriptor(
+    file_path: Path, frame_path: str, node: WzProperty | None = None,
+) -> dict[str, Any]:
+    """把一帧压成前端可直接用的结构：声明尺寸、真实资源、缩略图 URL、锚点与延时。
+
+    ``width``/``height`` 返回**真实像素**尺寸（占位帧会是真实资源的大小），
+    否则动画舞台会按 1×1 对齐；声明尺寸另存为 ``declaredWidth``/``declaredHeight``。
+    """
+    report = canvas_reference(file_path, frame_path)
+    if node is None:
+        node = load_image(file_path).root.get(frame_path)
+    resolved = report["resolved"]
+    target = None
+    if resolved is not None:
+        target = load_image(Path(resolved["absPath"])).root.get(resolved["path"])
+    declared_node = node if isinstance(node, WzCanvasProperty) else None
+    origin = declared_node.child("origin") if declared_node is not None else None
+    if not isinstance(origin, WzVectorProperty) and isinstance(target, WzCanvasProperty):
+        origin = target.child("origin")
+    delay = child_value(declared_node, "delay")
+    if delay is None and isinstance(target, WzCanvasProperty):
+        delay = child_value(target, "delay")
+    width = int(resolved["width"]) if resolved is not None else int(report["declaredWidth"] or 0)
+    height = int(resolved["height"]) if resolved is not None else int(report["declaredHeight"] or 0)
+    return {
+        "path": frame_path,
+        "url": (
+            f"/api/canvas?file={quote(relative_path(file_path))}&path={quote(frame_path)}"
+            if resolved is not None else ""
+        ),
+        "width": width,
+        "height": height,
+        "declaredWidth": report["declaredWidth"],
+        "declaredHeight": report["declaredHeight"],
+        "origin": (
+            {"x": int(origin.x), "y": int(origin.y)} if isinstance(origin, WzVectorProperty)
+            else {"x": 0, "y": height}
+        ),
+        "delay": max(16, int(delay or 100)),
+        "state": report["state"],
+        "placeholder": report["placeholder"],
+        "linkKind": report["linkKind"],
+        "linkRaw": report["linkRaw"],
+        "crossMob": report["crossMob"],
+        "resolved": resolved,
+        "summary": canvas_reference_summary(report),
+        "error": report["error"],
+    }
+
+
 def mob_preview(path: Path) -> dict[str, Any]:
     image = load_image(path)
     actions = []
@@ -931,11 +1326,19 @@ def mob_preview(path: Path) -> dict[str, Any]:
         for child in sorted(action.children(), key=lambda node: natural_key(node.name)):
             if not child.name.isdigit() or not isinstance(child, (WzCanvasProperty, WzUolProperty)):
                 continue
-            desc = canvas_descriptor(path, property_path(child))
-            if desc:
-                frames.append({"path": property_path(child), **desc})
+            frames.append(mob_frame_descriptor(path, property_path(child), child))
         if frames:
-            actions.append({"name": action.name, "frames": frames, "duration": sum(frame["delay"] for frame in frames)})
+            real_files = sorted({
+                frame["resolved"]["fileLabel"] for frame in frames if frame["resolved"]
+            })
+            actions.append({
+                "name": action.name,
+                "frames": frames,
+                "duration": sum(frame["delay"] for frame in frames),
+                "realFiles": real_files,
+                "linkedFrames": sum(1 for frame in frames if frame["state"] == "linked"),
+                "orphanFrames": sum(1 for frame in frames if frame["state"] == "orphan"),
+            })
     info = image.root.child("info")
     stats = {}
     for name in ("level", "maxHP", "maxMP", "PADamage", "MADamage", "speed", "exp"):
@@ -3320,28 +3723,319 @@ def audit_mob_action_canvases(data: bytes, image_name: str, action_name: str) ->
     return {"canvases": canvases, "visible": visible, "formats": ["1/0"]}
 
 
-def verify_mob_action_replace_scope(before: bytes, after: bytes, action_name: str) -> int:
+def img_record_reference_hazard(
+    data: bytes, path: tuple[str, ...], *, region: str = "GMS",
+) -> int:
+    """统计有多少处字符串引用指向 ``path`` 记录内部的字节区间。
+
+    旧版 IMG 没有独立字符串块：属性名在首次出现处内联，之后的同名属性用绝对偏移
+    回指。若某个记录内部正好存着这些共享名字（通常是文件里第一个大动作），就不能
+    对它做**变长**替换——那 1000+ 处引用的目标偏移会全部失效。
+    返回 0 表示可安全变长替换；正数则只允许同长度原地改写。
+    """
+    layout = scan_img(data, region=region)
+    found: list[Any] = []
+
+    def walk(prop_list: Any, parent: tuple[str, ...] = ()) -> None:
+        if found:
+            return
+        for record in prop_list.records:
+            current = (*parent, record.name)
+            if current == path:
+                found.append(record)
+                return
+            if record.children is not None:
+                walk(record.children, current)
+            if found:
+                return
+
+    walk(layout.root)
+    if not found:
+        return 0
+    span = found[0]
+    return sum(
+        1 for reference in layout.string_references
+        if span.start <= reference.target_offset < span.end
+    )
+
+
+def img_length_change_blocked_message(node_label: str, hazard: int) -> str:
+    """旧版 IMG 无法变长改写时的可执行提示。"""
+    return (
+        f"{node_label} 不能变长改写：它所在的字节区间被 {hazard} 处共享属性名引用占用，"
+        "改动长度会让这些回指偏移全部失效。这是旧版 IMG（没有独立字符串块）的格式限制，"
+        "不是可以绕过的工具缺陷。可行做法：改用同一只怪物里其它动作（文件里第一个大动作通常最受限）；"
+        "或用动作级迁移整条新增/替换动作。"
+    )
+
+
+def verify_img_replace_scope(
+    before: bytes, after: bytes, approved_root: tuple[str, ...], *, label: str = "替换",
+) -> int:
+    """证明只有 approved_root 记录变了，其余记录逐字节不变。
+
+    ``approved_root`` 可以是任意深度的记录路径，例如 ``("attack1",)`` 或
+    ``("die1", "0")``。记录跨度包含自己的子记录，所以被替换记录的**祖先**跨度
+    也会变——祖先只校验子节点顺序，不校验整段字节。
+    """
     before_records, before_orders = arc.raw_record_state(before)
     after_records, after_orders = arc.raw_record_state(after)
-    action_root = (action_name,)
-    outside = lambda path: path[:1] != action_root
-    removed = {path for path in before_records.keys() - after_records.keys() if outside(path)}
-    added = {path for path in after_records.keys() - before_records.keys() if outside(path)}
+    depth = len(approved_root)
+
+    def inside(path: tuple[str, ...]) -> bool:
+        return path[:depth] == approved_root
+
+    def is_ancestor(path: tuple[str, ...]) -> bool:
+        return len(path) < depth and approved_root[:len(path)] == path
+
+    def protected(path: tuple[str, ...]) -> bool:
+        return not inside(path) and not is_ancestor(path)
+
+    removed = {path for path in before_records.keys() - after_records.keys() if protected(path)}
+    added = {path for path in after_records.keys() - before_records.keys() if protected(path)}
     if removed or added:
-        raise ValueError(f"动作迁移影响了其他记录: removed={sorted(removed)} added={sorted(added)}")
+        raise ValueError(f"{label}影响了其他记录: removed={sorted(removed)} added={sorted(added)}")
     for parent, names in before_orders.items():
-        if parent[:1] == action_root:
+        if inside(parent):
             continue
         if after_orders.get(parent) != names:
-            raise ValueError(f"动作迁移改变了其他兄弟顺序: {'/'.join(parent) or '/'}")
-    protected = 0
+            raise ValueError(f"{label}改变了其他兄弟顺序: {'/'.join(parent) or '/'}")
+    protected_count = 0
     for path, raw in before_records.items():
-        if not outside(path):
+        if not protected(path):
             continue
         if after_records.get(path) != raw:
-            raise ValueError(f"动作迁移改变了未授权记录: {'/'.join(path)}")
-        protected += 1
-    return protected
+            raise ValueError(f"{label}改变了未授权记录: {'/'.join(path)}")
+        protected_count += 1
+    return protected_count
+
+
+def verify_mob_action_replace_scope(before: bytes, after: bytes, action_name: str) -> int:
+    return verify_img_replace_scope(before, after, (action_name,), label="动作迁移")
+
+
+def audit_mob_frame_canvas(
+    data: bytes, image_name: str, frame_path: str, *, allow_blank: bool = False,
+) -> dict[str, Any]:
+    """校验单帧写入结果：必须是 GMS ARGB4444，且默认要求有可见像素。"""
+    image = WzImage.from_bytes(data, key=arc.GMS_KEY, name=image_name)
+    image.parse()
+    if image.truncated or image.parse_warnings:
+        raise ValueError(f"帧写入结果解析失败: {image.parse_warnings}")
+    node = image.root.get(frame_path)
+    if not isinstance(node, WzCanvasProperty):
+        raise ValueError(f"写入后帧不存在或不是 Canvas: {frame_path}")
+    formats = {(int(node.format), int(node.format2))}
+    if formats != {(1, 0)}:
+        raise ValueError(f"帧 Canvas 不是 GMS ARGB4444: {sorted(formats)}")
+    if not node.has_pixels():
+        raise ValueError(f"帧 {frame_path} 没有像素数据")
+    bitmap = decode_canvas(node, region="GMS").convert("RGBA")
+    visible = bitmap.width > 4 and bitmap.height > 4 and bool(bitmap.getchannel("A").getbbox())
+    if not visible and not allow_blank:
+        raise ValueError(
+            f"帧 {frame_path} 只有占位或全透明像素（{bitmap.width}×{bitmap.height}）："
+            "这通常说明源帧本身没有真实资源，拒绝写入。如确实要写入空帧，请显式勾选“允许空帧”。"
+        )
+    return {
+        "canvas": 1, "visible": 1 if visible else 0,
+        "width": bitmap.width, "height": bitmap.height, "formats": ["1/0"],
+    }
+
+
+def copy_mob_frame_with_server_sync(
+    client_path: Path, source_path: Path, source_frame_path: str,
+    action_name: str, frame_index: int, *, dry_run: bool = False,
+    allow_blank: bool = False, sync_server: bool = True,
+) -> dict[str, Any]:
+    """把一帧的真实像素复制/替换到项目怪物 IMG。
+
+    占位帧会被解析到真实资源后再写入（TMS 的 1×1 占位本身没有像素）。
+    只做增量记录替换：其他帧的记录逐字节保持不变，并同步服务端 Mob XML。
+    """
+    require_repo_write(client_path)
+    if client_path.parent.resolve() != (_ROOT / "clien" / "Data" / "Mob").resolve():
+        raise ValueError("帧复制目标必须是 clien/Data/Mob 下的 IMG")
+    if not client_path.is_file():
+        raise ValueError(f"当前项目怪物 IMG 不存在: {relative_path(client_path)}")
+    action_name = action_name.strip()
+    if not action_name or "/" in action_name or "\\" in action_name:
+        raise ValueError("动作名称必须是顶层节点名")
+    source_frame_path = source_frame_path.strip("/")
+    if not source_frame_path:
+        raise ValueError("缺少 sourceFramePath")
+    frame_name = str(int(frame_index))
+
+    source_image = load_image(source_path)
+    source_node = source_image.root.get(source_frame_path)
+    if source_node is None:
+        raise ValueError(f"源帧不存在: {source_frame_path}")
+    reference = canvas_reference(source_path, source_frame_path)
+    if reference["resolved"] is None:
+        raise ValueError(
+            f"源帧没有可复制的真实像素：{source_frame_path}"
+            f"（{reference['error'] or '无像素来源'}）"
+        )
+    if reference["state"] == "orphan" and not allow_blank:
+        raise ValueError(
+            f"源帧 {source_frame_path} 是空占位（声明 "
+            f"{reference['declaredWidth']}×{reference['declaredHeight']}，无链接，"
+            "TMS 里它本身就没有可见像素）：复制过去只会得到一个透明小图。"
+            "请改用同一动作里有真实资源的帧；如确实要写入空帧，请显式允许空帧。"
+        )
+
+    client_original = client_path.read_bytes()
+    if detect_region_from_img(client_original) != "GMS":
+        raise ValueError("当前项目怪物 IMG 不是 GMS 格式")
+    client_image = _verified_img_from_bytes(client_path, client_original)
+    target_action = client_image.root.get(action_name)
+    if not isinstance(target_action, WzSubProperty):
+        raise ValueError(
+            f"客户端缺少动作目录 {action_name}，单帧复制只负责“替换/补帧”。"
+            f"请改用动作级迁移：它会把 {reference['resolved']['fileLabel']} "
+            f"里该动作的全部真实帧一次带入。"
+        )
+    existing_frame = target_action.get(frame_name)
+
+    materializer = arc.CanvasMaterializer()
+    clone = arc.clone_property(
+        source_node, None, source_image, source_path, materializer, name=frame_name,
+    )
+    if not isinstance(clone, WzCanvasProperty):
+        raise ValueError(f"源帧不是 Canvas，无法复制: {source_frame_path}")
+
+    target_frame_path = f"{action_name}/{frame_name}"
+    reference_hazard = 0
+    if existing_frame is None:
+        client_data = arc.append_property_record(client_original, (action_name,), clone)
+        arc.verify_raw_record_insert_scope(client_original, client_data, {(action_name,)})
+        protected_records = len(arc.raw_record_state(client_original)[0])
+        client_operation = "add"
+    else:
+        reference_hazard = img_record_reference_hazard(
+            client_original, (action_name, frame_name),
+        )
+        try:
+            client_data = replace_img_record(
+                client_original, (action_name, frame_name), clone, region="GMS",
+            ).data
+        except ValueError as exc:
+            if "points into replaced bytes" in str(exc):
+                raise ValueError(
+                    img_length_change_blocked_message(
+                        f"{action_name}/{frame_name}", reference_hazard,
+                    )
+                ) from exc
+            raise
+        protected_records = verify_img_replace_scope(
+            client_original, client_data, (action_name, frame_name), label="帧替换",
+        )
+        client_operation = "replace"
+    canvas_audit = audit_mob_frame_canvas(
+        client_data, client_path.name, target_frame_path, allow_blank=allow_blank,
+    )
+
+    server_path = server_xml_for_client(client_path)
+    server_original = None
+    server_data = None
+    server_operation = "skipped"
+    if sync_server and server_path is not None and server_path.is_file():
+        server_original = server_path.read_bytes()
+        spans = index_xml(server_original)
+        # 暂存用系统临时目录：xml_*_cloned_node 需要真实文件路径，但目录位置无所谓
+        # （atomic_write 自己在目标同目录建临时文件）。放在仓库里会污染工作区，
+        # 且临时目录清理会被当成仓库内的批量删除。
+        with tempfile.TemporaryDirectory(prefix="beidou-copy-mob-frame-") as directory:
+            staged_server = Path(directory) / server_path.name
+            staged_server.write_bytes(server_original)
+            if target_frame_path in spans:
+                xml_replace_cloned_node(
+                    staged_server, target_frame_path, clone, dry_run=False, backup=False,
+                )
+                server_operation = "replace"
+            elif action_name in spans and spans[action_name].tag == "imgdir":
+                xml_add_cloned_node(
+                    staged_server, action_name, clone, dry_run=False, backup=False,
+                )
+                server_operation = "addFrame"
+            else:
+                # 服务端镜像里没有这个动作目录：只补一帧会造成半截动作树，
+                # 这里不猜，明确跳过并让界面提示改用动作级迁移。
+                server_operation = "skippedMissingAction"
+            if server_operation == "skippedMissingAction":
+                server_data = None
+                server_original = None
+            else:
+                server_data = staged_server.read_bytes()
+                ET.fromstring(server_data)
+
+    client_changed = client_data != client_original
+    server_changed = server_data is not None and server_data != server_original
+    committed: list[tuple[Path, bytes]] = []
+    if not dry_run:
+        try:
+            if client_changed:
+                atomic_write(client_path, client_data, backup=True)
+                committed.append((client_path, client_original))
+            if server_changed and server_path is not None and server_data is not None \
+                    and server_original is not None:
+                atomic_write(server_path, server_data, backup=True)
+                committed.append((server_path, server_original))
+            _load_image_cached.cache_clear()
+            _verified_img_from_bytes(client_path, client_path.read_bytes())
+            if server_changed and server_path is not None:
+                ET.parse(server_path)
+        except Exception:
+            for target, original in reversed(committed):
+                atomic_write(target, original, backup=False)
+            _load_image_cached.cache_clear()
+            raise
+
+    modified_files: list[str] = []
+    if client_changed and not dry_run:
+        modified_files.append(relative_path(client_path))
+    if server_changed and not dry_run and server_path is not None:
+        modified_files.append(relative_path(server_path))
+    # 与 migrate_mob_action_with_server_sync 一致：modifiedFiles 只表示“已写入”。
+    # dry run 想展示将要改哪些文件时用 plannedFiles。
+    planned_files: list[str] = []
+    if client_changed:
+        planned_files.append(relative_path(client_path))
+    if server_changed and server_path is not None:
+        planned_files.append(relative_path(server_path))
+    return {
+        "action": action_name,
+        "frame": frame_name,
+        "framePath": target_frame_path,
+        "sourcePath": relative_path(source_path),
+        "sourceFramePath": source_frame_path,
+        "sourceSummary": canvas_reference_summary(reference),
+        "sourceResolved": reference["resolved"],
+        "sourceState": reference["state"],
+        "sourceCrossMob": reference["crossMob"],
+        "declaredWidth": reference["declaredWidth"],
+        "declaredHeight": reference["declaredHeight"],
+        "clientPath": relative_path(client_path),
+        "serverPath": relative_path(server_path) if server_path is not None else "",
+        "clientOperation": client_operation,
+        "serverOperation": server_operation,
+        "changed": client_changed or server_changed,
+        "dryRun": dry_run,
+        "canvas": canvas_audit,
+        "materialized": {
+            "canvases": materializer.canvases,
+            "links": materializer.links,
+            "resized": materializer.resized,
+        },
+        "rawScope": {
+            "approvedRoots": [target_frame_path],
+            "protectedRecords": protected_records,
+            "referencedStringRefs": reference_hazard,
+        },
+        "modifiedFiles": modified_files,
+        "plannedFiles": planned_files,
+        "sha256": {"client": hashlib.sha256(client_data).hexdigest()},
+    }
 
 
 def migrate_mob_action_with_server_sync(
@@ -3378,9 +4072,17 @@ def migrate_mob_action_with_server_sync(
         protected_records = len(arc.raw_record_state(client_original)[0])
         client_operation = "add"
     else:
-        client_data = replace_img_record(
-            client_original, (action_name,), clone, region="GMS",
-        ).data
+        try:
+            client_data = replace_img_record(
+                client_original, (action_name,), clone, region="GMS",
+            ).data
+        except ValueError as exc:
+            if "points into replaced bytes" in str(exc):
+                raise ValueError(img_length_change_blocked_message(
+                    f"动作 {action_name}",
+                    img_record_reference_hazard(client_original, (action_name,)),
+                )) from exc
+            raise
         protected_records = verify_mob_action_replace_scope(
             client_original, client_data, action_name,
         )
@@ -3727,6 +4429,47 @@ def api_mob_sources():
     return jsonify({"ok": True, **mob_source_options(request.args.get("id", ""))})
 
 
+@app.get("/api/project-mobs")
+def api_project_mobs():
+    """列出项目 clien/Data/Mob/ 下的怪物 IMG 文件，供对比选择。"""
+    mob_dir = _ROOT / "clien" / "Data" / "Mob"
+    q = request.args.get("q", "").strip().lower()
+    mobs = []
+    if mob_dir.is_dir():
+        for f in sorted(mob_dir.iterdir()):
+            if not f.name.endswith(".img"):
+                continue
+            mob_id = f.name.replace(".img", "")
+            if not mob_id.isdigit():
+                continue
+            if q and q not in mob_id:
+                continue
+            size = f.stat().st_size
+            # Try to get name from String.wz
+            name = _mob_string_name(mob_id)
+            mobs.append({"id": mob_id, "path": relative_path(f), "size": size, "name": name})
+    return jsonify({"ok": True, "mobs": mobs[:200]})
+
+
+def _mob_string_name(mob_id: str) -> str:
+    """从 String.wz/Mob.img.xml 获取怪物名称。"""
+    try:
+        string_path = _ROOT / "gms-server" / "wz" / "String.wz" / "Mob.img.xml"
+        if not string_path.is_file():
+            string_path = _ROOT / "gms-server" / "wz-zh-CN" / "String.wz" / "Mob.img.xml"
+        if not string_path.is_file():
+            return ""
+        import xml.etree.ElementTree as ET
+        tree = ET.parse(string_path)
+        for imgdir in tree.getroot().findall(f".//imgdir[@name='{mob_id}']"):
+            name_node = imgdir.find(".//string[@name='name']")
+            if name_node is not None:
+                return name_node.get("value", "")
+    except Exception:
+        pass
+    return ""
+
+
 @app.get("/api/files")
 def api_files():
     return jsonify({"ok": True, **browse_directory(request.args.get("path", ""))})
@@ -3806,6 +4549,60 @@ def api_migrate_mob_action():
     return jsonify({"ok": True, **result})
 
 
+@app.post("/api/copy-mob-frame")
+def api_copy_mob_frame():
+    """把单帧的真实像素复制到项目怪物 IMG（增量记录替换，不动其他帧）。"""
+    body = request.get_json(silent=True) or {}
+    source_path = resolve_repo_path(str(body.get("sourcePath", "")))
+    target_path = resolve_repo_path(str(body.get("targetPath", "")))
+    frame_path = str(body.get("sourceFramePath", "")).strip("/")
+    action_name = str(body.get("actionName", "")).strip()
+    frame_index = int(body.get("frameIndex", 0))
+    if not frame_path or not action_name:
+        raise ValueError("缺少 sourceFramePath 或 actionName")
+    with _WRITE_LOCK:
+        result = copy_mob_frame_with_server_sync(
+            target_path, source_path, frame_path, action_name, frame_index,
+            dry_run=bool(body.get("dryRun", False)),
+            allow_blank=bool(body.get("allowBlank", False)),
+            sync_server=bool(body.get("syncServer", True)),
+        )
+    return jsonify({"ok": True, **result})
+
+
+@app.post("/api/canvas-reference")
+def api_canvas_reference():
+    """解析单个帧/Canvas 节点的真实资源来源（只读）。"""
+    body = request.get_json(silent=True) or {}
+    source_path = resolve_repo_path(str(body.get("sourcePath", "")))
+    node_path = str(body.get("path", "")).strip("/")
+    if not node_path:
+        return jsonify({"ok": False, "error": "缺少 path"}), 400
+    if not source_path.is_file():
+        return jsonify({"ok": False, "error": f"文件不存在: {relative_path(source_path)}"}), 404
+    report = canvas_reference(source_path, node_path)
+    return jsonify({
+        "ok": True,
+        "sourcePath": relative_path(source_path),
+        "summary": canvas_reference_summary(report),
+        **report,
+    })
+
+
+@app.post("/api/mob-resource-manifest")
+def api_mob_resource_manifest():
+    """列出该怪物 IMG 全部帧的真实资源清单（TMS 占位帧的像素在哪）。"""
+    body = request.get_json(silent=True) or {}
+    source_path = resolve_repo_path(str(body.get("sourcePath", "")))
+    if not source_path.is_file():
+        return jsonify({"ok": False, "error": f"文件不存在: {relative_path(source_path)}"}), 404
+    if source_path.suffix.lower() != ".img":
+        return jsonify({"ok": False, "error": "真实资源清单只支持 .img"}), 400
+    node_path = str(body.get("path", "")).strip("/")
+    result = mob_resource_manifest(load_image(source_path), source_path, node_path)
+    return jsonify({"ok": True, **result})
+
+
 def require_mob_action_source(path: Path) -> None:
     allowed_roots = ((_TMS_DATA / "Mob").resolve(), _MS_CACHE_ROOT.resolve())
     if not any(path == root or path.is_relative_to(root) for root in allowed_roots):
@@ -3843,6 +4640,147 @@ def api_preview():
     return jsonify({"ok": True, "sourcePath": relative_path(source), **payload})
 
 
+@app.post("/api/child-frames")
+def api_child_frames():
+    """返回指定节点的子节点列表（用于动作/技能的帧详情展示）。"""
+    body = request.get_json(silent=True) or {}
+    source_path = resolve_repo_path(str(body.get("sourcePath", "")))
+    node_path = str(body.get("path", "")).strip("/")
+    if not node_path:
+        return jsonify({"ok": False, "error": "缺少 path"}), 400
+    image = load_image(source_path)
+    node = image.root.get(node_path)
+    if node is None:
+        return jsonify({"ok": False, "error": f"节点不存在: {node_path}"}), 404
+    children = []
+    if isinstance(node, WzSubProperty):
+        for child in sorted(node.children(), key=lambda n: natural_key(n.name)):
+            desc = {
+                "name": child.name,
+                "type": child.type_name.lower(),
+                "path": f"{node_path}/{child.name}",
+                "meaning": _mob_node_meaning(child.name, node_path, child),
+            }
+            if isinstance(child, (WzCanvasProperty, WzUolProperty)):
+                report = canvas_reference(source_path, f"{node_path}/{child.name}")
+                resolved = report["resolved"]
+                # 真实像素尺寸优先：TMS 的帧常常声明成 1×1 占位，真实图在别的文件里。
+                desc["width"] = (
+                    int(resolved["width"]) if resolved is not None
+                    else int(report["declaredWidth"] or 0)
+                )
+                desc["height"] = (
+                    int(resolved["height"]) if resolved is not None
+                    else int(report["declaredHeight"] or 0)
+                )
+                desc["declaredWidth"] = report["declaredWidth"]
+                desc["declaredHeight"] = report["declaredHeight"]
+                desc["state"] = report["state"]
+                desc["placeholder"] = report["placeholder"]
+                desc["linkKind"] = report["linkKind"]
+                desc["linkRaw"] = report["linkRaw"]
+                desc["crossMob"] = report["crossMob"]
+                desc["resolved"] = resolved
+                desc["summary"] = canvas_reference_summary(report)
+                desc["error"] = report["error"]
+                desc["isPlaceholder"] = report["placeholder"]
+                if isinstance(child, WzUolProperty):
+                    desc["value"] = str(child.value)
+                if isinstance(child, WzCanvasProperty):
+                    desc["format"] = int(child.format)
+                    origin = child.child("origin")
+                    if isinstance(origin, WzVectorProperty):
+                        desc["origin"] = {"x": int(origin.x), "y": int(origin.y)}
+                    delay = child_value(child, "delay")
+                    if delay is not None:
+                        desc["delay"] = int(delay)
+                if resolved is not None:
+                    desc["url"] = (
+                        f"/api/canvas?file={quote(relative_path(source_path))}"
+                        f"&path={quote(f'{node_path}/{child.name}')}"
+                    )
+            elif isinstance(child, WzSubProperty):
+                desc["childCount"] = len(list(child.children()))
+                # Recursively collect sub-children names for info-like nodes
+                if child.name == "info":
+                    sub_fields = []
+                    for sub in child.children():
+                        try:
+                            sub_fields.append({"name": sub.name, "type": sub.type_name.lower(), "value": sub.value if not isinstance(sub, WzSubProperty) else None})
+                        except Exception:
+                            sub_fields.append({"name": sub.name, "type": sub.type_name.lower()})
+                    desc["subFields"] = sub_fields
+            elif not isinstance(child, WzSubProperty):
+                try:
+                    desc["value"] = child.value
+                except Exception:
+                    pass
+            children.append(desc)
+    return jsonify({
+        "ok": True,
+        "nodePath": node_path,
+        "nodeType": node.type_name.lower(),
+        "childCount": len(children),
+        "children": children,
+    })
+
+
+# 怪物动作节点含义表
+_MOB_NODE_MEANINGS = {
+    "info": "动作参数配置",
+    "range": "攻击范围（左/右边界 x 坐标）",
+    "hit": "命中判定参数（攻击框位置与大小）",
+    "lt": "命中框左上角 (left, top)",
+    "rb": "命中框右下角 (right, bottom)",
+    "attackAfter": "攻击后硬直时间 (ms)，动作结束后等待该时长才可执行下一动作",
+    "onlyFsm": "是否仅由 FSM 控制触发（1=是，不响应普通输入）",
+    "mobCount": "召唤怪物数量",
+    "mob": "召唤的怪物 ID",
+    "type": "攻击类型（0=近身，1=远程，2=魔法）",
+    "delay": "帧延迟 (ms)，该帧显示时长",
+    "origin": "锚点坐标 (x, y)，用于对齐到怪物脚底",
+    "lt": "判定框左上角偏移",
+    "rb": "判定框右下角偏移",
+    "affect": "是否影响角色",
+    "spell": "是否为魔法攻击",
+    "fatal": "是否致死攻击",
+    "buff": "附加 Buff 参数",
+    "area": "攻击区域形状",
+    "knockback": "击退距离",
+    "mpConsume": "MP 消耗",
+    "cooltime": "技能冷却时间 (ms)",
+}
+
+
+def _mob_node_meaning(name: str, parent_path: str, node) -> str:
+    """返回怪物 IMG 节点的中文含义说明。"""
+    # Direct name match
+    if name in _MOB_NODE_MEANINGS:
+        return _MOB_NODE_MEANINGS[name]
+    # Numeric names = animation frames
+    if name.isdigit():
+        return f"动画帧 #{name}"
+    # Common mob action names
+    action_names = {
+        "stand": "站立", "move": "移动", "fly": "飞行", "jump": "跳跃",
+        "hit1": "受击", "die1": "死亡", "die2": "死亡(爆炸)",
+        "attack1": "攻击1", "attack2": "攻击2", "attack3": "攻击3",
+        "attack4": "攻击4", "attack5": "攻击5", "attack6": "攻击6",
+        "skill1": "技能1", "skill2": "技能2", "skill3": "技能3",
+        "skill4": "技能4", "skill5": "技能5", "skill6": "技能6",
+        "skill7": "技能7", "skill8": "技能8", "skill9": "技能9",
+        "skillAfter1": "技能1后摇", "skillAfter2": "技能2后摇",
+        "skillAfter3": "技能3后摇", "skillAfter4": "技能4后摇",
+    }
+    if name in action_names:
+        return action_names[name]
+    # info sub-fields
+    if parent_path.endswith("/info") or "/info/" in parent_path:
+        return _MOB_NODE_MEANINGS.get(name, f"info 子属性: {name}")
+    # Default
+    return ""
+
+
 @app.post("/api/diagnose-map")
 def api_diagnose_map():
     body = request.get_json(silent=True) or {}
@@ -3867,6 +4805,621 @@ def api_canvas():
     png.save(buffer, format="PNG")
     buffer.seek(0)
     return send_file(buffer, mimetype="image/png", max_age=3600)
+
+
+@app.get("/api/video")
+def api_video():
+    file_path = resolve_repo_path(request.args.get("file", ""))
+    image = load_image(file_path)
+    node_path = request.args.get("path", "").strip("/")
+    node = image.root.get(node_path)
+    if not isinstance(node, WzVideoProperty):
+        return jsonify({"ok": False, "error": "节点不是 Video 类型"}), 400
+    # 提取视频数据
+    data = node._data
+    if data is None and node._wz_image is not None and node._data_length > 0:
+        with node._wz_image.wz_file.reader_lock:
+            reader = node._wz_image.wz_file.reader
+            previous = reader.position
+            reader.seek(node._data_offset)
+            data = reader.read(node._data_length)
+            reader.seek(previous)
+    if not data:
+        return jsonify({"ok": False, "error": "无视频数据"}), 404
+    buffer = io.BytesIO(data)
+    buffer.seek(0)
+    return send_file(buffer, mimetype="video/ivf", max_age=3600)
+
+
+_MCV_DIR = _ROOT / "clien" / "Data" / "Video"
+_EFFECT_IMG = _ROOT / "clien" / "Data" / "Map" / "Effect.img"
+# Boss/category Chinese labels
+_BOSS_CN = {
+    "deathFault": "戴斯Fault",
+    "dawnWarrior": "魂骑士",
+    "blazeWizard": "炎术士",
+    "nightWalker": "夜行者",
+    "windArcher": "风灵使者",
+    "thunderBreaker": "奇袭者",
+    "hero": "英雄",
+    "paladin": "圣骑士",
+    "darkKnight": "黑骑士",
+    "fpArchMage": "火毒主教",
+    "ilArchMage": "冰雷主教",
+    "bishop": "主教",
+    "bowmaster": "弓箭手",
+    "marksman": "弩弓手",
+    "nightLord": "隐士",
+    "shadower": "侠盗",
+    "buccaneer": "冲锋队长",
+    "corsair": "船长",
+    "karing": "卡琳",
+    "lucid": "路西德",
+    "rootAbyss": "根源深渊",
+    "demian": "戴米安",
+    "will": "威尔",
+    "magnus": "玛格努斯",
+    "seren": "塞莲",
+    "akayrum": "阿卡伊伦",
+}
+
+
+@app.get("/api/mcv-catalog")
+def api_mcv_catalog():
+    """扫描 Effect.img 中所有 Boss 相关段（customSkill/customBoss*），列出 MCV 视频层引用。"""
+    import re as _re
+    try:
+        image = load_image(_EFFECT_IMG)
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
+    # Build a lookup of existing .mcv files by stem
+    mcv_files = {}
+    if _MCV_DIR.is_dir():
+        for f in _MCV_DIR.iterdir():
+            if f.suffix.lower() == ".mcv":
+                mcv_files[f.stem.lower()] = f.name
+
+    def camel_to_kebab(s):
+        k = ""
+        for ch in s:
+            if ch.isupper():
+                k += ("-" if k else "") + ch.lower()
+            else:
+                k += ch
+        return k
+
+    def match_mcv(layer_name, boss_name, section_key=""):
+        candidates = []
+        stem = layer_name.replace("VideoLayer", "").replace("video", "")
+        kebab = camel_to_kebab(stem)
+        # For numeric layer names in boss sections, also try matching by boss name
+        if stem.isdigit() and boss_name:
+            boss_stem = boss_name.replace("VideoLayer", "").replace("video", "")
+            boss_kebab = camel_to_kebab(boss_stem)
+            candidates.append(boss_kebab)
+            candidates.append(boss_stem.lower())
+        candidates.append(kebab)
+        candidates.append(stem.lower())
+        if stem and stem[0] in "2345":
+            candidates.append(f"explorer-{stem}")
+        candidates.append(f"{boss_name.lower()}-{kebab}")
+        num_match = _re.match(r"^(.+?)(\d+)$", kebab)
+        if num_match:
+            base, num = num_match.group(1), num_match.group(2)
+            candidates.append(f"{boss_name.lower()}-{base}-{num}")
+            candidates.append(f"{base}-{num}")
+        if boss_name == "windArcher" and "monsoon" in kebab:
+            candidates.append("monsoon-vi")
+        if boss_name == "rootAbyss":
+            candidates.append(f"root-abyss-{kebab}")
+            candidates.append(f"root-abyss-{kebab.replace('-', '')}")
+        if "Demian" in section_key:
+            candidates.append(f"damien-{kebab}")
+            candidates.append(kebab)
+            # groundBurst -> damien-ground (not damien-ground-burst)
+            if num_match:
+                candidates.append(f"damien-{num_match.group(1)}")
+            candidates.append(f"damien-{stem.lower()}")
+            # Also try the boss name for numeric layers
+            if stem.isdigit() and boss_name:
+                boss_kebab = camel_to_kebab(boss_name)
+                candidates.append(f"damien-{boss_kebab}")
+                candidates.append(f"damien-{boss_name.lower()}")
+                # groundBurst -> damien-ground
+                boss_num = _re.match(r"^(.+?)(\d+)$", boss_kebab)
+                if boss_num:
+                    candidates.append(f"damien-{boss_num.group(1)}")
+                # groundBurst -> also try damien-ground (strip suffix words)
+                parts = boss_kebab.split("-")
+                if len(parts) > 1:
+                    candidates.append(f"damien-{parts[0]}")
+        for cand in candidates:
+            if cand in mcv_files:
+                return mcv_files[cand]
+        return None
+
+    def scan_section(section_node, section_key):
+        result = []
+        for boss_node in section_node.children():
+            boss_name = boss_node.name
+            boss_cn = _BOSS_CN.get(boss_name, boss_name)
+            if boss_cn == boss_name and section_key.startswith("customBoss") and section_key != "customSkill":
+                boss_cn = _BOSS_CN.get(section_key.replace("customBoss", "").lower(), boss_name)
+            layers = []
+            for layer_node in boss_node.children():
+                layer_name = layer_node.name
+                matched_mcv = match_mcv(layer_name, boss_name, section_key)
+                child_count = 0
+                has_canvas = False
+                for c in layer_node.children():
+                    child_count += 1
+                    has_canvas = has_canvas or (c.type_name == "Canvas")
+                layers.append({
+                    "name": layer_name,
+                    "path": f"{section_key}/{boss_name}/{layer_name}",
+                    "mcvFile": matched_mcv,
+                    "childCount": child_count,
+                    "hasCanvas": has_canvas,
+                })
+            if layers:
+                result.append({
+                    "name": boss_name,
+                    "label": boss_cn,
+                    "section": section_key,
+                    "layers": layers,
+                })
+        return result
+
+    bosses = []
+    custom_skill = image.root.child("customSkill")
+    if custom_skill:
+        bosses.extend(scan_section(custom_skill, "customSkill"))
+    for child in image.root.children():
+        if child.name.startswith("customBoss") and child.name != "customSkill":
+            bosses.extend(scan_section(child, child.name))
+    return jsonify({"ok": True, "bosses": bosses})
+
+
+@app.get("/api/mcv-file")
+def api_mcv_file():
+    """将 .mcv 转换为 WebM 供浏览器播放（经 IVF → ffmpeg → WebM）。"""
+    import shutil as _shutil
+    name = request.args.get("name", "").strip()
+    if not name or "/" in name or "\\" in name or ".." in name:
+        return jsonify({"ok": False, "error": "无效文件名"}), 400
+    path = _MCV_DIR / name
+    if not path.is_file():
+        return jsonify({"ok": False, "error": f"文件不存在: {name}"}), 404
+    ffmpeg = _shutil.which("ffmpeg")
+    if not ffmpeg:
+        return jsonify({"ok": False, "error": "ffmpeg 未安装"}), 500
+    try:
+        ivf_data = _convert_mcv_to_ivf(path)
+    except Exception as exc:
+        return jsonify({"ok": False, "error": f"MCV 解析失败: {exc}"}), 500
+    # Write IVF to temp file, convert with ffmpeg to WebM
+    try:
+        with tempfile.NamedTemporaryFile(suffix=".ivf", delete=False) as tmp_ivf:
+            tmp_ivf.write(ivf_data)
+            tmp_ivf_path = tmp_ivf.name
+        tmp_webm_path = tmp_ivf_path.replace(".ivf", ".webm")
+        proc = subprocess.run(
+            [ffmpeg, "-v", "error",
+             "-i", tmp_ivf_path,
+             "-c:v", "libvpx-vp9", "-b:v", "0", "-crf", "30",
+             "-deadline", "realtime", "-cpu-used", "8",
+             "-f", "webm", "-y", tmp_webm_path],
+            capture_output=True, timeout=30,
+        )
+        Path(tmp_ivf_path).unlink(missing_ok=True)
+        if proc.returncode != 0:
+            Path(tmp_webm_path).unlink(missing_ok=True)
+            raise RuntimeError(proc.stderr.decode(errors="replace")[:200])
+        webm_data = Path(tmp_webm_path).read_bytes()
+        Path(tmp_webm_path).unlink(missing_ok=True)
+    except subprocess.TimeoutExpired:
+        return jsonify({"ok": False, "error": "ffmpeg 转码超时"}), 500
+    except Exception as exc:
+        return jsonify({"ok": False, "error": f"WebM 转码失败: {exc}"}), 500
+    buffer = io.BytesIO(webm_data)
+    buffer.seek(0)
+    return send_file(buffer, mimetype="video/webm", max_age=3600)
+
+
+
+@app.get("/api/mcv-info")
+def api_mcv_info():
+    """返回 MCV 文件的详细信息（帧数、时长、每帧延迟、Effect.img 引用等）。"""
+    name = request.args.get("name", "").strip()
+    if not name or "/" in name or "\\" in name or ".." in name:
+        return jsonify({"ok": False, "error": "无效文件名"}), 400
+    path = _MCV_DIR / name
+    if not path.is_file():
+        return jsonify({"ok": False, "error": f"文件不存在: {name}"}), 404
+    data = path.read_bytes()
+    if len(data) < 36 or data[:4] != b"MCV0":
+        return jsonify({"ok": False, "error": "不是有效的 MCV 文件"}), 400
+    encoded_fourcc = struct.unpack_from("<I", data, 8)[0]
+    width = struct.unpack_from("<H", data, 12)[0]
+    height = struct.unpack_from("<H", data, 14)[0]
+    frame_count = struct.unpack_from("<I", data, 16)[0]
+    decoded_fourcc = encoded_fourcc ^ _MCV_FOURCC_XOR
+    color_table_start = 36
+    alpha_table_start = color_table_start + frame_count * 8
+    delay_table_start = alpha_table_start + frame_count * 8
+    payload_start = delay_table_start + frame_count * 4
+    color_entries = []
+    for i in range(frame_count):
+        off = struct.unpack_from("<I", data, color_table_start + i * 8)[0]
+        sz = struct.unpack_from("<I", data, color_table_start + i * 8 + 4)[0]
+        color_entries.append({"offset": off, "size": sz})
+    alpha_entries = []
+    for i in range(frame_count):
+        off = struct.unpack_from("<I", data, alpha_table_start + i * 8)[0]
+        sz = struct.unpack_from("<I", data, alpha_table_start + i * 8 + 4)[0]
+        alpha_entries.append({"offset": off, "size": sz})
+    delays = []
+    total_ms = 0
+    for i in range(frame_count):
+        d = struct.unpack_from("<I", data, delay_table_start + i * 4)[0]
+        delays.append(d)
+        total_ms += d
+    effect_refs = _find_mcv_effect_refs(name)
+    return jsonify({
+        "ok": True,
+        "name": name,
+        "fileSize": len(data),
+        "fourcc": struct.pack("<I", decoded_fourcc).decode(errors="replace"),
+        "width": width,
+        "height": height,
+        "frameCount": frame_count,
+        "totalDurationMs": total_ms,
+        "totalDurationSec": round(total_ms / 1000, 2),
+        "payloadStart": payload_start,
+        "frames": [
+            {"index": i, "delayMs": delays[i], "colorSize": color_entries[i]["size"], "alphaSize": alpha_entries[i]["size"]}
+            for i in range(frame_count)
+        ],
+        "effectRefs": effect_refs,
+    })
+
+
+def _find_mcv_effect_refs(mcv_name: str) -> list[dict]:
+    """在 Effect.img 中查找引用指定 MCV 文件的视频层。"""
+    try:
+        image = load_image(_EFFECT_IMG)
+    except Exception:
+        return []
+    stem = mcv_name.replace(".mcv", "").lower()
+    refs = []
+    for child in image.root.children():
+        if not child.name.startswith("custom"):
+            continue
+        if not isinstance(child, WzSubProperty):
+            continue
+        for boss in child.children():
+            for layer in boss.children():
+                layer_lower = layer.name.lower()
+                match = (stem in layer_lower
+                         or layer_lower.replace("videolayer", "").replace("video", "") in stem
+                         or layer_lower.replace("videolayer", "").replace("video", "") == stem.replace("-", "").replace(boss.name.lower(), ""))
+                if not match:
+                    continue
+                marker = layer.child("0")
+                ref = {
+                    "section": child.name,
+                    "boss": boss.name,
+                    "layer": layer.name,
+                    "path": f"{child.name}/{boss.name}/{layer.name}",
+                }
+                if isinstance(marker, WzCanvasProperty):
+                    ref["markerWidth"] = int(marker.width)
+                    ref["markerHeight"] = int(marker.height)
+                    origin = marker.child("origin")
+                    if isinstance(origin, WzVectorProperty):
+                        ref["originX"] = int(origin.x)
+                        ref["originY"] = int(origin.y)
+                    delay = marker.child("delay")
+                    if isinstance(delay, WzIntProperty):
+                        ref["markerDelay"] = int(delay.value)
+                refs.append(ref)
+    return refs
+
+
+@app.get("/api/mcv-frame")
+def api_mcv_frame():
+    """提取 MCV 指定帧为 PNG 图片（用于预览）。"""
+    import shutil as _shutil
+    name = request.args.get("name", "").strip()
+    frame_idx = request.args.get("frame", "0")
+    if not name or "/" in name or "\\" in name or ".." in name:
+        return jsonify({"ok": False, "error": "无效文件名"}), 400
+    try:
+        frame_idx = int(frame_idx)
+    except (TypeError, ValueError):
+        frame_idx = 0
+    path = _MCV_DIR / name
+    if not path.is_file():
+        return jsonify({"ok": False, "error": f"文件不存在: {name}"}), 404
+    ffmpeg = _shutil.which("ffmpeg")
+    if not ffmpeg:
+        return jsonify({"ok": False, "error": "ffmpeg 未安装"}), 500
+    try:
+        ivf_data = _convert_mcv_to_ivf(path)
+    except Exception as exc:
+        return jsonify({"ok": False, "error": f"MCV 解析失败: {exc}"}), 500
+    with tempfile.NamedTemporaryFile(suffix=".ivf", delete=False) as tmp:
+        tmp.write(ivf_data)
+        tmp_path = tmp.name
+    png_path = tmp_path.replace(".ivf", ".png")
+    try:
+        proc = subprocess.run(
+            [ffmpeg, "-v", "error",
+             "-i", tmp_path,
+             "-vf", f"select=eq(n\\,{frame_idx})",
+             "-frames:v", "1", "-pix_fmt", "rgba",
+             "-y", png_path],
+            capture_output=True, timeout=10,
+        )
+        Path(tmp_path).unlink(missing_ok=True)
+        if proc.returncode != 0 or not Path(png_path).exists():
+            raise RuntimeError("帧提取失败")
+        return send_file(png_path, mimetype="image/png", max_age=3600)
+    except Exception as exc:
+        Path(tmp_path).unlink(missing_ok=True)
+        Path(png_path).unlink(missing_ok=True)
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
+
+@app.post("/api/mcv-update-delays")
+def api_mcv_update_delays():
+    """更新 MCV 文件的帧延迟（不重新编码视频数据）。"""
+    body = request.get_json(silent=True) or {}
+    name = str(body.get("name", "")).strip()
+    delays = body.get("delays")  # list of int
+    if not name or "/" in name or "\\" in name:
+        return jsonify({"ok": False, "error": "无效文件名"}), 400
+    if not isinstance(delays, list) or not all(isinstance(d, int) and d > 0 for d in delays):
+        return jsonify({"ok": False, "error": "delays 必须是正整数列表"}), 400
+    path = _MCV_DIR / name
+    if not path.is_file():
+        return jsonify({"ok": False, "error": f"文件不存在: {name}"}), 404
+    data = path.read_bytes()
+    if len(data) < 36 or data[:4] != b"MCV0":
+        return jsonify({"ok": False, "error": "不是有效的 MCV 文件"}), 400
+    frame_count = struct.unpack_from("<I", data, 16)[0]
+    if len(delays) != frame_count:
+        return jsonify({"ok": False, "error": f"延迟数量 ({len(delays)}) 与帧数 ({frame_count}) 不匹配"}), 400
+    # Calculate delay table offset
+    color_table_start = 36
+    alpha_table_start = color_table_start + frame_count * 8
+    delay_table_start = alpha_table_start + frame_count * 8
+    # Backup
+    backup_path = path.with_suffix(".mcv.bak")
+    if not backup_path.exists():
+        backup_path.write_bytes(data)
+    # Patch delays in-place
+    data = bytearray(data)
+    for i, d in enumerate(delays):
+        struct.pack_into("<I", data, delay_table_start + i * 4, d)
+    path.write_bytes(bytes(data))
+    total_ms = sum(delays)
+    return jsonify({"ok": True, "name": name, "totalDurationMs": total_ms, "totalDurationSec": round(total_ms / 1000, 2)})
+
+
+@app.get("/api/mcv-export-frames")
+def api_mcv_export_frames():
+    """导出 MCV 的所有 color 帧为 PNG 序列（返回 zip）。"""
+    import io, zipfile
+    name = request.args.get("name", "").strip()
+    if not name or "/" in name or "\\" in name or ".." in name:
+        return jsonify({"ok": False, "error": "无效文件名"}), 400
+    path = _MCV_DIR / name
+    if not path.is_file():
+        return jsonify({"ok": False, "error": f"文件不存在: {name}"}), 404
+    # Parse MCV and extract color VP9 packets
+    ivf_data = _convert_mcv_to_ivf(path)
+    # Use ffmpeg to extract frames to PNG
+    import shutil as _shutil
+    ffmpeg = _shutil.which("ffmpeg")
+    if not ffmpeg:
+        return jsonify({"ok": False, "error": "ffmpeg 未安装"}), 500
+    stem = name.replace(".mcv", "")
+    with tempfile.TemporaryDirectory() as tmpdir:
+        ivf_path = Path(tmpdir) / "input.ivf"
+        ivf_path.write_bytes(ivf_data)
+        subprocess.run(
+            [ffmpeg, "-v", "error", "-i", str(ivf_path),
+             "-pix_fmt", "rgba", "-y", str(Path(tmpdir) / "frame_%04d.png")],
+            capture_output=True, timeout=60,
+        )
+        # Build zip
+        zip_buffer = io.BytesIO()
+        with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+            for png_file in sorted(Path(tmpdir).glob("frame_*.png")):
+                zf.write(png_file, f"{stem}/{png_file.name}")
+        zip_buffer.seek(0)
+    return send_file(zip_buffer, mimetype="application/zip",
+                     as_attachment=True, download_name=f"{stem}_frames.zip")
+
+
+@app.post("/api/mcv-replace")
+def api_mcv_replace():
+    """用上传的 WebM/MP4 视频替换现有 MCV 文件（经 ffmpeg → IVF → MCV 打包）。"""
+    import shutil as _shutil
+    ffmpeg = _shutil.which("ffmpeg")
+    if not ffmpeg:
+        return jsonify({"ok": False, "error": "ffmpeg 未安装"}), 500
+    name = request.form.get("name", "").strip()
+    if not name or "/" in name or "\\" in name or ".." in name:
+        return jsonify({"ok": False, "error": "无效文件名"}), 400
+    target_path = _MCV_DIR / name
+    if not target_path.is_file():
+        return jsonify({"ok": False, "error": f"目标文件不存在: {name}"}), 404
+    # Get uploaded file
+    upload = request.files.get("file")
+    if not upload:
+        return jsonify({"ok": False, "error": "未上传文件"}), 400
+    # Read original MCV header to get dimensions
+    orig_data = target_path.read_bytes()
+    orig_width = struct.unpack_from("<H", orig_data, 12)[0]
+    orig_height = struct.unpack_from("<H", orig_data, 14)[0]
+    with tempfile.TemporaryDirectory() as tmpdir:
+        upload_path = Path(tmpdir) / upload.filename
+        upload.save(str(upload_path))
+        # Convert to IVF with VP9
+        ivf_path = Path(tmpdir) / "output.ivf"
+        proc = subprocess.run(
+            [ffmpeg, "-v", "error", "-i", str(upload_path),
+             "-vf", f"scale={orig_width}:{orig_height}",
+             "-c:v", "libvpx-vp9", "-b:v", "0", "-crf", "20",
+             "-deadline", "good", "-cpu-used", "4",
+             "-f", "ivf", "-y", str(ivf_path)],
+            capture_output=True, timeout=120,
+        )
+        if proc.returncode != 0:
+            return jsonify({"ok": False, "error": f"ffmpeg 转码失败: {proc.stderr.decode(errors='replace')[:200]}"}), 500
+        # Read IVF and pack into MCV
+        ivf_bytes = ivf_path.read_bytes()
+        if len(ivf_bytes) < 32 or ivf_bytes[:4] != b"DKIF":
+            return jsonify({"ok": False, "error": "ffmpeg 输出的 IVF 无效"}), 500
+        # Parse IVF packets
+        ivf_hdr_size = struct.unpack_from("<H", ivf_bytes, 6)[0]
+        ivf_frame_count = struct.unpack_from("<I", ivf_bytes, 24)[0]
+        ivf_tb_num = struct.unpack_from("<I", ivf_bytes, 20)[0]
+        ivf_tb_den = struct.unpack_from("<I", ivf_bytes, 16)[0]
+        packets = []
+        pos = ivf_hdr_size
+        for _ in range(ivf_frame_count):
+            if pos + 12 > len(ivf_bytes):
+                break
+            pkt_size = struct.unpack_from("<I", ivf_bytes, pos)[0]
+            pkt = ivf_bytes[pos + 12:pos + 12 + pkt_size]
+            packets.append(pkt)
+            pos += 12 + pkt_size
+        if not packets:
+            return jsonify({"ok": False, "error": "IVF 中无有效帧"}), 500
+        # Calculate delays from IVF timebase
+        delays = []
+        for i in range(len(packets)):
+            d = max(16, int(ivf_tb_num / max(ivf_tb_den, 1) * 1000)) if ivf_tb_den else 33
+            delays.append(d)
+        # Pack into MCV format
+        encoded_fourcc = struct.unpack("<I", b"VP90")[0] ^ _MCV_FOURCC_XOR
+        mcv_header = struct.pack(
+            "<4sHHIHHIB3xQI",
+            b"MCV0", 0, 36, encoded_fourcc,
+            orig_width, orig_height, len(packets), 3, 1_000_000, 0,
+        )
+        color_offsets = []
+        offset = 0
+        for pkt in packets:
+            color_offsets.append(offset)
+            offset += len(pkt)
+        # Alpha is empty (same packets for simplicity)
+        alpha_offsets = [offset] * len(packets)
+        mcv_body = b""
+        for off, pkt in zip(color_offsets, packets):
+            mcv_body += struct.pack("<II", off, len(pkt))
+        for off in alpha_offsets:
+            mcv_body += struct.pack("<II", off, 0)
+        for d in delays:
+            mcv_body += struct.pack("<I", d)
+        for pkt in packets:
+            mcv_body += pkt
+        # Backup and write
+        backup_path = target_path.with_suffix(".mcv.bak")
+        if not backup_path.exists():
+            backup_path.write_bytes(orig_data)
+        target_path.write_bytes(mcv_header + mcv_body)
+    return jsonify({
+        "ok": True,
+        "name": name,
+        "frameCount": len(packets),
+        "totalDurationMs": sum(delays),
+    })
+
+
+_MCV_FOURCC_XOR = 0xA5A5A5A5
+
+
+def _convert_mcv_to_ivf(path: Path) -> bytes:
+    """解析 MCV 文件，提取 color VP9 流，包装为标准 IVF 容器。
+
+    MCV 格式 (来自 export_soul_eclipse_mcv.py write_mcv):
+      [0-35]    Header (36 bytes): MCV0 + XOR'd fourcc + w/h/count + timebase
+      [36..]    Color offset table: frame_count × (cum_offset:u32, size:u32)
+      [...]     Alpha offset table: frame_count × (cum_offset:u32, size:u32)
+      [...]     Delay table: frame_count × delay_ms:u32
+      [...]     Payload: all color VP9 packets + all alpha VP9 packets
+    """
+    data = path.read_bytes()
+    if len(data) < 36 or data[:4] != b"MCV0":
+        raise ValueError("不是有效的 MCV 文件")
+
+    encoded_fourcc = struct.unpack_from("<I", data, 8)[0]
+    width = struct.unpack_from("<H", data, 12)[0]
+    height = struct.unpack_from("<H", data, 14)[0]
+    frame_count = struct.unpack_from("<I", data, 16)[0]
+    decoded_fourcc = encoded_fourcc ^ _MCV_FOURCC_XOR  # VP90
+
+    # Offset table: color (frame_count × 8 bytes) + alpha (frame_count × 8 bytes)
+    color_table_start = 36
+    alpha_table_start = color_table_start + frame_count * 8
+    delay_table_start = alpha_table_start + frame_count * 8
+    payload_start = delay_table_start + frame_count * 4
+
+    if payload_start > len(data):
+        raise ValueError("MCV 文件截断")
+
+    # Read color offset table (cumulative offsets + sizes)
+    color_entries = []
+    for i in range(frame_count):
+        off = struct.unpack_from("<I", data, color_table_start + i * 8)[0]
+        sz = struct.unpack_from("<I", data, color_table_start + i * 8 + 4)[0]
+        color_entries.append((off, sz))
+
+    # Read delays for timestamp calculation
+    delays = []
+    for i in range(frame_count):
+        delays.append(struct.unpack_from("<I", data, delay_table_start + i * 4)[0])
+
+    # Extract color VP9 packets with their original frame indices
+    color_packets = []  # list of (timestamp_ms, packet_bytes)
+    cumulative_ms = 0
+    for i, (off, sz) in enumerate(color_entries):
+        if sz > 0:
+            pkt = data[payload_start + off:payload_start + off + sz]
+            color_packets.append((cumulative_ms, pkt))
+        if i < len(delays):
+            cumulative_ms += delays[i]
+        else:
+            cumulative_ms += 33
+
+    if not color_packets:
+        raise ValueError("MCV 文件中没有有效的 color 数据包")
+
+    # Build standard IVF container
+    # IVF timebase: tb_num/tb_den seconds per timestamp unit
+    # Our timestamps are in milliseconds, so tb_num=1, tb_den=1000 → 1ms per tick
+    ivf_header = struct.pack(
+        "<4sHHIHHIIII",
+        b"DKIF",
+        0,             # version
+        32,            # header size
+        decoded_fourcc,  # VP90
+        width,
+        height,
+        1000,          # timebase denominator
+        1,             # timebase numerator (1ms per tick)
+        len(color_packets),
+        0,
+    )
+    frame_data = b""
+    for ts, pkt in color_packets:
+        frame_data += struct.pack("<IQ", len(pkt), ts) + pkt
+    return ivf_header + frame_data
 
 
 @app.post("/api/edit")

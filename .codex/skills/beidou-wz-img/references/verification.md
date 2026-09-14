@@ -65,7 +65,7 @@ Before reporting completion:
 ## Delivery
 
 Validate locally first, including any required DLL rebuild for files this
-task changed. Recreate `/Users/lizixian/Downloads/路西德/` so it contains
+task changed. Recreate `/Users/lizixian/Downloads/<本次功能中文名>/` so it contains
 **only this task's created or modified runtime files**. Preserve in-client
 names and layout. Do not re-copy unchanged files from earlier tasks, even
 when they share a feature, map, or conversation. Compare

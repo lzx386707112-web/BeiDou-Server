@@ -31,6 +31,7 @@ import org.gms.server.life.MobSkill;
 import org.gms.server.life.MobSkillFactory;
 import org.gms.server.life.MobSkillId;
 import org.gms.server.life.MobSkillType;
+import org.gms.server.life.DamienBossCompat;
 import org.gms.server.life.KaringBossCompat;
 import org.gms.server.life.Monster;
 import org.gms.server.life.MonsterInformationProvider;
@@ -96,7 +97,7 @@ public final class MoveLifeHandler extends AbstractMovementPacketHandler {
         }
 
         boolean isAttack = inRangeInclusive(rawActivity, 24, 41);
-        boolean isSkill = inRangeInclusive(rawActivity, 42, 59);
+        boolean isSkill = inRangeInclusive(rawActivity, 42, 61);
 
         if (traceArcanaMob) {
             log.info("[Mob8644001Trace] classified map={} oid={} activity={} attack={} skill={} castPos={}",
@@ -111,24 +112,29 @@ public final class MoveLifeHandler extends AbstractMovementPacketHandler {
         boolean skillAccepted = false;
 
         if (isSkill) {
-            useSkillId = skillId;
-            useSkillLevel = skillLv;
-
-            if (monster.hasSkill(useSkillId, useSkillLevel)) {
-                MobSkillType mobSkillType = MobSkillType.from(useSkillId).orElseThrow();
-                MobSkill toUse = MobSkillFactory.getMobSkillOrThrow(mobSkillType, useSkillLevel);
+            int skillActionIndex = (rawActivity - 42) / 2;
+            MobSkillId resolved = monster.resolveCastSkill(skillId, skillLv, skillActionIndex);
+            if (resolved != null) {
+                useSkillId = resolved.type().getId();
+                useSkillLevel = resolved.level();
+                MobSkill toUse = MobSkillFactory.getMobSkillOrThrow(resolved.type(), resolved.level());
 
                 if (monster.canUseSkill(toUse, true)) {
                     skillAccepted = true;
                     boolean handled = KaringBossCompat.handleProjectedSkillCast(
                             monster, useSkillId, useSkillLevel);
                     if (!handled) {
-                        int animationTime = MonsterInformationProvider.getInstance().getMobSkillAnimationTime(toUse);
-                        if (animationTime > 0 && toUse.getType() != MobSkillType.BANISH) {
-                            toUse.applyDelayedEffect(player, monster, true, animationTime);
-                        } else {
+                        if (DamienBossCompat.isDamien(monster.getId())) {
                             banishPlayers = new LinkedList<>();
                             toUse.applyEffect(player, monster, true, banishPlayers);
+                        } else {
+                            int animationTime = MonsterInformationProvider.getInstance().getMobSkillAnimationTime(toUse);
+                            if (animationTime > 0 && toUse.getType() != MobSkillType.BANISH) {
+                                toUse.applyDelayedEffect(player, monster, true, animationTime);
+                            } else {
+                                banishPlayers = new LinkedList<>();
+                                toUse.applyEffect(player, monster, true, banishPlayers);
+                            }
                         }
                     }
                 }
@@ -163,7 +169,8 @@ public final class MoveLifeHandler extends AbstractMovementPacketHandler {
             for (MobSkillId skillToUse : monster.getSkillsInRandomOrder()) {
                 MobSkill candidate = MobSkillFactory.getMobSkillOrThrow(skillToUse.type(), skillToUse.level());
                 if (monster.canUseSkill(candidate, false)
-                        && candidate.getHP() >= hpPercent
+                        && (DamienBossCompat.ignoresMobSkillHpGate(monster.getId())
+                            || candidate.getHP() >= hpPercent)
                         && mobMp >= candidate.getMpCon()) {
                     nextSkillId = skillToUse.type().getId();
                     nextSkillLevel = skillToUse.level();

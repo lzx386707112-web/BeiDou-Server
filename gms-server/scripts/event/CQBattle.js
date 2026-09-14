@@ -7,14 +7,14 @@
 var isPq = true;
 var minPlayers = 1, maxPlayers = 30;
 var minLevel = 125, maxLevel = 255;
-var entryMap = 105200311;
+var entryMap = 105200710;
 var entryItem = 4033611;    // 入场消耗道具
 var exitMap = 105200000;
 var recruitMap = 105200000;
 var clearMap = 105200000;
 
-var minMapId = 105200311;
-var maxMapId = 105200311;
+var minMapId = 105200710;
+var maxMapId = 105200710;
 
 var eventTime = 120;     // 120 minutes
 
@@ -28,8 +28,8 @@ if (GameConfig.getServerBoolean("use_enable_party_level_limit_lift")) {
     minLevel = 125, maxLevel = 200;
 }
 
-var bossId = 8920101;         // 血腥女王 BOSS
-var treasureMobId = 8920106;  // 宝箱怪物
+var bossId = 8920000;         // 血腥女王 BOSS
+var treasureMobId = 8920006;  // 宝箱怪物
 
 // === 变身配置 ===
 var phase1MobId = bossId;
@@ -109,7 +109,7 @@ function setup(channel) {
     eim.setProperty("treasureSpawned", 0);
 	
 	    // === 变身状态初始化 ===
-    eim.setProperty("bossPhase", "4");       // 当前仓库只包含 8920101，禁用缺失形态轮询
+    eim.setProperty("bossPhase", "4");       // 当前仓库只包含 8920000，禁用缺失形态轮询
     eim.setProperty("isTransforming", "0");   // 变身标记，防止 killMonster 触发通关
 
     var level = 1;
@@ -144,11 +144,11 @@ function checkBossHp(eim) {
  * 根据阶段获取对应怪物ID
  */
 function getBossIdByPhase(phase) {
-    if (phase == 0) return bossId;       // 8920101
-    if (phase == 1) return phase1MobId;  // 8920101
-    if (phase == 2) return phase2MobId;  // 8920101
-	if (phase == 3) return phase3MobId;  // 8920101
-    if (phase == 4) return bossId;       // 8920101
+    if (phase == 0) return bossId;       // 8920000
+    if (phase == 1) return phase1MobId;  // 8920000
+    if (phase == 2) return phase2MobId;  // 8920000
+	if (phase == 3) return phase3MobId;  // 8920000
+    if (phase == 4) return bossId;       // 8920000
     return bossId;
 }
 

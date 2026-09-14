@@ -253,6 +253,18 @@ public class EventManager {
         return cserv;
     }
 
+    public MapleMap getMap(int mapId) {
+        MapleMap map = cserv.getMapFactory().getMap(mapId);
+        if (map == null) {
+            log.warn("Event {} skipped missing map {}", name, mapId);
+        }
+        return map;
+    }
+
+    public MapleMap getMap(Number mapId) {
+        return mapId == null ? null : getMap(mapId.intValue());
+    }
+
     /**
      * 获取可调用的脚本引擎
      * @return 可调用的脚本引擎

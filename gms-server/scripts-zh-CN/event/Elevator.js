@@ -28,8 +28,13 @@ function init() {
     beginTime = em.getTransportationTime(beginTime);
     rideTime = em.getTransportationTime(rideTime);
 
-    em.getChannelServer().getMapFactory().getMap(222020100).resetReactors();
-    em.getChannelServer().getMapFactory().getMap(222020200).resetReactors();
+    var goingDownMap = em.getChannelServer().getMapFactory().getMap(222020100);
+    var goingUpMap = em.getChannelServer().getMapFactory().getMap(222020200);
+    if (goingDownMap == null || goingUpMap == null) {
+        return;
+    }
+    goingDownMap.resetReactors();
+    goingUpMap.resetReactors();
 
     scheduleNew();
 }

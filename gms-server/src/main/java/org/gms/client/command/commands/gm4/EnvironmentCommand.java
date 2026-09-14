@@ -25,7 +25,6 @@ import static soloMapling.Environment.EnvironmentManager.getAvailablePlatformIds
 import static soloMapling.Environment.EnvironmentManager.getCurrentPlatform;
 import static soloMapling.Environment.EnvironmentManager.getMainPlatformIds;
 import static soloMapling.Environment.EnvironmentManager.spawnBotsInFMEntrance;
-import static soloMapling.Environment.EnvironmentManager.spawnCasinoNpcs;
 import static soloMapling.Environment.EnvironmentManager.spawnFillerBots;
 import static soloMapling.Environment.EnvironmentManager.spawnFillerBotsHenesys;
 import static soloMapling.Environment.EnvironmentManager.spawnFillerBotsHenesysMarket;
@@ -240,15 +239,6 @@ public class EnvironmentCommand extends Command {
                 if (!requireFeature(SoloMaplingConfig.casinoNpcEnabled(), "赌场 NPC")) return;
                 spawnCasinoNpc(c);
                 break;
-            case "spawnrpsnpc":
-                if (!requireFeature(SoloMaplingConfig.rpsNpcEnabled(), "猜拳 NPC")) return;
-                NpcSpawner.spawnNpcAtPlayer(c.getPlayer(), 9000019);
-                break;
-            case "spawncasinonpcs":
-                if (!requireFeature(SoloMaplingConfig.casinoNpcEnabled() || SoloMaplingConfig.rpsNpcEnabled(), "赌场/猜拳 NPC")) return;
-                spawnCasinoNpcs();
-                player.yellowMessage("Casino NPCs spawned on map 100000203.");
-                break;
             default:
                 player.yellowMessage("Invalid command - Direct Command");
                 break;
@@ -380,8 +370,6 @@ public class EnvironmentCommand extends Command {
         player.yellowMessage("!env spawngzhbots                - spawn Game Zone Host bots");
         player.yellowMessage("!env spawnbjtables               - spawn Blackjack tables");
         player.yellowMessage("!env spawncasinonpc              - spawn casino NPC at player");
-        player.yellowMessage("!env spawncasinonpcs             - spawn all casino NPCs on map");
-        player.yellowMessage("!env spawnrpsnpc                 - spawn RPS NPC");
         player.yellowMessage("-- Social Systems --");
         player.yellowMessage("!env starthotpotato              - start Social Hot Potato manager");
         player.yellowMessage("!env stophotpotato               - stop Social Hot Potato manager");

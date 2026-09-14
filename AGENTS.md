@@ -245,8 +245,9 @@ effect, movement, other-player view, map transition, and repeated casting.
   build script and include that rebuilt DLL in the delivery set. Do not wait
   for a separate authorization.
 - Rebuild or package the server JAR only when the user explicitly requests it.
-- Recreate `/Users/lizixian/Downloads/路西德/` so the drop contains only this
-  task's payload. Do not mix in a previous delivery.
+- Recreate `/Users/lizixian/Downloads/<本次功能中文名>/` so the drop contains
+  only this task's payload. Name the folder after the function that changed.
+  Do not reuse a fixed name such as `路西德`. Do not mix in a previous delivery.
 - Copy only runtime files this task created or modified. Do not re-deliver
   unchanged files from earlier work, even if they are part of the same
   feature or conversation.

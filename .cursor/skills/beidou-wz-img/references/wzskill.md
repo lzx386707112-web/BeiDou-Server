@@ -96,9 +96,14 @@ After each XML change:
 - verify corresponding client/server IDs and values;
 - run the generator twice and require stable hashes.
 
-Update `gms-server/wz-zh-CN` as well when that tree is a runtime consumer or the
-existing platform writes both trees. Do not add a parallel translation record
-without confirming it belongs to the requested contract.
+Update `gms-server/wz-zh-CN` only for `Etc.wz`, `Quest.wz`, and `String.wz`.
+Never create or copy `Map.wz`, `Mob.wz`, `Npc.wz`, `Item.wz`, `Skill.wz`,
+`Character.wz`, `Reactor.wz`, `Sound.wz`, or `UI.wz` into `wz-zh-CN`. If that
+directory exists for a WZ, `WZFiles.getFile()` loads it instead of `wz` for the
+entire archive; two Damien maps in `wz-zh-CN/Map.wz` made every other map
+`MapFactory: missing map data`. Map/mob/NPC XML belongs in `gms-server/wz`.
+Chinese display names go in `wz-zh-CN/String.wz`. Do not add a parallel
+translation XML without confirming it belongs to the requested contract.
 
 ## 5. Packed WZ boundary
 

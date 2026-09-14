@@ -101,6 +101,10 @@ public class MapManager {
         return (map != null) ? map : loadMapFromWz(mapid, true);
     }
 
+    public MapleMap getMap(Number mapid) {
+        return mapid == null ? null : getMap(mapid.intValue());
+    }
+
     public MapleMap getMapByLifeId(int lifeId) {
         String mapId = MapFactory.getMapIdByLifeId(lifeId);
         return mapId == null ? null : getMap(Integer.parseInt(mapId));

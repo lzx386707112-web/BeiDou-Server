@@ -111,6 +111,13 @@ public class MobId {
         return mobId == MORI_RANMARU_HARD;
     }
 
+    public static final int DAMIEN_PHASE_ONE = 8880110;
+    public static final int DAMIEN_PHASE_TWO = 8880111;
+
+    public static boolean isDamien(int mobId) {
+        return mobId == DAMIEN_PHASE_ONE || mobId == DAMIEN_PHASE_TWO;
+    }
+
     public static final int CYGNUS_BOSS_MIN = 8850000;
     public static final int CYGNUS_BOSS_MAX = 8850013;
     public static final int CYGNUS_MIHILE = 8850000;

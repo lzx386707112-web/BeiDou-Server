@@ -30,6 +30,9 @@ function init() {
 }
 
 function scheduleNew() {
+    if (Orbis_docked == null || Ludibrium_docked == null) {
+        return;
+    }
     em.setProperty("docked", "true");
     Orbis_docked.setDocked(true);
     Ludibrium_docked.setDocked(true);

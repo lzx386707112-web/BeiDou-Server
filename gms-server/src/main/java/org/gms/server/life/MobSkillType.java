@@ -64,7 +64,9 @@ public enum MobSkillType {
     SUMMON(200),
     SUMMON_201(201),
     SUMMON_202(202),
-    SUMMON_203(203);
+    SUMMON_203(203),
+    DAMAGE_CANCEL(214),
+    MOB_CHANGE(215);
 
     private final int id;
 
@@ -83,7 +85,7 @@ public enum MobSkillType {
     }
 
     private static boolean isOutOfIdRange(int id) {
-        return id < 100 || id > 203;
+        return id < 100 || id > 215;
     }
 
     public int getId() {

@@ -19,8 +19,6 @@ import soloMapling.ArtificialPlayer.ConversationManager;
 import soloMapling.ArtificialPlayer.SocialHotPotatoManager;
 import soloMapling.SoloMaplingConfig;
 import soloMapling.server.ExecutorServiceManager;
-import soloMapling.server.NpcSpawner;
-import org.gms.constants.id.NpcId;
 
 import java.awt.*;
 import java.io.File;
@@ -116,7 +114,6 @@ public class EnvironmentManager {
             ));
 
             runWave(2, "Free Market specialty", List.of(
-                    () -> spawnCasinoNpcs(),
                     () -> spawnGachaBotsHenesys(),
                     () -> spawnBlackjackTables(),
                     () -> spawnOPQBotsInLobby()
@@ -222,19 +219,6 @@ public class EnvironmentManager {
             List<Integer> s1 = spawnBotsOnMapOnPlatform(perSpot, HENESYS, "m4_social");
             List<Integer> s2 = spawnBotsOnMapOnPlatform(perSpot, HENESYS, "m5_social");
             List<Integer> s3 = spawnBotsOnMapOnPlatform(perSpot, HENESYS, "m6_social");
-        }
-    }
-
-    public static void spawnCasinoNpcs() {
-        ensureMarketServiceNpcs(getMapleMapById(FM_ENTRANCE));
-    }
-
-    public static void ensureMarketServiceNpcs(MapleMap map) {
-        if (map == null || map.getId() != FM_ENTRANCE) {
-            return;
-        }
-        if (SoloMaplingConfig.rpsNpcEnabled() && map.getNPCById(NpcId.RPS_ADMIN) == null) {
-            NpcSpawner.spawnNpc(NpcId.RPS_ADMIN, map, new Point(320, 34));
         }
     }
 

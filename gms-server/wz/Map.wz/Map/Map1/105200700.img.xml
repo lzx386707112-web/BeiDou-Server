@@ -16,8 +16,7 @@
     <int name="VRLeft" value="-794"/>
     <int name="VRBottom" value="380"/>
     <int name="VRRight" value="2425"/>
-    <int name="quarterView" value="0"/>
-    <int name="fieldType" value="0"/>
+    <int name="abilityPresetBlock" value="1"/>
   </imgdir>
   <imgdir name="back">
     <imgdir name="0">
@@ -742,8 +741,8 @@
     </imgdir>
   </imgdir>
   <imgdir name="0">
-    <imgdir name="info"/>
-    <imgdir name="tile"/>
+    <imgdir name="info"></imgdir>
+    <imgdir name="tile"></imgdir>
     <imgdir name="obj">
       <imgdir name="0">
         <string name="oS" value="rootabyss"/>
@@ -755,10 +754,6 @@
         <int name="z" value="9"/>
         <int name="f" value="0"/>
         <int name="zM" value="6"/>
-        <int name="r" value="0"/>
-        <int name="move" value="0"/>
-        <int name="dynamic" value="0"/>
-        <int name="piece" value="0"/>
       </imgdir>
       <imgdir name="1">
         <string name="oS" value="rootabyss"/>
@@ -770,10 +765,6 @@
         <int name="z" value="9"/>
         <int name="f" value="0"/>
         <int name="zM" value="0"/>
-        <int name="r" value="0"/>
-        <int name="move" value="0"/>
-        <int name="dynamic" value="0"/>
-        <int name="piece" value="1"/>
       </imgdir>
       <imgdir name="2">
         <string name="oS" value="rootabyss"/>
@@ -785,10 +776,6 @@
         <int name="z" value="9"/>
         <int name="f" value="0"/>
         <int name="zM" value="6"/>
-        <int name="r" value="0"/>
-        <int name="move" value="0"/>
-        <int name="dynamic" value="0"/>
-        <int name="piece" value="2"/>
       </imgdir>
       <imgdir name="3">
         <string name="oS" value="rootabyss"/>
@@ -800,10 +787,6 @@
         <int name="z" value="9"/>
         <int name="f" value="0"/>
         <int name="zM" value="6"/>
-        <int name="r" value="0"/>
-        <int name="move" value="0"/>
-        <int name="dynamic" value="0"/>
-        <int name="piece" value="3"/>
       </imgdir>
       <imgdir name="4">
         <string name="oS" value="rootabyss"/>
@@ -815,10 +798,6 @@
         <int name="z" value="9"/>
         <int name="f" value="0"/>
         <int name="zM" value="6"/>
-        <int name="r" value="0"/>
-        <int name="move" value="0"/>
-        <int name="dynamic" value="0"/>
-        <int name="piece" value="4"/>
       </imgdir>
       <imgdir name="5">
         <string name="oS" value="rootabyss"/>
@@ -830,26 +809,22 @@
         <int name="z" value="6"/>
         <int name="f" value="0"/>
         <int name="zM" value="6"/>
-        <int name="r" value="0"/>
-        <int name="move" value="0"/>
-        <int name="dynamic" value="0"/>
-        <int name="piece" value="5"/>
       </imgdir>
     </imgdir>
   </imgdir>
   <imgdir name="1">
-    <imgdir name="info"/>
-    <imgdir name="tile"/>
-    <imgdir name="obj"/>
+    <imgdir name="info"></imgdir>
+    <imgdir name="tile"></imgdir>
+    <imgdir name="obj"></imgdir>
   </imgdir>
   <imgdir name="2">
-    <imgdir name="info"/>
-    <imgdir name="tile"/>
-    <imgdir name="obj"/>
+    <imgdir name="info"></imgdir>
+    <imgdir name="tile"></imgdir>
+    <imgdir name="obj"></imgdir>
   </imgdir>
   <imgdir name="3">
-    <imgdir name="info"/>
-    <imgdir name="tile"/>
+    <imgdir name="info"></imgdir>
+    <imgdir name="tile"></imgdir>
     <imgdir name="obj">
       <imgdir name="0">
         <string name="oS" value="rootabyss"/>
@@ -861,10 +836,6 @@
         <int name="z" value="9"/>
         <int name="f" value="0"/>
         <int name="zM" value="13"/>
-        <int name="r" value="0"/>
-        <int name="move" value="0"/>
-        <int name="dynamic" value="0"/>
-        <int name="piece" value="0"/>
       </imgdir>
       <imgdir name="1">
         <string name="oS" value="rootabyss"/>
@@ -876,10 +847,6 @@
         <int name="z" value="9"/>
         <int name="f" value="0"/>
         <int name="zM" value="13"/>
-        <int name="r" value="0"/>
-        <int name="move" value="0"/>
-        <int name="dynamic" value="0"/>
-        <int name="piece" value="1"/>
       </imgdir>
       <imgdir name="2">
         <string name="oS" value="rootabyss"/>
@@ -891,10 +858,6 @@
         <int name="z" value="9"/>
         <int name="f" value="0"/>
         <int name="zM" value="13"/>
-        <int name="r" value="0"/>
-        <int name="move" value="0"/>
-        <int name="dynamic" value="0"/>
-        <int name="piece" value="2"/>
       </imgdir>
       <imgdir name="3">
         <string name="oS" value="rootabyss"/>
@@ -906,16 +869,12 @@
         <int name="z" value="9"/>
         <int name="f" value="0"/>
         <int name="zM" value="13"/>
-        <int name="r" value="0"/>
-        <int name="move" value="0"/>
-        <int name="dynamic" value="0"/>
-        <int name="piece" value="3"/>
       </imgdir>
     </imgdir>
   </imgdir>
   <imgdir name="4">
-    <imgdir name="info"/>
-    <imgdir name="tile"/>
+    <imgdir name="info"></imgdir>
+    <imgdir name="tile"></imgdir>
     <imgdir name="obj">
       <imgdir name="1">
         <string name="oS" value="rootabyss"/>
@@ -927,10 +886,6 @@
         <int name="z" value="9"/>
         <int name="f" value="0"/>
         <int name="zM" value="16"/>
-        <int name="r" value="0"/>
-        <int name="move" value="0"/>
-        <int name="dynamic" value="0"/>
-        <int name="piece" value="1"/>
       </imgdir>
       <imgdir name="2">
         <string name="oS" value="rootabyss"/>
@@ -942,10 +897,6 @@
         <int name="z" value="9"/>
         <int name="f" value="0"/>
         <int name="zM" value="12"/>
-        <int name="r" value="0"/>
-        <int name="move" value="0"/>
-        <int name="dynamic" value="0"/>
-        <int name="piece" value="2"/>
       </imgdir>
       <imgdir name="3">
         <string name="oS" value="rootabyss"/>
@@ -957,10 +908,6 @@
         <int name="z" value="9"/>
         <int name="f" value="0"/>
         <int name="zM" value="8"/>
-        <int name="r" value="0"/>
-        <int name="move" value="0"/>
-        <int name="dynamic" value="0"/>
-        <int name="piece" value="3"/>
       </imgdir>
       <imgdir name="4">
         <string name="oS" value="rootabyss"/>
@@ -972,10 +919,6 @@
         <int name="z" value="11"/>
         <int name="f" value="0"/>
         <int name="zM" value="11"/>
-        <int name="r" value="0"/>
-        <int name="move" value="0"/>
-        <int name="dynamic" value="0"/>
-        <int name="piece" value="4"/>
       </imgdir>
       <imgdir name="5">
         <string name="oS" value="rootabyss"/>
@@ -987,10 +930,6 @@
         <int name="z" value="9"/>
         <int name="f" value="0"/>
         <int name="zM" value="20"/>
-        <int name="r" value="0"/>
-        <int name="move" value="0"/>
-        <int name="dynamic" value="0"/>
-        <int name="piece" value="5"/>
       </imgdir>
       <imgdir name="6">
         <string name="oS" value="rootabyss"/>
@@ -1002,10 +941,6 @@
         <int name="z" value="9"/>
         <int name="f" value="0"/>
         <int name="zM" value="11"/>
-        <int name="r" value="0"/>
-        <int name="move" value="0"/>
-        <int name="dynamic" value="0"/>
-        <int name="piece" value="6"/>
       </imgdir>
       <imgdir name="7">
         <string name="oS" value="rootabyss"/>
@@ -1017,10 +952,6 @@
         <int name="z" value="9"/>
         <int name="f" value="0"/>
         <int name="zM" value="8"/>
-        <int name="r" value="0"/>
-        <int name="move" value="0"/>
-        <int name="dynamic" value="0"/>
-        <int name="piece" value="7"/>
       </imgdir>
       <imgdir name="8">
         <string name="oS" value="rootabyss"/>
@@ -1032,10 +963,6 @@
         <int name="z" value="9"/>
         <int name="f" value="0"/>
         <int name="zM" value="8"/>
-        <int name="r" value="0"/>
-        <int name="move" value="0"/>
-        <int name="dynamic" value="0"/>
-        <int name="piece" value="8"/>
       </imgdir>
       <imgdir name="0">
         <string name="oS" value="rootabyss"/>
@@ -1047,16 +974,12 @@
         <int name="z" value="9"/>
         <int name="f" value="0"/>
         <int name="zM" value="14"/>
-        <int name="r" value="0"/>
-        <int name="move" value="0"/>
-        <int name="dynamic" value="0"/>
-        <int name="piece" value="0"/>
       </imgdir>
     </imgdir>
   </imgdir>
   <imgdir name="5">
-    <imgdir name="info"/>
-    <imgdir name="tile"/>
+    <imgdir name="info"></imgdir>
+    <imgdir name="tile"></imgdir>
     <imgdir name="obj">
       <imgdir name="0">
         <string name="oS" value="rootabyss"/>
@@ -1068,10 +991,6 @@
         <int name="z" value="9"/>
         <int name="f" value="0"/>
         <int name="zM" value="19"/>
-        <int name="r" value="0"/>
-        <int name="move" value="0"/>
-        <int name="dynamic" value="0"/>
-        <int name="piece" value="0"/>
       </imgdir>
       <imgdir name="1">
         <string name="oS" value="rootabyss"/>
@@ -1083,10 +1002,6 @@
         <int name="z" value="9"/>
         <int name="f" value="0"/>
         <int name="zM" value="15"/>
-        <int name="r" value="0"/>
-        <int name="move" value="0"/>
-        <int name="dynamic" value="0"/>
-        <int name="piece" value="1"/>
       </imgdir>
       <imgdir name="2">
         <string name="oS" value="rootabyss"/>
@@ -1098,10 +1013,6 @@
         <int name="z" value="9"/>
         <int name="f" value="0"/>
         <int name="zM" value="19"/>
-        <int name="r" value="0"/>
-        <int name="move" value="0"/>
-        <int name="dynamic" value="0"/>
-        <int name="piece" value="2"/>
       </imgdir>
       <imgdir name="3">
         <string name="oS" value="rootabyss"/>
@@ -1113,10 +1024,6 @@
         <int name="z" value="9"/>
         <int name="f" value="0"/>
         <int name="zM" value="9"/>
-        <int name="r" value="0"/>
-        <int name="move" value="0"/>
-        <int name="dynamic" value="0"/>
-        <int name="piece" value="3"/>
       </imgdir>
       <imgdir name="5">
         <string name="oS" value="rootabyss"/>
@@ -1128,10 +1035,6 @@
         <int name="z" value="9"/>
         <int name="f" value="0"/>
         <int name="zM" value="19"/>
-        <int name="r" value="0"/>
-        <int name="move" value="0"/>
-        <int name="dynamic" value="0"/>
-        <int name="piece" value="5"/>
       </imgdir>
       <imgdir name="6">
         <string name="oS" value="rootabyss"/>
@@ -1143,10 +1046,6 @@
         <int name="z" value="8"/>
         <int name="f" value="0"/>
         <int name="zM" value="19"/>
-        <int name="r" value="0"/>
-        <int name="move" value="0"/>
-        <int name="dynamic" value="0"/>
-        <int name="piece" value="6"/>
       </imgdir>
       <imgdir name="7">
         <string name="oS" value="rootabyss"/>
@@ -1158,10 +1057,6 @@
         <int name="z" value="9"/>
         <int name="f" value="0"/>
         <int name="zM" value="9"/>
-        <int name="r" value="0"/>
-        <int name="move" value="0"/>
-        <int name="dynamic" value="0"/>
-        <int name="piece" value="7"/>
       </imgdir>
       <imgdir name="8">
         <string name="oS" value="rootabyss"/>
@@ -1173,10 +1068,6 @@
         <int name="z" value="9"/>
         <int name="f" value="0"/>
         <int name="zM" value="10"/>
-        <int name="r" value="0"/>
-        <int name="move" value="0"/>
-        <int name="dynamic" value="0"/>
-        <int name="piece" value="8"/>
       </imgdir>
       <imgdir name="9">
         <string name="oS" value="rootabyss"/>
@@ -1188,10 +1079,6 @@
         <int name="z" value="4"/>
         <int name="f" value="0"/>
         <int name="zM" value="10"/>
-        <int name="r" value="0"/>
-        <int name="move" value="0"/>
-        <int name="dynamic" value="0"/>
-        <int name="piece" value="9"/>
       </imgdir>
       <imgdir name="10">
         <string name="oS" value="rootabyss"/>
@@ -1203,10 +1090,6 @@
         <int name="z" value="3"/>
         <int name="f" value="0"/>
         <int name="zM" value="10"/>
-        <int name="r" value="0"/>
-        <int name="move" value="0"/>
-        <int name="dynamic" value="0"/>
-        <int name="piece" value="10"/>
       </imgdir>
       <imgdir name="4">
         <string name="oS" value="rootabyss"/>
@@ -1218,10 +1101,6 @@
         <int name="z" value="6"/>
         <int name="f" value="0"/>
         <int name="zM" value="19"/>
-        <int name="r" value="0"/>
-        <int name="move" value="0"/>
-        <int name="dynamic" value="0"/>
-        <int name="piece" value="4"/>
       </imgdir>
       <imgdir name="11">
         <string name="oS" value="rootabyss"/>
@@ -1233,10 +1112,6 @@
         <int name="z" value="9"/>
         <int name="f" value="0"/>
         <int name="zM" value="18"/>
-        <int name="r" value="0"/>
-        <int name="move" value="0"/>
-        <int name="dynamic" value="0"/>
-        <int name="piece" value="11"/>
       </imgdir>
       <imgdir name="12">
         <string name="oS" value="rootabyss"/>
@@ -1248,10 +1123,6 @@
         <int name="z" value="9"/>
         <int name="f" value="0"/>
         <int name="zM" value="17"/>
-        <int name="r" value="0"/>
-        <int name="move" value="0"/>
-        <int name="dynamic" value="0"/>
-        <int name="piece" value="12"/>
       </imgdir>
       <imgdir name="13">
         <string name="oS" value="rootabyss"/>
@@ -1263,10 +1134,6 @@
         <int name="z" value="9"/>
         <int name="f" value="0"/>
         <int name="zM" value="10"/>
-        <int name="r" value="0"/>
-        <int name="move" value="0"/>
-        <int name="dynamic" value="0"/>
-        <int name="piece" value="13"/>
       </imgdir>
       <imgdir name="14">
         <string name="oS" value="rootabyss"/>
@@ -1278,10 +1145,6 @@
         <int name="z" value="9"/>
         <int name="f" value="0"/>
         <int name="zM" value="7"/>
-        <int name="r" value="0"/>
-        <int name="move" value="0"/>
-        <int name="dynamic" value="0"/>
-        <int name="piece" value="14"/>
       </imgdir>
       <imgdir name="15">
         <string name="oS" value="rootabyss"/>
@@ -1293,10 +1156,6 @@
         <int name="z" value="9"/>
         <int name="f" value="0"/>
         <int name="zM" value="21"/>
-        <int name="r" value="0"/>
-        <int name="move" value="0"/>
-        <int name="dynamic" value="0"/>
-        <int name="piece" value="15"/>
       </imgdir>
       <imgdir name="16">
         <string name="oS" value="rootabyss"/>
@@ -1308,10 +1167,6 @@
         <int name="z" value="9"/>
         <int name="f" value="0"/>
         <int name="zM" value="21"/>
-        <int name="r" value="0"/>
-        <int name="move" value="0"/>
-        <int name="dynamic" value="0"/>
-        <int name="piece" value="16"/>
       </imgdir>
       <imgdir name="17">
         <string name="oS" value="rootabyss"/>
@@ -1323,10 +1178,6 @@
         <int name="z" value="9"/>
         <int name="f" value="0"/>
         <int name="zM" value="15"/>
-        <int name="r" value="0"/>
-        <int name="move" value="0"/>
-        <int name="dynamic" value="0"/>
-        <int name="piece" value="17"/>
       </imgdir>
       <imgdir name="18">
         <string name="oS" value="rootabyss"/>
@@ -1338,10 +1189,6 @@
         <int name="z" value="9"/>
         <int name="f" value="0"/>
         <int name="zM" value="9"/>
-        <int name="r" value="0"/>
-        <int name="move" value="0"/>
-        <int name="dynamic" value="0"/>
-        <int name="piece" value="18"/>
       </imgdir>
       <imgdir name="19">
         <string name="oS" value="rootabyss"/>
@@ -1353,10 +1200,6 @@
         <int name="z" value="9"/>
         <int name="f" value="0"/>
         <int name="zM" value="19"/>
-        <int name="r" value="0"/>
-        <int name="move" value="0"/>
-        <int name="dynamic" value="0"/>
-        <int name="piece" value="19"/>
       </imgdir>
       <imgdir name="20">
         <string name="oS" value="rootabyss"/>
@@ -1368,10 +1211,6 @@
         <int name="z" value="9"/>
         <int name="f" value="0"/>
         <int name="zM" value="10"/>
-        <int name="r" value="0"/>
-        <int name="move" value="0"/>
-        <int name="dynamic" value="0"/>
-        <int name="piece" value="20"/>
       </imgdir>
       <imgdir name="21">
         <string name="oS" value="rootabyss"/>
@@ -1383,10 +1222,6 @@
         <int name="z" value="7"/>
         <int name="f" value="0"/>
         <int name="zM" value="18"/>
-        <int name="r" value="0"/>
-        <int name="move" value="0"/>
-        <int name="dynamic" value="0"/>
-        <int name="piece" value="21"/>
       </imgdir>
       <imgdir name="22">
         <string name="oS" value="rootabyss"/>
@@ -1398,10 +1233,6 @@
         <int name="z" value="9"/>
         <int name="f" value="0"/>
         <int name="zM" value="19"/>
-        <int name="r" value="0"/>
-        <int name="move" value="0"/>
-        <int name="dynamic" value="0"/>
-        <int name="piece" value="22"/>
       </imgdir>
       <imgdir name="23">
         <string name="oS" value="rootabyss"/>
@@ -1413,16 +1244,12 @@
         <int name="z" value="9"/>
         <int name="f" value="0"/>
         <int name="zM" value="10"/>
-        <int name="r" value="0"/>
-        <int name="move" value="0"/>
-        <int name="dynamic" value="0"/>
-        <int name="piece" value="23"/>
       </imgdir>
     </imgdir>
   </imgdir>
   <imgdir name="6">
-    <imgdir name="info"/>
-    <imgdir name="tile"/>
+    <imgdir name="info"></imgdir>
+    <imgdir name="tile"></imgdir>
     <imgdir name="obj">
       <imgdir name="0">
         <string name="oS" value="rootabyss"/>
@@ -1434,10 +1261,6 @@
         <int name="z" value="9"/>
         <int name="f" value="0"/>
         <int name="zM" value="1"/>
-        <int name="r" value="0"/>
-        <int name="move" value="0"/>
-        <int name="dynamic" value="0"/>
-        <int name="piece" value="0"/>
       </imgdir>
       <imgdir name="1">
         <string name="oS" value="rootabyss"/>
@@ -1449,10 +1272,6 @@
         <int name="z" value="9"/>
         <int name="f" value="0"/>
         <int name="zM" value="2"/>
-        <int name="r" value="0"/>
-        <int name="move" value="0"/>
-        <int name="dynamic" value="0"/>
-        <int name="piece" value="1"/>
       </imgdir>
       <imgdir name="2">
         <string name="oS" value="rootabyss"/>
@@ -1464,10 +1283,6 @@
         <int name="z" value="9"/>
         <int name="f" value="0"/>
         <int name="zM" value="3"/>
-        <int name="r" value="0"/>
-        <int name="move" value="0"/>
-        <int name="dynamic" value="0"/>
-        <int name="piece" value="2"/>
       </imgdir>
       <imgdir name="3">
         <string name="oS" value="rootabyss"/>
@@ -1479,10 +1294,6 @@
         <int name="z" value="9"/>
         <int name="f" value="0"/>
         <int name="zM" value="4"/>
-        <int name="r" value="0"/>
-        <int name="move" value="0"/>
-        <int name="dynamic" value="0"/>
-        <int name="piece" value="3"/>
       </imgdir>
       <imgdir name="4">
         <string name="oS" value="rootabyss"/>
@@ -1494,10 +1305,6 @@
         <int name="z" value="9"/>
         <int name="f" value="0"/>
         <int name="zM" value="5"/>
-        <int name="r" value="0"/>
-        <int name="move" value="0"/>
-        <int name="dynamic" value="0"/>
-        <int name="piece" value="4"/>
       </imgdir>
       <imgdir name="5">
         <string name="oS" value="rootabyss"/>
@@ -1509,17 +1316,13 @@
         <int name="z" value="9"/>
         <int name="f" value="0"/>
         <int name="zM" value="5"/>
-        <int name="r" value="0"/>
-        <int name="move" value="0"/>
-        <int name="dynamic" value="0"/>
-        <int name="piece" value="5"/>
       </imgdir>
     </imgdir>
   </imgdir>
   <imgdir name="7">
-    <imgdir name="info"/>
-    <imgdir name="tile"/>
-    <imgdir name="obj"/>
+    <imgdir name="info"></imgdir>
+    <imgdir name="tile"></imgdir>
+    <imgdir name="obj"></imgdir>
   </imgdir>
   <imgdir name="foothold">
     <imgdir name="6">
@@ -1589,9 +1392,9 @@
       </imgdir>
     </imgdir>
   </imgdir>
-  <imgdir name="ladderRope"/>
+  <imgdir name="ladderRope"></imgdir>
   <imgdir name="miniMap">
-    <canvas name="canvas" width="233" height="71" format="1"/>
+    <canvas name="canvas" width="233" height="71" format="1"></canvas>
     <int name="width" value="3732"/>
     <int name="height" value="1142"/>
     <int name="centerX" value="805"/>
@@ -1606,7 +1409,6 @@
       <int name="y" value="74"/>
       <int name="tm" value="999999999"/>
       <string name="tn" value=""/>
-      <int name="horizontalImpact" value="0"/>
     </imgdir>
     <imgdir name="1">
       <string name="pn" value="next00"/>
@@ -1615,18 +1417,16 @@
       <int name="y" value="259"/>
       <int name="tm" value="999999999"/>
       <string name="tn" value=""/>
-      <int name="horizontalImpact" value="0"/>
       <string name="script" value="rootaNext"/>
     </imgdir>
     <imgdir name="2">
       <string name="pn" value="out00"/>
+      <string name="script" value="rootabyssGardenOut"/>
       <int name="pt" value="7"/>
       <int name="x" value="-565"/>
       <int name="y" value="260"/>
-      <int name="horizontalImpact" value="0"/>
       <int name="tm" value="999999999"/>
       <string name="tn" value=""/>
-      <string name="script" value="rootabyssGardenOut"/>
     </imgdir>
   </imgdir>
 </imgdir>

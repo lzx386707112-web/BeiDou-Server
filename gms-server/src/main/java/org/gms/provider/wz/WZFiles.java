@@ -28,13 +28,27 @@ public enum WZFiles {
         this.fileName = name + ".wz";
     }
 
-    public Path getFile() {
-        // 优先取语言文件夹，没有则取wz
-        Path wzPath = Path.of(DIRECTORY, fileName);
-        ServiceProperty serviceProperty = ServerManager.getApplicationContext().getBean(ServiceProperty.class);
-        Path langPath = Path.of(DIRECTORY + "-" + serviceProperty.getLanguage(), fileName);
+    public Path getBaseFile() {
+        return Path.of(DIRECTORY, fileName);
+    }
 
-        return Files.exists(langPath) ? langPath : wzPath;
+    public Path getLanguageFile() {
+        ServiceProperty serviceProperty = ServerManager.getApplicationContext().getBean(ServiceProperty.class);
+        return Path.of(DIRECTORY + "-" + serviceProperty.getLanguage(), fileName);
+    }
+
+    public Path getFile() {
+        Path languagePath = getLanguageFile();
+        return Files.exists(languagePath) ? languagePath : getBaseFile();
+    }
+
+    public Path resolveDataFile(String dataPath) {
+        Path relative = Path.of(dataPath + ".xml");
+        Path languageFile = getLanguageFile().resolve(relative);
+        if (Files.exists(languageFile)) {
+            return languageFile;
+        }
+        return getBaseFile().resolve(relative);
     }
 
     public String getFilePath() {

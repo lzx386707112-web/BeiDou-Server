@@ -50,6 +50,12 @@ before editing. It defines the evidence gate, reserved packet markers, native
   analogue. Do not copy a modern schema wholesale.
 - Keep client, server XML, String data, scripts, drops, and runtime code in one
   audited contract. Do not assume editing an `.img.xml` changes the client IMG.
+- `gms-server/wz-zh-CN` may contain only `Etc.wz`, `Quest.wz`, and `String.wz`.
+  Never add Map, Mob, Npc, Item, Skill, Character, Reactor, Sound, or UI under
+  that tree. `WZFiles.getFile()` uses the whole language WZ if the folder exists,
+  so a partial `wz-zh-CN/Map.wz` hides `wz/Map.wz` and logs
+  `MapFactory: missing map data`. Put map/mob/NPC XML in `gms-server/wz`. Put
+  Chinese names in `wz-zh-CN/String.wz`.
 - Parse independently, reject truncation or warnings, prove the raw-record
   change scope, run generators twice, and require stable SHA-256 hashes.
 - Default to static verification of the modified IMG/XML and source files. Do
@@ -60,8 +66,9 @@ before editing. It defines the evidence gate, reserved packet markers, native
   checked-in build script without waiting for a separate authorization.
 - Never copy unverified artifacts to Downloads or another delivery location.
 - After the requested fix is verified, deliver **only this task's modified
-  runtime files** to `/Users/lizixian/Downloads/路西德/` (or the explicitly
-  requested delivery folder). See [Delivery scope](#delivery-scope).
+  runtime files** to `/Users/lizixian/Downloads/<本次功能中文名>/`.
+  Name the folder after this task's function, never a fixed boss name.
+  See [Delivery scope](#delivery-scope).
 
 ## Work sequence
 
@@ -93,7 +100,7 @@ After static gates pass:
 2. Verify that the output is the expected 32-bit Windows DLL and inspect its
    repository path and SHA-256 hash.
 3. If this task rebuilt the DLL, copy that DLL with the other files this
-   task modified to `/Users/lizixian/Downloads/路西德/`, preserving in-client
+   task modified to `/Users/lizixian/Downloads/<本次功能中文名>/`, preserving in-client
    paths (DLL at the client root, for example `BeiDouSetItemCompat.dll`).
 4. Compare source and delivered SHA-256 hashes for every copied file and
    require an exact match.
@@ -108,8 +115,10 @@ also edited in the same task.
 Each delivery is a delta for the current user request, not a recap of the
 feature or of earlier turns in the same chat.
 
-- Recreate `/Users/lizixian/Downloads/路西德/` (or empty it) so the folder
-  contains only this task's payload. Do not leave a previous drop mixed in.
+- Recreate the `/Users/lizixian/Downloads/<本次功能中文名>/` directory (or
+  clear its contents) so it contains only this task's payload. Name the
+  folder in Chinese from the function that changed. Do not reuse a fixed
+  name such as `路西德`.
 - Copy only runtime files this task created or modified after static gates
   pass: client IMGs/strings/MCV/Effect/DLLs, matching server XML, and scripts
   that actually changed. Preserve in-client relative paths (`Data/...` under

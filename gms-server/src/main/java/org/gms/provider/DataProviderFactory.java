@@ -21,17 +21,21 @@
 */
 package org.gms.provider;
 
+import org.gms.provider.wz.OverlayXMLWZFile;
 import org.gms.provider.wz.WZFiles;
 import org.gms.provider.wz.XMLWZFile;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 
 public class DataProviderFactory {
-    private static DataProvider getWZ(Path in) {
-        return new XMLWZFile(in);
-    }
-
     public static DataProvider getDataProvider(WZFiles in) {
-        return getWZ(in.getFile());
+        Path base = in.getBaseFile();
+        Path language = in.getLanguageFile();
+        if (Files.exists(language) && Files.exists(base) && !language.equals(base)) {
+            return new OverlayXMLWZFile(base, language);
+        }
+        Path chosen = Files.exists(language) ? language : base;
+        return new XMLWZFile(chosen);
     }
 }
