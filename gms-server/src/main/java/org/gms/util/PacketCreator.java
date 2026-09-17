@@ -2777,16 +2777,27 @@ public class PacketCreator {
         } else {
             p.writeByte(0);
         }
-        p.writeByte(chr.getCashShop().getWishList().size());
-        for (int sn : chr.getCashShop().getWishList()) {
-            p.writeInt(sn);
+        if (chr.getCashShop() != null) {
+            p.writeByte(chr.getCashShop().getWishList().size());
+            for (int sn : chr.getCashShop().getWishList()) {
+                p.writeInt(sn);
+            }
+        } else {
+            p.writeByte(0);
         }
 
         MonsterBook book = chr.getMonsterBook();
-        p.writeInt(book.getBookLevel());
-        p.writeInt(book.getNormalCard());
-        p.writeInt(book.getSpecialCard());
-        p.writeInt(book.getTotalCards());
+        if (book != null) {
+            p.writeInt(book.getBookLevel());
+            p.writeInt(book.getNormalCard());
+            p.writeInt(book.getSpecialCard());
+            p.writeInt(book.getTotalCards());
+        } else {
+            p.writeInt(1);
+            p.writeInt(0);
+            p.writeInt(0);
+            p.writeInt(0);
+        }
         p.writeInt(chr.getMonsterBookCover() > 0 ? ItemInformationProvider.getInstance().getCardMobId(chr.getMonsterBookCover()) : 0);
         Item medal = chr.getInventory(InventoryType.EQUIPPED).getItem((short) -49);
         if (medal != null) {

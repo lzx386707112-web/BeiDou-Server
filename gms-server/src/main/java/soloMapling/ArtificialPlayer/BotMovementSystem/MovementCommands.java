@@ -3,17 +3,18 @@ package soloMapling.ArtificialPlayer.BotMovementSystem;
 import org.gms.client.Character;
 import org.gms.net.packet.InPacket;
 import org.gms.server.maps.Foothold;
+import org.gms.server.maps.MapleMap;
 import org.gms.server.maps.Portal;
+import org.gms.exception.EmptyMovementException;
+import org.gms.util.PacketCreator;
 import soloMapling.ArtificialPlayer.BotHelpers;
 import soloMapling.ArtificialPlayer.BotMovementSystem.MovementStructures.MovementPacket;
-import soloMapling.ArtificialPlayer.BotMovementSystem.MovementStructures.SingleMoveCommand;
 import soloMapling.ArtificialPlayer.BotMovementSystem.MovementStructures.MovementRecording;
+import soloMapling.ArtificialPlayer.BotMovementSystem.MovementStructures.SingleMoveCommand;
 import soloMapling.ArtificialPlayer.BotMovementSystem.NavigationSystem.NavigationElement;
 import soloMapling.ArtificialPlayer.BotMovementSystem.NavigationSystem.PathFinder;
-import org.gms.util.PacketCreator;
-import org.gms.exception.EmptyMovementException;
-
-import org.gms.server.maps.MapleMap;
+import soloMapling.Environment.PlatformSpawner;
+import soloMapling.FreeMarket.MarketBotLog;
 
 import java.awt.*;
 import java.util.Map;
@@ -30,7 +31,10 @@ import static soloMapling.ArtificialPlayer.BotMovementSystem.InPacketReader.getM
 import static soloMapling.ArtificialPlayer.BotMovementSystem.MovementPacketConstructor.createArtificialStopPacket;
 import static soloMapling.ArtificialPlayer.BotMovementSystem.MovementPacketConstructor.createFallDownPacket;
 import static soloMapling.ArtificialPlayer.BotMovementSystem.MovementPacketConstructor.createIdleStandlingPacket;
+import static soloMapling.ArtificialPlayer.BotMovementSystem.MovementPacketConstructor.createJumpPacket;
 import static soloMapling.ArtificialPlayer.BotMovementSystem.MovementPacketConstructor.createSitPacket;
+import static soloMapling.ArtificialPlayer.BotMovementSystem.MovementPacketConstructor.createWalkStepPacket;
+import static soloMapling.ArtificialPlayer.BotHelpers.sleepAmountSeconds;
 import static soloMapling.ArtificialPlayer.BotMovementSystem.MovementPacketConstructor.createUnsitPacket;
 import static soloMapling.ArtificialPlayer.BotMovementSystem.MovementPacketConstructor.deconstructMovementInPacket;
 import static soloMapling.ArtificialPlayer.BotMovementSystem.MovementPacketConstructor.modifyMovementPacketWithOffset;
@@ -437,6 +441,13 @@ public class MovementCommands {
         System.out.println("  bot final pos: " + fakechar.getPosition());
     }
 
+    public static void botJump(Character fakechar) {
+        if (fakechar == null || fakechar.getMap() == null) {
+            return;
+        }
+        BotMove(createJumpPacket(fakechar), fakechar);
+    }
+
     public static void botSitChair(Character fakechar, Integer chairId) {
         fakechar.setChair(chairId);
         int stance = fakechar.getStance();
@@ -550,6 +561,82 @@ public class MovementCommands {
         } finally {
             releaseMovementLock(fakechar);
         }
+    }
+
+    /**
+     * Walk horizontally on the current foothold without replaying short clips.
+     * Short recordings start and stop each step, which looks like stuttering,
+     * and their recorded Y can lift the bot off the real floor.
+     */
+    public static void walkAlongX(Character fakechar, Point dest, int maxSteps) {
+        if (fakechar == null || dest == null || maxSteps <= 0 || fakechar.getMap() == null) {
+            return;
+        }
+        if (!tryAcquireMovementLock(fakechar)) {
+            MarketBotLog.warn("walkAlongX lock busy name={} map={}", fakechar.getName(), fakechar.getMapId());
+            return;
+        }
+        try {
+            Point pos = fakechar.getPosition();
+            Point grounded = PlatformSpawner.snapToGround(fakechar.getMap(), pos);
+            if (grounded != null && Math.abs(grounded.y - pos.y) > 6) {
+                BotMove(createIdleStandlingPacket((short) grounded.x, (short) grounded.y,
+                        (short) findFootHoldId(fakechar), (byte) fakechar.getStance()), fakechar);
+                pos = fakechar.getPosition();
+            }
+            Point destGround = PlatformSpawner.snapToGround(fakechar.getMap(), new Point(dest.x, pos.y));
+            if (destGround == null) {
+                destGround = new Point(dest.x, pos.y);
+            }
+            boolean movingLeft = destGround.x < pos.x;
+            final short duration = 160;
+            final int step = 10;
+            for (int i = 0; i < maxSteps; i++) {
+                if (fakechar.getTrade() != null) {
+                    return;
+                }
+                pos = fakechar.getPosition();
+                if (Math.abs(pos.x - destGround.x) <= 20) {
+                    break;
+                }
+                int dir = destGround.x >= pos.x ? 1 : -1;
+                int nextX = pos.x + dir * step;
+                Point next = PlatformSpawner.snapToGround(fakechar.getMap(), new Point(nextX, pos.y));
+                if (next == null) {
+                    next = new Point(nextX, pos.y);
+                }
+                Foothold floor = fakechar.getMap().getFootholds() != null
+                        ? fakechar.getMap().getFootholds().findBelow(next) : null;
+                short fh = floor != null ? (short) floor.getId() : (short) findFootHoldId(fakechar);
+                BotMove(createWalkStepPacket((short) next.x, (short) next.y, fh, movingLeft, duration), fakechar);
+                if (!sleepAmountSeconds(duration)) {
+                    return;
+                }
+            }
+            injectArtificialStopPacket(fakechar);
+        } finally {
+            releaseMovementLock(fakechar);
+        }
+    }
+
+    /** One non-blocking walk packet toward destX. For companions; do not sleep. */
+    public static void nudgeOneStepX(Character fakechar, int destX) {
+        if (fakechar == null || fakechar.getMap() == null) {
+            return;
+        }
+        Point pos = fakechar.getPosition();
+        int dx = destX - pos.x;
+        if (Math.abs(dx) <= 16) {
+            return;
+        }
+        boolean movingLeft = dx < 0;
+        int step = Math.min(48, Math.abs(dx));
+        int nextX = pos.x + (movingLeft ? -step : step);
+        Point next = new Point(nextX, pos.y);
+        Foothold floor = fakechar.getMap().getFootholds() != null
+                ? fakechar.getMap().getFootholds().findBelow(next) : null;
+        short fh = floor != null ? (short) floor.getId() : (short) findFootHoldId(fakechar);
+        BotMove(createWalkStepPacket((short) next.x, (short) next.y, fh, movingLeft, (short) 220), fakechar);
     }
 
     private static void smallMoveUnlocked(Character fakechar, Point endpos) {

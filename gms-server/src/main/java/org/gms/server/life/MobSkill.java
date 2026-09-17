@@ -190,6 +190,11 @@ public class MobSkill {
         }
     }
 
+    /**
+     * 等动画冲击点再 applyEffect。戴米安用
+     * {@code DamienBossCompat.skillEffectDelayMs} 对齐画面，不要 0ms 抢先、
+     * 也不要用整段 pose 拖到特效已经结束。
+     */
     public void applyDelayedEffect(final Character player, final Monster monster, final boolean skill, int animationTime) {
         Runnable toRun = () -> {
             if (monster.isAlive()) {
@@ -266,11 +271,13 @@ public class MobSkill {
             case SPEED -> stats.put(MonsterStatus.SPEED, x);
             case SEAL_SKILL -> stats.put(MonsterStatus.SEAL_SKILL, x);
             case AKAYRUM_SCREEN_CRACK_VISUAL -> {
-                if (MobId.isDamien(monster.getId())) {
-                    // 7x5 FIELD_EFFECT marker; KaringSceneCompat plays damien-scene.mcv
-                    castBossCompatEffect(monster, "customBossDemian/scene", 25);
+                // 戴米安不再占用 176；残留绑定也不要播阿卡伊勒碎屏。
+                if (DamienBossCompat.isDamien(monster.getId())) {
+                    return;
                 } else if (MobId.isMoriRanmaruHard(monster.getId())) {
+                    // TMS 176/10 只有 hit，没有 screen/lua。百分比伤害，不播阿卡伊勒 overlay。
                     applyRanmaruScreenCrack(monster);
+                    return;
                 } else {
                     monster.getMap().broadcastMessage(PacketCreator.showEffect("customBoss/akayrum/screenCrack"));
                     scheduleAkayrumScreenCrackDamage(monster);
@@ -297,9 +304,9 @@ public class MobSkill {
                 }
             }
             case LUCID_DREAM_BURST -> {
-                if (MobId.isDamien(monster.getId())) {
-                    // 7x5 FIELD_EFFECT marker; KaringSceneCompat plays damien-ground.mcv
-                    castBossCompatEffect(monster, "customBossDemian/groundBurst", 35);
+                // 戴米安不再占用 185；残留绑定也不要播路西德碎梦。
+                if (DamienBossCompat.isDamien(monster.getId())) {
+                    return;
                 } else {
                     castBossCompatEffect(monster, "customBossLucid/dreamBurst");
                 }
@@ -336,15 +343,7 @@ public class MobSkill {
             applyMonsterBuffs(stats, skill, monster, reflection);
         }
         if (disease != null) {
-            if (MobId.isDamien(monster.getId())) {
-                for (Character character : monster.getMap().getAllPlayers()) {
-                    if (character.isAlive()) {
-                        character.giveDebuff(disease, this);
-                    }
-                }
-            } else {
-                applyDisease(disease, skill, monster, player);
-            }
+            applyDisease(disease, skill, monster, player);
         }
     }
 
@@ -382,7 +381,7 @@ public class MobSkill {
     }
 
     private void applyRanmaruScreenCrack(Monster monster) {
-        // skill5 already plays Ranmaru's scene animation; do not reuse Akayrum overlay/x=999999.
+        // skill5 播动作；176/10 只打百分比伤害，不播阿卡伊勒 overlay。
         TimerManager.getInstance().schedule(() -> {
             if (!monster.isAlive()) {
                 return;
@@ -457,6 +456,10 @@ public class MobSkill {
         }, BOSS_COMPAT_EFFECT_DAMAGE_DELAY_MS);
     }
 
+    /**
+     * 服务端权威百分比 HP。必须 sendPacket 给受击者再广播，
+     * 旧端受伤表现不靠客户端本地 TakeDamage。
+     */
     private void damageCharacterByPercent(Monster monster, Character character, int percent) {
         if (!character.isAlive()) {
             return;

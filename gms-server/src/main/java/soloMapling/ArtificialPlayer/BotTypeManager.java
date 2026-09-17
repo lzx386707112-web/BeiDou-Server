@@ -21,6 +21,8 @@ import soloMapling.ArtificialPlayer.BotTypes.TutorialBot;
 import soloMapling.ArtificialPlayer.BotTypes.GameZoneHostBot;
 import soloMapling.ArtificialPlayer.BotTypes.DropGameBot;
 import soloMapling.ArtificialPlayer.BotTypes.SocialBot;
+import soloMapling.ArtificialPlayer.BotTypes.CompanionGrindBot;
+import soloMapling.ArtificialPlayer.BotTypes.TownWandererBot;
 
 import java.awt.*;
 import java.util.List;
@@ -143,6 +145,20 @@ public class BotTypeManager {
             public void createAndSetBot(Character character) {
                 SocialBot socialBot = new SocialBot(character);
                 CharacterStorage.addActiveBot(character.getId(), socialBot);
+            }
+        },
+        TOWN_WANDERER_BOT {
+            @Override
+            public void createAndSetBot(Character character) {
+                TownWandererBot bot = new TownWandererBot(character);
+                CharacterStorage.addActiveBot(character.getId(), bot);
+            }
+        },
+        COMPANION_GRIND_BOT {
+            @Override
+            public void createAndSetBot(Character character) {
+                CompanionGrindBot bot = new CompanionGrindBot(character);
+                CharacterStorage.addActiveBot(character.getId(), bot);
             }
         };
 

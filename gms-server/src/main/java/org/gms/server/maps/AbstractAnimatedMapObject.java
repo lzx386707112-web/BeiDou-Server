@@ -65,6 +65,29 @@ public abstract class AbstractAnimatedMapObject extends AbstractMapObject implem
         return new ByteBufInPacket(Unpooled.wrappedBuffer(movementData));
     }
 
+    public InPacket getAbsoluteMovement(int x, int y, int foothold, int stance, int duration) {
+        return getAbsoluteMovement(x, y, foothold, stance, duration, 0, 0);
+    }
+
+    public InPacket getAbsoluteMovement(int x, int y, int foothold, int stance, int duration, int vx, int vy) {
+        final byte[] idleMovementBytes = IDLE_MOVEMENT_PACKET.getBytes();
+        byte[] movementData = Arrays.copyOf(idleMovementBytes, idleMovementBytes.length);
+        movementData[2] = (byte) (x & 0xFF);
+        movementData[3] = (byte) (x >> 8 & 0xFF);
+        movementData[4] = (byte) (y & 0xFF);
+        movementData[5] = (byte) (y >> 8 & 0xFF);
+        movementData[6] = (byte) (vx & 0xFF);
+        movementData[7] = (byte) (vx >> 8 & 0xFF);
+        movementData[8] = (byte) (vy & 0xFF);
+        movementData[9] = (byte) (vy >> 8 & 0xFF);
+        movementData[10] = (byte) (foothold & 0xFF);
+        movementData[11] = (byte) (foothold >> 8 & 0xFF);
+        movementData[12] = (byte) (stance & 0xFF);
+        movementData[13] = (byte) (duration & 0xFF);
+        movementData[14] = (byte) (duration >> 8 & 0xFF);
+        return new ByteBufInPacket(Unpooled.wrappedBuffer(movementData));
+    }
+
     private static Packet createIdleMovementPacket() {
         OutPacket p = new ByteBufOutPacket();
         p.writeByte(1); //movement command count

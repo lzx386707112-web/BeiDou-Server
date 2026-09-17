@@ -100,6 +100,8 @@ import org.gms.server.life.MobSkill;
 import org.gms.server.life.MobSkillFactory;
 import org.gms.server.life.MobSkillType;
 import org.gms.server.life.Monster;
+import org.gms.server.life.MonsterVacCompat;
+import org.gms.server.life.PartyGrindCompat;
 import org.gms.server.maps.Door;
 import org.gms.server.maps.FieldLimit;
 import org.gms.server.maps.MapObject;
@@ -1261,6 +1263,14 @@ public class StatEffect {
             return duration;
         }
         if (!skill) {
+            if (sourceid == ItemId.MONSTER_VAC) {
+                long configured = MonsterVacCompat.durationMillis();
+                return configured > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) configured;
+            }
+            if (sourceid == ItemId.PARTY_GRIND_COMPANIONS) {
+                long configured = PartyGrindCompat.durationMillis();
+                return configured > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) configured;
+            }
             return duration;
         }
         // 全局配置未开启，返回原始时长

@@ -251,6 +251,7 @@ public class MapFactory {
                     Foothold fh = new Foothold(new Point(x1, y1), new Point(x2, y2), Integer.parseInt(footHold.getName()));
                     fh.setPrev(DataTool.getInt(footHold.getChildByPath("prev")));
                     fh.setNext(DataTool.getInt(footHold.getChildByPath("next")));
+                    fh.setForbidFallDown(DataTool.getInt(footHold.getChildByPath("forbidFallDown"), 0) != 0);
                     if (fh.getX1() < lBound.x) {
                         lBound.x = fh.getX1();
                     }
@@ -272,6 +273,24 @@ public class MapFactory {
             fTree.insert(fh);
         }
         map.setFootholds(fTree);
+        Data swimData = infoData.getChildByPath("swim");
+        if (swimData != null) {
+            map.setSwim(DataTool.getInt(swimData, 0) != 0);
+        }
+        Data footholdSpeedData = infoData.getChildByPath("fs");
+        if (footholdSpeedData != null) {
+            map.setFootholdSpeed(DataTool.getFloat(footholdSpeedData));
+        }
+        Data ropeData = mapData.getChildByPath("ladderRope");
+        if (ropeData != null) {
+            for (Data rope : ropeData) {
+                int x = DataTool.getInt(rope.getChildByPath("x"));
+                int y1 = DataTool.getInt(rope.getChildByPath("y1"));
+                int y2 = DataTool.getInt(rope.getChildByPath("y2"));
+                boolean ladder = DataTool.getInt(rope.getChildByPath("l"), 0) == 1;
+                map.addRope(new Rope(x, y1, y2, ladder));
+            }
+        }
         if (mapData.getChildByPath("area") != null) {
             for (Data area : mapData.getChildByPath("area")) {
                 int x1 = DataTool.getInt(area.getChildByPath("x1"));

@@ -284,7 +284,7 @@ public class EventInstanceManager {
             try {
                 invokeScriptFunction("playerEntry", EventInstanceManager.this, chr);// 调用玩家进入脚本函数
             } catch (ScriptException | NoSuchMethodException ex) {
-                ex.printStackTrace();
+                log.error("Event script failed instance={}", name, ex);
             }
         }
     }
@@ -299,7 +299,7 @@ public class EventInstanceManager {
         try {
             invokeScriptFunction("playerExit", EventInstanceManager.this, chr);
         } catch (ScriptException | NoSuchMethodException ex) {
-            ex.printStackTrace();
+            log.error("Event script failed instance={}", name, ex);
         }
     }
 
@@ -482,7 +482,7 @@ public class EventInstanceManager {
         try {
             invokeScriptFunction("moveMap", EventInstanceManager.this, chr);
         } catch (ScriptException | NoSuchMethodException ex) {
-            ex.printStackTrace();
+            log.error("Event script failed instance={}", name, ex);
         }
     }
 
@@ -504,7 +504,7 @@ public class EventInstanceManager {
         try {
             invokeScriptFunction("changedLeader", EventInstanceManager.this, ldr);
         } catch (ScriptException | NoSuchMethodException ex) {
-            ex.printStackTrace();
+            log.error("Event script failed instance={}", name, ex);
         }
 
         leaderId = ldr.getId();
@@ -532,14 +532,14 @@ public class EventInstanceManager {
             try {
                 invokeScriptFunction("monsterKilled", mob, EventInstanceManager.this, hasKiller);
             } catch (ScriptException | NoSuchMethodException ex) {
-                ex.printStackTrace();
+                log.error("Event script failed instance={}", name, ex);
             }
 
             if (scriptResult > 1) {
                 try {
                     invokeScriptFunction("allMonstersDead", EventInstanceManager.this, hasKiller);
                 } catch (ScriptException | NoSuchMethodException ex) {
-                    ex.printStackTrace();
+                    log.error("Event script failed instance={}", name, ex);
                 }
             }
         }
@@ -598,7 +598,7 @@ public class EventInstanceManager {
         try {
             invokeScriptFunction("playerDisconnected", EventInstanceManager.this, chr);
         } catch (ScriptException | NoSuchMethodException ex) {
-            ex.printStackTrace();
+            log.error("Event script failed instance={}", name, ex);
         }
 
         EventRecallCoordinator.getInstance().storeEventInstance(chr.getId(), this);
@@ -621,7 +621,7 @@ public class EventInstanceManager {
                 }
             }
         } catch (ScriptException | NoSuchMethodException ex) {
-            ex.printStackTrace();
+            log.error("Event script failed instance={}", name, ex);
         }
     }
 
@@ -651,7 +651,7 @@ public class EventInstanceManager {
         try {
             invokeScriptFunction("dispose", EventInstanceManager.this);
         } catch (ScriptException | NoSuchMethodException ex) {
-            ex.printStackTrace();
+            log.error("Event script failed instance={}", name, ex);
         }
         disposed = true;
 
@@ -714,7 +714,7 @@ public class EventInstanceManager {
                     try {
                         invokeScriptFunction(methodName, EventInstanceManager.this);
                     } catch (ScriptException | NoSuchMethodException ex) {
-                        ex.printStackTrace();
+                        log.error("Event script failed instance={}", name, ex);
                     }
                 };
 
@@ -812,7 +812,7 @@ public class EventInstanceManager {
         try {
             invokeScriptFunction("leftParty", EventInstanceManager.this, chr);
         } catch (ScriptException | NoSuchMethodException ex) {
-            ex.printStackTrace();
+            log.error("Event script failed instance={}", name, ex);
         }
     }
 
@@ -820,7 +820,7 @@ public class EventInstanceManager {
         try {
             invokeScriptFunction("disbandParty", EventInstanceManager.this);
         } catch (ScriptException | NoSuchMethodException ex) {
-            ex.printStackTrace();
+            log.error("Event script failed instance={}", name, ex);
         }
     }
 
@@ -828,7 +828,7 @@ public class EventInstanceManager {
         try {
             invokeScriptFunction("clearPQ", EventInstanceManager.this);
         } catch (ScriptException | NoSuchMethodException ex) {
-            ex.printStackTrace();
+            log.error("Event script failed instance={}", name, ex);
         }
     }
 
@@ -836,7 +836,7 @@ public class EventInstanceManager {
         try {
             invokeScriptFunction("playerExit", EventInstanceManager.this, chr);
         } catch (ScriptException | NoSuchMethodException ex) {
-            ex.printStackTrace();
+            log.error("Event script failed instance={}", name, ex);
         }
     }
 
@@ -888,7 +888,7 @@ public class EventInstanceManager {
                 return true;
             }
         } catch (Exception ex) {
-            ex.printStackTrace();
+            log.error("Event script failed instance={}", name, ex);
         }
 
         return false;
@@ -1123,7 +1123,7 @@ public class EventInstanceManager {
         try {
             invokeScriptFunction("afterSetup", EventInstanceManager.this);
         } catch (ScriptException | NoSuchMethodException ex) {
-            ex.printStackTrace();
+            log.error("Event script failed instance={}", name, ex);
         }
     }
 

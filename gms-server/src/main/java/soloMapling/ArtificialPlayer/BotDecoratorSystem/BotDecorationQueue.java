@@ -108,6 +108,7 @@ public class BotDecorationQueue {
 
             // Run the full expensive decoration (WZ lookups, job-specific gear, etc.)
             BotDecorateEquips.decorateBotEquips(bot);
+            BotDecorate.applyVisibleHpMp(bot);
         } catch (Exception e) {
             System.err.println("[BotDecorationQueue] Error decorating bot " + botId + ": " + e.getMessage());
         }

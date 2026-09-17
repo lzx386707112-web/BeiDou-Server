@@ -191,9 +191,10 @@ public class BotDecorateEquips {
      */
     public static void equipWeapon(Character character) {
         Random random = new Random();
+        Job job = character.getJob();
         Job jobType = character.getJobStyle();
-        int jobId = character.getJob().getId(); // Specific job ID
-        int jobLevel = character.getJob().getJobTier(); // 0 for beginner, 1 for first job, etc.
+        int jobId = job.getId();
+        int jobLevel = job.getJobTier();
 
         List<EquipType> possibleWeapons = new ArrayList<>();
         boolean useShield = false;
@@ -208,9 +209,7 @@ public class BotDecorateEquips {
                     if (useTwoHanded) {
                         List<EquipType> twoHandedOptions = List.of(
                                 EquipType.SWORD_2H,
-                                EquipType.AXE_2H,
-                                EquipType.SPEAR,
-                                EquipType.POLEARM
+                                EquipType.AXE_2H
                         );
                         possibleWeapons.add(twoHandedOptions.get(random.nextInt(twoHandedOptions.size())));
                     } else {
@@ -296,6 +295,10 @@ public class BotDecorateEquips {
                 }
                 break;
 
+            case CROSSBOWMAN:
+                possibleWeapons.add(EquipType.CROSSBOW);
+                break;
+
             case THIEF:
                 if (jobLevel == 1) {
                     // Beginner thief can use either claw or dagger
@@ -321,10 +324,36 @@ public class BotDecorateEquips {
                 }
                 break;
 
+            case BRAWLER:
+            case PIRATE:
+                if (jobId == Job.PIRATE.getId()) {
+                    if (random.nextBoolean()) {
+                        possibleWeapons.add(EquipType.KNUCKLER);
+                    } else {
+                        possibleWeapons.add(EquipType.PISTOL);
+                    }
+                } else if (job.isA(Job.GUNSLINGER)) {
+                    possibleWeapons.add(EquipType.PISTOL);
+                } else {
+                    possibleWeapons.add(EquipType.KNUCKLER);
+                }
+                break;
+
+            case GUNSLINGER:
+                possibleWeapons.add(EquipType.PISTOL);
+                break;
+
             // Add other job types as needed
             default:
-                // Default beginner weapon
-                possibleWeapons.add(EquipType.SWORD);
+                if (job.isA(Job.GUNSLINGER) || (job == Job.PIRATE && jobType == Job.GUNSLINGER)) {
+                    possibleWeapons.add(EquipType.PISTOL);
+                } else if (job.isA(Job.BRAWLER) || job == Job.PIRATE) {
+                    possibleWeapons.add(EquipType.KNUCKLER);
+                } else if (job.isA(Job.CROSSBOWMAN)) {
+                    possibleWeapons.add(EquipType.CROSSBOW);
+                } else {
+                    possibleWeapons.add(EquipType.SWORD);
+                }
                 break;
         }
 

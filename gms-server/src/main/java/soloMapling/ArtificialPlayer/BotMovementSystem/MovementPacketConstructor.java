@@ -21,6 +21,8 @@ import static soloMapling.ArtificialPlayer.BotMovementSystem.MovementStructures.
 import static soloMapling.ArtificialPlayer.BotMovementSystem.MovementStructures.MovementEnums.StanceValues.IDLE_RIGHT;
 import static soloMapling.ArtificialPlayer.BotMovementSystem.MovementStructures.MovementEnums.StanceValues.JUMP_LEFT;
 import static soloMapling.ArtificialPlayer.BotMovementSystem.MovementStructures.MovementEnums.StanceValues.JUMP_RIGHT;
+import static soloMapling.ArtificialPlayer.BotMovementSystem.MovementStructures.MovementEnums.StanceValues.MOVING_LEFT;
+import static soloMapling.ArtificialPlayer.BotMovementSystem.MovementStructures.MovementEnums.StanceValues.MOVING_RIGHT;
 import static soloMapling.ArtificialPlayer.BotMovementSystem.MovementStructures.MovementEnums.StanceValues.SIT_LEFT;
 import static soloMapling.ArtificialPlayer.BotMovementSystem.MovementStructures.MovementEnums.StanceValues.SIT_RIGHT;
 import static soloMapling.ArtificialPlayer.BotMovementSystem.MovementStructures.SingleMoveCommand.getConvertedStanceDirection;
@@ -297,6 +299,21 @@ public class MovementPacketConstructor {
         return p;
     }
 
+    public static InPacket createWalkStepPacket(short xpos, short ypos, short fh, boolean movingLeft, short duration) {
+        ByteBuf byteBuf = Unpooled.buffer();
+        for (int i = 0; i < 9; i++) {
+            byteBuf.writeByte(0);
+        }
+        byteBuf.writeByte(1);
+        byte stance = movingLeft ? MOVING_LEFT : MOVING_RIGHT;
+        short xwobble = (short) (movingLeft ? -100 : 100);
+        SingleMoveCommand packRec = new SingleMoveCommand(NORMAL,
+                xpos, ypos, xwobble, (short) 0, fh, stance, duration);
+        writeMovePackDataToByteBuf(byteBuf, packRec);
+        InPacket p = (new ByteBufInPacket(byteBuf));
+        return p;
+    }
+
     // This works okay. not the best.
     public static InPacket createFallDownPacket(Character fakechar) {
         short xpos = (short) fakechar.getPosition().getX();
@@ -384,6 +401,26 @@ public class MovementPacketConstructor {
 
         InPacket p = (new ByteBufInPacket(byteBuf));
         return p;
+    }
+
+    public static InPacket createJumpPacket(Character fakechar) {
+        short xpos = (short) fakechar.getPosition().getX();
+        short ypos = (short) fakechar.getPosition().getY();
+        short fh = (short) findFootHoldId(fakechar);
+        byte stance = (byte) fakechar.getStance();
+        byte jumpStance = getConvertedStanceDirection(stance, JUMP_RIGHT, JUMP_LEFT);
+        byte landStance = getConvertedStanceDirection(stance, IDLE_RIGHT, IDLE_LEFT);
+
+        ByteBuf byteBuf = Unpooled.buffer();
+        for (int i = 0; i < 9; i++) {
+            byteBuf.writeByte(0);
+        }
+        byteBuf.writeByte(2);
+        SingleMoveCommand up = new SingleMoveCommand(NORMAL, xpos, (short) (ypos - 80), (short) 0, (short) 300, fh, jumpStance, (short) 180);
+        writeMovePackDataToByteBuf(byteBuf, up);
+        SingleMoveCommand land = new SingleMoveCommand(NORMAL, xpos, ypos, (short) 0, (short) 0, fh, landStance, (short) 180);
+        writeMovePackDataToByteBuf(byteBuf, land);
+        return new ByteBufInPacket(byteBuf);
     }
 
     public static InPacket createSitPacket(Character fakechar) {

@@ -120,6 +120,57 @@ class ImgPatchTests(unittest.TestCase):
                 workbench._TMS_DATA = original_tms_data
             self.assertEqual(right, canvas)
 
+    def test_mob_default_path_keeps_canvas_directory_when_files_are_missing(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            original_tms_data = workbench._TMS_DATA
+            workbench._TMS_DATA = Path(directory)
+            try:
+                _, right = workbench.default_paths("mob", "8880110")
+            finally:
+                workbench._TMS_DATA = original_tms_data
+            self.assertEqual(right, Path(directory) / "Mob/_Canvas/8880110.img")
+
+    def test_mob_comparison_prefers_tms_directory_not_ms_cache(self) -> None:
+        result = workbench.mob_source_options("8880100")
+        canvas = workbench._TMS_DATA / "Mob/_Canvas/8880100.img"
+        self.assertEqual(result["comparisonPath"], workbench.relative_path(canvas))
+        self.assertTrue(str(result["comparisonPath"]).startswith(str(workbench._TMS_DATA)))
+        self.assertNotIn("Library/Caches", result["comparisonPath"])
+        missing = workbench.mob_source_options("8880110")
+        expected = workbench.relative_path(workbench._TMS_DATA / "Mob/_Canvas/8880110.img")
+        self.assertEqual(missing["comparisonPath"], expected)
+        self.assertIn("/_Canvas/", missing["comparisonPath"].replace("\\", "/"))
+
+    def test_mob_canvas_store_tree_includes_sparse_attack_frames(self) -> None:
+        canvas = workbench._TMS_DATA / "Mob/_Canvas/8880100.img"
+        if not canvas.is_file():
+            self.skipTest("TMS Canvas 8880100 is unavailable")
+        nodes, info = workbench.flatten_img(canvas)
+        self.assertTrue(info.get("canvasStore"))
+        for index in range(35):
+            self.assertIn(f"attack1/{index}", nodes, f"attack1/{index} missing from canvas tree")
+        self.assertTrue(nodes["attack1/12"].get("canvasStoreMissing"))
+        self.assertIn("attack1", nodes)
+        self.assertIn("attack2", nodes)
+        self.assertIn("attack2/info/hit", nodes)
+        self.assertNotIn("attack2/info/ball", nodes)
+        self.assertNotIn("attack2/info/ball/0", nodes)
+        self.assertIn("attack3", nodes)
+        self.assertNotIn("attack4", nodes)
+        self.assertNotIn("attack5", nodes)
+        self.assertNotIn("attack6", nodes)
+
+    def test_json_companion_does_not_invent_attack2_ball(self) -> None:
+        canvas = workbench._TMS_DATA / "Mob/_Canvas/8880100.img"
+        json_dump = workbench._ROOT / "clien/Data/Mob/8880100.img.json"
+        if not canvas.is_file() or not json_dump.is_file():
+            self.skipTest("Damien 8880100 Canvas or JSON companion is unavailable")
+        merged = workbench.merge_canvas_metadata_tables(canvas, allow_extract=True)
+        self.assertNotIn("attack2/info/ball", merged)
+        self.assertNotIn("attack2/info/ball/0", merged)
+        self.assertIn("attack2/info/hit/0", merged)
+        self.assertIn("attack1/0/origin", merged)
+
     def test_ms_mob_index_resolves_lucid_id_to_exact_pack_entry(self) -> None:
         if not workbench._MS_PROBE.is_file() or not workbench.ms_pack_signature():
             self.skipTest("TMS MS packs or MSProbe are unavailable")
@@ -137,9 +188,11 @@ class ImgPatchTests(unittest.TestCase):
         self.assertEqual(source["pack"], "Mob_00000.ms")
         self.assertEqual(source["rootCount"], 14)
         self.assertIn("attack5", source["roots"])
-        self.assertEqual(result["comparisonPath"], source["path"])
+        _, expected_right = workbench.default_paths("mob", "8880141")
+        self.assertEqual(result["comparisonPath"], workbench.relative_path(expected_right))
+        self.assertTrue(str(expected_right).startswith(str(workbench._TMS_DATA)))
         extracted = workbench.resolve_repo_path(source["path"])
-        self.assertTrue(extracted.is_relative_to(workbench._MS_CACHE_ROOT))
+        self.assertTrue(any(extracted.is_relative_to(root) for root in workbench._ms_extract_roots()))
         self.assertEqual(workbench.data_root_for(extracted), workbench._TMS_DATA)
         image = workbench.load_image(extracted)
         self.assertFalse(image.truncated)
@@ -158,7 +211,8 @@ class ImgPatchTests(unittest.TestCase):
         if not workbench._MS_PROBE.is_file() or not workbench.ms_pack_signature():
             self.skipTest("TMS MS packs or MSProbe are unavailable")
         source = workbench.mob_source_options("8880141")
-        preview = workbench.mob_preview(workbench.resolve_repo_path(source["comparisonPath"]))
+        ms_path = next(item["path"] for item in source["sources"] if item["kind"] == "ms")
+        preview = workbench.mob_preview(workbench.resolve_repo_path(ms_path))
         actions = {action["name"] for action in preview["actions"]}
         self.assertTrue({"stand", "skill5", "attack5"}.issubset(actions))
         self.assertGreaterEqual(len(actions), 13)
@@ -171,7 +225,9 @@ class ImgPatchTests(unittest.TestCase):
         if not project_client.is_file() or not project_server.is_file():
             self.skipTest("Lucid client/server baseline is unavailable")
         source_info = workbench.mob_source_options("8880141")
-        source = workbench.resolve_repo_path(source_info["comparisonPath"])
+        source = workbench.resolve_repo_path(
+            next(item["path"] for item in source_info["sources"] if item["kind"] == "ms")
+        )
 
         with tempfile.TemporaryDirectory(prefix=".mob-action-migration-test-", dir=workbench._HERE) as directory:
             repo = Path(directory)
@@ -847,6 +903,808 @@ class ImgPatchTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Canvas"):
             workbench.clone_supported_node(root)
 
+    def test_mob_area_warning_copy_projects_canvas_and_fills_numeric_gaps(self) -> None:
+        source = workbench._TMS_DATA / "Mob/_Canvas/8880100.img"
+        project_client = workbench._ROOT / "clien/Data/Mob/8880110.img"
+        project_server = workbench._ROOT / "gms-server/wz/Mob.wz/8880110.img.xml"
+        if not source.is_file() or not project_client.is_file() or not project_server.is_file():
+            self.skipTest("Damien 8880100 Canvas or 8880110 baseline is unavailable")
+        image = workbench.load_image(source)
+        warning = image.root.get("attack1/info/areaWarning")
+        self.assertIsInstance(warning, workbench.WzSubProperty)
+        source_names = sorted(int(child.name) for child in warning.children() if child.name.isdigit())
+        self.assertNotEqual(source_names, list(range(source_names[0], source_names[-1] + 1)))
+        clone, materializer = workbench.clone_compatible_mob_node(warning, image, source)[:2]
+        names = [int(child.name) for child in clone.children() if child.name.isdigit()]
+        self.assertEqual(names, list(range(len(source_names) + 1)))
+        self.assertEqual(len(names), len(source_names) + 1)
+        frame0 = clone.get("0")
+        self.assertIsInstance(frame0, workbench.WzCanvasProperty)
+        self.assertEqual((int(frame0.width), int(frame0.height)), (1, 1))
+        frame1 = clone.get("1")
+        self.assertIsInstance(frame1, workbench.WzCanvasProperty)
+        self.assertGreater(int(frame1.width), 4)
+        self.assertGreaterEqual(materializer.canvases, len(source_names))
+        for child in clone.children():
+            if isinstance(child, workbench.WzCanvasProperty):
+                self.assertEqual((int(child.format), int(child.format2)), (1, 0))
+                self.assertTrue(child._png_data)
+                origin = child.child("origin")
+                delay = child.child("delay")
+                self.assertIsInstance(origin, workbench.WzVectorProperty)
+                self.assertIsInstance(delay, workbench.WzIntProperty)
+                self.assertGreaterEqual(int(delay.value), 16)
+
+        with tempfile.TemporaryDirectory(prefix=".copy-area-warning-", dir=workbench._HERE) as directory:
+            repo = Path(directory)
+            client = repo / "clien/Data/Mob/8880110.img"
+            server = repo / "gms-server/wz/Mob.wz/8880110.img.xml"
+            client.parent.mkdir(parents=True)
+            server.parent.mkdir(parents=True)
+            client.write_bytes(project_client.read_bytes())
+            server.write_bytes(project_server.read_bytes())
+            original_root = workbench._ROOT
+            workbench._ROOT = repo
+            try:
+                result = workbench.copy_tms_node_with_server_sync(
+                    client, source, "attack1/info/areaWarning",
+                )
+            finally:
+                workbench._ROOT = original_root
+            self.assertGreater(result["densifiedFrames"], 0)
+            self.assertGreater(result["materialized"]["canvases"], 0)
+            copied = workbench.load_image(client).root.get("attack1/info/areaWarning")
+            copied_names = [int(child.name) for child in copied.children() if child.name.isdigit()]
+            self.assertEqual(copied_names[0], 0)
+            self.assertEqual((int(copied.get("0").width), int(copied.get("0").height)), (1, 1))
+            self.assertGreater(int(copied.get("1").width), 4)
+            server_nodes, _ = workbench.flatten_xml(server)
+            self.assertIn("attack1/info/areaWarning/0", server_nodes)
+
+    def test_mob_area_warning_frame0_copies_1x1_stub(self) -> None:
+        source = workbench._TMS_DATA / "Mob/_Canvas/8880100.img"
+        if not source.is_file():
+            self.skipTest("Damien 8880100 Canvas is unavailable")
+        image = workbench.load_image(source)
+        self.assertIsNone(image.root.get("attack1/info/areaWarning/0"))
+        companion = workbench.companion_logical_node(source, "attack1/info/areaWarning/0")
+        self.assertIsInstance(companion, workbench.WzCanvasProperty)
+        self.assertEqual((int(companion.width), int(companion.height)), (1, 1))
+        clone, _, _ = workbench.clone_compatible_mob_node(
+            companion, image, source, copied_root="attack1/info/areaWarning/0",
+        )
+        self.assertIsInstance(clone, workbench.WzCanvasProperty)
+        self.assertEqual(clone.name, "0")
+        self.assertEqual((int(clone.width), int(clone.height)), (1, 1))
+        self.assertEqual((int(clone.format), int(clone.format2)), (1, 0))
+        self.assertTrue(clone._png_data)
+        origin = clone.child("origin")
+        self.assertIsInstance(origin, workbench.WzVectorProperty)
+        self.assertEqual((int(origin.x), int(origin.y)), (0, 0))
+
+    def test_mob_canvas_copy_keeps_origin_delay_from_companion(self) -> None:
+        source = workbench._TMS_DATA / "Mob/_Canvas/8880100.img"
+        json_dump = workbench._ROOT / "clien/Data/Mob/8880100.img.json"
+        if not source.is_file() or not json_dump.is_file():
+            self.skipTest("Damien 8880100 Canvas or JSON companion is unavailable")
+        image = workbench.load_image(source)
+        attack1 = image.root.get("attack1/0")
+        self.assertIsInstance(attack1, workbench.WzCanvasProperty)
+        self.assertIsNone(attack1.child("origin"))
+        clone, _materializer, stats = workbench.clone_compatible_mob_node(
+            attack1, image, source, copied_root="attack1/0",
+        )
+        self.assertIsInstance(clone, workbench.WzCanvasProperty)
+        origin = clone.child("origin")
+        delay = clone.child("delay")
+        self.assertIsInstance(origin, workbench.WzVectorProperty)
+        self.assertEqual((int(origin.x), int(origin.y)), (45, 146))
+        self.assertEqual(int(delay.value), 90)
+        self.assertEqual((int(clone.child("head").x), int(clone.child("head").y)), (-3, -116))
+        self.assertEqual((int(clone.child("lt").x), int(clone.child("lt").y)), (-38, -145))
+        self.assertEqual((int(clone.child("rb").x), int(clone.child("rb").y)), (39, -11))
+        self.assertEqual(int(clone.child("z").value), 0)
+        self.assertGreater(stats["canvasMeta"], 0)
+
+        cache = Path("/private/tmp/arcane-river-mob-cache/8880100/Mob_8880100.img")
+        if cache.is_file():
+            warning = image.root.get("attack1/info/areaWarning/1")
+            self.assertIsInstance(warning, workbench.WzCanvasProperty)
+            warning_clone, _, _ = workbench.clone_compatible_mob_node(
+                warning, image, source, copied_root="attack1/info/areaWarning/1",
+            )
+            self.assertEqual(
+                (int(warning_clone.child("origin").x), int(warning_clone.child("origin").y)),
+                (59, 201),
+            )
+            skill2 = image.root.get("skill2")
+            skill1 = workbench.WzSubProperty("skill1")
+            for index in range(10):
+                skill1.add(workbench._legacy_stub_canvas(str(index), skill1))
+            stand = workbench.WzSubProperty("stand")
+            for index in range(8):
+                stand.add(workbench._legacy_stub_canvas(str(index), stand))
+            client_data = workbench.arc.append_property_record(workbench.empty_gms_img_bytes(), (), stand)
+            client_data = workbench.arc.append_property_record(client_data, (), skill1)
+            client = workbench._verified_img_from_bytes(Path("8880110.img"), client_data)
+            skill_clone, _, stats = workbench.clone_compatible_mob_node(
+                skill2, image, source, client_image=client, copied_root="skill2",
+            )
+            names = sorted(int(child.name) for child in skill_clone.children() if child.name.isdigit())
+            self.assertEqual(names, list(range(105)))
+            self.assertIsInstance(skill_clone.get("0"), workbench.WzUolProperty)
+            self.assertEqual(str(skill_clone.get("0").value), "../skill1/0")
+            frame = skill_clone.get("10")
+            self.assertIsInstance(frame, workbench.WzCanvasProperty)
+            self.assertGreater(int(frame.width), 4)
+            self.assertEqual((int(frame.child("origin").x), int(frame.child("origin").y)), (106, 653))
+            self.assertEqual(str(skill_clone.get("31").value), "23")
+            self.assertEqual(str(skill_clone.get("72").value), "23")
+            self.assertEqual(str(skill_clone.get("97").value), "../stand/0")
+            self.assertGreaterEqual(stats["uolsKept"], 59)
+            return
+
+        skill2 = image.root.get("skill2")
+        with self.assertRaisesRegex(ValueError, "skill1"):
+            workbench.clone_compatible_mob_node(skill2, image, source, copied_root="skill2")
+
+    def test_mob_attack_copy_keeps_companion_children_and_skips_huge_gaps(self) -> None:
+        source = workbench._TMS_DATA / "Mob/_Canvas/8880100.img"
+        project_client = workbench._ROOT / "clien/Data/Mob/8880110.img"
+        if not source.is_file() or not project_client.is_file():
+            self.skipTest("Damien Canvas or 8880110 baseline is unavailable")
+        image = workbench.load_image(source)
+        client_image = workbench.load_image(project_client)
+        attack2 = image.root.get("attack2")
+        clone, _materializer, stats = workbench.clone_compatible_mob_node(
+            attack2, image, source, client_image=client_image, copied_root="attack2",
+        )
+        frame0 = clone.get("0")
+        self.assertIsInstance(frame0, workbench.WzUolProperty)
+        self.assertEqual(str(frame0.value), "../stand/0")
+        stand_names = [
+            child.name for child in client_image.root.get("stand").children() if child.name.isdigit()
+        ]
+        self.assertTrue(stand_names)
+        last = str(max(int(name) for name in stand_names))
+        self.assertIsInstance(clone.get(last), workbench.WzUolProperty)
+        self.assertEqual(str(clone.get(last).value), f"../stand/{last}")
+        self.assertGreaterEqual(stats["uolsKept"], len(stand_names))
+        self.assertIsNone(clone.get("info/ball"))
+        self.assertIsNone(clone.get("info/type"))
+        self.assertIsNone(clone.get("info/bulletSpeed"))
+        self.assertIsNotNone(clone.get("info/hit/0"))
+        self.assertEqual(
+            (int(clone.get("info/hit/0").width), int(clone.get("info/hit/0").height)),
+            (107, 88),
+        )
+        extracted = workbench.find_extracted_ms_mob("8880100")
+        if extracted is not None:
+            self.assertIsNotNone(clone.get("info/range/lt"))
+            self.assertEqual(int(clone.get("info/attackAfter").value), 30)
+        hit0 = clone.get("info/hit/0")
+        self.assertIsInstance(hit0.child("origin"), workbench.WzVectorProperty)
+        self.assertEqual((int(hit0.child("origin").x), int(hit0.child("origin").y)), (50, 46))
+        self.assertEqual(int(hit0.child("delay").value), 90)
+        self.assertIsNone(clone.get("info/hit/attach"))
+
+        attack1 = image.root.get("attack1")
+        attack1_clone, _, _ = workbench.clone_compatible_mob_node(
+            attack1, image, source, client_image=client_image, copied_root="attack1",
+        )
+        self.assertEqual(int(attack1_clone.get("info/type").value), 3)
+        self.assertEqual(int(attack1_clone.get("info/effectAfter").value), 0)
+        self.assertEqual(int(attack1_clone.get("info/range/areaCount").value), 9)
+        self.assertEqual(int(attack1_clone.get("info/range/attackCount").value), 6)
+        self.assertEqual(int(attack1_clone.get("info/range/start").value), -4)
+        self.assertIsNone(attack1_clone.get("info/onlyFsm"))
+
+        attack3 = image.root.get("attack3")
+        attack3_clone, _, _ = workbench.clone_compatible_mob_node(
+            attack3, image, source, client_image=client_image, copied_root="attack3",
+        )
+        self.assertEqual(int(attack3_clone.get("info/type").value), 3)
+        self.assertIsNotNone(attack3_clone.get("info/hit/0"))
+        self.assertGreater(int(attack3_clone.get("info/hit/0").width), 1)
+        self.assertIsNone(attack3_clone.get("info/randDelayAttack"))
+        self.assertEqual(int(attack3_clone.get("info/range/areaCount").value), 11)
+
+        warning = image.root.get("attack3/info/areaWarning")
+        source_names = sorted(int(child.name) for child in warning.children() if child.name.isdigit())
+        warning_clone, _, warning_stats = workbench.clone_compatible_mob_node(
+            warning, image, source, client_image=client_image, copied_root="attack3/info/areaWarning",
+        )
+        names = [int(child.name) for child in warning_clone.children() if child.name.isdigit()]
+        self.assertEqual(names, list(range(len(source_names) + 1)))
+        self.assertEqual(len(names), len(source_names) + 1)
+        self.assertEqual((int(warning_clone.get("0").width), int(warning_clone.get("0").height)), (1, 1))
+        self.assertGreater(int(warning_clone.get("1").width), 4)
+        self.assertNotIn(53, names)
+        self.assertGreater(warning_stats["densified"], 0)
+
+    def test_mob_copy_info_from_canvas_uses_companion_and_projects_skills(self) -> None:
+        source = workbench._TMS_DATA / "Mob/_Canvas/8880100.img"
+        if not source.is_file():
+            self.skipTest("Damien 8880100 Canvas is unavailable")
+        canvas = workbench.load_image(source)
+        self.assertIsNone(canvas.root.get("info"))
+        nodes, info = workbench.flatten_img(source)
+        self.assertTrue(info.get("canvasStore"))
+        self.assertIn("info", nodes)
+        self.assertTrue(nodes["info"].get("logicalSource"))
+
+        companion_info = workbench.companion_logical_node(source, "info")
+        self.assertIsInstance(companion_info, workbench.WzSubProperty)
+        clone, _, _ = workbench.clone_compatible_mob_node(
+            companion_info, canvas, source,
+            client_image=workbench._verified_img_from_bytes(
+                Path("8880110.img"),
+                subprocess.check_output(["git", "cat-file", "blob", "HEAD:clien/Data/Mob/8880110.img"]),
+            ),
+            copied_root="info",
+            dest_mob_id="8880110",
+        )
+        self.assertEqual(int(clone.get("firstAttack").value), 1)
+        self.assertIsNone(clone.get("publicReward"))
+        self.assertEqual(int(clone.get("skill/0/skill").value), 100)
+        self.assertEqual(int(clone.get("skill/1/skill").value), 101)
+        self.assertEqual(int(clone.get("skill/2/skill").value), 123)
+        self.assertEqual(int(clone.get("skill/3/skill").value), 128)
+        self.assertEqual(int(clone.get("speed").value), 0)
+        self.assertIsNone(clone.get("skill/0/skillForbid"))
+        self.assertIsInstance(clone.get("maxHP"), workbench.WzIntProperty)
+        self.assertIsNone(clone.get("attack"))
+        self.assertIsNone(clone.get("firstAttackRange"))
+        self.assertIsNone(clone.get("mobType"))
+        self.assertIsInstance(clone.get("PDDamage"), workbench.WzIntProperty)
+        self.assertIsInstance(clone.get("MDDamage"), workbench.WzIntProperty)
+
+        empty = workbench._verified_img_from_bytes(Path("empty.img"), workbench.empty_gms_img_bytes())
+        tms_info = workbench.WzSubProperty("info")
+        tms_info.add(workbench.WzIntProperty("level", 210, tms_info))
+        tms_info.add(workbench.WzIntProperty("maxHP", 1000, tms_info))
+        tms_info.add(workbench.WzIntProperty("PADamage", 22000, tms_info))
+        tms_info.add(workbench.WzIntProperty("MADamage", 24000, tms_info))
+        tms_info.add(workbench.WzIntProperty("PDRate", 300, tms_info))
+        source_data = workbench.arc.append_property_record(workbench.empty_gms_img_bytes(), (), tms_info)
+        source_image = workbench._verified_img_from_bytes(Path("8880100.img"), source_data)
+        filled, _, _ = workbench.clone_compatible_mob_node(
+            source_image.root.get("info"), source_image, Path("TMS/Mob/8880100.img"),
+            client_image=empty, copied_root="info", dest_mob_id="8880110",
+        )
+        self.assertEqual(int(filled.get("PDDamage").value), 0)
+        self.assertEqual(int(filled.get("MDDamage").value), 0)
+
+    def test_mob_info_placeholder_maxhp_falls_back_to_int_max(self) -> None:
+        source_image = workbench._verified_img_from_bytes(
+            Path("source.img"), workbench.empty_gms_img_bytes(),
+        )
+        source = workbench.WzSubProperty("info")
+        source.add(workbench.WzStringProperty("maxHP", "??????", source))
+        source.add(workbench.WzIntProperty("level", 200, source))
+        empty = workbench._verified_img_from_bytes(Path("empty.img"), workbench.empty_gms_img_bytes())
+        projected, _, _ = workbench.clone_compatible_mob_node(
+            source, source_image, Path("TMS/Mob/9910004.img"), client_image=empty, copied_root="info",
+        )
+        self.assertEqual(int(projected.get("maxHP").value), workbench._CLIENT_MAXHP_INT)
+        self.assertIsInstance(projected.get("maxHP"), workbench.WzIntProperty)
+
+        existing = workbench.WzSubProperty("info")
+        existing.add(workbench.WzIntProperty("maxHP", 10000, existing))
+        existing_data = workbench.arc.append_property_record(workbench.empty_gms_img_bytes(), (), existing)
+        target = workbench._verified_img_from_bytes(Path("target.img"), existing_data)
+        inherited, _, _ = workbench.clone_compatible_mob_node(
+            source, source_image, Path("TMS/Mob/9910004.img"), client_image=target, copied_root="info",
+        )
+        self.assertEqual(int(inherited.get("maxHP").value), 10000)
+
+    def test_validate_copied_mob_info_allows_ballistic_attack_without_body_frames(self) -> None:
+        info = workbench.WzSubProperty("info")
+        info.add(workbench.WzIntProperty("maxHP", 50000, info))
+        info.add(workbench.WzIntProperty("level", 100, info))
+        for name in ("PADamage", "PDDamage", "MADamage", "MDDamage"):
+            info.add(workbench.WzIntProperty(name, 0, info))
+        attack2 = workbench.WzSubProperty("attack2")
+        attack_info = workbench.WzSubProperty("info", attack2)
+        attack_info.add(workbench.WzIntProperty("type", 2, attack_info))
+        ball = workbench.WzSubProperty("ball", attack_info)
+        ball.add(workbench.WzSubProperty("0", ball))
+        attack_info.add(ball)
+        attack2.add(attack_info)
+        data = workbench.arc.append_property_record(workbench.empty_gms_img_bytes(), (), info)
+        data = workbench.arc.append_property_record(data, (), attack2)
+        image = workbench._verified_img_from_bytes(Path("8880110.img"), data)
+        workbench.validate_copied_mob_info(image)
+
+        empty_attack = workbench.WzSubProperty("attack1")
+        empty_attack.add(workbench.WzSubProperty("info", empty_attack))
+        broken = workbench.arc.append_property_record(workbench.empty_gms_img_bytes(), (), info)
+        broken = workbench.arc.append_property_record(broken, (), empty_attack)
+        with self.assertRaisesRegex(ValueError, "attack1 没有动作帧"):
+            workbench.validate_copied_mob_info(
+                workbench._verified_img_from_bytes(Path("broken.img"), broken),
+            )
+
+    def test_fsm_only_attack_projects_stand_uols_not_origin_zero_stub(self) -> None:
+        source_image = workbench._verified_img_from_bytes(
+            Path("source.img"), workbench.empty_gms_img_bytes(),
+        )
+        attack = workbench.WzSubProperty("attack2")
+        info = workbench.WzSubProperty("info", attack)
+        info.add(workbench.WzIntProperty("onlyFsm", 1, info))
+        info.add(workbench.WzIntProperty("attackAfter", 30, info))
+        attack.add(info)
+        attack.add(workbench._legacy_stub_canvas("0", attack))
+        stand = workbench.WzSubProperty("stand")
+        stand.add(workbench._legacy_stub_canvas("0", stand))
+        stand.add(workbench._legacy_stub_canvas("1", stand))
+        client = workbench._verified_img_from_bytes(
+            Path("8880110.img"),
+            workbench.arc.append_property_record(workbench.empty_gms_img_bytes(), (), stand),
+        )
+        clone, _, stats = workbench.clone_compatible_mob_node(
+            attack, source_image, Path("TMS/Mob/8880100.img"),
+            client_image=client, copied_root="attack2",
+        )
+        self.assertIsInstance(clone.get("0"), workbench.WzUolProperty)
+        self.assertEqual(str(clone.get("0").value), "../stand/0")
+        self.assertEqual(str(clone.get("1").value), "../stand/1")
+        self.assertIsNone(clone.get("info/onlyFsm"))
+        self.assertGreaterEqual(stats["uolsKept"], 2)
+
+    def test_ballistic_attack_without_body_keeps_stub_not_stand_uol(self) -> None:
+        source_image = workbench._verified_img_from_bytes(
+            Path("source.img"), workbench.empty_gms_img_bytes(),
+        )
+        attack = workbench.WzSubProperty("attack2")
+        info = workbench.WzSubProperty("info", attack)
+        ball = workbench.WzSubProperty("ball", info)
+        ball.add(workbench._legacy_stub_canvas("0", ball))
+        info.add(ball)
+        attack.add(info)
+        stand = workbench.WzSubProperty("stand")
+        stand.add(workbench._legacy_stub_canvas("0", stand))
+        client = workbench._verified_img_from_bytes(
+            Path("8880110.img"),
+            workbench.arc.append_property_record(workbench.empty_gms_img_bytes(), (), stand),
+        )
+        clone, _, stats = workbench.clone_compatible_mob_node(
+            attack, source_image, Path("TMS/Mob/8641002.img"),
+            client_image=client, copied_root="attack2",
+        )
+        frame0 = clone.get("0")
+        self.assertIsInstance(frame0, workbench.WzCanvasProperty)
+        self.assertEqual((int(frame0.width), int(frame0.height)), (1, 1))
+        self.assertEqual(int(clone.get("info/type").value), 2)
+        self.assertEqual(stats["uolsKept"], 0)
+
+    def test_fsm_only_attack_without_stand_raises(self) -> None:
+        source_image = workbench._verified_img_from_bytes(
+            Path("source.img"), workbench.empty_gms_img_bytes(),
+        )
+        attack = workbench.WzSubProperty("attack2")
+        info = workbench.WzSubProperty("info", attack)
+        info.add(workbench.WzIntProperty("onlyFsm", 1, info))
+        attack.add(info)
+        empty = workbench._verified_img_from_bytes(Path("empty.img"), workbench.empty_gms_img_bytes())
+        with self.assertRaisesRegex(ValueError, "onlyFsm"):
+            workbench.clone_compatible_mob_node(
+                attack, source_image, Path("TMS/Mob/8880100.img"),
+                client_image=empty, copied_root="attack2",
+            )
+
+    def test_skill2_copy_keeps_tms_timeline_uols(self) -> None:
+        skill2 = workbench.WzSubProperty("skill2")
+        skill2.add(workbench.WzUolProperty("0", "../skill1/0", skill2))
+        skill2.add(workbench.WzUolProperty("1", "../skill1/1", skill2))
+        for name, origin in (("2", (106, 653)), ("4", (111, 658))):
+            frame = workbench._legacy_stub_canvas(name, skill2)
+            frame._children.pop("origin", None)
+            frame.add(workbench.WzVectorProperty("origin", origin[0], origin[1], frame))
+            skill2.add(frame)
+        skill2.add(workbench.WzUolProperty("3", "2", skill2))
+        source_data = workbench.arc.append_property_record(workbench.empty_gms_img_bytes(), (), skill2)
+        source_image = workbench._verified_img_from_bytes(Path("8880100.img"), source_data)
+        stand = workbench.WzSubProperty("stand")
+        stand.add(workbench._legacy_stub_canvas("0", stand))
+        skill1 = workbench.WzSubProperty("skill1")
+        skill1.add(workbench._legacy_stub_canvas("0", skill1))
+        skill1.add(workbench._legacy_stub_canvas("1", skill1))
+        client_data = workbench.arc.append_property_record(workbench.empty_gms_img_bytes(), (), stand)
+        client_data = workbench.arc.append_property_record(client_data, (), skill1)
+        client = workbench._verified_img_from_bytes(Path("8880110.img"), client_data)
+        clone, _, stats = workbench.clone_compatible_mob_node(
+            source_image.root.get("skill2"), source_image, Path("TMS/Mob/8880100.img"),
+            client_image=client, copied_root="skill2",
+        )
+        self.assertEqual(
+            sorted(int(child.name) for child in clone.children() if child.name.isdigit()),
+            [0, 1, 2, 3, 4],
+        )
+        self.assertEqual(str(clone.get("0").value), "../skill1/0")
+        self.assertIsInstance(clone.get("2"), workbench.WzCanvasProperty)
+        self.assertEqual(str(clone.get("3").value), "../skill2/2")
+        self.assertGreaterEqual(stats["uolsKept"], 3)
+
+        empty = workbench._verified_img_from_bytes(Path("empty.img"), workbench.empty_gms_img_bytes())
+        with self.assertRaisesRegex(ValueError, "skill1"):
+            workbench.clone_compatible_mob_node(
+                source_image.root.get("skill2"), source_image, Path("TMS/Mob/8880100.img"),
+                client_image=empty, copied_root="skill2",
+            )
+
+        source = workbench._TMS_DATA / "Mob/_Canvas/8880100.img"
+        project_client = workbench._ROOT / "clien/Data/Mob/8880110.img"
+        if source.is_file() and project_client.is_file():
+            image = workbench.load_image(source)
+            client_image = workbench.load_image(project_client)
+            if client_image.root.get("skill1/9") is None:
+                skill1 = workbench.WzSubProperty("skill1")
+                for index in range(10):
+                    skill1.add(workbench._legacy_stub_canvas(str(index), skill1))
+                client_data = workbench.arc.append_property_record(project_client.read_bytes(), (), skill1)
+                client_image = workbench._verified_img_from_bytes(Path("8880110.img"), client_data)
+            tms_clone, _, stats = workbench.clone_compatible_mob_node(
+                image.root.get("skill2"), image, source,
+                client_image=client_image, copied_root="skill2",
+            )
+            names = sorted(int(child.name) for child in tms_clone.children() if child.name.isdigit())
+            self.assertEqual(names, list(range(105)))
+            self.assertEqual(str(tms_clone.get("0").value), "../skill1/0")
+            self.assertGreater(int(tms_clone.get("10").width), 4)
+            self.assertEqual(str(tms_clone.get("31").value), "../skill2/23")
+            self.assertEqual(str(tms_clone.get("72").value), "../skill2/23")
+            self.assertEqual(str(tms_clone.get("104").value), "../stand/7")
+            self.assertGreaterEqual(stats["uolsKept"], 59)
+
+    def test_skill4_copy_uses_skill3_outlink_not_skill1(self) -> None:
+        source = workbench._TMS_DATA / "Mob/_Canvas/8880100.img"
+        if not source.is_file():
+            self.skipTest("Damien 8880100 Canvas is unavailable")
+        image = workbench.load_image(source)
+        skill4 = image.root.get("skill4")
+        self.assertIsNotNone(skill4)
+
+        def client_with(*actions: workbench.WzSubProperty) -> workbench.WzImage:
+            data = workbench.empty_gms_img_bytes()
+            for action in actions:
+                data = workbench.arc.append_property_record(data, (), action)
+            return workbench._verified_img_from_bytes(Path("8880110.img"), data)
+
+        skill1 = workbench.WzSubProperty("skill1")
+        for index in range(10):
+            skill1.add(workbench._legacy_stub_canvas(str(index), skill1))
+        skill2 = workbench.WzSubProperty("skill2")
+        for index in (87, 88):
+            skill2.add(workbench._legacy_stub_canvas(str(index), skill2))
+        skill3 = workbench.WzSubProperty("skill3")
+        skill3.add(workbench._legacy_stub_canvas("0", skill3))
+        skill3.add(workbench._legacy_stub_canvas("1", skill3))
+
+        with self.assertRaisesRegex(ValueError, r"skill4/0.*skill3"):
+            workbench.clone_compatible_mob_node(
+                skill4, image, source, client_image=client_with(skill1, skill2), copied_root="skill4",
+            )
+
+        clone, _, stats = workbench.clone_compatible_mob_node(
+            skill4, image, source,
+            client_image=client_with(skill1, skill2, skill3), copied_root="skill4",
+        )
+        names = sorted(int(child.name) for child in clone.children() if child.name.isdigit())
+        self.assertEqual(names, list(range(44)))
+        self.assertEqual(str(clone.get("0").value), "../skill3/0")
+        self.assertEqual(str(clone.get("1").value), "../skill3/1")
+        self.assertIsInstance(clone.get("2"), workbench.WzCanvasProperty)
+        self.assertEqual(str(clone.get("42").value), "../skill2/87")
+        self.assertEqual(str(clone.get("43").value), "../skill2/88")
+        self.assertIsNone(clone.get("44"))
+        self.assertGreaterEqual(stats["uolsKept"], 4)
+
+        project_client = workbench._ROOT / "clien/Data/Mob/8880110.img"
+        if project_client.is_file():
+            live = workbench.load_image(project_client)
+            if live.root.get("skill3/1") is not None and live.root.get("skill2/87") is not None:
+                live_clone, _, _ = workbench.clone_compatible_mob_node(
+                    skill4, image, source, client_image=live, copied_root="skill4",
+                )
+                self.assertEqual(str(live_clone.get("0").value), "../skill3/0")
+                self.assertEqual(
+                    sorted(int(child.name) for child in live_clone.children() if child.name.isdigit()),
+                    list(range(44)),
+                )
+
+    def test_mob_info_copy_is_generic_numeric_and_inserts_before_existing_actions(self) -> None:
+        with tempfile.TemporaryDirectory(prefix=".copy-mob-info-generic-", dir=workbench._HERE) as directory:
+            repo = Path(directory)
+            client = repo / "clien/Data/Mob/9910001.img"
+            server = repo / "gms-server/wz/Mob.wz/9910001.img.xml"
+            source = repo / "TMS/Mob/9910001.img"
+            for path in (client, server, source):
+                path.parent.mkdir(parents=True, exist_ok=True)
+            info = workbench.WzSubProperty("info")
+            info.add(workbench.WzIntProperty("level", 100, info))
+            info.add(workbench.WzStringProperty("maxHP", "12345", info))
+            info.add(workbench.WzStringProperty("mobType", "7N", info))
+            info.add(workbench.WzIntProperty("forcedSeperateSoul", 1, info))
+            attack = workbench.WzSubProperty("attack", info)
+            slot = workbench.WzSubProperty("0", attack)
+            slot.add(workbench.WzIntProperty("action", 6, slot))
+            attack.add(slot)
+            info.add(attack)
+            info.add(workbench.WzSubProperty("firstAttackRange", info))
+            source.write_bytes(workbench.arc.append_property_record(
+                workbench.empty_gms_img_bytes(), (), info,
+            ))
+            original = workbench.arc.append_property_record(
+                workbench.empty_gms_img_bytes(), (), workbench.WzSubProperty("stand"),
+            )
+            client.write_bytes(original)
+            server.write_bytes(b'<imgdir name="9910001.img">\n  <imgdir name="stand"/>\n</imgdir>\n')
+            original_root = workbench._ROOT
+            workbench._ROOT = repo
+            try:
+                workbench.copy_tms_node_with_server_sync(client, source, "info")
+                first_hashes = (hashlib.sha256(client.read_bytes()).digest(), hashlib.sha256(server.read_bytes()).digest())
+                workbench.copy_tms_node_with_server_sync(client, source, "info")
+            finally:
+                workbench._ROOT = original_root
+            copied = workbench._verified_img_from_bytes(client, client.read_bytes())
+            self.assertEqual([node.name for node in copied.root.children()], ["info", "stand"])
+            self.assertEqual(int(copied.root.get("info/maxHP").value), 12345)
+            self.assertIsInstance(copied.root.get("info/maxHP"), workbench.WzIntProperty)
+            for forbidden in ("mobType", "attack", "firstAttackRange", "forcedSeperateSoul"):
+                self.assertIsNone(copied.root.get("info/" + forbidden))
+            before_records, _ = workbench.arc.raw_record_state(original)
+            after_records, _ = workbench.arc.raw_record_state(client.read_bytes())
+            self.assertEqual(before_records[("stand",)], after_records[("stand",)])
+            self.assertEqual(
+                [node.get("name") for node in workbench.ET.parse(server).getroot()],
+                ["info", "stand"],
+            )
+            self.assertEqual(
+                first_hashes,
+                (hashlib.sha256(client.read_bytes()).digest(), hashlib.sha256(server.read_bytes()).digest()),
+            )
+
+    def test_mob_info_copy_rejects_existing_modern_profile_without_writing(self) -> None:
+        with tempfile.TemporaryDirectory(prefix=".copy-mob-info-reject-", dir=workbench._HERE) as directory:
+            repo = Path(directory)
+            client = repo / "clien/Data/Mob/9910002.img"
+            server = repo / "gms-server/wz/Mob.wz/9910002.img.xml"
+            source = repo / "TMS/Mob/9910002.img"
+            for path in (client, server, source):
+                path.parent.mkdir(parents=True, exist_ok=True)
+            modern = workbench.WzSubProperty("info")
+            modern.add(workbench.WzStringProperty("maxHP", "??????", modern))
+            modern.add(workbench.WzSubProperty("attack", modern))
+            old = workbench.arc.append_property_record(
+                workbench.empty_gms_img_bytes(), (), workbench.WzSubProperty("stand"),
+            )
+            client.write_bytes(workbench.arc.append_property_record(old, (), modern))
+            server.write_bytes(
+                b'<imgdir name="9910002.img">\n  <imgdir name="stand"/>\n'
+                + workbench.xml_snippet_for_node(modern, b"  ")
+                + b'</imgdir>\n'
+            )
+            safe = workbench.WzSubProperty("info")
+            safe.add(workbench.WzIntProperty("maxHP", 50000, safe))
+            source.write_bytes(workbench.arc.append_property_record(
+                workbench.empty_gms_img_bytes(), (), safe,
+            ))
+            before = (client.read_bytes(), server.read_bytes())
+            original_root = workbench._ROOT
+            workbench._ROOT = repo
+            try:
+                with self.assertRaisesRegex(ValueError, "info 不在首节点"):
+                    workbench.copy_tms_node_with_server_sync(client, source, "info")
+            finally:
+                workbench._ROOT = original_root
+            self.assertEqual((client.read_bytes(), server.read_bytes()), before)
+
+    def test_mob_info_copy_never_invents_modern_skill_mapping(self) -> None:
+        source_image = workbench._verified_img_from_bytes(
+            Path("source.img"), workbench.empty_gms_img_bytes(),
+        )
+        source = workbench.WzSubProperty("info")
+        source.add(workbench.WzIntProperty("maxHP", 50000, source))
+        skills = workbench.WzSubProperty("skill", source)
+        slot = workbench.WzSubProperty("0", skills)
+        for name, value in (("skill", 170), ("level", 1), ("action", 1)):
+            slot.add(workbench.WzIntProperty(name, value, slot))
+        skills.add(slot)
+        source.add(skills)
+        empty = workbench._verified_img_from_bytes(Path("empty.img"), workbench.empty_gms_img_bytes())
+        with self.assertRaisesRegex(ValueError, "目标没有可沿用"):
+            workbench.clone_compatible_mob_node(
+                source, source_image, Path("TMS/Mob/9910003.img"), client_image=empty, copied_root="info",
+            )
+
+        existing = workbench.WzSubProperty("info")
+        existing.add(workbench.WzIntProperty("maxHP", 10000, existing))
+        safe_skills = workbench.WzSubProperty("skill", existing)
+        safe_slot = workbench.WzSubProperty("0", safe_skills)
+        for name, value in (("skill", 120), ("level", 1), ("action", 1)):
+            safe_slot.add(workbench.WzIntProperty(name, value, safe_slot))
+        safe_skills.add(safe_slot)
+        existing.add(safe_skills)
+        existing_data = workbench.arc.append_property_record(workbench.empty_gms_img_bytes(), (), existing)
+        target = workbench._verified_img_from_bytes(Path("target.img"), existing_data)
+        projected, _, _ = workbench.clone_compatible_mob_node(
+            source, source_image, Path("TMS/Mob/9910003.img"), client_image=target, copied_root="info",
+        )
+        self.assertEqual(int(projected.get("skill/0/skill").value), 120)
+        self.assertEqual(int(projected.get("maxHP").value), 50000)
+
+    def test_mob_info_damien_uses_projected_skill_table_when_target_has_none(self) -> None:
+        source_image = workbench._verified_img_from_bytes(
+            Path("source.img"), workbench.empty_gms_img_bytes(),
+        )
+        source = workbench.WzSubProperty("info")
+        source.add(workbench.WzIntProperty("maxHP", 50000, source))
+        skills = workbench.WzSubProperty("skill", source)
+        slot = workbench.WzSubProperty("0", skills)
+        for name, value in (("skill", 170), ("level", 44), ("action", 1)):
+            slot.add(workbench.WzIntProperty(name, value, slot))
+        skills.add(slot)
+        source.add(skills)
+        empty = workbench._verified_img_from_bytes(Path("empty.img"), workbench.empty_gms_img_bytes())
+        projected, _, _ = workbench.clone_compatible_mob_node(
+            source, source_image, Path("TMS/Mob/_Canvas/8880100.img"),
+            client_image=empty, copied_root="info", dest_mob_id="8880110",
+        )
+        self.assertEqual(int(projected.get("skill/0/skill").value), 100)
+        self.assertEqual(int(projected.get("skill/1/skill").value), 101)
+        self.assertEqual(int(projected.get("skill/2/skill").value), 123)
+        self.assertEqual(int(projected.get("skill/3/skill").value), 128)
+        self.assertIsNone(projected.get("skill/0/skillForbid"))
+
+        cygnus = workbench.WzSubProperty("info")
+        cygnus.add(workbench.WzIntProperty("maxHP", 10000, cygnus))
+        cygnus_skills = workbench.WzSubProperty("skill", cygnus)
+        cygnus_slot = workbench.WzSubProperty("0", cygnus_skills)
+        for name, value in (("skill", 200), ("level", 223), ("action", 2)):
+            cygnus_slot.add(workbench.WzIntProperty(name, value, cygnus_slot))
+        cygnus_skills.add(cygnus_slot)
+        cygnus.add(cygnus_skills)
+        cygnus_data = workbench.arc.append_property_record(workbench.empty_gms_img_bytes(), (), cygnus)
+        cygnus_target = workbench._verified_img_from_bytes(Path("8880110.img"), cygnus_data)
+        replaced, _, _ = workbench.clone_compatible_mob_node(
+            source, source_image, Path("TMS/Mob/_Canvas/8880100.img"),
+            client_image=cygnus_target, copied_root="info", dest_mob_id="8880110",
+        )
+        self.assertEqual(int(replaced.get("skill/0/skill").value), 100)
+        self.assertNotEqual(int(replaced.get("skill/0/skill").value), 200)
+        self.assertEqual(int(replaced.get("PDDamage").value), 0)
+        self.assertEqual(int(replaced.get("MDDamage").value), 0)
+
+    def test_mob_info_copy_replaces_cygnus_skill_and_fills_pddamage(self) -> None:
+        with tempfile.TemporaryDirectory(prefix=".copy-mob-info-lifefactory-", dir=workbench._HERE) as directory:
+            repo = Path(directory)
+            client = repo / "clien/Data/Mob/8880110.img"
+            server = repo / "gms-server/wz/Mob.wz/8880110.img.xml"
+            source = repo / "TMS/Mob/_Canvas/8880100.img"
+            for path in (client, server, source):
+                path.parent.mkdir(parents=True, exist_ok=True)
+            info = workbench.WzSubProperty("info")
+            info.add(workbench.WzIntProperty("level", 210, info))
+            info.add(workbench.WzIntProperty("maxHP", 50000, info))
+            info.add(workbench.WzIntProperty("PADamage", 22000, info))
+            info.add(workbench.WzIntProperty("MADamage", 24000, info))
+            info.add(workbench.WzIntProperty("PDRate", 300, info))
+            info.add(workbench.WzIntProperty("MDRate", 300, info))
+            skills = workbench.WzSubProperty("skill", info)
+            slot = workbench.WzSubProperty("0", skills)
+            for name, value in (("skill", 200), ("level", 223), ("action", 2)):
+                slot.add(workbench.WzIntProperty(name, value, slot))
+            skills.add(slot)
+            info.add(skills)
+            source.write_bytes(workbench.arc.append_property_record(
+                workbench.empty_gms_img_bytes(), (), info,
+            ))
+            dest_info = workbench.WzSubProperty("info")
+            dest_info.add(workbench.WzIntProperty("level", 190, dest_info))
+            dest_info.add(workbench.WzIntProperty("maxHP", 10000, dest_info))
+            dest_info.add(workbench.WzIntProperty("PADamage", 1, dest_info))
+            dest_info.add(workbench.WzIntProperty("MADamage", 1, dest_info))
+            dest_info.add(workbench.WzIntProperty("PDRate", 300, dest_info))
+            dest_info.add(workbench.WzIntProperty("MDRate", 300, dest_info))
+            dest_skills = workbench.WzSubProperty("skill", dest_info)
+            dest_slot = workbench.WzSubProperty("0", dest_skills)
+            for name, value in (("skill", 200), ("level", 223), ("action", 2)):
+                dest_slot.add(workbench.WzIntProperty(name, value, dest_slot))
+            dest_skills.add(dest_slot)
+            dest_info.add(dest_skills)
+            data = workbench.arc.append_property_record(workbench.empty_gms_img_bytes(), (), dest_info)
+            stand = workbench.WzSubProperty("stand")
+            stand.add(workbench._legacy_stub_canvas("0", stand))
+            data = workbench.arc.append_property_record(data, (), stand)
+            for name in ("skill1", "skill2"):
+                action = workbench.WzSubProperty(name)
+                action.add(workbench._legacy_stub_canvas("0", action))
+                data = workbench.arc.append_property_record(data, (), action)
+            client.write_bytes(data)
+            server.write_bytes(
+                b'<imgdir name="8880110.img">\n'
+                + workbench.xml_snippet_for_node(dest_info, b"  ")
+                + workbench.xml_snippet_for_node(stand, b"  ")
+                + b'  <imgdir name="skill1"/>\n  <imgdir name="skill2"/>\n'
+                + b'</imgdir>\n'
+            )
+            original_root = workbench._ROOT
+            workbench._ROOT = repo
+            try:
+                workbench.copy_tms_node_with_server_sync(client, source, "info")
+            finally:
+                workbench._ROOT = original_root
+            copied = workbench._verified_img_from_bytes(client, client.read_bytes())
+            self.assertEqual(int(copied.root.get("info/PDDamage").value), 0)
+            self.assertEqual(int(copied.root.get("info/MDDamage").value), 0)
+            self.assertEqual(int(copied.root.get("info/skill/0/skill").value), 100)
+            self.assertEqual(int(copied.root.get("info/skill/1/skill").value), 101)
+            self.assertEqual(int(copied.root.get("info/PDRate").value), 0)
+            self.assertEqual(int(copied.root.get("info/MDRate").value), 0)
+            self.assertIsNone(copied.root.get("info/skill/2"))
+            xml_root = workbench.ET.parse(server).getroot()
+            xml_info = next(child for child in xml_root if child.get("name") == "info")
+            xml_skill = next(child for child in xml_info if child.get("name") == "skill")
+            self.assertEqual(
+                [slot.find("int[@name='skill']").get("value") for slot in xml_skill],
+                ["100", "101"],
+            )
+
+    def test_mob_copy_keeps_companion_uols_when_target_exists_in_a(self) -> None:
+        source = workbench._TMS_DATA / "Mob/_Canvas/8880100.img"
+        project_client = workbench._ROOT / "clien/Data/Mob/8880110.img"
+        if not source.is_file() or not project_client.is_file():
+            self.skipTest("Damien Canvas or 8880110 baseline is unavailable")
+        image = workbench.load_image(source)
+        client_image = workbench.load_image(project_client)
+        self.assertIsNotNone(client_image.root.get("stand/0"))
+        attack = image.root.get("attack1")
+        clone, _materializer, stats = workbench.clone_compatible_mob_node(
+            attack, image, source, client_image=client_image, copied_root="attack1",
+        )
+        self.assertGreaterEqual(stats["uolsKept"], 8)
+        uols = [child for child in clone.children() if isinstance(child, workbench.WzUolProperty)]
+        self.assertGreaterEqual(len(uols), 8)
+        self.assertIn("../stand/0", [str(child.value).replace("\\", "/") for child in uols])
+        self.assertTrue(all(child.name.isdigit() for child in clone.children() if child.name != "info"))
+        digit_names = sorted(int(child.name) for child in clone.children() if child.name.isdigit())
+        self.assertEqual(digit_names, list(range(len(digit_names))))
+        self.assertNotIn("_outlink", [child.name for child in clone.get("0").children()] if clone.get("0") else [])
+
+        synthetic = workbench.companion_uol_property(source, "attack1/35")
+        self.assertIsInstance(synthetic, workbench.WzUolProperty)
+        kept, _materializer, uol_stats = workbench.clone_compatible_mob_node(
+            synthetic, image, source, client_image=client_image, copied_root="attack1/35",
+        )
+        self.assertIsInstance(kept, workbench.WzUolProperty)
+        self.assertEqual(str(kept.value), "../stand/0")
+        self.assertGreaterEqual(uol_stats["uolsKept"], 1)
+
+        with tempfile.TemporaryDirectory(prefix=".copy-attack1-uol-", dir=workbench._HERE) as directory:
+            repo = Path(directory)
+            client = repo / "clien/Data/Mob/8880110.img"
+            server = repo / "gms-server/wz/Mob.wz/8880110.img.xml"
+            client.parent.mkdir(parents=True)
+            server.parent.mkdir(parents=True)
+            client.write_bytes(project_client.read_bytes())
+            server.write_bytes((workbench._ROOT / "gms-server/wz/Mob.wz/8880110.img.xml").read_bytes())
+            original_root = workbench._ROOT
+            workbench._ROOT = repo
+            try:
+                result = workbench.copy_tms_node_with_server_sync(client, source, "attack1")
+            finally:
+                workbench._ROOT = original_root
+            self.assertGreaterEqual(result["uolsKept"], 8)
+            copied_attack = workbench.load_image(client).root.get("attack1")
+            uols = [
+                child for child in copied_attack.children()
+                if isinstance(child, workbench.WzUolProperty)
+            ]
+            self.assertTrue(uols)
+            self.assertIn("../stand/0", [str(child.value).replace("\\", "/") for child in uols])
+
     def test_compare_api_loads_tms_nodes_when_main_file_is_missing(self) -> None:
         tms_source = workbench._TMS_DATA / "Map/Map/Map4/450002011.img"
         if not tms_source.is_file():
@@ -1213,12 +2071,14 @@ class MobRealResourceTests(unittest.TestCase):
     CANVAS_STORE = ("Mob", "_Canvas", "8880140.img")
 
     def _comparison(self) -> Path:
-        source = workbench.resolve_repo_path(
-            workbench.mob_source_options(self.MOB_ID)["comparisonPath"]
-        )
-        if not source.is_file():
+        options = workbench.mob_source_options(self.MOB_ID)
+        source = next((item for item in options["sources"] if item["kind"] == "ms"), None)
+        if source is None:
+            self.skipTest("TMS Lucid MS record is unavailable")
+        path = workbench.resolve_repo_path(source["path"])
+        if not path.is_file():
             self.skipTest("TMS Lucid comparison source is unavailable")
-        return source
+        return path
 
     def _canvas_store(self) -> Path:
         store = workbench._TMS_DATA.joinpath(*self.CANVAS_STORE)
@@ -1590,6 +2450,97 @@ class MobRealResourceTests(unittest.TestCase):
                 workbench._load_image_cached.cache_clear()
 
 
+class ServerControlHelpTests(unittest.TestCase):
+    def test_skill2_uses_spawn_visual_template_and_lists_8880112(self) -> None:
+        from map_mob import server_control_help
+
+        rows = [
+            {"path": "info/skill/1/skill", "left": {"value": 101}},
+            {"path": "info/skill/1/action", "left": {"value": 2}},
+            {"path": "info/skill/1/level", "left": {"value": 1}},
+            {"path": "skill2", "left": {"type": "imgdir"}},
+            {"path": "attack2/info/type", "left": {"value": 2}},
+            {"path": "attack2/info/ball/0", "left": {"type": "canvas"}},
+        ]
+        help_data = server_control_help.help_for("skill2", rows, "8880110")
+        self.assertEqual(help_data["template"]["id"], "spawn_visual")
+        self.assertEqual(help_data["projectedSkill"], 101)
+        self.assertTrue(any(item["name"] == "8880112" for item in help_data["related"]))
+        self.assertGreaterEqual(len(help_data["howToStart"]), 4)
+        ballistic = server_control_help.help_for("attack2", rows, "8880110")
+        self.assertEqual(ballistic["template"]["id"], "ballistic")
+        self.assertEqual(ballistic["attackIndex"], 1)
+        self.assertEqual(help_data["mobSkill"]["skillId"], 101)
+        self.assertEqual(help_data["mobSkill"]["nodePath"], "101/level/1")
+        self.assertEqual(help_data["mobSkill"]["advice"]["verdict"], "keep")
+        self.assertFalse(help_data["mobSkill"]["advice"]["edit"])
+
+        fsm_rows = [
+            {"path": "attack2/info/onlyFsm", "right": {"value": 1}},
+            {"path": "attack2/info/hit/0", "right": {"type": "canvas"}},
+        ]
+        fsm = server_control_help.help_for("attack2", fsm_rows, "8880110")
+        self.assertEqual(fsm["template"]["id"], "fsm_pose")
+        self.assertFalse(any(item["kind"] == "ball" for item in fsm["related"]))
+        skill2 = server_control_help.help_for("skill2", rows, "8880110")
+        self.assertEqual(skill2["template"]["id"], "spawn_visual")
+        self.assertTrue(skill2["timeline"])
+        self.assertIn("0–9", skill2["timeline"][1])
+        self.assertIn("23–30", server_control_help.action_frame_meaning("skill2", "31", value="23"))
+        skill4 = server_control_help.help_for("skill4", rows, "8880110")
+        self.assertTrue(skill4["timeline"])
+        self.assertIn("skill3", skill4["timeline"][1])
+        self.assertIn("skill3/0", server_control_help.action_frame_meaning("skill4", "0"))
+        info_help = server_control_help.help_for("info", rows, "8880110")
+        self.assertEqual(info_help["template"]["id"], "info_copy")
+        self.assertIn("PDDamage", info_help["timeline"][0])
+
+
+class MobSkillResolveTests(unittest.TestCase):
+    def test_maps_id_to_v83_xml_and_tms_canvas_file(self) -> None:
+        from map_mob import mob_skill_resolve
+
+        card = mob_skill_resolve.mapping_card(176, 2, 2, tms_skill_id=142, intercept=True, mob_id="8880110")
+        self.assertEqual(card["typeName"], "AKAYRUM_SCREEN_CRACK_VISUAL")
+        self.assertTrue(card["serverHasLevel"])
+        self.assertEqual(card["nodePath"], "176/level/2")
+        self.assertFalse(card["advice"]["edit"])
+        self.assertTrue(card["tmsCanvas"]["exists"])
+        self.assertIn("142.img", card["tmsCanvas"]["path"])
+
+    def test_modern_tms_id_is_not_copied_into_v83_table(self) -> None:
+        from map_mob import mob_skill_resolve
+
+        card = mob_skill_resolve.mapping_card(277, 1, 1)
+        self.assertEqual(card["advice"]["verdict"], "forbidden")
+        self.assertFalse(card["advice"]["edit"])
+
+    def test_hard_skin_142_is_not_damien_fsm(self) -> None:
+        from map_mob import mob_skill_resolve
+
+        card = mob_skill_resolve.mapping_card(142, 1, 2)
+        self.assertEqual(card["advice"]["verdict"], "skip")
+        self.assertIn("硬皮", card["advice"]["reason"])
+
+    def test_resolve_api_returns_mapping(self) -> None:
+        client = workbench.app.test_client()
+        response = client.get("/api/mob-skill-resolve?skillId=176&level=2&action=2&tmsSkillId=142&intercept=1&mobId=8880110")
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertTrue(payload["ok"])
+        self.assertEqual(payload["nodePath"], "176/level/2")
+        self.assertEqual(payload["advice"]["verdict"], "java-owns")
+
+    def test_help_api_returns_templates(self) -> None:
+        client = workbench.app.test_client()
+        response = client.get("/api/server-control-help?path=skill2&mobId=8880110")
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertTrue(payload["ok"])
+        self.assertEqual(payload["template"]["id"], "spawn_visual")
+        self.assertIn("howToStart", payload)
+
+
 class FileBrowserTests(unittest.TestCase):
     def test_lists_supported_files_and_directories(self) -> None:
         result = workbench.browse_directory("gms-server/wz/Map.wz/Map/Map1")
@@ -1600,6 +2551,19 @@ class FileBrowserTests(unittest.TestCase):
     def test_rejects_directory_outside_home(self) -> None:
         with self.assertRaisesRegex(ValueError, "用户目录"):
             workbench.browse_directory("/tmp")
+
+
+class WorkbenchUiTests(unittest.TestCase):
+    def test_node_detail_lives_in_overlay_not_inspector_column(self) -> None:
+        html = (Path(__file__).resolve().parent / "templates" / "index.html").read_text(encoding="utf-8")
+        self.assertIn('id="nodeDetailDialog"', html)
+        self.assertIn('class="node-detail-overlay"', html)
+        self.assertIn('id="dialogCopyBtn"', html)
+        self.assertLess(html.index('id="inspectorPanel"'), html.index('id="nodeDetailDialog"'))
+        self.assertGreater(html.index('id="inspector"'), html.index('id="nodeDetailDialog"'))
+        inspector = html[html.index('id="inspectorPanel"'):html.index('id="nodeDetailDialog"')]
+        self.assertNotIn('id="inspector"', inspector)
+        self.assertIn("打开节点详情", inspector)
 
 
 if __name__ == "__main__":

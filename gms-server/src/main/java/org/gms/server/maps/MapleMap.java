@@ -71,6 +71,7 @@ import org.gms.server.life.MonsterInformationProvider;
 import org.gms.server.life.MonsterListener;
 import org.gms.server.life.NPC;
 import org.gms.server.life.PlayerNPC;
+import org.gms.server.life.MonsterVacCompat;
 import org.gms.server.life.SpawnPoint;
 import org.gms.server.partyquest.CarnivalFactory;
 import org.gms.server.timer.HuntTaskAutoPublisher;
@@ -138,6 +139,9 @@ public class MapleMap {
     private final List<Runnable> statUpdateRunnables = new ArrayList(50);
     private final List<Rectangle> areas = new ArrayList<>();
     private FootholdTree footholds = null;
+    private final List<Rope> ropes = new ArrayList<>();
+    private boolean swim;
+    private float footholdSpeed = 1.0f;
     private Pair<Integer, Integer> xLimits;  // caches the min and max x's with available footholds
     private final Rectangle mapArea = new Rectangle();
     private final int mapid;
@@ -154,6 +158,7 @@ public class MapleMap {
     private String mapName;
     private String streetName;
     private MapEffect mapEffect = null;
+    private Point monsterVacDest = null;
     private boolean everlast = false;
     private int forcedReturnMap = MapId.NONE;
     private int timeLimit;
@@ -2065,6 +2070,9 @@ public class MapleMap {
     }
 
     public void spawnRevives(final Monster monster) {
+        if (refuseCrashSummon(monster)) {
+            return;
+        }
         monster.setMap(this);
         if (getEventInstance() != null) {
             getEventInstance().registerMonster(monster);
@@ -2332,7 +2340,19 @@ public class MapleMap {
         spawnMonster(monster, 1, false);
     }
 
+    /** 8880102 等旧端一刷就崩的 ID，拦截所有召唤入口。 */
+    private boolean refuseCrashSummon(Monster monster) {
+        if (monster == null || !MobId.crashesOldClientOnSummon(monster.getId())) {
+            return false;
+        }
+        log.warn("refusing crash-on-summon mob {} on map {}", monster.getId(), mapid);
+        return true;
+    }
+
     public void spawnMonster(final Monster monster, int difficulty, boolean isPq) {
+        if (refuseCrashSummon(monster)) {
+            return;
+        }
         if (mobCapacity != -1 && mobCapacity == spawnedMonstersOnMap.get()) {
             return;//PyPQ
         }
@@ -2390,6 +2410,9 @@ public class MapleMap {
     }
 
     public void spawnMonsterWithEffect(final Monster monster, final int effect, Point pos) {
+        if (refuseCrashSummon(monster)) {
+            return;
+        }
         monster.setMap(this);
         Point spos = new Point(pos.x, pos.y - 1);
         spos = calcPointBelow(spos);
@@ -2416,6 +2439,9 @@ public class MapleMap {
     }
 
     public void spawnFakeMonster(final Monster monster) {
+        if (refuseCrashSummon(monster)) {
+            return;
+        }
         monster.setMap(this);
         monster.setFake(true);
         spawnAndAddRangedMapObject(monster, c -> c.sendPacket(PacketCreator.spawnFakeMonster(monster, 0)));
@@ -3080,6 +3106,10 @@ public class MapleMap {
     }
     */
 
+    public Collection<Portal> getPortals() {
+        return Collections.unmodifiableCollection(portals.values());
+    }
+
     public void addPlayerPuppet(Character player) {
         for (Monster mm : this.getAllMonsters()) {
             mm.aggroAddPuppet(player);
@@ -3554,6 +3584,32 @@ public class MapleMap {
         return footholds;
     }
 
+    public void addRope(Rope rope) {
+        if (rope != null) {
+            ropes.add(rope);
+        }
+    }
+
+    public List<Rope> getRopes() {
+        return ropes;
+    }
+
+    public boolean isSwim() {
+        return swim;
+    }
+
+    public void setSwim(boolean swim) {
+        this.swim = swim;
+    }
+
+    public float getFootholdSpeed() {
+        return footholdSpeed;
+    }
+
+    public void setFootholdSpeed(float footholdSpeed) {
+        this.footholdSpeed = footholdSpeed;
+    }
+
     public void setMapPointBoundings(int px, int py, int h, int w) {
         mapArea.setBounds(px, py, w, h);
     }
@@ -3707,6 +3763,84 @@ public class MapleMap {
         for (Character chr : getAllPlayers()) {
             updateMapObjectVisibility(chr, monster);
         }
+    }
+
+    public void pullMonstersTo(Point dest) {
+        Point target = dest;
+        Point below = calcPointBelow(new Point(dest.x, dest.y - 1));
+        if (below != null) {
+            target = new Point(below.x, below.y - 1);
+        }
+        monsterVacDest = target;
+        Foothold fh = footholds.findBelow(target);
+        int fhId = fh != null ? fh.getId() : 0;
+        for (Monster monster : getAllMonsters()) {
+            if (!MonsterVacCompat.isPullable(monster.isAlive(), monster.isFake(), monster.isBoss())) {
+                continue;
+            }
+            Point from = new Point(monster.getPosition());
+            boolean arrived = from.distanceSq(target) <= MonsterVacCompat.SNAP_DISTANCE_SQ;
+            if (!arrived) {
+                Point next = MonsterVacCompat.stepToward(from, target, MonsterVacCompat.PULL_STEP_PX);
+                int stance = MonsterVacCompat.facingStance(from.x, next.x);
+                monster.setStance(stance);
+                if (next.distanceSq(target) <= MonsterVacCompat.SNAP_DISTANCE_SQ && fhId != 0) {
+                    monster.setFh(fhId);
+                }
+                moveMonster(monster, next);
+                broadcastMessage(PacketCreator.moveMonster(
+                        monster.getObjectId(),
+                        false,
+                        -1,
+                        0,
+                        0,
+                        0,
+                        from,
+                        monster.getAbsoluteMovement(
+                                next.x,
+                                next.y,
+                                next.distanceSq(target) <= MonsterVacCompat.SNAP_DISTANCE_SQ ? fhId : 0,
+                                stance,
+                                MonsterVacCompat.MOVE_DURATION_MS),
+                        AbstractAnimatedMapObject.IDLE_MOVEMENT_PACKET_LENGTH));
+            }
+            if (MonsterVacCompat.stunEnabled()) {
+                monster.applyVacStun(MonsterVacCompat.STUN_DURATION_MS, !arrived);
+            } else {
+                monster.cancelVacStun();
+            }
+        }
+    }
+
+    public void clearMonsterVacDest() {
+        for (Monster monster : getAllMonsters()) {
+            monster.cancelVacStun();
+        }
+        monsterVacDest = null;
+    }
+
+    public boolean isMonsterVacLocked(Monster monster) {
+        if (monsterVacDest == null || monster == null) {
+            return false;
+        }
+        return MonsterVacCompat.isPullable(monster.isAlive(), monster.isFake(), monster.isBoss());
+    }
+
+    public void pinMonsterVac(Monster monster) {
+        if (!isMonsterVacLocked(monster)) {
+            return;
+        }
+        Point from = new Point(monster.getPosition());
+        broadcastMessage(PacketCreator.moveMonster(
+                monster.getObjectId(),
+                false,
+                -1,
+                0,
+                0,
+                0,
+                from,
+                monster.getIdleMovement(),
+                AbstractAnimatedMapObject.IDLE_MOVEMENT_PACKET_LENGTH));
     }
 
     public void movePlayer(Character player, Point newPosition) {

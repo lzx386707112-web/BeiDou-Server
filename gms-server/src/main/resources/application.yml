@@ -1,6 +1,11 @@
 server:
   port: 8686
 
+# printStackTrace 只进终端；脚本异常走 SLF4J 后写入本文件。
+logging:
+  file:
+    name: logs/gms-server.log
+
 app:
   vue: http://localhost:8787
   

@@ -10,10 +10,19 @@ import static soloMapling.FreeMarket.ArtificialShopGenerator.random;
 
 public class FMShopInfoManager {
 
+    public static final List<Integer> hiredMerchantItemIds = List.of(5030000, 5030001, 5030002, 5030004, 5030008);
+
     public static List<Integer> henesysRegionFM = new ArrayList<>(List.of(910000001, 910000002, 910000003, 910000004, 910000005, 910000006));
     public static List<Integer> ludiRegionFM = new ArrayList<>(List.of(910000007, 910000008, 910000009, 910000010, 910000011, 910000012));
     public static List<Integer> perionRegionFM = new ArrayList<>(List.of(910000013, 910000014, 910000015, 910000016, 910000017));
     public static List<Integer> elnathRegionFM = new ArrayList<>(List.of(910000018, 910000019, 910000020, 910000021, 910000022));
+
+    public static List<Point> entranceShopCoordinates = new ArrayList<>(List.of(
+            new Point(-271, 34), new Point(-124, 34), new Point(21, 34),
+            new Point(169, 34), new Point(328, 34), new Point(481, 34),
+            new Point(-300, -266), new Point(-133, -266), new Point(18, -266),
+            new Point(166, -266), new Point(319, -266), new Point(477, -266)
+    ));
 
     public static List<Point> henesysShopCoordinates = new ArrayList<>(List.of(
             // 24 Shops

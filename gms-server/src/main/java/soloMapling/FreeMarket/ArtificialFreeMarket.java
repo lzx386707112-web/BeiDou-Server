@@ -3,10 +3,16 @@ package soloMapling.FreeMarket;
 import org.gms.client.Client;
 import org.gms.client.Character;
 import org.gms.client.Job;
+import org.gms.client.inventory.Item;
 import org.gms.net.server.Server;
+import org.gms.net.server.channel.Channel;
+import org.gms.net.server.world.World;
 import org.gms.server.maps.HiredMerchant;
+import org.gms.server.maps.MapleMap;
 import org.gms.server.maps.PlayerShop;
 import org.gms.server.maps.PlayerShopItem;
+import soloMapling.ArtificialPlayer.BotClientHandler;
+import soloMapling.Environment.PlatformSpawner;
 import soloMapling.SoloMaplingConfig;
 import soloMapling.server.ExecutorServiceManager;
 import org.gms.util.PacketCreator;
@@ -17,6 +23,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -55,9 +62,11 @@ import static soloMapling.server.SoloMaplingUtilities.chance;
 
 public class ArtificialFreeMarket {
 
-    static List<Integer> hiredMerchantsList = Arrays.asList(5030000, 5030001, 5030002, 5030004, 5030008, 5030010); // 5030012 - tiki torch
+    static final List<Integer> hiredMerchantsList = FMShopInfoManager.hiredMerchantItemIds;
     private static final Random random = new Random();
     private static final AtomicInteger marketShopCount = new AtomicInteger(0);
+    private static final AtomicInteger nextMerchantOwnerId = new AtomicInteger(800001);
+    private static final ConcurrentHashMap<String, AtomicInteger> shopsByMap = new ConcurrentHashMap<>();
     public static FMShopInfoManager fmInfo = new FMShopInfoManager();
     private record ShopSpot(int mapId, Point position) {}
 
@@ -86,20 +95,78 @@ public class ArtificialFreeMarket {
             debugprint("Free Market region fill disabled by config: " + region);
             return;
         }
-        List<ShopSpot> candidates = new java.util.ArrayList<>();
+        int perRoom = SoloMaplingConfig.marketShopMax();
         for (int mapId : fmInfo.getRegionFMMapId(region)) {
-            for (Point position : fmInfo.getRegionFMSpots(region)) {
-                candidates.add(new ShopSpot(mapId, position));
+            List<Point> spots = new java.util.ArrayList<>(fmInfo.getRegionFMSpots(region));
+            Collections.shuffle(spots, random);
+            int spawned = 0;
+            for (Point position : spots) {
+                if (spawned >= perRoom) {
+                    break;
+                }
+                if (spawnHiredMerchantStore(mapId, position)) {
+                    spawned++;
+                }
             }
         }
-        Collections.shuffle(candidates, random);
-        for (ShopSpot spot : candidates) {
-            if (marketShopCount.get() >= SoloMaplingConfig.marketShopMax()) {
+        debugprint("Free Market shops populated: " + marketShopCount.get());
+    }
+
+    public static void populateFreeMarketEntrance() {
+        MarketBotLog.info("skip hired merchants at FM entrance; shops only in rooms 910000001-012");
+    }
+
+    public static void populateHenesysLayoutRooms(int fromMapId, int toMapId) {
+        populateMarketRooms(fromMapId, toMapId);
+    }
+
+    public static void populateMarketRooms(int fromMapId, int toMapId) {
+        if (!SoloMaplingConfig.fmRegionFillEnabled()) {
+            MarketBotLog.warn("populateMarketRooms skipped; fmRegionFill disabled");
+            return;
+        }
+        MarketBotLog.info("populateMarketRooms {}-{}", fromMapId, toMapId);
+        for (int mapId = fromMapId; mapId <= toMapId; mapId++) {
+            String region = getRegionByMapId(mapId);
+            List<Point> spots;
+            try {
+                spots = fmInfo.getRegionFMSpots(region);
+            } catch (IllegalArgumentException ignored) {
+                spots = FMShopInfoManager.henesysShopCoordinates;
+            }
+            spawnShopsOnMap(mapId, spots, spots.size());
+            spawnVisibleShopkeepers(mapId, spots, 2);
+        }
+    }
+
+    private static void spawnShopsOnMap(int mapId, List<Point> sourceSpots, int cap) {
+        List<Point> spots = new java.util.ArrayList<>(sourceSpots);
+        Collections.shuffle(spots, random);
+        int spawned = 0;
+        for (Point position : spots) {
+            if (spawned >= cap) {
                 break;
             }
-            spawnHiredMerchantStore(spot.mapId(), spot.position());
+            if (spawnHiredMerchantStore(mapId, position)) {
+                spawned++;
+            }
         }
-        debugprint("Free Market shops populated: " + marketShopCount.get() + "/" + SoloMaplingConfig.marketShopMax());
+        System.out.println("[ArtificialFreeMarket] hired merchants on " + mapId + ": " + spawned + "/" + Math.min(cap, spots.size()));
+        MarketBotLog.info("hired merchants map={} spawned={}/{}", mapId, spawned, Math.min(cap, spots.size()));
+    }
+
+    private static void spawnVisibleShopkeepers(int mapId, List<Point> sourceSpots, int count) {
+        List<Point> spots = new java.util.ArrayList<>(sourceSpots);
+        Collections.shuffle(spots, random);
+        int spawned = 0;
+        for (Point position : spots) {
+            if (spawned >= count) {
+                break;
+            }
+            createBotShopAtLocation(position, mapId);
+            spawned++;
+        }
+        MarketBotLog.info("shopkeepers queued map={} count={}", mapId, spawned);
     }
 
     public static void populateFreeMarketRoom(int mapId) {
@@ -139,31 +206,83 @@ public class ArtificialFreeMarket {
 //    }
 
 
-    private static void spawnHiredMerchantStore(int mapId, Point position) {
-        if (!reserveMarketShopSlot()) {
-            return;
+    private static boolean spawnHiredMerchantStore(int mapId, Point position) {
+        if (mapId == 910000000) {
+            return false;
+        }
+        boolean any = false;
+        for (Channel channel : marketChannels()) {
+            if (spawnHiredMerchantStoreOnChannel(channel, mapId, position)) {
+                any = true;
+            }
+        }
+        return any;
+    }
+
+    private static List<Channel> marketChannels() {
+        Client source = BotClientHandler.ensureStandaloneClient();
+        World world = Server.getInstance().getWorld(source.getWorld());
+        if (world != null && world.getChannels() != null && !world.getChannels().isEmpty()) {
+            return world.getChannels();
+        }
+        Channel fallback = Server.getInstance().getChannel(source.getWorld(), source.getChannel());
+        return fallback == null ? List.of() : List.of(fallback);
+    }
+
+    private static boolean spawnHiredMerchantStoreOnChannel(Channel channel, int mapId, Point position) {
+        if (channel == null) {
+            return false;
+        }
+        if (!reserveMarketShopSlot(channel.getId(), mapId)) {
+            return false;
         }
         if (calculateSkippedSpot(mapId)) {
-            releaseMarketShopSlot();
+            releaseMarketShopSlot(channel.getId(), mapId);
+            return false;
+        }
+        try {
+            MapleMap map = channel.getMapFactory().getMap(mapId);
+            Point grounded = PlatformSpawner.snapToGround(map, position);
+            if (grounded == null) {
+                grounded = new Point(position);
+            }
+
+            int ownerId = nextMerchantOwnerId.getAndIncrement();
+            String ownerName = getRandomShopOwnerIGN();
+            int shopItemId = hiredMerchantsList.get(random.nextInt(hiredMerchantsList.size()));
+            Client cm = Client.createMock();
+            cm.setWorld(channel.getWorld());
+            cm.setChannel(channel.getId());
+            Character newchar = Character.getDefault(cm);
+            newchar.setID(ownerId);
+            newchar.setName(ownerName);
+            cm.setPlayer(newchar);
+            newchar.setPosition(grounded);
+            newchar.setMap(map);
+
+            generateHiredMerchantShopData(newchar, ownerName, ownerId, "", shopItemId, mapId);
+            ensureShopHasItems(newchar.getHiredMerchant());
+            HiredMerchant spawned = newchar.getHiredMerchant();
+            addMerchantToChannel(newchar, channel);
+            MarketBotLog.info("shop ok map={} ch={} owner={} item={} pos={},{} oid={}",
+                    mapId, channel.getId(), ownerName, shopItemId, grounded.x, grounded.y,
+                    spawned == null ? -1 : spawned.getObjectId());
+            return true;
+        } catch (Exception e) {
+            releaseMarketShopSlot(channel.getId(), mapId);
+            MarketBotLog.error("hired merchant spawn failed map=" + mapId + " ch=" + channel.getId(), e);
+            return false;
+        }
+    }
+
+    private static void ensureShopHasItems(HiredMerchant merchant) {
+        if (merchant == null || !merchant.getItems().isEmpty()) {
             return;
         }
-
-        int world = 0;
-        int channel = 1;
-
-        int ownerId = 20000 + random.nextInt(10001);
-        String ownerName = getRandomShopOwnerIGN();
-        String description = "";
-
-        int shop_item_id = hiredMerchantsList.get(random.nextInt(hiredMerchantsList.size())); // 5030000;
-        Client cm = Client.createMock();
-        Character newchar = Character.getDefault(cm);
-        newchar.setPosition(position);
-        newchar.setMap(Server.getInstance().getChannel(world, channel).getMapFactory().getMap(mapId));
-
-        generateHiredMerchantShopData(newchar, ownerName, ownerId, description, shop_item_id, mapId);
-
-        addMerchantToChannel(newchar);
+        Item potion = new Item(2000002, (short) 1, (short) 100);
+        merchant.addItem(new PlayerShopItem(potion, (short) 20, 1));
+        Item orange = new Item(2000001, (short) 1, (short) 100);
+        merchant.addItem(new PlayerShopItem(orange, (short) 20, 1));
     }
 
     private static HiredMerchantArtificial generateHiredMerchantShopData(Character newchar, String ownerName, int ownerId, String description, int shop_item_id, int mapId) {
@@ -201,6 +320,7 @@ public class ArtificialFreeMarket {
         applySpecialShopType(newMerch);
 
         appendRoomNumber(newMerch);
+        ensureShopHasItems(newMerch);
         return newMerch;
     }
 
@@ -332,16 +452,15 @@ public class ArtificialFreeMarket {
     }
 
     private static HiredMerchantArtificial createMerchantObject(Character newchar, String ownerName, int ownerId, String description, int shopItemId) {
-        // STEP 1 - CREATE MERCHANT OBJECT
         HiredMerchantArtificial merchant = new HiredMerchantArtificial(newchar, description, shopItemId, ownerId, ownerName);
         newchar.setHiredMerchant(merchant);
-        newchar.getWorldServer().registerHiredMerchant(merchant);
-        newchar.getWorldServer().getChannel(1).addHiredMerchant(newchar.getId(), merchant);
+        World world = Server.getInstance().getWorld(newchar.getClient().getWorld());
+        world.registerHiredMerchant(merchant);
+        world.getChannel(newchar.getClient().getChannel()).addHiredMerchant(ownerId, merchant);
         return merchant;
     }
 
-    private static HiredMerchant addMerchantToChannel(Character newchar) {
-        // Step 3
+    private static HiredMerchant addMerchantToChannel(Character newchar, Channel channel) {
         HiredMerchant merchant = newchar.getHiredMerchant();
         newchar.setHasMerchant(true);
         merchant.setOpen(true);
@@ -362,22 +481,21 @@ public class ArtificialFreeMarket {
     }
 
     private static boolean calculateSkippedSpot(int mapId) {
-        // Map to store regions and their probabilities
+        if (mapId >= 910000000 && mapId <= 910000012) {
+            return false;
+        }
         Map<String, Double> regionProbabilities = Map.of(
                 "henesys", 0.002,
                 "ludi", 0.04,
                 "perion", 0.10,
                 "elnath", 0.15
         );
-
-        // Iterate through the map to find the matching region and apply the probability
         for (Map.Entry<String, Double> entry : regionProbabilities.entrySet()) {
             if (fmInfo.getRegionFMMapId(entry.getKey()).contains(mapId)) {
                 return Math.random() < entry.getValue();
             }
         }
-
-        return false; // Default case
+        return false;
     }
 
     private static void applySpecialShopType(HiredMerchantArtificial merchant) {
@@ -385,18 +503,18 @@ public class ArtificialFreeMarket {
         int roll = random.nextInt(10_000);
         if (roll == 0) { // 1 in 10,000 chance
             setOneMesoShop(merchant);
-            setMerchantDescription(merchant, " 1 MESO SHOP!!!");
+            setMerchantDescription(merchant, "一金币店");
             return;
         }
         if (roll < 100) { // 100 in 10,000 chance (1%)
             // Quitting Sale
             applyQuittingSaleDiscount(merchant);
-            appendMerchantDescription(merchant, " QUITTING SALE");
+            appendMerchantDescription(merchant, "清仓");
             return;
         }
         if (roll < 800) { // 800 in 10,000 chance (7%)
             applyCheapSaleDiscount(merchant);
-            appendMerchantDescription(merchant, " Cheap");
+            appendMerchantDescription(merchant, "低价");
             return;
         }
     }
@@ -419,7 +537,7 @@ public class ArtificialFreeMarket {
     // Bot Store Permits
 
     public static void BotPlayerStorePermit(Character fakechar) {
-        String desc = "Test";
+        String desc = "小店";
         Integer shopItemId = getRandomStorePermitId();
         PlayerShop ps = new PlayerShop(fakechar, desc, shopItemId);
         fakechar.setPlayerShop(ps);
@@ -469,53 +587,26 @@ public class ArtificialFreeMarket {
 //    private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
     public static void createBotShopAtLocation(Point position, int mapId) {
+        if (mapId == 910000000) {
+            MarketBotLog.info("skip bot shop at FM entrance");
+            return;
+        }
         if (!SoloMaplingConfig.fmRegionFillEnabled()) {
             debugprint("Free Market bot shop disabled by config: " + mapId);
             return;
         }
-        if (!reserveMarketShopSlot()) {
-            return;
-        }
-        if (BotGeneration.environmentBotLimitReached()) {
-            debugprint("Free Market bot shop skipped; environment bot limit reached.");
-            releaseMarketShopSlot();
+        int channelId = BotClientHandler.ensureStandaloneClient().getChannel();
+        if (!reserveMarketShopSlot(channelId, mapId)) {
             return;
         }
         getExecutorService().submit(() -> {
-            if (BotGeneration.environmentBotLimitReached()) {
-                debugprint("Free Market bot shop skipped; environment bot limit reached.");
-                releaseMarketShopSlot();
-                return;
-            }
             debugprint("Making shop at: " + mapId + ", " + position);
-
-//            int botId = BotGeneration.createBot(position, getMapleMapById(mapId));
-//            // Poll for bot readiness - check every 100ms up to 3 seconds
-//            Character fakechar2 = null;
-//            for (int i = 0; i < 30; i++) { // 30 * 100ms = 3000ms max
-//                try {
-//                    Thread.sleep(100);
-//                    fakechar2 = BotHelpers.getCharFromChannelStorage(botId);
-//                    if (fakechar2 != null) {
-//                        debugprint("Bot " + botId + " ready after " + ((i + 1) * 100) + "ms");
-//                        break; // Bot is ready, proceed immediately
-//                    }
-//                } catch (InterruptedException e) {
-//                    Thread.currentThread().interrupt();
-//                    return;
-//                }
-//            }
-
-            Character fakechar2 = createBotPollReadiness(position, mapId);
+            Character fakechar2 = createBotPollReadiness(position, mapId, true);
             if (fakechar2 == null) {
                 System.err.println("Bot not ready after 3 seconds, skipping store");
-                releaseMarketShopSlot();
+                releaseMarketShopSlot(channelId, mapId);
                 return;
             }
-
-            // The spawn drop-down/turn-around choreography plays asynchronously,
-            // so wait it out before opening the store - a shop popping open while
-            // the bot is still mid-drop looks broken.
             getScheduledExecutorService().schedule(() -> runAsync(() -> {
                 BotPlayerStorePermit(fakechar2);
 
@@ -526,24 +617,31 @@ public class ArtificialFreeMarket {
                     getScheduledExecutorService().schedule(() -> botSitChair(fakechar2, getRandomChairId()),
                             500, TimeUnit.MILLISECONDS);
                 }
-            }), BotGeneration.SPAWN_CHOREOGRAPHY_MAX_MS, TimeUnit.MILLISECONDS);
+            }), 1200, TimeUnit.MILLISECONDS);
         });
     }
 
-    private static boolean reserveMarketShopSlot() {
+    private static boolean reserveMarketShopSlot(int channelId, int mapId) {
+        AtomicInteger perMap = shopsByMap.computeIfAbsent(channelId + ":" + mapId, ignored -> new AtomicInteger());
+        int cap = Math.max(SoloMaplingConfig.marketShopMax(), 24);
         while (true) {
-            int current = marketShopCount.get();
-            if (current >= SoloMaplingConfig.marketShopMax()) {
-                debugprint("Free Market shop limit reached: " + SoloMaplingConfig.marketShopMax());
+            int current = perMap.get();
+            if (current >= cap) {
+                debugprint("Free Market shop limit reached for map " + mapId + ": " + cap);
                 return false;
             }
-            if (marketShopCount.compareAndSet(current, current + 1)) {
+            if (perMap.compareAndSet(current, current + 1)) {
+                marketShopCount.incrementAndGet();
                 return true;
             }
         }
     }
 
-    private static void releaseMarketShopSlot() {
+    private static void releaseMarketShopSlot(int channelId, int mapId) {
+        AtomicInteger perMap = shopsByMap.get(channelId + ":" + mapId);
+        if (perMap != null) {
+            perMap.updateAndGet(value -> Math.max(0, value - 1));
+        }
         marketShopCount.updateAndGet(value -> Math.max(0, value - 1));
     }
 }

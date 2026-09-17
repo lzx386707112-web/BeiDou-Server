@@ -1,5 +1,7 @@
 package soloMapling.Environment;
 
+import org.gms.server.maps.MapleMap;
+
 import java.awt.Point;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -30,13 +32,26 @@ public class PlatformSpawner {
     private static final double OFFSET_VARIANCE = 0.3; // 30% variance from center
 
     /**
-     * Finds a good unoccupied point on the platform, considering existing objects.
-     * Automatically handles FLAT vs SLOPED platforms.
-     *
-     * @param platform         The platform
-     * @param occupiedPositions List of currently occupied positions on this platform
-     * @return A Point representing a good location that statistically is less occupied
+     * Drop a recorded CSV / fallback point onto the real foothold so bots do not
+     * spawn in mid-air when the guide Y is a few pixels off.
      */
+    public static Point snapToGround(MapleMap map, Point raw) {
+        if (raw == null) {
+            return null;
+        }
+        if (map == null) {
+            return new Point(raw);
+        }
+        Point below = map.getPointBelow(new Point(raw.x, raw.y - 12));
+        if (below == null && map.getFootholds() != null) {
+            below = map.getPointBelow(new Point(raw.x, map.getFootholds().getY1()));
+        }
+        if (below == null) {
+            return new Point(raw);
+        }
+        return new Point(below.x, below.y - 1);
+    }
+
     public static Point findUnoccupiedPoint(Platform platform, List<Point> occupiedPositions) {
         if (platform.isSloped()) {
             return findUnoccupiedPointSloped(platform, occupiedPositions);

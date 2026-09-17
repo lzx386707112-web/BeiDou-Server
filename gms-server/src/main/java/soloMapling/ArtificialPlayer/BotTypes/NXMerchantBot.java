@@ -3,14 +3,14 @@ package soloMapling.ArtificialPlayer.BotTypes;
 import org.gms.client.Character;
 import org.gms.server.Trade;
 import soloMapling.ArtificialPlayer.BotCommandsPack.SocialCommands;
-import soloMapling.ArtificialPlayer.BotMessagingSystem.ChatMessage;
-import soloMapling.ArtificialPlayer.BotMessagingSystem.MessageQueue;
 import soloMapling.ArtificialPlayer.BotSM;
 import soloMapling.ArtificialPlayer.BotTradeSystem.BotTradeSM;
+import soloMapling.FreeMarket.MarketBotAmbient;
+import soloMapling.SoloMaplingConfig;
+import soloMapling.server.MarketBotDirector;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 import static soloMapling.ArtificialPlayer.BotCommandsPack.MapleMessengerCommands.botLeaveMessenger;
 import static soloMapling.ArtificialPlayer.BotCommandsPack.MapleMessengerCommands.botSendChatFull;
@@ -24,7 +24,6 @@ import static soloMapling.ArtificialPlayer.BotTypeManager.convertBotType;
 import static soloMapling.BotLogger.log;
 import static soloMapling.Environment.EnvironmentManager.botMoveToPlatformAnyUnoccupiedSpot;
 import static soloMapling.Environment.EnvironmentManager.getCurrentPlatform;
-import static soloMapling.Environment.EnvironmentManager.getMainPlatformIds;
 import static soloMapling.FreeMarket.ArtificialShopGenerator.generateItem;
 import static soloMapling.server.NXCodeManager.createCompleteNXCode;
 import static soloMapling.server.NXCodeManager.generateGiftCardCode;
@@ -55,6 +54,11 @@ public class NXMerchantBot extends BotSM {
         botType = "MerchantBot";
     }
 
+    @Override
+    public boolean usesSharedMarketTick() {
+        return true;
+    }
+
     private void setupNXSale() {
         // Use a filler item as the visual representation in trade
         org.gms.client.inventory.Item filler = generateItem(4031865, 1, 100);
@@ -69,15 +73,17 @@ public class NXMerchantBot extends BotSM {
 
     private void advertise() {
         List<String> messages = List.of(
-                "Selling 10k nx cash code, 50m TRADE ME!",
-                "S> 10k NX code 50m, no lowballs",
-                "NX CODE 10k >> 50m trade me!! legit only",
-                "10k nx cash code for 50m, Pros only",
-                "SELLING NX 10K CODE!! 50m!! no scammers",
-                "S>> 10,000 NX code, 50m, serious offers only",
-                "got nx codes, 10k for 50m, trade me fast"
+                "出1万点券兑换码，五千万金币，交易我！",
+                "出点券码一万点，五千万，别刀太狠。",
+                "点券码一万点换五千万，只接受交易。",
+                "正经出点券码，一万点五千万，要的密。",
+                "出点券一万点，五千万，先到先得。",
+                "卖点券码，一万点五千万，认真的来。",
+                "有点券码，一万点换五千万，交易窗见。"
         );
-        SocialCommands.BotSpeak(getChr(), getRandomElement(messages));
+        if (MarketBotDirector.get().trySpeak(getChr())) {
+            SocialCommands.BotSpeak(getChr(), getRandomElement(messages));
+        }
     }
 
     private void deliverNXCode() {
@@ -86,7 +92,7 @@ public class NXMerchantBot extends BotSM {
             return;
         }
 
-        SocialCommands.BotSpeak(getChr(), "messaging you.");
+        SocialCommands.BotSpeak(getChr(), "我密你了。");
         sendMessengerInviteComplete(getChr(), getLastTradedCharacter());
 
         boolean accepted = waitForCondition(
@@ -97,14 +103,14 @@ public class NXMerchantBot extends BotSM {
             String nxCode = generateGiftCardCode();
             createCompleteNXCode(nxCode);
 
-            botSendChatFull(getChr(), "here is the 10k nx code... be sure to write it down. Remember to NOT include dashes", 3000);
+            botSendChatFull(getChr(), "一万点的兑换码给你，记下来，不要带横杠。", 3000);
             botSendChatFull(getChr(), nxCode, 7000);
-            botSendChatFull(getChr(), "enjoy it!", 2000);
+            botSendChatFull(getChr(), "用得开心！", 2000);
 
             sleepAmountSeconds(2000);
             botLeaveMessenger(getChr());
         } else {
-            SocialCommands.BotSpeak(getChr(), "You didn't accept the messenger invite... too bad noob.");
+            SocialCommands.BotSpeak(getChr(), "你没接聊天邀请，那就算了。");
         }
 
         resetLastTradeResult();
@@ -112,6 +118,9 @@ public class NXMerchantBot extends BotSM {
     }
 
     private boolean tryPlatformShuffle() {
+        if (!SoloMaplingConfig.marketWanderEnabled()) {
+            return false;
+        }
         if (rollChanceInverse(15)) {
             botMoveToPlatformAnyUnoccupiedSpot(getChr(), getCurrentPlatform(getChr()));
             if (rollChanceInverse(2)) nudgeAwayFromOverlap(getChr());
@@ -141,7 +150,13 @@ public class NXMerchantBot extends BotSM {
         if (getState() == BotState.TRADING) {
             return;
         }
-        // Skip straight to delivery if trade completed while we were in TRADING state
+        MarketBotAmbient.act(this);
+        if (MarketBotAmbient.isSitting(getChr()) || isBusy()) {
+            if (MarketBotAmbient.isSitting(getChr())) {
+                advertise();
+            }
+            return;
+        }
         if (getLastTradeResult() == Trade.TradeResult.SUCCESSFUL && nxState != NXState.DELIVER_CODE && nxState != NXState.CONVERT_BACK) {
             nxState = NXState.DELIVER_CODE;
         }
@@ -167,7 +182,6 @@ public class NXMerchantBot extends BotSM {
             case CHECK_TRADES:
                 checkForTrades();
                 advertiseCycles++;
-                tryPlatformShuffle();
                 if (getLastTradeResult() == Trade.TradeResult.SUCCESSFUL) {
                     nxState = NXState.DELIVER_CODE;
                 } else if (advertiseCycles >= MAX_ADVERTISE_CYCLES) {
@@ -197,10 +211,5 @@ public class NXMerchantBot extends BotSM {
 
     @Override
     public void processMessages() {
-        try {
-            ChatMessage message = MessageQueue.getInstance().getMessageWithTimeout("secondary", 1, TimeUnit.SECONDS);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
     }
 }

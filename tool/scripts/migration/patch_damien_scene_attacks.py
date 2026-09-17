@@ -412,10 +412,16 @@ def patch_effect() -> None:
     existing = image.root.child("customBossDemian")
     if not isinstance(existing, WzSubProperty):
         return
-    if is_video_marker(existing.child("scene")) and is_video_marker(existing.child("groundBurst")):
+    if is_video_marker(existing.child("scene")) and (
+        is_video_marker(existing.child("groundBurst"))
+        or (
+            existing.child("groundBurst") is not None
+            and len(visible_frames(existing.child("groundBurst"))) >= 8
+        )
+    ):
         return
     raise RuntimeError(
-        "customBossDemian is still Canvas overlays; run tool/client-video/export_damien_boss_mcvs.py"
+        "customBossDemian overlays must not be restored; Damien MCV playback was removed"
     )
 
 

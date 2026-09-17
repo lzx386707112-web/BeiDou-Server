@@ -1,6 +1,5 @@
 package soloMapling.itemPool;
 
-import java.io.FileReader;
 import java.util.*;
 
 import com.esotericsoftware.yamlbeans.YamlReader;
@@ -35,16 +34,20 @@ public class ItemDatabase {
                 "useables.yaml"); // Add more options as needed
 
         for (String itemPool : itemPools) {
-            String yamlFile = "src/main/java/soloMapling/itemPool/itemConfig/" + itemPool;
-            YamlReader reader = new YamlReader(new FileReader(yamlFile));
-            Map<String, List<ItemNode>> thiefitems = (Map<String, List<ItemNode>>) reader.read();
+            try (java.io.Reader source = soloMapling.server.SoloMaplingResource.openReader("soloMapling/itemPool/itemConfig/" + itemPool)) {
+                YamlReader reader = new YamlReader(source);
+                Map<String, List<ItemNode>> thiefitems = (Map<String, List<ItemNode>>) reader.read();
+                if (thiefitems == null) {
+                    continue;
+                }
 
-            for (Map.Entry<String, List<ItemNode>> entry : thiefitems.entrySet()) {
-                String itemType = entry.getKey();
-                List<ItemNode> itemList = thiefitems.get(itemType);
+                for (Map.Entry<String, List<ItemNode>> entry : thiefitems.entrySet()) {
+                    String itemType = entry.getKey();
+                    List<ItemNode> itemList = thiefitems.get(itemType);
 
-                for (Object item : itemList) {
-                    db.processItem((Map<String, Object>) item);
+                    for (Object item : itemList) {
+                        db.processItem((Map<String, Object>) item);
+                    }
                 }
             }
         }

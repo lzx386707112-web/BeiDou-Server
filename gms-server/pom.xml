@@ -47,6 +47,8 @@
         <mockito.version>5.11.0</mockito.version> <!-- Unit test -->
         <flyway-mysql.version>9.15.2</flyway-mysql.version>
         <lombok.version>1.18.30</lombok.version>
+        <!-- package_server_jar.sh overrides this to isolate javac from IDE target/classes. -->
+        <beidou.build.directory>target</beidou.build.directory>
         <fastjson2.version>2.0.47</fastjson2.version>
         <mybatis-flex.version>1.8.9</mybatis-flex.version>
         <swagger.version>2.5.0</swagger.version>
@@ -258,6 +260,7 @@
     </dependencies>
 
     <build>
+        <directory>${beidou.build.directory}</directory>
         <finalName>BeiDou</finalName>
         <resources>
             <resource>
@@ -269,6 +272,10 @@
                     <include>soloMapling/ArtificialPlayer/BotMovementSystem/movementDataPackets/**</include>
                     <include>soloMapling/ArtificialPlayer/BotDecoratorSystem/*.yaml</include>
                     <include>soloMapling/ArtificialPlayer/BotDialoguePack/*.yaml</include>
+                    <include>soloMapling/ArtificialPlayer/BotTownSystem/*.yaml</include>
+                    <include>soloMapling/itemPool/itemConfig/*.yaml</include>
+                    <include>soloMapling/FreeMarket/FMNameDesc/**</include>
+                    <include>soloMapling/server/*.yaml</include>
                 </includes>
             </resource>
         </resources>
@@ -279,7 +286,34 @@
                 <version>3.13.0</version>
                 <configuration>
                     <release>21</release>
+                    <encoding>UTF-8</encoding>
                     <parameters>true</parameters>
+                    <!-- Incremental javac + mybatis-flex can emit 0-byte .class files. -->
+                    <useIncrementalCompilation>false</useIncrementalCompilation>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>${lombok.version}</version>
+                        </path>
+                        <path>
+                            <groupId>com.mybatis-flex</groupId>
+                            <artifactId>mybatis-flex-processor</artifactId>
+                            <version>${mybatis-flex.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-clean-plugin</artifactId>
+                <version>3.4.0</version>
+                <configuration>
+                    <filesets>
+                        <fileset>
+                            <directory>${project.build.directory}/generated-sources/annotations</directory>
+                        </fileset>
+                    </filesets>
                 </configuration>
             </plugin>
             <plugin>

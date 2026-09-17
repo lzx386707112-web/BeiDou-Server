@@ -43,6 +43,16 @@ const GAME: AppRouteRecordRaw = {
       },
     },
     {
+      path: 'botControl',
+      name: 'BotControl',
+      component: () => import('@/views/game/botControl/index.vue'),
+      meta: {
+        locale: 'menu.game.botControl',
+        requiresAuth: true,
+        roles: ['admin'],
+      },
+    },
+    {
       path: 'equipmentCatalog',
       name: 'EquipmentCatalog',
       component: () => import('@/views/game/equipmentCatalog/index.vue'),

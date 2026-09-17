@@ -152,7 +152,7 @@ function updateDefaultPaths(id) {
     $("rightPath").value = `${tmsDataRoot}/Map/Map/${bucket}/${id}.img`;
   } else {
     $("leftPath").value = `clien/Data/Mob/${id}.img`;
-    $("rightPath").value = `gms-server/wz/Mob.wz/${id}.img.xml`;
+    $("rightPath").value = `${tmsDataRoot}/Mob/_Canvas/${id}.img`;
   }
 }
 
@@ -266,6 +266,7 @@ function clearWorkspace() {
   $("exportBtn").disabled = true;
   $("editActions").hidden = true;
   $("operationResult").hidden = true;
+  closeNodeDetailDialog();
 }
 
 async function searchCatalog() {
@@ -310,6 +311,32 @@ function buildTreeIndex() {
   }
 }
 
+function isLinkNode(meta) {
+  if (!meta) return false;
+  const type = String(meta.type || "").toLowerCase();
+  const name = String(meta.name || "");
+  return type === "uol" || name === "_inlink" || name === "_outlink";
+}
+
+function linkTarget(meta) {
+  if (!meta) return "";
+  if (meta.value !== undefined && meta.value !== null && typeof meta.value !== "object") return String(meta.value);
+  if (meta.target) return String(meta.target);
+  return "";
+}
+
+function resolveUolTarget(fromPath, target) {
+  if (!target) return "";
+  const parts = fromPath.split("/").filter(Boolean);
+  parts.pop();
+  for (const segment of String(target).replaceAll("\\", "/").split("/")) {
+    if (!segment || segment === ".") continue;
+    if (segment === "..") parts.pop();
+    else parts.push(segment);
+  }
+  return parts.join("/");
+}
+
 function rowLabel(row) {
   const meta = row.left || row.right || {};
   return meta.name || row.path.split("/").pop() || "root";
@@ -317,6 +344,12 @@ function rowLabel(row) {
 
 function metaValue(meta) {
   if (!meta) return "缺失";
+  if (isLinkNode(meta)) {
+    const target = linkTarget(meta);
+    if (String(meta.type || "").toLowerCase() === "uol") return target ? `↗ ${target}` : "UOL";
+    return target ? `${meta.name} → ${target}` : meta.name;
+  }
+  if (meta.canvasStoreMissing && (meta.type === "gap" || meta.value === "Canvas 库未收录")) return "库未收录";
   if (meta.value && typeof meta.value === "object") return Object.values(meta.value).join(", ");
   if (meta.value !== undefined && meta.value !== null) return String(meta.value);
   if (meta.type === "canvas") return `${meta.width || 0}×${meta.height || 0}`;
@@ -325,20 +358,22 @@ function metaValue(meta) {
 }
 
 function typeIcon(type) {
-  return ({imgdir: "D", canvas: "C", vector: "V", string: "S", int: "#", long: "L", short: "#", float: "F", double: "F", uol: "↗", video: "🎬"})[type] || "·";
+  return ({imgdir: "D", canvas: "C", vector: "V", string: "S", int: "#", long: "L", short: "#", float: "F", double: "F", uol: "↗", video: "🎬", gap: "○"})[type] || "·";
 }
 
 function visiblePaths() {
   const search = $("treeSearch").value.trim().toLowerCase();
   const diffOnly = $("diffOnly").checked;
+  const uolOnly = $("uolOnly")?.checked;
   const keep = new Set();
-  if (search || diffOnly) {
+  if (search || diffOnly || uolOnly) {
     for (const row of state.rows) {
       if (!row.path) continue;
-      const haystack = `${row.path} ${metaValue(row.left)} ${metaValue(row.right)}`.toLowerCase();
+      const haystack = `${row.path} ${row.left?.type || ""} ${row.right?.type || ""} ${metaValue(row.left)} ${metaValue(row.right)}`.toLowerCase();
       const matchesSearch = !search || haystack.includes(search);
       const matchesDiff = !diffOnly || row.status !== "same";
-      if (!matchesSearch || !matchesDiff) continue;
+      const matchesUol = !uolOnly || isLinkNode(row.left) || isLinkNode(row.right);
+      if (!matchesSearch || !matchesDiff || !matchesUol) continue;
       let cursor = row.path;
       while (cursor) {
         keep.add(cursor);
@@ -350,12 +385,12 @@ function visiblePaths() {
   if (state.rowByPath.has("")) output.push({path: "", depth: 0});
   const visit = (parent, depth) => {
     for (const path of state.children.get(parent) || []) {
-      if ((search || diffOnly) && !keep.has(path)) continue;
+      if ((search || diffOnly || uolOnly) && !keep.has(path)) continue;
       output.push({path, depth});
-      if ((state.expanded.has(path) || search || diffOnly) && state.children.has(path)) visit(path, depth + 1);
+      if ((state.expanded.has(path) || search || diffOnly || uolOnly) && state.children.has(path)) visit(path, depth + 1);
     }
   };
-  if (state.expanded.has("") || search || diffOnly) visit("", 1);
+  if (state.expanded.has("") || search || diffOnly || uolOnly) visit("", 1);
   return output;
 }
 
@@ -373,11 +408,15 @@ function renderTree() {
       const prefix = resource.status === "missingFile" ? `缺 ${label}` : `${label} 不完整`;
       return `<span class="node-resource-status" title="${escapeHtml((resource.issues || []).join("；") || "引用资源缺失或不兼容")}">${escapeHtml(prefix)} ${escapeHtml(resource.name)}</span>`;
     }).join("");
+    const linkMeta = [row.left, row.right].find((meta) => isLinkNode(meta));
+    const linkBadge = linkMeta
+      ? `<span class="node-uol-status" title="${escapeHtml(linkTarget(linkMeta) || "引用节点")}">${String(linkMeta.type || "").toLowerCase() === "uol" ? "UOL" : escapeHtml(linkMeta.name)}</span>`
+      : "";
     return `<div class="tree-row status-${row.status} ${state.selectedPath === path ? "selected" : ""}" data-path="${escapeHtml(path)}" style="padding-left:${8 + depth * 15}px" role="treeitem" aria-selected="${state.selectedPath === path}">
       <button class="twisty" type="button" data-twist="${escapeHtml(path)}" ${hasChildren ? "" : "disabled"}>${hasChildren ? (open ? "▾" : "▸") : ""}</button>
       <span class="node-icon">${typeIcon(meta.type)}</span>
       <span class="node-body">
-        <span class="node-title-line"><span class="node-name" title="${escapeHtml(path)}">${escapeHtml(rowLabel(row))}</span><span class="node-status">${statusLabel}</span>${resourceBadges}${meta.type === "video" ? `<button class="video-preview-btn" type="button" data-path="${escapeHtml(path)}" title="预览 MCV 视频">🎬</button>` : ""}</span>
+        <span class="node-title-line"><span class="node-name" title="${escapeHtml(path)}">${escapeHtml(rowLabel(row))}</span><span class="node-status">${statusLabel}</span>${linkBadge}${resourceBadges}${meta.type === "video" ? `<button class="video-preview-btn" type="button" data-path="${escapeHtml(path)}" title="预览 MCV 视频">🎬</button>` : ""}</span>
         <span class="node-compare-values">
           <span class="node-side side-a ${row.left ? "" : "missing"}" title="A 主文件：${escapeHtml(metaValue(row.left))}"><b>A</b><span>${escapeHtml(metaValue(row.left))}</span></span>
           <span class="node-side side-b ${row.right ? "" : "missing"}" title="B 对比文件：${escapeHtml(metaValue(row.right))}"><b>B</b><span>${escapeHtml(metaValue(row.right))}</span></span>
@@ -1122,8 +1161,9 @@ function renderMobRealHint(box, frame, action) {
   const resolved = frame.resolved;
   if (frame.state === "linked" && resolved) {
     box.className = "real-hint linked";
-    box.title = `本帧声明 ${frame.declaredWidth}×${frame.declaredHeight}，真实像素在 ${resolved.fileLabel}/${resolved.path}`;
-    box.innerHTML = `真实资源：<b>${resolved.width}×${resolved.height}</b> ← <code>${escapeHtml(resolved.fileLabel)}/${escapeHtml(resolved.path)}</code>${frame.crossMob ? '<span class="real-chip cross">跨怪</span>' : ""}`;
+    const displayPath = resolved.absPath || resolved.fileLabel || "";
+    box.title = `本帧声明 ${frame.declaredWidth}×${frame.declaredHeight}，真实像素在 ${displayPath}/${resolved.path}`;
+    box.innerHTML = `真实资源：<b>${resolved.width}×${resolved.height}</b> ← <code title="${escapeHtml(displayPath)}">${escapeHtml(displayPath)}/${escapeHtml(resolved.path)}</code>${frame.crossMob ? '<span class="real-chip cross">跨怪</span>' : ""}`;
     return;
   }
   if (frame.state === "orphan") {
@@ -1256,9 +1296,8 @@ function nodeTypeExplanation(type, semantic) {
       包含 ARGB4444 格式的 PNG 图片、尺寸（width×height）、origin（锚点坐标，用于对齐到角色脚底）、delay（帧显示时长 ms）。<br>
       <em>格式说明：</em> format=1 为 ARGB4444（标准格式），format2=0 为无额外压缩。</div>`,
     uol: `<div class="type-explain type-explain-uol"><strong>UOL（引用）</strong> — 不存储实际数据，而是指向另一个节点的"快捷方式"。<br>
-      值是一个相对路径（如 <code>../stand/0</code>），表示"去那里取数据"。<br>
-      用途：多个动作共享同一帧图片，避免重复存储。客户端解析时会自动跟随引用。<br>
-      <em>注意：</em> 引用目标必须存在，否则客户端崩溃。</div>`,
+      值是相对路径。戴米安 skill2 的 0–9 是 <code>../skill1/N</code>；skill4 的 0–1 是 <code>../skill3/N</code>（TMS 1×1 _outlink），不是 skill1。<br>
+      客户端从 0 连播到最后一帧；缺目标会崩。复制时保持原序号，不要把缺口压成 0..n-1，也不要用 stand 去填。</div>`,
     imgdir: `<div class="type-explain"><strong>imgdir（容器）</strong> — 组织子节点的文件夹节点，本身没有值。<br>
       用于构建树形结构，如 <code>attack1/</code> 下包含帧 0~N 和 info。</div>`,
     vector: `<div class="type-explain"><strong>Vector（向量）</strong> — 存储两个整数 (x, y) 的节点。<br>
@@ -1294,7 +1333,6 @@ function selectNode(path) {
   $("selectedPath").textContent = path || "/";
   $("selectedPath").title = path || "/";
   setInspectorMode("node");
-  renderInspector(row);
   revealSelectedMapContent();
   // 怪物模式下，点击动作节点（stand/attack1 等）自动切换动画到该动作
   if (state.kind === "mob" && path) {
@@ -1323,13 +1361,15 @@ function updateNodeActions() {
   const left = row?.left;
   const copyCompatibility = row?.right?.compatibility;
   const supportedCopyTypes = new Set(["imgdir", "short", "int", "long", "float", "double", "string", "vector", "uol", "null"]);
+  const mobProjectableTypes = new Set(["imgdir", "canvas", "uol", "short", "int", "long", "float", "double", "string", "vector", "null"]);
   const unsafeDescendants = row ? state.rows.filter((candidate) => (
     (row.path === "" || candidate.path === row.path || candidate.path.startsWith(`${row.path}/`))
     && candidate.right
     && (candidate.right.compatibility?.status !== "ok" || !supportedCopyTypes.has(candidate.right.type))
   )) : [];
   const selectedSupported = Boolean(row?.right && supportedCopyTypes.has(row.right.type));
-  const safeToCopy = copyCompatibility?.status === "ok" && selectedSupported;
+  const mobProjectable = state.kind === "mob" && Boolean(row?.right && mobProjectableTypes.has(row.right.type));
+  const safeToCopy = mobProjectable || (copyCompatibility?.status === "ok" && selectedSupported);
   const relatedRows = row ? state.rows.filter((candidate) => (
     row.path === "" || candidate.path === row.path || candidate.path.startsWith(`${row.path}/`)
   )) : [];
@@ -1342,11 +1382,16 @@ function updateNodeActions() {
     left?.type === "imgdir" && Number(left.childCount || 0) === 0 && row?.right?.type === "imgdir"
   );
   const resourceOnlyRepair = Boolean(left && autoResources.length && !blockedEntities.length && !mergeIntoEmpty);
+  const mergeMissing = Boolean(
+    state.kind === "mob" && left?.type === "imgdir" && row?.right?.type === "imgdir"
+  );
   const validParent = left?.type === "imgdir" || (state.leftInfo?.format === "xml" && left?.type === "canvas");
   $("createMainBtn").hidden = leftExists || !clientImgPath;
   $("createMainBtn").disabled = leftExists || !clientImgPath;
   $("copyTmsBtn").textContent = resourceOnlyRepair
     ? "补齐选中节点的引用资源"
+    : mergeMissing
+    ? "补齐选中节点的兼容投影"
     : "复制选中的 TMS 节点到 A";
   $("copyTmsBtn").title = resourceOnlyRepair
     ? `保留当前地图节点不变，仅迁移 ${autoResources.length} 个不完整引用资源（NPC/怪物会同步服务端 XML 和 String）`
@@ -1355,6 +1400,16 @@ function updateNodeActions() {
       ? `复制整个兼容子树；自动略过 ${unsafeDescendants.length} 个现代或不兼容后代，首个为 ${unsafeDescendants[0].path}`
       : "按原路径复制整个节点；缺失的主文件和父目录会自动建立，并同步客户端 IMG 与服务端 XML")
     : (copyCompatibility?.suggestion || "该节点不能直接复制到旧端");
+  if (mobProjectable) {
+    const infoCopy = row?.path === "info" || (row?.path || "").startsWith("info/");
+    $("copyTmsBtn").title = infoCopy
+      ? "投影 info：补伤害字段并把 PDRate/MDRate>70 清 0；戴米安技能表改成 100/101/123/128，不占用 185/176"
+      : mergeMissing
+      ? "只补 A 里缺失的子节点：按 TMS 时间轴接 UOL（跨动作 _outlink 如 skill4→skill3），Canvas 投影，并过滤不兼容字段"
+      : unsafeDescendants.length
+      ? `自动投影为旧端结构：Canvas 转 ARGB4444，UOL 补到 A 已有目标，并略过 ${unsafeDescendants.length} 个现代/不兼容节点`
+      : "自动投影为旧端结构：Canvas 转 ARGB4444；保持 TMS 帧号（skill2 起手 skill1，skill4 起手 skill3）";
+  }
   if (!resourceOnlyRepair && safeToCopy && autoResources.length) {
     $("copyTmsBtn").title += `；同时自动迁移 ${autoResources.length} 个缺失引用资源（NPC/怪物会同步 String）`;
   }
@@ -1362,35 +1417,71 @@ function updateNodeActions() {
     $("copyTmsBtn").title = `引用资源无法安全自动迁移：${blockedEntities.map((resource) => `${resource.kind.toUpperCase()} ${resource.name}`).join("、")}`;
   }
   $("copyTmsBtn").disabled = !(
-    copyWritable && clientImgPath && row?.right && (!row?.left || mergeIntoEmpty || resourceOnlyRepair)
+    copyWritable && clientImgPath && row?.right && (!row?.left || mergeIntoEmpty || resourceOnlyRepair || mergeMissing)
     && safeToCopy && !blockedEntities.length && state.rightInfo?.format === "img"
   );
   $("addRootBtn").disabled = !writable;
   $("addChildBtn").disabled = !(writable && validParent);
   $("deleteBtn").disabled = !(writable && left && Boolean(row.path));
   $("exportBtn").disabled = !writable;
+  const dialogCopy = $("dialogCopyBtn");
+  if (dialogCopy) {
+    dialogCopy.disabled = $("copyTmsBtn").disabled;
+    dialogCopy.textContent = $("copyTmsBtn").textContent;
+    dialogCopy.title = $("copyTmsBtn").title;
+  }
+  if ($("dialogAddChildBtn")) $("dialogAddChildBtn").disabled = $("addChildBtn").disabled;
+  if ($("dialogDeleteBtn")) $("dialogDeleteBtn").disabled = $("deleteBtn").disabled;
 }
 
 function setInspectorMode(mode) {
+  if (mode === "node") {
+    openNodeDetailDialog();
+    return;
+  }
   const compatibilityMode = mode === "compatibility";
   const diagnosticMode = mode === "diagnostic";
+  const serverControlMode = mode === "serverControl";
   $("compatibility").hidden = !compatibilityMode;
   $("crashDiagnostic").hidden = !diagnosticMode;
-  $("inspector").hidden = compatibilityMode || diagnosticMode;
+  if ($("serverControlHelp")) $("serverControlHelp").hidden = !serverControlMode;
   $("compatibilityTab").classList.toggle("active", compatibilityMode);
   $("diagnosticTab").classList.toggle("active", diagnosticMode);
-  $("nodeDetailTab").classList.toggle("active", !compatibilityMode && !diagnosticMode);
+  $("nodeDetailTab").classList.toggle("active", false);
+  $("serverControlTab")?.classList.toggle("active", serverControlMode);
   $("compatibilityTab").setAttribute("aria-selected", String(compatibilityMode));
   $("diagnosticTab").setAttribute("aria-selected", String(diagnosticMode));
-  $("nodeDetailTab").setAttribute("aria-selected", String(!compatibilityMode && !diagnosticMode));
-  if (compatibilityMode || diagnosticMode) {
-    $("editActions").hidden = true;
-    if (diagnosticMode && state.kind === "map" && state.leftInfo?.exists !== false && state.diagnosticPath !== state.leftPath) {
-      runCrashDiagnostic();
-    }
-  } else if (state.selectedPath !== null) {
-    renderInspector(state.rowByPath.get(state.selectedPath));
+  $("nodeDetailTab").setAttribute("aria-selected", "false");
+  $("serverControlTab")?.setAttribute("aria-selected", String(serverControlMode));
+  $("serverControlTab") && ($("serverControlTab").hidden = state.kind !== "mob");
+  if (diagnosticMode && state.kind === "map" && state.leftInfo?.exists !== false && state.diagnosticPath !== state.leftPath) {
+    runCrashDiagnostic();
+  } else if (serverControlMode) {
+    renderServerControlHelp(state.selectedPath === null ? null : state.rowByPath.get(state.selectedPath));
   }
+}
+
+function closeNodeDetailDialog() {
+  $("nodeDetailDialog")?.setAttribute("hidden", "");
+  $("nodeDetailTab")?.classList.remove("active");
+  $("nodeDetailTab")?.setAttribute("aria-selected", "false");
+}
+
+function openNodeDetailDialog() {
+  const dialog = $("nodeDetailDialog");
+  if (!dialog) return;
+  $("nodeDetailPath").textContent = state.selectedPath || "/";
+  $("nodeDetailPath").title = state.selectedPath || "/";
+  $("nodeDetailTab").classList.add("active");
+  $("nodeDetailTab").setAttribute("aria-selected", "true");
+  if (state.selectedPath !== null && state.rowByPath.has(state.selectedPath)) {
+    renderInspector(state.rowByPath.get(state.selectedPath));
+  } else {
+    $("inspector").className = "inspector empty-state compact";
+    $("inspector").innerHTML = '<span class="empty-mark small" aria-hidden="true">⌖</span><strong>选择左侧节点</strong><span>对比树里点选节点后，会在这里显示属性、差异和可编辑值。</span>';
+    $("editActions").hidden = true;
+  }
+  dialog.hidden = false;
 }
 
 function diagnosticConfidence(value) {
@@ -1488,7 +1579,7 @@ async function openDiagnosticMob(id) {
   setKind("mob");
   $("itemId").value = id;
   $("leftPath").value = `clien/Data/Mob/${id}.img`;
-  $("rightPath").value = `gms-server/wz/Mob.wz/${id}.img.xml`;
+  $("rightPath").value = `${tmsDataRoot}/Mob/_Canvas/${id}.img`;
   await loadMobSources(id, true);
   await loadComparison();
 }
@@ -1584,6 +1675,11 @@ function renderInspector(row) {
     ["值", [prettyValue(left), prettyValue(right)]],
   ];
   if (left?.origin || right?.origin) fields.push(["原点", [JSON.stringify(left?.origin ?? "—"), JSON.stringify(right?.origin ?? "—")]]);
+  if (isLinkNode(left) || isLinkNode(right)) {
+    fields.push(["引用目标", [linkTarget(left) || "—", linkTarget(right) || "—"]]);
+    const resolved = resolveUolTarget(row.path, linkTarget(right) || linkTarget(left));
+    if (resolved) fields.push(["解析路径", resolved]);
+  }
   const table = fields.map(([label, values]) => {
     if (!Array.isArray(values)) return `<tr><th>${label}</th><td colspan="2">${escapeHtml(values)}</td></tr>`;
     const different = values[0] !== values[1] ? "different" : "";
@@ -1620,6 +1716,10 @@ function renderInspector(row) {
   }
   // Node type explanation
   const typeExplanation = nodeTypeExplanation(left?.type || right?.type, semantic);
+  const uolJumpTarget = resolveUolTarget(row.path, linkTarget([right, left].find(isLinkNode)));
+  const uolJumpMarkup = uolJumpTarget
+    ? `<p><button id="jumpUolBtn" type="button" data-path="${escapeHtml(uolJumpTarget)}">跳转到 ${escapeHtml(uolJumpTarget)}</button></p>`
+    : "";
   const semanticMarkup = `<div class="node-explanation">
     <div class="side-label">节点解析 ${modernBadge}</div>
     ${typeExplanation}
@@ -1646,19 +1746,108 @@ function renderInspector(row) {
   const mobManifestMarkup = state.kind === "mob"
     ? `<div id="mobResourceSection" class="node-explanation"><div class="side-label">TMS 真实资源清单</div><div id="mobResourceContent" class="compat-empty">待解析…</div></div>`
     : "";
-  inspector.innerHTML = `${canvasPreview}${semanticMarkup}${resourceMarkup}${mobManifestMarkup}<div class="side-label">属性对比</div><table class="compare-table"><thead><tr><th>属性</th><th><span class="column-badge a">A</span>主文件</th><th><span class="column-badge b">B</span>对比</th></tr></thead><tbody>${table}</tbody></table>${childFramesMarkup}${editorMarkup(left)}`;
+  inspector.innerHTML = `<div class="node-detail-col">${canvasPreview}${semanticMarkup}${resourceMarkup}${mobManifestMarkup}${serverControlMarkup(row)}</div><div class="node-detail-col"><div class="side-label">属性对比</div><table class="compare-table"><thead><tr><th>属性</th><th><span class="column-badge a">A</span>主文件</th><th><span class="column-badge b">B</span>对比</th></tr></thead><tbody>${table}</tbody></table>${childFramesMarkup}${editorMarkup(left)}</div>`;
   const leftXml = state.leftInfo?.format === "xml";
   const editable = Boolean(left?.editable && (leftXml || state.leftInfo?.format === "img"));
-  $("editActions").hidden = !editable;
+  $("editActions").hidden = false;
+  $("saveBtn").hidden = !editable;
+  $("saveBtn").disabled = !editable;
   updateNodeActions();
   // B 侧真实资源清单：把占位帧解析回真实文件，解决“只看到 1×1 占位”
   if (state.kind === "mob" && state.rightPath) {
     loadMobResourceManifest(state.rightPath);
   }
   // Load child frames if node is a container (imgdir with children)
-  if (left?.type === "imgdir" && left.childCount > 0) {
-    loadChildFrames(row.path, left.childCount);
+  if (row.path && ((left?.type === "imgdir" && Number(left.childCount || 0) > 0) || (row?.right?.type === "imgdir" && Number(row.right.childCount || 0) > 0))) {
+    loadChildFrames(row.path, left?.childCount || row?.right?.childCount);
   }
+  $("openServerControlBtn")?.addEventListener("click", () => setInspectorMode("serverControl"));
+  bindMobSkillOpenButtons($("inspector"));
+}
+
+function serverControlMarkup(row) {
+  const help = row?.serverControl;
+  if (!help) return "";
+  return `<div class="node-explanation server-control-card">
+    <div class="side-label">服务端控制</div>
+    <p><b>${escapeHtml(help.template?.title || "")}</b> · ${escapeHtml(help.playback || "")}</p>
+    ${(help.timeline || []).length ? `<ol class="playback-timeline">${help.timeline.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ol>` : ""}
+    <p>${escapeHtml(help.javaHint || "")}</p>
+    ${mobSkillCardMarkup(help.mobSkill)}
+    <p><button id="openServerControlBtn" type="button">打开帮助模块</button></p>
+  </div>`;
+}
+
+function mobSkillCardMarkup(mapping) {
+  if (!mapping) return "";
+  const advice = mapping.advice || {};
+  const tms = mapping.tmsCanvas || {};
+  const openId = mapping.skillId;
+  const openLv = mapping.level || 1;
+  return `<div class="mob-skill-map">
+    <div class="side-label">MobSkill 对应</div>
+    <p>类型 <b>${escapeHtml(String(mapping.skillId ?? "未绑定"))}</b> ${escapeHtml(mapping.typeName || "")}
+      · 档 <b>${escapeHtml(String(mapping.level ?? "—"))}</b>
+      · 动作 skill${escapeHtml(String(mapping.action ?? "—"))}
+      · 节点 <code>${escapeHtml(mapping.nodePath || "—")}</code></p>
+    <p class="verdict verdict-${escapeHtml(advice.verdict || "keep")}">${escapeHtml(advice.reason || "")}</p>
+    <p>改这份表？ <b>${advice.edit ? "要" : "不要"}</b>
+      ${tms.exists ? ` · TMS 分文件 ${escapeHtml(String(mapping.tmsSkillId || mapping.skillId))}.img ${(tms.size / 1024).toFixed(0)} KB` : " · 无对应 TMS _Canvas 文件"}</p>
+    <ul>${(mapping.files || []).map((item) => `<li>${escapeHtml(item.role)} · <code>${escapeHtml(item.path)}</code></li>`).join("")}</ul>
+    ${openId ? `<p><button type="button" class="open-mob-skill-btn" data-skill-id="${openId}" data-level="${openLv}">打开 MobSkill ${openId}/${openLv}</button></p>` : ""}
+  </div>`;
+}
+
+function renderServerControlHelp(row) {
+  const panel = $("serverControlHelp");
+  if (!panel) return;
+  const paint = (help) => {
+    const templates = help?.templates || [];
+    const steps = help?.howToStart || [];
+    const related = help?.related || [];
+    const slots = (help?.slots || []).map((slot) =>
+      `<li>槽 ${escapeHtml(String(slot.index))} → skill ${escapeHtml(String(slot.skill ?? "—"))} / action ${escapeHtml(String(slot.action ?? "—"))}</li>`
+    ).join("");
+    panel.className = "server-control-help";
+    panel.innerHTML = `
+      <div class="side-label">怎么入手</div>
+      <ol class="server-control-steps">${steps.map((step) => `<li>${escapeHtml(step)}</li>`).join("")}</ol>
+      <div class="side-label">MobSkill 是什么、何时改</div>
+      <p>${escapeHtml(help?.mobSkillGuide?.whatItDoes || "")}</p>
+      <p><b>要改时</b></p>
+      <ul>${(help?.mobSkillGuide?.whenToEdit || []).map((step) => `<li>${escapeHtml(step)}</li>`).join("")}</ul>
+      <p><b>不要改时</b></p>
+      <ul>${(help?.mobSkillGuide?.whenNotToEdit || []).map((step) => `<li>${escapeHtml(step)}</li>`).join("")}</ul>
+      ${mobSkillCardMarkup(help?.mobSkill)}
+      <div class="side-label">可复用模板</div>
+      <div class="server-control-templates">${templates.map((item) => `
+        <article>
+          <strong>${escapeHtml(item.title)}</strong>
+          <p>${escapeHtml(item.summary)}</p>
+          <pre>${escapeHtml(item.start)}</pre>
+        </article>`).join("")}</div>
+      ${help ? `<div class="side-label">当前节点 ${escapeHtml(help.path || "")}</div>
+        <p><b>${escapeHtml(help.template?.title || "")}</b></p>
+        <p>${escapeHtml(help.playback || "")}</p>
+        ${(help.timeline || []).length ? `<ol class="playback-timeline">${help.timeline.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ol>` : ""}
+        <p>${escapeHtml(help.javaHint || "")}</p>
+        ${slots ? `<ul>${slots}</ul>` : ""}
+        <div class="side-label">相关资源</div>
+        <ul>${related.map((item) => `<li>${escapeHtml(item.kind)} ${escapeHtml(item.name)} · <code>${escapeHtml(item.path)}</code></li>`).join("")}</ul>
+        ${help.template?.start ? `<pre>${escapeHtml(help.template.start)}</pre>` : ""}` : ""}
+    `;
+    bindMobSkillOpenButtons(panel);
+  };
+  if (row?.serverControl) {
+    paint(row.serverControl);
+    return;
+  }
+  const mobId = (String(state.leftPath).match(/(\d{7})\.img/) || [])[1] || "";
+  get(`/api/server-control-help?path=${encodeURIComponent(row?.path || "skill2")}&mobId=${encodeURIComponent(mobId)}`)
+    .then(paint)
+    .catch((error) => {
+      panel.innerHTML = `<p>${escapeHtml(error.message)}</p>`;
+    });
 }
 
 async function loadChildFrames(path, childCount) {
@@ -1770,7 +1959,7 @@ const MOB_FIELD_MEANINGS = {
   undead: "是否不死族", friendly: "是否友好怪物",
   bodyAttack: "是否接触伤害", elemAttr: "元素属性",
   attack: "攻击力", defense: "防御力",
-  attackAfter: "攻击后硬直(ms)", onlyFsm: "仅FSM控制",
+  attackAfter: "攻击后硬直(ms)", onlyFsm: "TMS仅FSM；旧端投影为stand UOL",
   range: "攻击范围", hit: "命中判定", lt: "判定框左上", rb: "判定框右下",
   mobCount: "召唤数量", mob: "召唤怪物ID", type: "攻击类型",
   delay: "帧延迟(ms)", origin: "锚点坐标",
@@ -1840,6 +2029,10 @@ function renderChildFrames(leftData, rightData, parentPath) {
   const linkedCount = leftChildren.filter((c) => c.state === "linked").length;
   const orphanCount = leftChildren.filter((c) => c.state === "orphan").length;
   let html = "";
+  const playback = leftData.playback?.length ? leftData.playback : rightData?.playback;
+  if (playback?.length) {
+    html += `<div class="child-note"><strong>TMS 播放时间轴</strong><ol>${playback.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ol></div>`;
+  }
   // 说明占位帧的真实出处
   if (placeholderCount) {
     html += `<div class="child-note">
@@ -2181,7 +2374,16 @@ async function copyTmsNode() {
     const operation = data.resourceOnly
       ? "地图节点保持不变，引用资源已执行补齐。"
       : "TMS 节点已按原路径复制到 A，并同步服务端 XML。";
-    const resultText = `${operation}${skipped}${migratedResources}${unresolvedResources}${recordedFiles}\n${JSON.stringify(data, null, 2)}`;
+    const canvasNote = data.materialized?.canvases
+      ? `\n已把 ${data.materialized.canvases} 个 Canvas 投影为 GMS ARGB4444。`
+      : "";
+    const densifyNote = data.densifiedFrames
+      ? `\n已连续化 ${data.densifiedFrames} 个子目录数字帧（如 areaWarning）。动作根帧号保持 TMS 原序号。`
+      : "";
+    const uolNote = data.uolsKept
+      ? `\n已保留 ${data.uolsKept} 个 TMS 真实 UOL（目标在 A 中存在）。`
+      : "";
+    const resultText = `${operation}${skipped}${canvasNote}${densifyNote}${uolNote}${migratedResources}${unresolvedResources}${recordedFiles}\n${JSON.stringify(data, null, 2)}`;
     showResult(resultText);
     await refreshComparisonAfterCopy(path);
   } catch (error) {
@@ -2449,6 +2651,20 @@ $("reloadBtn")?.addEventListener("click", loadComparison);
 $("compatibilityTab")?.addEventListener("click", () => setInspectorMode("compatibility"));
 $("diagnosticTab")?.addEventListener("click", () => setInspectorMode("diagnostic"));
 $("nodeDetailTab")?.addEventListener("click", () => setInspectorMode("node"));
+$("openNodeDetailBtn")?.addEventListener("click", () => openNodeDetailDialog());
+$("closeNodeDetailBtn")?.addEventListener("click", closeNodeDetailDialog);
+$("nodeDetailDialog")?.addEventListener("click", (event) => {
+  if (event.target === $("nodeDetailDialog")) closeNodeDetailDialog();
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "Escape") return;
+  if ($("addDialog")?.open || $("exportDialog")?.open || $("fileDialog")?.open || $("mobSkillDialog")?.open) return;
+  if (!$("nodeDetailDialog")?.hidden) closeNodeDetailDialog();
+});
+$("dialogCopyBtn")?.addEventListener("click", copyTmsNode);
+$("dialogAddChildBtn")?.addEventListener("click", () => openAddDialog(state.selectedPath));
+$("dialogDeleteBtn")?.addEventListener("click", deleteNode);
+$("serverControlTab")?.addEventListener("click", () => setInspectorMode("serverControl"));
 $("runDiagnosticBtn")?.addEventListener("click", runCrashDiagnostic);
 $("swapBtn")?.addEventListener("click", () => {
   const left = $("leftPath").value;
@@ -2964,13 +3180,27 @@ async function _msApi(path, body = null) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   } : {};
-  const response = await fetch(path, options);
-  const payload = await response.json();
-  if (!response.ok || payload.ok === false) throw new Error(payload.error || `HTTP ${response.status}`);
+  const url = path.startsWith("/") ? path : `/img-editor/api/${path}`;
+  const response = await fetch(url, options);
+  const text = await response.text();
+  let payload;
+  try { payload = JSON.parse(text); } catch {
+    throw new Error(`HTTP ${response.status} ${url}: ${text.slice(0, 120)}`);
+  }
+  if (!response.ok || payload.ok === false) throw new Error(payload.error || `HTTP ${response.status} ${url}`);
   return payload;
 }
 
-async function openMobSkillEditor() {
+function bindMobSkillOpenButtons(root) {
+  if (!root) return;
+  root.querySelectorAll(".open-mob-skill-btn").forEach((button) => {
+    button.addEventListener("click", () => {
+      openMobSkillEditor(Number(button.dataset.skillId), Number(button.dataset.level || 1));
+    });
+  });
+}
+
+async function openMobSkillEditor(skillId, level) {
   const dialog = $("mobSkillDialog");
   if (!dialog) return;
   dialog.showModal();
@@ -2982,7 +3212,12 @@ async function openMobSkillEditor() {
       _renderMobSkillList(state.mobSkills);
     } catch (e) {
       $("mobSkillList").innerHTML = `<div class="empty-state compact"><strong>加载失败</strong><span>${escapeHtml(e.message)}</span></div>`;
+      return;
     }
+  }
+  if (skillId && state.mobSkills.length) {
+    const found = state.mobSkills.find((item) => Number(item.id) === Number(skillId));
+    if (found) await _selectMobSkill(found.id, found.name, found.level_count, level);
   }
 }
 
@@ -3003,9 +3238,10 @@ function _renderMobSkillList(skills) {
   }));
 }
 
-async function _selectMobSkill(id, name, levelCount) {
+async function _selectMobSkill(id, name, levelCount, level) {
   state.mobSkillSelected = { id, name, levelCount };
-  state.mobSkillLevel = 1;
+  const startLevel = Math.min(Math.max(Number(level) || 1, 1), Math.max(1, levelCount));
+  state.mobSkillLevel = startLevel;
   // 高亮
   $("mobSkillList").querySelectorAll(".mob-skill-item").forEach((btn) => {
     btn.classList.toggle("active", Number(btn.dataset.id) === id);
@@ -3015,11 +3251,11 @@ async function _selectMobSkill(id, name, levelCount) {
   sel.innerHTML = Array.from({ length: levelCount }, (_, i) =>
     `<option value="${i + 1}">${i + 1}</option>`
   ).join("");
-  sel.value = 1;
+  sel.value = String(startLevel);
   $("mobSkillName").textContent = `${name} #${id}`;
   $("mobSkillDetailEmpty").hidden = true;
   $("mobSkillDetail").hidden = false;
-  await _loadMobSkillEffect(id, 1);
+  await _loadMobSkillEffect(id, startLevel);
 }
 
 async function _loadMobSkillEffect(skillId, level) {
@@ -3030,7 +3266,7 @@ async function _loadMobSkillEffect(skillId, level) {
   mobBox.innerHTML = "";
   fieldsBox.innerHTML = "";
   try {
-    const data = await api(`/img-editor/api/mob-skill-effect?skillId=${skillId}&level=${level}`);
+    const data = await _msApi(`/img-editor/api/mob-skill-effect?skillId=${skillId}&level=${level}`);
     // Effect 帧
     if (data.effect_frames?.length) {
       effectBox.innerHTML = data.effect_frames.map((f) =>

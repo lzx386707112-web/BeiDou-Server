@@ -15,6 +15,7 @@ import equipmentCatalog from '@/views/game/equipmentCatalog/locale/zh-CN';
 import mapDetect from '@/views/game/mapDetect/locale/zh-CN';
 import questBrowse from '@/views/game/questBrowse/locale/zh-CN';
 import weather from '@/views/game/weather/locale/zh-CN';
+import botControl from '@/views/game/botControl/locale/zh-CN';
 import itemCatalog from '@/views/game/itemCatalog/locale/zh-CN';
 import baseConfig from './zh-CN/base';
 
@@ -28,6 +29,7 @@ export default {
   'menu.game.config': '参数管理',
   'menu.game.setItem': '套装属性',
   'menu.game.weather': '天气管理',
+  'menu.game.botControl': '机器人管理',
   'menu.game.equipmentCatalog': '装备预览',
   'menu.game.itemCatalog': '物品预览',
   'menu.game.mobCatalog': '怪物预览',
@@ -80,4 +82,5 @@ export default {
   ...mapDetect,
   ...questBrowse,
   ...weather,
+  ...botControl,
 };

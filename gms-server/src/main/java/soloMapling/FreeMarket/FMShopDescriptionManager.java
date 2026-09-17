@@ -144,7 +144,7 @@ public class FMShopDescriptionManager {
                 debugprint("Top only gen");
                 return topGenerated;
             } else {
-                return "NOTHING GENERATED";
+                return MarketShopTitles.randomTitle("common");
             }
         }
 
@@ -309,7 +309,7 @@ public class FMShopDescriptionManager {
                 List.of("B"),
                 List.of(13),
                 () -> {
-                    return ("Welcome to " + owner + "'s Shop!");
+                    return MarketShopTitles.welcome(owner);
                 });
         welcomeDesc.addRoomRange(13, 22);
 
@@ -374,8 +374,7 @@ public class FMShopDescriptionManager {
         String description = strategy.generateDescription(tier, room, merchant);
         debugprint("Tier " + tier + ", Room " + room + ":");
         debugprint(description);
-        debugprint();
-        merchant.setDescription(description);
+        merchant.setDescription(MarketShopTitles.chineseOrFallback(description));
 
         /////////////////////////////////////////////////////////////
 //        String[] tiers = {"S", "S", "A", "B"};
@@ -424,7 +423,7 @@ public class FMShopDescriptionManager {
     }
 
     public static void setMerchantDescription(HiredMerchantArtificial merchant, String description) {
-        merchant.setDescription(description);
+        merchant.setDescription(MarketShopTitles.chineseOrFallback(description));
     }
 
     /*

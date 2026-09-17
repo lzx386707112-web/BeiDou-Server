@@ -67,16 +67,16 @@ STAND_SPEED = 0
 PHASE_ONE_ATTACKS = 6
 PHASE_TWO_ATTACKS = 7
 # Distinct legacy MobSkill ids that already apply through MobSkill.java
-# (185/176 Damien field effects, 123/128 diseases), same as other bosses.
+# (100/101 ATK buffs, 123/128 diseases). Do not occupy Lucid 185 / Akayrum 176.
 PHASE_ONE_SKILLS = (
-    {"skill": 185, "level": 1, "action": 1},
-    {"skill": 176, "level": 2, "action": 2},
+    {"skill": 100, "level": 1, "action": 1},
+    {"skill": 101, "level": 1, "action": 2},
     {"skill": 123, "level": 4, "action": 3},
     {"skill": 128, "level": 6, "action": 4},
 )
 PHASE_TWO_SKILLS = (
-    {"skill": 185, "level": 1, "action": 1},
-    {"skill": 176, "level": 2, "action": 2},
+    {"skill": 100, "level": 1, "action": 1},
+    {"skill": 101, "level": 1, "action": 2},
     {"skill": 123, "level": 4, "action": 3},
     {"skill": 128, "level": 6, "action": 4},
     {"skill": 126, "level": 1, "action": 5},
@@ -600,6 +600,7 @@ var spawnX = 800;
 var spawnY = 17;
 const maxLobbies = 1;
 const LifeFactory = Java.type("org.gms.server.life.LifeFactory");
+const DamienBossCompat = Java.type("org.gms.server.life.DamienBossCompat");
 const Point = Java.type("java.awt.Point");
 
 function init() {
@@ -694,9 +695,6 @@ function monsterValue(eim, mobId) {
 }
 
 function monsterKilled(mob, eim, hasKiller) {
-    if (!hasKiller) {
-        return;
-    }
     if (mob.getId() == phaseOneBoss && eim.getIntProperty("phase") == 1) {
         eim.setIntProperty("phase", 2);
         eim.schedule("advanceToPhaseTwo", 2500);
@@ -707,8 +705,10 @@ function monsterKilled(mob, eim, hasKiller) {
 }
 
 function advanceToPhaseTwo(eim) {
+    var fromMap = eim.getInstanceMap(entryMap);
     var targetMap = eim.getInstanceMap(phaseTwoMap);
-    eim.getInstanceMap(entryMap).killAllMonsters();
+    DamienBossCompat.stop(fromMap);
+    fromMap.killAllMonsters();
     targetMap.killAllMonsters();
     targetMap.spawnMonsterOnGroundBelow(LifeFactory.getMonster(phaseTwoBoss), new Point(spawnX, spawnY));
     var players = eim.getPlayers();
@@ -857,6 +857,19 @@ function action(mode, type, selection) {
         cm.sendOk("远征已经结束。");
         cm.dispose();
     }
+}
+""",
+    )
+    write_script(
+        "npc/1540941.js",
+        """\
+function start() {
+    cm.sendOk("世界树祭坛暂时没有反应。");
+    cm.dispose();
+}
+
+function action(mode, type, selection) {
+    cm.dispose();
 }
 """,
     )

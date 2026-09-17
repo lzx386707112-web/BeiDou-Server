@@ -144,6 +144,7 @@ public class Server {
     @Getter
     @Setter
     private boolean online = false;
+    private volatile boolean shuttingDown = false;
     public static long uptime = System.currentTimeMillis();
     private long nextTime;
 
@@ -751,6 +752,7 @@ public class Server {
         online = true;
         Duration initDuration = Duration.between(beforeInit, Instant.now());
         log.info(I18nUtil.getLogMessage("Server.init.info9"), initDuration.toMillis() / 1000.0);
+        soloMapling.ArtificialPlayer.BotAutoSpawner.requestStartupIfEnabled();
     }
 
     private void registerChannelDependencies() {
@@ -1614,7 +1616,12 @@ public class Server {
         return () -> shutdownInternal(restart);
     }
 
+    public boolean isShuttingDown() {
+        return shuttingDown;
+    }
+
     public synchronized void shutdownInternal(boolean restart) {
+        shuttingDown = true;
         log.info(I18nUtil.getLogMessage("Server.shutdownInternal.info1"), restart ?
                 I18nUtil.getLogMessage("Server.shutdownInternal.info2") : I18nUtil.getLogMessage("Server.shutdownInternal.info3"));
         if (getWorlds() == null) {

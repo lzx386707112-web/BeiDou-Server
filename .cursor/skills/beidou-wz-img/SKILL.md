@@ -23,6 +23,8 @@ Then read only the references matching the requested surface:
   [references/map-npc-mob.md](references/map-npc-mob.md). When migrating
   maps or mobs, that file’s gap / `connect` rope / ballistic sections are
   required, not optional.
+- Damien (`8880110`/`8880111`) combat, `DamienBossCompat`, skill2 orbs:
+  `.cursor/skills/beidou-damien-boss/SKILL.md` (or `.codex/skills/beidou-damien-boss/SKILL.md`).
 - Items, icons, Etc/String records, quest drops, or inventory-facing resources:
   [references/item-string.md](references/item-string.md).
 

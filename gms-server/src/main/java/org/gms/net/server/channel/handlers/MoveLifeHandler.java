@@ -112,6 +112,7 @@ public final class MoveLifeHandler extends AbstractMovementPacketHandler {
         boolean skillAccepted = false;
 
         if (isSkill) {
+            // activity 42–61 → skill1–10。戴米安用动作下标补全包体里错误的 skillId。
             int skillActionIndex = (rawActivity - 42) / 2;
             MobSkillId resolved = monster.resolveCastSkill(skillId, skillLv, skillActionIndex);
             if (resolved != null) {
@@ -124,17 +125,20 @@ public final class MoveLifeHandler extends AbstractMovementPacketHandler {
                     boolean handled = KaringBossCompat.handleProjectedSkillCast(
                             monster, useSkillId, useSkillLevel);
                     if (!handled) {
+                        // 戴米安 skill2：IMG 只播飞天；射手 8880112 金火，弹道走 attack1/info/ball。
+                        if (DamienBossCompat.isDamien(monster.getId()) && skillActionIndex == 1) {
+                            DamienBossCompat.onSkill2Cast(monster);
+                        }
+                        int animationTime = MonsterInformationProvider.getInstance().getMobSkillAnimationTime(toUse);
                         if (DamienBossCompat.isDamien(monster.getId())) {
+                            animationTime = DamienBossCompat.skillEffectDelayMs(
+                                    monster.getId(), skillActionIndex, animationTime);
+                        }
+                        if (animationTime > 0 && toUse.getType() != MobSkillType.BANISH) {
+                            toUse.applyDelayedEffect(player, monster, true, animationTime);
+                        } else if (!DamienBossCompat.isDamien(monster.getId()) || animationTime > 0) {
                             banishPlayers = new LinkedList<>();
                             toUse.applyEffect(player, monster, true, banishPlayers);
-                        } else {
-                            int animationTime = MonsterInformationProvider.getInstance().getMobSkillAnimationTime(toUse);
-                            if (animationTime > 0 && toUse.getType() != MobSkillType.BANISH) {
-                                toUse.applyDelayedEffect(player, monster, true, animationTime);
-                            } else {
-                                banishPlayers = new LinkedList<>();
-                                toUse.applyEffect(player, monster, true, banishPlayers);
-                            }
                         }
                     }
                 }
@@ -146,10 +150,20 @@ public final class MoveLifeHandler extends AbstractMovementPacketHandler {
                 useSkillLevel = 0;
             }
         } else {
-            attackStatus = monster.canUseAttack(requestedCastPos, isSkill);
-            if (attackStatus < 1) {
+            if (isAttack && monster.getId() == DamienBossCompat.PHASE_TWO && requestedCastPos == 2) {
+                // 不要等 canUseAttack：失败时客户端仍会打出本体那 1 颗 type=2 弹。
+                DamienBossCompat.onAttack3Cast(monster);
+            }
+            if (isAttack && DamienBossCompat.isDamien(monster.getId())
+                    && !DamienBossCompat.allowClientAttack(monster.getId(), requestedCastPos)) {
                 rawActivity = -1;
                 pOption = 0;
+            } else {
+                attackStatus = monster.canUseAttack(requestedCastPos, isSkill);
+                if (attackStatus < 1) {
+                    rawActivity = -1;
+                    pOption = 0;
+                }
             }
         }
 
@@ -169,8 +183,7 @@ public final class MoveLifeHandler extends AbstractMovementPacketHandler {
             for (MobSkillId skillToUse : monster.getSkillsInRandomOrder()) {
                 MobSkill candidate = MobSkillFactory.getMobSkillOrThrow(skillToUse.type(), skillToUse.level());
                 if (monster.canUseSkill(candidate, false)
-                        && (DamienBossCompat.ignoresMobSkillHpGate(monster.getId())
-                            || candidate.getHP() >= hpPercent)
+                        && candidate.getHP() >= hpPercent
                         && mobMp >= candidate.getMpCon()) {
                     nextSkillId = skillToUse.type().getId();
                     nextSkillLevel = skillToUse.level();
@@ -192,12 +205,18 @@ public final class MoveLifeHandler extends AbstractMovementPacketHandler {
             return;
         }
 
-        if (nextUse != null) {
-            c.sendPacket(PacketCreator.moveMonsterResponse(objectid, moveid, mobMp, aggro, nextSkillId, nextSkillLevel));
+        boolean vacLocked = map.isMonsterVacLocked(monster);
+        boolean allowClientAct = aggro && !vacLocked;
+        if (nextUse != null && !vacLocked) {
+            c.sendPacket(PacketCreator.moveMonsterResponse(objectid, moveid, mobMp, allowClientAct, nextSkillId, nextSkillLevel));
         } else {
-            c.sendPacket(PacketCreator.moveMonsterResponse(objectid, moveid, mobMp, aggro));
+            c.sendPacket(PacketCreator.moveMonsterResponse(objectid, moveid, mobMp, allowClientAct));
         }
 
+        if (vacLocked) {
+            map.pinMonsterVac(monster);
+            return;
+        }
 
         try {
             int movementDataStart = p.getPosition();

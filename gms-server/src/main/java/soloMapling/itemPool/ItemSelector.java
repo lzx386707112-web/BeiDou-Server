@@ -2,19 +2,34 @@ package soloMapling.itemPool;
 
 import com.esotericsoftware.yamlbeans.YamlReader;
 import soloMapling.server.MapleVersionManager;
+import soloMapling.server.SoloMaplingResource;
 
-import java.io.FileReader;
+import java.io.Reader;
 import java.util.*;
 import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static soloMapling.server.SoloMaplingUtilities.pickRandomItem;
 
 public class ItemSelector {
+    private static final String CONFIG_DIR = "soloMapling/itemPool/itemConfig/";
+    private static final ConcurrentHashMap<String, ItemSelector> CACHE = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<String, Boolean> MISSING = new ConcurrentHashMap<>();
     private Map<String, List<ItemNode>> items;
 
     public ItemSelector(String yamlFile) throws Exception {
-        YamlReader reader = new YamlReader(new FileReader(yamlFile));
-        items = (Map<String, List<ItemNode>>) reader.read();
+        try (Reader source = SoloMaplingResource.openReader(CONFIG_DIR + stripDirectory(yamlFile))) {
+            YamlReader reader = new YamlReader(source);
+            items = (Map<String, List<ItemNode>>) reader.read();
+        }
+        if (items == null) {
+            items = Map.of();
+        }
+    }
+
+    private static String stripDirectory(String yamlFile) {
+        int slash = Math.max(yamlFile.lastIndexOf('/'), yamlFile.lastIndexOf('\\'));
+        return slash >= 0 ? yamlFile.substring(slash + 1) : yamlFile;
     }
 
     // Convert a map to an ItemNode instance
@@ -160,18 +175,38 @@ public class ItemSelector {
     }
 
     public static ItemNode getRandomItemFull(String itemPool, String itemType, String tier) {
-        try {
-            int version = MapleVersionManager.getItemPoolVersion();
-            ItemSelector itemSelector = new ItemSelector("src/main/java/soloMapling/itemPool/itemConfig/" + itemPool);
-            ItemNode randomItem = itemSelector.getRandomItem(itemType, tier, version);
-            if (randomItem != null) {
-                return randomItem;
-            } else {
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
+        ItemSelector itemSelector = loadPool(itemPool);
+        if (itemSelector == null) {
+            return null;
         }
-        return null;
+        try {
+            return itemSelector.getRandomItem(itemType, tier, MapleVersionManager.getItemPoolVersion());
+        } catch (Exception e) {
+            if (MISSING.putIfAbsent("parse:" + itemPool, Boolean.TRUE) == null) {
+                System.err.println("[ItemSelector] Failed to pick from " + itemPool + ": " + e.getMessage());
+            }
+            return null;
+        }
+    }
+
+    private static ItemSelector loadPool(String itemPool) {
+        ItemSelector cached = CACHE.get(itemPool);
+        if (cached != null) {
+            return cached;
+        }
+        if (MISSING.containsKey(itemPool)) {
+            return null;
+        }
+        try {
+            ItemSelector loaded = new ItemSelector(itemPool);
+            CACHE.put(itemPool, loaded);
+            return loaded;
+        } catch (Exception e) {
+            if (MISSING.putIfAbsent(itemPool, Boolean.TRUE) == null) {
+                System.err.println("[ItemSelector] Missing item pool " + itemPool + ": " + e.getMessage());
+            }
+            return null;
+        }
     }
 
     public static ScrollNode getScrollNodeData(int itemId) {

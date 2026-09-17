@@ -157,12 +157,14 @@ public class NXItemPool {
             }
 
             int fallbackCount = addFallbackItemsForEmptyCategories();
+            int showcaseRingCount = mergeShowcaseRings(pools);
 
             loaded = true;
             System.out.println("[NXItemPool] Loaded " + itemCount + " curated + "
                     + fashionCount + " fashion-script + "
                     + cacheCount + " cache-auto + " + fallbackCount
-                    + " fallback items across " + pools.size() + " categories");
+                    + " fallback + " + showcaseRingCount
+                    + " showcase-ring items across " + pools.size() + " categories");
         } catch (Exception e) {
             System.err.println("[NXItemPool] Failed to load YAML: " + e.getMessage());
             e.printStackTrace();
@@ -198,6 +200,55 @@ public class NXItemPool {
                     + "' with " + fallback.size() + " built-in items");
         }
         return count;
+    }
+
+    static final int[][] SHOWCASE_RING_RANGES = {
+            {1112100, 1112127},
+            {1112134, 1112136},
+            {1112138, 1112146},
+            {1112148, 1112166},
+            {1112170, 1112184},
+            {1112190, 1112199},
+            {1112200, 1112239},
+            {1112241, 1112254},
+            {1112256, 1112278},
+            {1112282, 1112296},
+            {1112724, 1112724},
+            {1112808, 1112808},
+            {1115003, 1115066},
+            {1115068, 1115084},
+            {1115086, 1115092},
+            {1115094, 1115094},
+            {1115097, 1115097},
+            {1115100, 1115155},
+            {1115157, 1115173},
+            {1115175, 1115180},
+            {1115193, 1115193},
+            {1115195, 1115195},
+            {1115198, 1115198},
+            {1118000, 1118042}, // 灵魂戒指1-43
+            {1118063, 1118078}  // 至高无上·逼王戒
+    };
+
+    static int mergeShowcaseRings(Map<String, List<PoolItem>> target) {
+        List<PoolItem> rings = target.computeIfAbsent("rings", ignored -> new ArrayList<>());
+        Set<Integer> existing = new HashSet<>();
+        for (PoolItem item : rings) {
+            existing.add(item.id);
+        }
+        int added = 0;
+        for (int[] range : SHOWCASE_RING_RANGES) {
+            for (int id = range[0]; id <= range[1]; id++) {
+                if (existing.add(id)) {
+                    rings.add(new PoolItem(id, GENDER_UNISEX));
+                    added++;
+                }
+            }
+        }
+        if (added > 0) {
+            System.out.println("[NXItemPool]   Merged " + added + " 灵魂戒指/逼王戒/名片/聊天戒指 into rings");
+        }
+        return added;
     }
 
     private static java.io.Reader openYamlReader() throws Exception {

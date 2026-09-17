@@ -4,6 +4,9 @@ import org.gms.client.Character;
 import org.gms.server.maps.FootholdTree;
 import org.gms.server.maps.MapleMap;
 import soloMapling.ArtificialPlayer.BotSM;
+import soloMapling.ArtificialPlayer.BotFlavorSystem.BotFlavor;
+import soloMapling.ArtificialPlayer.GCMoveSystem.GCMovement;
+import soloMapling.FreeMarket.MarketBotFlavor;
 import soloMapling.SoloMaplingConfig;
 
 import java.awt.Point;
@@ -19,23 +22,10 @@ import static soloMapling.ArtificialPlayer.BotMovementSystem.MovementCommands.pa
 
 public class AmbientMapBot extends BotSM {
     private static final int RANDOM_WALK_TARGET_ATTEMPTS = 24;
-    private static final int MIN_RANDOM_WALK_DISTANCE_X = 260;
-    private static final int SMALL_STEP_MIN_DISTANCE = 45;
-    private static final int SMALL_STEP_MAX_DISTANCE = 85;
-    private static final int MAX_SMALL_STEP_Y_DELTA = 8;
-
-    private static final String[] AMBIENT_LINES = {
-            "有人一起打吗？",
-            "这个图还挺舒服的。",
-            "刚才卡了一下。",
-            "我去旁边看看。",
-            "今天爆率怎么样？",
-            "有人做任务吗？",
-            "先在这边练一会儿。",
-            "路过路过。",
-            "这里人还不少。",
-            "等会儿去自由市场看看。"
-    };
+    private static final int MIN_RANDOM_WALK_DISTANCE_X = 180;
+    private static final int SMALL_STEP_MIN_DISTANCE = 140;
+    private static final int SMALL_STEP_MAX_DISTANCE = 280;
+    private static final int MAX_SMALL_STEP_Y_DELTA = 240;
 
     private long nextActionAt = 0;
 
@@ -44,6 +34,11 @@ public class AmbientMapBot extends BotSM {
         dialoguePath = "";
         botType = "AmbientMapBot";
         scheduleNextAction();
+    }
+
+    @Override
+    public boolean isAvailableForAmbientActions() {
+        return getState() != BotState.TRADING;
     }
 
     @Override
@@ -60,6 +55,7 @@ public class AmbientMapBot extends BotSM {
             return;
         }
 
+        BotFlavor.maybeExpress(this);
         runAmbientAction();
         scheduleNextAction();
     }
@@ -70,7 +66,7 @@ public class AmbientMapBot extends BotSM {
             updateScheduleDelay(SoloMaplingConfig.ambientActionMinMs());
             return;
         }
-        updateScheduleDelay(8000);
+        updateScheduleDelay(2500);
     }
 
     private void runAmbientAction() {
@@ -91,17 +87,49 @@ public class AmbientMapBot extends BotSM {
         } else if (roll < moveWeight + faceWeight + emoteWeight) {
             BotEmote(getChr());
         } else {
-            BotSpeak(getChr(), AMBIENT_LINES[ThreadLocalRandom.current().nextInt(AMBIENT_LINES.length)]);
+            BotSpeak(getChr(), MarketBotFlavor.chat());
         }
     }
 
     private void stroll() {
+        Character chr = getChr();
         Point target = randomWalkTarget();
-        if (target != null && walkToTarget(target)) {
+        if (chr == null || target == null) {
             return;
         }
+        if (!GCMovement.isMapObserved(chr.getMapId())) {
+            return;
+        }
+        GCMovement.enable(chr);
+        GCMovement.move(chr, target.x, target.y);
+    }
 
-        walkSmallSteps(target);
+    private void walkToward(Point target) {
+        if (target == null) {
+            walkSmallSteps(null);
+            return;
+        }
+        int steps = ThreadLocalRandom.current().nextInt(6, 12);
+        for (int i = 0; i < steps; i++) {
+            Point pos = getChr().getPosition();
+            if (Math.abs(target.x - pos.x) < 40) {
+                return;
+            }
+            int direction = Integer.compare(target.x, pos.x);
+            int distance = ThreadLocalRandom.current().nextInt(SMALL_STEP_MIN_DISTANCE, SMALL_STEP_MAX_DISTANCE + 1);
+            Point next = pointBelow(new Point(pos.x + direction * distance, pos.y - 24));
+            if (next == null) {
+                next = pointBelow(new Point(pos.x + direction * distance, target.y - 12));
+            }
+            if (next == null) {
+                walkSmallSteps(target);
+                return;
+            }
+            BotMoveSmallDistanceX(getChr(), next);
+            if (i + 1 < steps && !sleepAmountSeconds(180 + ThreadLocalRandom.current().nextInt(220))) {
+                return;
+            }
+        }
     }
 
     private Point randomWalkTarget() {
@@ -211,8 +239,8 @@ public class AmbientMapBot extends BotSM {
     }
 
     private void scheduleNextAction() {
-        long minMs = Math.min(SoloMaplingConfig.ambientActionMinMs(), 1200);
-        long maxMs = Math.min(SoloMaplingConfig.ambientActionMaxMs(), 2600);
+        long minMs = Math.min(SoloMaplingConfig.ambientActionMinMs(), 800);
+        long maxMs = Math.min(SoloMaplingConfig.ambientActionMaxMs(), 1600);
         if (maxMs < minMs) {
             maxMs = minMs;
         }

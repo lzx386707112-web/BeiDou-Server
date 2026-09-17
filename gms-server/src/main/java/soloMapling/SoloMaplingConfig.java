@@ -51,6 +51,14 @@ public final class SoloMaplingConfig {
     public static final String FEATURE_GAME_ZONE_HOST_BOTS_ENABLED = "solo_mapling_feature_game_zone_host_bots_enabled";
     public static final String FEATURE_POTION_SHOP_DROP_GAME_ENABLED = "solo_mapling_feature_potion_shop_drop_game_enabled";
     public static final String FEATURE_SCROLL_BOTS_ENABLED = "solo_mapling_feature_scroll_bots_enabled";
+    public static final String MARKET_WANDER_ENABLED = "solo_mapling_market_wander_enabled";
+    public static final String MARKET_HAWK_ENABLED = "solo_mapling_market_hawk_enabled";
+    public static final String MARKET_BROWSE_SHOPS_ENABLED = "solo_mapling_market_browse_shops_enabled";
+    public static final String MARKET_IDLE_WHEN_EMPTY = "solo_mapling_market_idle_when_empty";
+    public static final String MARKET_TICK_MS = "solo_mapling_market_tick_ms";
+    public static final String MARKET_SPEECH_GAP_MS = "solo_mapling_market_speech_gap_ms";
+    public static final String MARKET_PATHFIND_PER_TICK = "solo_mapling_market_pathfind_per_tick";
+    public static final String MARKET_AUTO_START = "solo_mapling_market_auto_start";
 
     public static boolean autoEnvironmentEnabled() {
         return getBoolean(AUTO_ENVIRONMENT, false);
@@ -240,6 +248,38 @@ public final class SoloMaplingConfig {
 
     public static boolean scrollBotsEnabled() {
         return getBoolean(FEATURE_SCROLL_BOTS_ENABLED, true);
+    }
+
+    public static boolean marketWanderEnabled() {
+        return getBoolean(MARKET_WANDER_ENABLED, true);
+    }
+
+    public static boolean marketHawkEnabled() {
+        return getBoolean(MARKET_HAWK_ENABLED, true);
+    }
+
+    public static boolean marketBrowseShopsEnabled() {
+        return getBoolean(MARKET_BROWSE_SHOPS_ENABLED, true);
+    }
+
+    public static boolean marketIdleWhenEmpty() {
+        return getBoolean(MARKET_IDLE_WHEN_EMPTY, true);
+    }
+
+    public static long marketTickMs() {
+        return Math.max(150, getPositiveInt(MARKET_TICK_MS, 250));
+    }
+
+    public static long marketSpeechGapMs() {
+        return Math.max(250, getPositiveInt(MARKET_SPEECH_GAP_MS, 500));
+    }
+
+    public static int marketPathfindPerTick() {
+        return getPositiveInt(MARKET_PATHFIND_PER_TICK, 3);
+    }
+
+    public static boolean marketAutoStartEnabled() {
+        return getBoolean(MARKET_AUTO_START, true);
     }
 
     private static boolean getBoolean(String key, boolean defaultValue) {

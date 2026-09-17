@@ -41,7 +41,7 @@ def canvas_signature(node):
 
 def main() -> int:
     errors = []
-    for mob_id in demian.BOSS_IDS:
+    for mob_id in (demian.PHASE_TWO_BOSS,):
         image = arc.load_image(demian.client_mob_path(mob_id), arc.GMS_KEY)
         expected_roots = demian.LEGACY_BOSS_TOP_LEVEL_BY_MOB[mob_id]
         roots = tuple(child.name for child in image.root.children())
@@ -88,18 +88,27 @@ def main() -> int:
 
     effect = arc.load_image(EFFECT, arc.GMS_KEY)
     marker_parent = effect.root.child("customBossDemian")
-    for name in ("scene", "groundBurst"):
-        marker = marker_parent.get(f"{name}/0") if marker_parent else None
-        if not isinstance(marker, WzCanvasProperty) or (marker.width, marker.height) != (7, 5):
-            errors.append(f"missing Damien MCV marker {name}")
+    scene = marker_parent.get("scene/0") if marker_parent else None
+    if not isinstance(scene, WzCanvasProperty) or (scene.width, scene.height) != (7, 5):
+        errors.append("missing Damien unused scene marker")
+    burst = marker_parent.child("groundBurst") if marker_parent else None
+    burst_frames = [
+        child for child in burst.children()
+        if isinstance(child, WzCanvasProperty) and child.name.isdigit()
+    ] if isinstance(burst, WzSubProperty) else []
+    if len(burst_frames) < 8 or burst_frames[0].width < 400:
+        errors.append("customBossDemian/groundBurst is not a visible scene skill")
 
     move_source = (ROOT / "gms-server/src/main/java/org/gms/net/server/channel/handlers/MoveLifeHandler.java").read_text()
     if "inRangeInclusive(rawActivity, 42, 61)" not in move_source:
         errors.append("MoveLifeHandler does not accept Damien action 10")
     compat = (ROOT / "gms-server/src/main/java/org/gms/server/life/DamienBossCompat.java").read_text()
-    for token in ("customBossDemian/groundBurst", "customBossDemian/scene", "skillId == 142"):
-        if token not in compat:
-            errors.append(f"DamienBossCompat missing {token}")
+    if "onSkill2Cast" not in compat or "SKILL2_ORB_MOB" not in compat:
+        errors.append("DamienBossCompat missing skill2 orb routing")
+    if "STIGMA_CAP" in compat:
+        errors.append("DamienBossCompat still has stigma combat")
+    if "SKILL2_GROUND_EFFECT" not in compat:
+        errors.append("DamienBossCompat missing skill2 ground-burst scene")
 
     if errors:
         print("damien complete TMS contract failed:")

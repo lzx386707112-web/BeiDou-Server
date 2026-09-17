@@ -27,22 +27,38 @@ import org.gms.net.AbstractPacketHandler;
 import org.gms.net.packet.InPacket;
 import org.gms.server.maps.MapObject;
 import org.gms.util.PacketCreator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import soloMapling.ArtificialPlayer.BotHelpers;
 
 public final class CharInfoRequestHandler extends AbstractPacketHandler {
+    private static final Logger log = LoggerFactory.getLogger(CharInfoRequestHandler.class);
 
     @Override
     public final void handlePacket(InPacket p, Client c) {
         p.skip(4);
         int cid = p.readInt();
-        MapObject target = c.getPlayer().getMap().getMapObject(cid);
-        if (target != null) {
-            if (target instanceof Character player) {
-
-                if (c.getPlayer().getId() != player.getId()) {
-                    player.exportExcludedItems(c);
-                }
-                c.sendPacket(PacketCreator.charInfo(player));
+        Character viewer = c.getPlayer();
+        if (viewer == null || viewer.getMap() == null) {
+            return;
+        }
+        Character player = viewer.getMap().getCharacterById(cid);
+        if (player == null) {
+            MapObject target = viewer.getMap().getMapObject(cid);
+            if (target instanceof Character found) {
+                player = found;
             }
+        }
+        if (player == null) {
+            return;
+        }
+        try {
+            if (viewer.getId() != player.getId()) {
+                player.exportExcludedItems(c);
+            }
+            c.sendPacket(PacketCreator.charInfo(player));
+        } catch (Exception e) {
+            log.warn("Failed to send char info for {} (bot={})", player.getName(), BotHelpers.isBot(player), e);
         }
     }
 }

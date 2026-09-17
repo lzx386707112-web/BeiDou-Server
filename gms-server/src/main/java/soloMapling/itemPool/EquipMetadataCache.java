@@ -108,6 +108,14 @@ public class EquipMetadataCache {
         EQUIP_RANGES.put(EquipType.PISTOL,     new int[]{1492000, 1492048});
     }
 
+    private static final int[][] EXTRA_RING_RANGES = {
+            {1112724, 1112724}, // 我是新人戒指（名片特效，超出经典 RING 上限）
+            {1112808, 1112808}, // 枫叶钻石聊天戒指
+            {1115003, 1115198}, // 聊天戒指 + 名片戒指（11150xx / 11151xx）
+            {1118000, 1118042}, // 灵魂戒指1-43
+            {1118063, 1118078}  // 至高无上·逼王戒
+    };
+
     // ── Singleton ────────────────────────────────────────────────────────
 
     private static volatile EquipMetadataCache instance;
@@ -299,7 +307,19 @@ public class EquipMetadataCache {
         return names;
     }
 
+    private static boolean isShowcaseRing(int id) {
+        for (int[] range : EXTRA_RING_RANGES) {
+            if (id >= range[0] && id <= range[1]) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private static EquipType classify(int id) {
+        if (isShowcaseRing(id)) {
+            return EquipType.RING;
+        }
         for (Map.Entry<EquipType, int[]> e : EQUIP_RANGES.entrySet()) {
             int[] range = e.getValue();
             if (id >= range[0] && id <= range[1]) {
@@ -319,22 +339,31 @@ public class EquipMetadataCache {
             EquipType eqType = rangeEntry.getKey();
             int[] range = rangeEntry.getValue();
 
-            for (int id = range[0]; id <= range[1]; id++) {
-                Map<String, Integer> stats = ii.getEquipStats(id);
-                if (stats == null) continue;  // item doesn't exist in WZ
-
-                String name = ii.getName(id);
-                all.add(new EquipEntry(id, eqType, deriveGender(id),
-                        stats.getOrDefault("reqLevel", 0),
-                        stats.getOrDefault("reqJob", 0),
-                        stats.getOrDefault("cash", 0) == 1,
-                        ii.isUntradeableRestricted(id),
-                        ii.isQuestItem(id),
-                        ii.getWholePrice(id),
-                        name != null ? name : "?"));
-            }
+            scanRingRange(ii, all, eqType, range[0], range[1]);
+        }
+        for (int[] extra : EXTRA_RING_RANGES) {
+            scanRingRange(ii, all, EquipType.RING, extra[0], extra[1]);
         }
         return all;
+    }
+
+    private static void scanRingRange(ItemInformationProvider ii, List<EquipEntry> all,
+                                      EquipType eqType, int fromId, int toId) {
+        for (int id = fromId; id <= toId; id++) {
+            Map<String, Integer> stats = ii.getEquipStats(id);
+            if (stats == null) {
+                continue;
+            }
+            String name = ii.getName(id);
+            all.add(new EquipEntry(id, eqType, deriveGender(id),
+                    stats.getOrDefault("reqLevel", 0),
+                    stats.getOrDefault("reqJob", 0),
+                    stats.getOrDefault("cash", 0) == 1,
+                    ii.isUntradeableRestricted(id),
+                    ii.isQuestItem(id),
+                    ii.getWholePrice(id),
+                    name != null ? name : "?"));
+        }
     }
 
     // ── Gender derivation (4th digit convention) ─────────────────────────

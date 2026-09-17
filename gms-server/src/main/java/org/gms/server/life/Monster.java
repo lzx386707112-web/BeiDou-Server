@@ -62,6 +62,7 @@ import org.gms.server.maps.MapObjectType;
 import org.gms.server.maps.MapleMap;
 import org.gms.server.maps.Summon;
 import org.gms.util.*;
+import soloMapling.ArtificialPlayer.BotHelpers;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -77,6 +78,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.atomic.AtomicLong;
@@ -113,6 +115,7 @@ public class Monster extends AbstractLoadedLife {
     private ScheduledFuture<?> monsterItemDrop = null;
     private Runnable removeAfterAction = null;
     private boolean availablePuppetUpdate = true;
+    private volatile boolean vacStunned = false;
 
     private final Lock externalLock = new ReentrantLock();
     private final Lock monsterLock = new ReentrantLock(true);
@@ -1034,6 +1037,9 @@ public class Monster extends AbstractLoadedLife {
 
     private void setControllerHasAggro(boolean controllerHasAggro) {
         if (!fake) {
+            if (controllerHasAggro && map != null && map.isMonsterVacLocked(this)) {
+                controllerHasAggro = false;
+            }
             this.controllerHasAggro = controllerHasAggro;
         }
     }
@@ -1127,14 +1133,20 @@ public class Monster extends AbstractLoadedLife {
         }
     }
 
-    private Character getActiveController() {
+    private Character getControllerOnThisMap() {
         Character chr = getController();
-
         if (chr != null && chr.isLoggedInWorld() && chr.getMap() == this.getMap()) {
             return chr;
-        } else {
+        }
+        return null;
+    }
+
+    private Character getActiveController() {
+        Character chr = getControllerOnThisMap();
+        if (chr == null || BotHelpers.isBot(chr)) {
             return null;
         }
+        return chr;
     }
 
     private void broadcastMonsterStatusMessage(Packet packet) {
@@ -1372,6 +1384,53 @@ public class Monster extends AbstractLoadedLife {
         service.registerMobStatus(map.getId(), effect, cancelTask, duration);
     }
 
+    public void applyVacStun(long duration) {
+        applyVacStun(duration, false);
+    }
+
+    public void applyVacStun(long duration, boolean refreshVisual) {
+        Skill skill = SkillFactory.getSkill(MonsterVacCompat.STUN_SKILL_ID);
+        if (skill == null) {
+            return;
+        }
+        MonsterStatusEffect existing = getStati(MonsterStatus.STUN);
+        if (existing != null) {
+            if (refreshVisual) {
+                broadcastMonsterStatusMessage(PacketCreator.applyMonsterStatus(getObjectId(), existing, null));
+            }
+            return;
+        }
+        Map<MonsterStatus, Integer> stats = Collections.singletonMap(MonsterStatus.STUN, 1);
+        final MonsterStatusEffect effect = new MonsterStatusEffect(stats, skill, null, false);
+        final Runnable cancelTask = () -> {
+            vacStunned = false;
+            if (isAlive()) {
+                debuffMobStat(MonsterStatus.STUN);
+            }
+        };
+        vacStunned = true;
+        broadcastMonsterStatusMessage(PacketCreator.applyMonsterStatus(getObjectId(), effect, Collections.emptyList()));
+        statiLock.lock();
+        try {
+            stati.put(MonsterStatus.STUN, effect);
+            alreadyBuffed.add(MonsterStatus.STUN);
+        } finally {
+            statiLock.unlock();
+        }
+        MobStatusService service = (MobStatusService) map.getChannelServer().getServiceAccess(ChannelServices.MOB_STATUS);
+        service.registerMobStatus(map.getId(), effect, cancelTask, duration);
+    }
+
+    public void cancelVacStun() {
+        if (!vacStunned) {
+            return;
+        }
+        vacStunned = false;
+        if (getStati(MonsterStatus.STUN) != null) {
+            debuffMobStat(MonsterStatus.STUN);
+        }
+    }
+
     public void refreshMobPosition() {
         resetMobPosition(getPosition());
     }
@@ -1483,6 +1542,12 @@ public class Monster extends AbstractLoadedLife {
         return stats.hasSkill(skillId, level);
     }
 
+    /**
+     * 把客户端 MOVE_LIFE 里的 skillId/level 对上 XML 技能表。
+     * 戴米安包里的 id/level 经常对不上（活动字节播的是 skillN，包体可能是 0），
+     * 因此：精确匹配 → 同 ID 任意等级 → 按 {@link LifeFactory} 写入顺序的槽位下标。
+     * 槽位顺序依赖 LinkedHashSet，HashSet 会让 skill3/4 落到错误 ID。
+     */
     public MobSkillId resolveCastSkill(int skillId, int skillLevel, int skillActionIndex) {
         if (hasSkill(skillId, skillLevel)) {
             return new MobSkillId(MobSkillType.from(skillId).orElseThrow(), skillLevel);
@@ -1567,8 +1632,6 @@ public class Monster extends AbstractLoadedLife {
         MobClearSkillService service = (MobClearSkillService) map.getChannelServer().getServiceAccess(ChannelServices.MOB_CLEAR_SKILL);
         long cooldown = KaringBossCompat.skillCooldownMillis(this, skill);
         cooldown = LucidBossCompat.skillCooldownMillis(
-                getId(), msId.type().getId(), msId.level(), cooldown);
-        cooldown = DamienBossCompat.skillCooldownMillis(
                 getId(), msId.type().getId(), msId.level(), cooldown);
         service.registerMobClearSkillAction(mmap.getId(), r, cooldown);
     }
@@ -1913,7 +1976,7 @@ public class Monster extends AbstractLoadedLife {
         Character newControllerWithPuppet = null;
 
         for (Character chr : getMap().getAllPlayers()) {
-            if (!chr.isHidden()) {
+            if (!chr.isHidden() && !BotHelpers.isBot(chr)) {
                 int ctrlMonsSize = chr.getNumControlledMonsters();
 
                 if (isCharacterPuppetInVicinity(chr)) {
@@ -1951,7 +2014,7 @@ public class Monster extends AbstractLoadedLife {
 
         aggroUpdateLock.lock();
         try {
-            chrController = getActiveController();
+            chrController = getControllerOnThisMap();
             hadAggro = isControllerHasAggro();
 
             this.setController(null);
@@ -1979,6 +2042,9 @@ public class Monster extends AbstractLoadedLife {
         if (aggroUpdateLock.tryLock()) {
             try {
                 Character prevController = getController();
+                if (BotHelpers.isBot(newController)) {
+                    return;
+                }
                 if (prevController == newController) {
                     return;
                 }
@@ -2127,6 +2193,9 @@ public class Monster extends AbstractLoadedLife {
      * there is already an active controller for this mob.
      */
     public void aggroAutoAggroUpdate(Character player) {
+        if (BotHelpers.isBot(player)) {
+            return;
+        }
         Character chrController = this.getActiveController();
 
         if (chrController == null) {
@@ -2146,8 +2215,15 @@ public class Monster extends AbstractLoadedLife {
     public void aggroMonsterDamage(Character attacker, int damage) {
         MonsterAggroCoordinator mmac = this.getMapAggroCoordinator();
         mmac.addAggroDamage(this, attacker.getId(), damage);
+        if (map != null && map.isMonsterVacLocked(this)) {
+            map.pinMonsterVac(this);
+        }
 
         Character chrController = this.getController();    // aggro based on DPS rather than first-come-first-served, now live after suggestions thanks to MedicOP, Thora, Vcoc
+        if (BotHelpers.isBot(attacker)) {
+            this.aggroUpdateController();
+            return;
+        }
         if (chrController != attacker) {
             if (this.getMapAggroCoordinator().isLeadingCharacterAggro(this, attacker)) {
                 this.aggroSwitchController(attacker, true);
@@ -2172,6 +2248,9 @@ public class Monster extends AbstractLoadedLife {
     }
 
     private static void aggroMonsterControl(Client c, Monster mob, boolean immediateAggro) {
+        if (immediateAggro && mob.getMap() != null && mob.getMap().isMonsterVacLocked(mob)) {
+            immediateAggro = false;
+        }
         c.sendPacket(PacketCreator.controlMonster(mob, false, immediateAggro));
     }
 

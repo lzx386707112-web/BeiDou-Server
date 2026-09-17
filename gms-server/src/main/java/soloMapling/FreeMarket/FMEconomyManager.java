@@ -375,7 +375,8 @@ public class FMEconomyManager {
             int[] weightsRandom = {20, 40, 40};
             return weightedRandomSelection(weightsRandom, random);
         }
-        return "Unknown"; // Default case, should not occur if room number is valid
+        int[] weightsEntrance = {25, 55, 20};
+        return weightedRandomSelection(weightsEntrance, random);
     }
 
     // Helper method for weighted random selection

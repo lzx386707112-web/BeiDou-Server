@@ -587,6 +587,7 @@ public class LifeFactory {
         Data monsterSkillInfoData = monsterInfoData.getChildByPath("skill");
         if (monsterSkillInfoData != null) {
             int i = 0;
+            // 必须保序：Monster.resolveCastSkill 用下标回退到 skill1/2/3/4。
             Set<MobSkillId> skills = new LinkedHashSet<>();
             while (monsterSkillInfoData.getChildByPath(Integer.toString(i)) != null) {
                 int skillId = DataTool.getInt(i + "/skill", monsterSkillInfoData, 0);
@@ -623,7 +624,6 @@ public class LifeFactory {
             int impactDelay = DataTool.getIntConvert("info/attackAfter", monsterAttackData, 0);
             int coolTime = KaringBossCompat.attackCooldownMillis(mid, i, impactDelay);
             coolTime = LucidBossCompat.attackCooldownMillis(mid, i, coolTime);
-            coolTime = DamienBossCompat.attackCooldownMillis(mid, i, coolTime);
             attackInfos.add(new MobAttackInfoHolder(i, mpCon, coolTime, animationTime));
             i++;
         }

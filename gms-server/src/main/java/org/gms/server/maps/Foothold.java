@@ -22,6 +22,7 @@
 package org.gms.server.maps;
 
 import java.awt.*;
+import java.util.Map;
 
 /**
  * @author Matze
@@ -31,6 +32,7 @@ public class Foothold implements Comparable<Foothold> {
     private final Point p2;
     private final int id;
     private int next, prev;
+    private boolean forbidFallDown;
 
     public Foothold(Point p1, Point p2, int id) {
         this.p1 = p1;
@@ -98,5 +100,24 @@ public class Foothold implements Comparable<Foothold> {
 
     public void setPrev(int prev) {
         this.prev = prev;
+    }
+
+    public boolean isForbidFallDown() {
+        return forbidFallDown;
+    }
+
+    public void setForbidFallDown(boolean forbidFallDown) {
+        this.forbidFallDown = forbidFallDown;
+    }
+
+    public double slope() {
+        if (isWall() || p1.x == p2.x) {
+            return 0.0d;
+        }
+        return (p2.y - p1.y) / (double) (p2.x - p1.x);
+    }
+
+    public static boolean isCollidableWall(Foothold foothold, Map<Integer, Foothold> byId) {
+        return foothold != null && foothold.isWall();
     }
 }

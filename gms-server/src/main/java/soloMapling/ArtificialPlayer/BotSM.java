@@ -5,13 +5,16 @@ import org.gms.server.Trade;
 import org.gms.server.maps.MapObject;
 import org.gms.server.maps.MapleMap;
 import soloMapling.ArtificialPlayer.BotCommandsPack.SocialCommands;
+import soloMapling.ArtificialPlayer.GCMoveSystem.GCMovement;
 import soloMapling.ArtificialPlayer.BotMessagingSystem.ChatMessage;
+import soloMapling.ArtificialPlayer.BotPartySystem.PartyGrindService;
 import soloMapling.ArtificialPlayer.BotMessagingSystem.MessageQueue;
 import soloMapling.ArtificialPlayer.BotTradeSystem.BotTradeHandler;
 import soloMapling.ArtificialPlayer.BotTradeSystem.BotTradeInventory;
 import soloMapling.ArtificialPlayer.BotTradeSystem.BotTradeLogic;
 import soloMapling.ArtificialPlayer.BotTradeSystem.BotTradeSM;
 import soloMapling.ArtificialPlayer.BotTradeSystem.BotTradeWants;
+import soloMapling.server.BotTickService;
 import soloMapling.server.EventMessageSystem.BotEventBuffer;
 import soloMapling.server.EventMessageSystem.EventBus;
 import soloMapling.server.EventMessageSystem.EventSubscriber;
@@ -27,6 +30,7 @@ import static soloMapling.ArtificialPlayer.BotHelpers.sleepAmountSeconds;
 import static soloMapling.ArtificialPlayer.BotMessagingSystem.CharacterStorage.botLoggedIn;
 import static soloMapling.ArtificialPlayer.BotHelpers.isBot;
 import static soloMapling.ArtificialPlayer.BotMovementSystem.MovementCommands.BotIdleStandingUpdate;
+import static soloMapling.ArtificialPlayer.BotMovementSystem.MovementCommands.isBotMoving;
 import static soloMapling.ArtificialPlayer.BotTradeSystem.BotTradeLogic.clearTradeRequest;
 import static soloMapling.BotLogger.log;
 import static soloMapling.DebugUtilities.debugprint;
@@ -75,7 +79,20 @@ public abstract class BotSM implements EventSubscriber {
     private BotTradeWants tradeWants = new BotTradeWants();
     private BotTradeSM.TradeMode currentTradeMode = BotTradeSM.TradeMode.NULL;
     private volatile long currentDelay = getRandomDelay(); // Store current delay
+    private volatile long busyUntilMs = 0;
     private volatile boolean movementInterrupted = false;
+    private volatile long lastNudgeMs = 0;
+    private static final long NUDGE_DEBOUNCE_MS = 1500;
+    private final Runnable tickRunnable = () -> {
+        try {
+            if (!this.running) {
+                return;
+            }
+            updateState();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    };
     protected Trade.TradeResult lastTradeResult = null;
     protected Character lastTradedCharacter = null;
 
@@ -181,7 +198,11 @@ public abstract class BotSM implements EventSubscriber {
                     log("Moving to FINISHED: " + getChr().getName());
                     break;
                 }
-                BotIdleStandingUpdate(getChr());
+                if (!isBusy() && getChr().getTrade() == null && !isBotMoving(getChr())
+                        && GCMovement.isMapObserved(getChr().getMapId())
+                        && !PartyGrindService.isCompanion(getChr().getId())) {
+                    BotIdleStandingUpdate(getChr());
+                }
 //                if (!checkMainPlayersOnMap()) {
 //                    state = BotState.PAUSE;
 //                    log("Moving to PAUSE: " + getChr().getName());
@@ -195,7 +216,7 @@ public abstract class BotSM implements EventSubscriber {
                 }
                 break;
             case PAUSE:
-                if (checkMainPlayersOnMap()) {
+                if (usesSharedMarketTick() || checkMainPlayersOnMap()) {
                     setState(BotState.RUNNING);
                     log("Resuming to RUNNING: " + getChr().getName());
                 }
@@ -211,7 +232,11 @@ public abstract class BotSM implements EventSubscriber {
                 if (botTradeSM.isTradeComplete() && !tradeHandler.verifyTradePartner() ||
                         !botTradeSM.isTradeComplete() && !tradeHandler.verifyTradePartner() && !botTradeSM.isOfferAccepted()) {
                     cleanupTradeState();
-                    sleepAmountSeconds(2000);
+                    if (usesSharedMarketTick()) {
+                        busyFor(2000);
+                    } else {
+                        sleepAmountSeconds(2000);
+                    }
                     setState(BotState.RUNNING);
                     break;
                 }
@@ -238,20 +263,36 @@ public abstract class BotSM implements EventSubscriber {
         startScheduledTask(0);
     }
 
+    public boolean usesSharedMarketTick() {
+        return false;
+    }
+
+    public boolean isBusy() {
+        return System.currentTimeMillis() < busyUntilMs;
+    }
+
+    public void busyFor(long milliseconds) {
+        busyUntilMs = System.currentTimeMillis() + Math.max(0, milliseconds);
+    }
+
+    public void clearBusy() {
+        busyUntilMs = 0;
+    }
+
     public synchronized void startScheduledTask(long initialDelayMs) {
-        if (scheduledTask == null || scheduledTask.isCancelled()) {
-            // Using FixedDelay instead of FixedRate - // SM NOTE this should prevent "piling up", and only allow 1 at a time
-            scheduledTask = getScheduledExecutorService().scheduleWithFixedDelay(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        updateState();
-                    } catch (Exception e) {
-                        e.printStackTrace(); // Handle exceptions to ensure the scheduler doesn't stop unexpectedly
-                    }
-                }
-            }, initialDelayMs, getRandomDelay(), TimeUnit.MILLISECONDS);
+        if (usesSharedMarketTick()) {
+            if (scheduledTask != null && !scheduledTask.isCancelled()) {
+                scheduledTask.cancel(false);
+                scheduledTask = null;
+            }
+            soloMapling.server.MarketBotDirector.get().register(this, initialDelayMs);
+            return;
         }
+        Character chr = getChr();
+        if (chr == null) {
+            return;
+        }
+        BotTickService.register(chr.getId(), tickRunnable, initialDelayMs, getRandomDelay());
     }
 
     public synchronized void updateScheduleDelay(long newDelayMs) {
@@ -260,22 +301,25 @@ public abstract class BotSM implements EventSubscriber {
         }
 
         this.currentDelay = newDelayMs;
-
-        // Cancel and restart
-        if (scheduledTask != null && !scheduledTask.isCancelled()) {
-            scheduledTask.cancel(false);
+        if (usesSharedMarketTick()) {
+            return;
         }
+        BotTickService.reschedule(getChr().getId(), newDelayMs);
+    }
 
-        scheduledTask = getScheduledExecutorService().scheduleWithFixedDelay(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    updateState();
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-        }, currentDelay, currentDelay, TimeUnit.MILLISECONDS);
+    public synchronized void nudgeSoon(long initialDelayMs) {
+        if (usesSharedMarketTick() || !getRunning() || this.state == BotState.TRADING || this.state == BotState.FINISHED
+                || !BotTickService.isRegistered(getChr().getId())) {
+            return;
+        }
+        long now = System.currentTimeMillis();
+        if (now - this.lastNudgeMs < NUDGE_DEBOUNCE_MS) {
+            return;
+        }
+        this.lastNudgeMs = now;
+        long period = getRandomDelay();
+        this.currentDelay = period;
+        BotTickService.nudge(getChr().getId(), initialDelayMs, period);
     }
 
     public void checkPrioritySpeed() {
@@ -309,6 +353,13 @@ public abstract class BotSM implements EventSubscriber {
         log("Shutting down scheduler: " + this.getChr().getName());
         EventBus.getInstance().unsubscribeAll(this);
         botClearChalkboard(this.getChr());
+        if (usesSharedMarketTick()) {
+            soloMapling.server.MarketBotDirector.get().unregister(this);
+        }
+        if (getChr() != null) {
+            GCMovement.disable(getChr());
+            BotTickService.unregister(getChr().getId());
+        }
         if (scheduledTask != null && !scheduledTask.isCancelled()) {
             scheduledTask.cancel(true);
         }
@@ -361,7 +412,7 @@ public abstract class BotSM implements EventSubscriber {
         this.currentTradeMode = tradeMode;
     }
 
-    protected BotTradeSM.TradeMode getTradeMode() {
+    public BotTradeSM.TradeMode getTradeMode() {
         return this.currentTradeMode;
     }
 

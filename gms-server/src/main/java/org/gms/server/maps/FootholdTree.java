@@ -245,4 +245,20 @@ public class FootholdTree {
     public int getMinDropX() {
         return minDropX;
     }
+
+    public List<Foothold> getAllFootholds() {
+        List<Foothold> all = new LinkedList<>();
+        collectAll(all);
+        return all;
+    }
+
+    private void collectAll(List<Foothold> all) {
+        all.addAll(footholds);
+        if (nw != null) {
+            nw.collectAll(all);
+            ne.collectAll(all);
+            sw.collectAll(all);
+            se.collectAll(all);
+        }
+    }
 }

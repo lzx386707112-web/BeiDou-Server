@@ -240,7 +240,9 @@ public class Trade {
     public void chat(String message) {
         chr.sendPacket(PacketCreator.getTradeChat(chr, message, true));
         if (partner != null) {
-            partner.getChr().sendPacket(PacketCreator.getTradeChat(chr, message, false));
+            Character other = partner.getChr();
+            other.sendPacket(PacketCreator.getTradeChat(chr, message, false));
+            soloMapling.FreeMarket.MarketBotTradeHook.onTradeChat(chr, other);
         }
     }
 
@@ -520,6 +522,7 @@ public class Trade {
 
                 c1.sendPacket(PacketCreator.getTradeStart(c1.getClient(), c1.getTrade(), (byte) 0));
                 c2.sendPacket(PacketCreator.tradeInvite(c1));
+                soloMapling.FreeMarket.MarketBotTradeHook.onPlayerInvitedBot(c1, c2);
             } else {
                 c1.message(I18nUtil.getMessage("Trade.inviteTrade.createInvite.msg1"));
                 cancelTrade(c1, TradeResult.NO_RESPONSE);

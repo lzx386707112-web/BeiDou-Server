@@ -1472,6 +1472,30 @@ public class AbstractPlayerInteraction {
                 extendName, extendValue);
     }
 
+    public boolean isMonsterVacActive() {
+        return getPlayer().isMonsterVacActive();
+    }
+
+    public boolean startMonsterVac() {
+        return getPlayer().startMonsterVac();
+    }
+
+    public boolean startPartyGrindCompanions() {
+        return getPlayer().startPartyGrindCompanions();
+    }
+
+    public void stopMonsterVac() {
+        getPlayer().stopMonsterVac("怪物吸星大法已关闭。");
+    }
+
+    public boolean toggleMonsterVac() {
+        if (getPlayer().isMonsterVacActive()) {
+            getPlayer().stopMonsterVac("怪物吸星大法已关闭。");
+            return false;
+        }
+        return getPlayer().startMonsterVac();
+    }
+
     public void gainEquip(Equip equip) {
         if (!InventoryManipulator.checkSpace(getClient(), equip.getItemId(), 1, equip.getOwner())) {
             message(I18nUtil.getMessage("AbstractPlayerInteraction.gainEquip.message2", InventoryType.EQUIP.getName()));

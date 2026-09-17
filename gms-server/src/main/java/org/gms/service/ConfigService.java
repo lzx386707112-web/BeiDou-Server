@@ -62,7 +62,10 @@ public class ConfigService {
         List<GameConfigDO> subTypeDOList = gameConfigMapper.selectListByQuery(QueryWrapper.create().select(distinct(GAME_CONFIG_D_O.CONFIG_SUB_TYPE)));
         return ConfigTypeDTO.builder()
                 .types(typeDOList.stream().map(GameConfigDO::getConfigType).toList())
-                .subTypes(subTypeDOList.stream().map(GameConfigDO::getConfigSubType).toList())
+                .subTypes(subTypeDOList.stream()
+                        .map(GameConfigDO::getConfigSubType)
+                        .filter(subType -> subType == null || !subType.startsWith("SoloMapling"))
+                        .toList())
                 .build();
     }
 
@@ -83,6 +86,8 @@ public class ConfigService {
         if (!RequireUtil.isEmpty(condition.getFilter())) {
             queryWrapper.and(GAME_CONFIG_D_O.CONFIG_CODE.like(condition.getFilter()).or(LANG_RESOURCES_D_O.LANG_VALUE.like(condition.getFilter())));
         }
+        queryWrapper.and(GAME_CONFIG_D_O.CONFIG_CODE.notLike("solo_mapling%"));
+        queryWrapper.and(GAME_CONFIG_D_O.CONFIG_SUB_TYPE.notLike("SoloMapling%"));
 
         return gameConfigMapper.paginate(condition.getPageNo(), condition.getPageSize(), queryWrapper);
     }
@@ -167,6 +172,9 @@ public class ConfigService {
             case SetItemConfigService.CATALOG_CONFIG_CODE:
                 ServerManager.getApplicationContext().getBean(SetItemConfigService.class)
                         .reloadAndRefresh();
+                break;
+            case "solo_mapling_market_tick_ms":
+                soloMapling.server.MarketBotDirector.get().refreshTickInterval();
                 break;
             default:
                 break;

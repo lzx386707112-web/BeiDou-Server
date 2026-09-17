@@ -3,17 +3,19 @@ package soloMapling.ArtificialPlayer.BotTypes;
 import org.gms.client.Character;
 import org.gms.client.inventory.Item;
 import soloMapling.ArtificialPlayer.BotCommandsPack.SocialCommands;
-import soloMapling.ArtificialPlayer.BotMessagingSystem.ChatMessage;
-import soloMapling.ArtificialPlayer.BotMessagingSystem.MessageQueue;
 import soloMapling.ArtificialPlayer.BotSM;
 import soloMapling.ArtificialPlayer.BotTradeSystem.BotTradeSM;
 import soloMapling.FreeMarket.FMItem;
+import soloMapling.FreeMarket.MarketBotAmbient;
+import soloMapling.FreeMarket.MarketBotFlavor;
+import soloMapling.SoloMaplingConfig;
+import soloMapling.server.MarketBotDirector;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
+import static soloMapling.ArtificialPlayer.BotCommandsPack.SocialCommands.BotEmote;
 import static soloMapling.ArtificialPlayer.BotTypeManager.BotType.NX_MERCHANT_BOT;
 import static soloMapling.ArtificialPlayer.BotTypeManager.convertBotType;
 import static soloMapling.BotLogger.log;
@@ -28,6 +30,7 @@ import static soloMapling.FreeMarket.ArtificialShopGenerator.generateThiefStarsL
 import static soloMapling.FreeMarket.FMEconomyManager.priceAdjustmentRules;
 import static soloMapling.itemPool.ItemInformationProviderUtilities.getItemName;
 import static soloMapling.itemPool.ItemUtilities.getItemMarketValue;
+import static soloMapling.ArtificialPlayer.BotMovementSystem.MovementCommands.isBotMoving;
 import static soloMapling.ArtificialPlayer.BotMovementSystem.MovementCommands.nudgeAwayFromOverlap;
 import static soloMapling.server.SoloMaplingUtilities.getRandomElement;
 import static soloMapling.server.SoloMaplingUtilities.random;
@@ -56,6 +59,11 @@ public class SellingMerchantBot extends BotSM {
         botType = "MerchantBot";
     }
 
+    @Override
+    public boolean usesSharedMarketTick() {
+        return true;
+    }
+
     private void resetState() {
         itemIndex = 0;
         loadItemList();
@@ -70,6 +78,12 @@ public class SellingMerchantBot extends BotSM {
                 () -> generatePotionsList("S")
         };
         itemsToSell = generators[random.nextInt(generators.length)].get();
+        if (itemsToSell == null || itemsToSell.isEmpty()) {
+            itemsToSell = generatePotionsList("S");
+        }
+        if (itemsToSell == null || itemsToSell.isEmpty()) {
+            itemsToSell = List.of(new FMItem(2000002, 1, 100), new FMItem(2000001, 1, 100));
+        }
     }
 
     private FMItem getCurrentItem() {
@@ -82,6 +96,9 @@ public class SellingMerchantBot extends BotSM {
     private void selectNextItem() {
         if (itemsToSell == null || itemsToSell.isEmpty()) {
             loadItemList();
+        }
+        if (itemsToSell == null || itemsToSell.isEmpty()) {
+            return;
         }
 
         itemIndex++;
@@ -113,75 +130,48 @@ public class SellingMerchantBot extends BotSM {
             return;
         }
         String itemName = getItemName(itm.getItemId());
-        if (itemName != null) {
+        if (itemName != null && random.nextInt(100) < 72 && MarketBotDirector.get().trySpeak(getChr())) {
             String msg = buildSellingMessage(itemName);
             SocialCommands.BotSpeak(getChr(), msg);
         }
     }
 
     static String buildSellingMessage(String itemName) {
-        List<String> prefixes = List.of("Selling", "S>", "S>>", "SELL>", "Selling>");
-        List<String> suffixes = List.of("You Offer", "Offer", "Trade Me", "just trade me!", "PM me",
-                "no lowball", "no noobs", "no scammers", "Pros only", "hotties only", "no nx h0es",
-                "baddies only", "no weebs", "English Only", "No Spanish",
-                "serious offers only", "dont waste my time", "legit only", "no time wasters");
-
-        String msg = getRandomElement(prefixes) + " " + itemName + " " + getRandomElement(suffixes);
-
-        int fillerCount = random.nextInt(4);
-        for (int i = 0; i < fillerCount; i++) {
-            msg += " @@@@@@@@";
-        }
-
-        msg = msg.replace("[", "").replace("]", "");
-
-        if (random.nextDouble() < 0.15) {
-            msg = msg.toUpperCase();
-        }
-        return msg;
+        return MarketBotFlavor.selling(itemName);
     }
 
     private boolean tryPlatformShuffleWhileAdvertising() {
+        if (!SoloMaplingConfig.marketWanderEnabled()) {
+            return false;
+        }
+        Runnable move = null;
         if (rollChanceInverse(10)) {
-            botMoveToPlatformAnyUnoccupiedSpot(getChr(), getCurrentPlatform(getChr()));
-            if (rollChanceInverse(2)) nudgeAwayFromOverlap(getChr());
-            return true;
+            move = () -> {
+                botMoveToPlatformAnyUnoccupiedSpot(getChr(), getCurrentPlatform(getChr()));
+                if (rollChanceInverse(2)) nudgeAwayFromOverlap(getChr());
+            };
         } else if (rollChanceInverse(20)) {
-            botMoveToPlatformAnyUnoccupiedSpot(getChr(), getRandomElement(List.of("m1", "m5")));
-            if (rollChanceInverse(2)) nudgeAwayFromOverlap(getChr());
-            return true;
+            move = () -> {
+                botMoveToPlatformAnyUnoccupiedSpot(getChr(), getRandomElement(List.of("m1", "m5")));
+                if (rollChanceInverse(2)) nudgeAwayFromOverlap(getChr());
+            };
         } else if (rollChanceInverse(30)) {
-            botMoveToPlatformAnyUnoccupiedSpot(getChr(), getRandomElement(List.of("m1", "m2")));
-            if (rollChanceInverse(2)) nudgeAwayFromOverlap(getChr());
-            return true;
+            move = () -> {
+                botMoveToPlatformAnyUnoccupiedSpot(getChr(), getRandomElement(List.of("m1", "m2")));
+                if (rollChanceInverse(2)) nudgeAwayFromOverlap(getChr());
+            };
         } else if (rollChanceInverse(70)) {
             int currentMap = getChr().getMapId();
-            botMoveToPlatformAnyUnoccupiedSpot(getChr(), getRandomElement(getMainPlatformIds(currentMap)));
-            if (rollChanceInverse(2)) nudgeAwayFromOverlap(getChr());
-            return true;
+            move = () -> {
+                botMoveToPlatformAnyUnoccupiedSpot(getChr(), getRandomElement(getMainPlatformIds(currentMap)));
+                if (rollChanceInverse(2)) nudgeAwayFromOverlap(getChr());
+            };
         }
-        return false;
+        return move != null && MarketBotDirector.get().runPathfind(move);
     }
 
     private void handleIdleActions() {
-        if (movedDuringAdvertise) {
-            movedDuringAdvertise = false;
-            return;
-        }
-        if (rollChanceInverse(10)) {
-            botMoveToPlatformAnyUnoccupiedSpot(getChr(), getCurrentPlatform(getChr()));
-            if (rollChanceInverse(2)) nudgeAwayFromOverlap(getChr());
-        } else if (rollChanceInverse(20)) {
-            botMoveToPlatformAnyUnoccupiedSpot(getChr(), getRandomElement(List.of("m1", "m5")));
-            if (rollChanceInverse(2)) nudgeAwayFromOverlap(getChr());
-        } else if (rollChanceInverse(30)) {
-            botMoveToPlatformAnyUnoccupiedSpot(getChr(), getRandomElement(List.of("m1", "m2")));
-            if (rollChanceInverse(2)) nudgeAwayFromOverlap(getChr());
-        } else if (rollChanceInverse(70)) {
-            int currentMap = getChr().getMapId();
-            botMoveToPlatformAnyUnoccupiedSpot(getChr(), getRandomElement(getMainPlatformIds(currentMap)));
-            if (rollChanceInverse(2)) nudgeAwayFromOverlap(getChr());
-        }
+        MarketBotAmbient.act(this);
     }
 
     private boolean tryConvertToNXMerchant() {
@@ -201,6 +191,13 @@ public class SellingMerchantBot extends BotSM {
         if (getState() == BotState.TRADING) {
             return;
         }
+        MarketBotAmbient.act(this);
+        if (MarketBotAmbient.isSitting(getChr()) || isBusy() || isBotMoving(getChr())) {
+            if (MarketBotAmbient.isSitting(getChr()) && SoloMaplingConfig.marketHawkEnabled()) {
+                advertise();
+            }
+            return;
+        }
         getDebugger().debugLoggingFull(
                 String.format("%s SellingMerchantBot: %s", getChr().getName(), sellingState),
                 String.format("%s", sellingState));
@@ -215,20 +212,18 @@ public class SellingMerchantBot extends BotSM {
                 sellingState = SellingState.ADVERTISE;
                 break;
             case ADVERTISE:
-                if (rollChanceInverse(25)) {
-                    getDialogueHandler().executeBotFlavorDialogue(getRandomElement(FLAVOR_NODES), this);
-                } else {
+                if (SoloMaplingConfig.marketHawkEnabled()) {
                     advertise();
                 }
-                movedDuringAdvertise = tryPlatformShuffleWhileAdvertising();
+                movedDuringAdvertise = false;
                 sellingState = SellingState.CHECK_TRADES;
+                busyFor(400);
                 break;
             case CHECK_TRADES:
                 checkForTrades();
                 sellingState = SellingState.IDLE_ACTIONS;
                 break;
             case IDLE_ACTIONS:
-                handleIdleActions();
                 if (tryConvertToNXMerchant()) {
                     return;
                 }
@@ -248,10 +243,5 @@ public class SellingMerchantBot extends BotSM {
 
     @Override
     public void processMessages() {
-        try {
-            ChatMessage message = MessageQueue.getInstance().getMessageWithTimeout("secondary", 1, TimeUnit.SECONDS);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
     }
 }

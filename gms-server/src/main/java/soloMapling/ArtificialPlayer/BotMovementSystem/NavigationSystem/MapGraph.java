@@ -14,6 +14,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.StringWriter;
 import java.io.Writer;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -26,6 +27,8 @@ import java.util.stream.Collectors;
 
 import static soloMapling.ArtificialPlayer.BotMovementSystem.InPacketReader.getMovementRecordingRaw;
 import static soloMapling.DebugUtilities.debugprint;
+import static soloMapling.Environment.EnvironmentManager.getConnectorPlatformIds;
+import static soloMapling.Environment.EnvironmentManager.getMainPlatformIds;
 
 public class MapGraph {
 
@@ -37,8 +40,10 @@ public class MapGraph {
     File directory;
 
     public MapGraph(int mapId) {
-        this.mapId = mapId; // convertFMMapDirectoryID(mapId);
-        this.directory = new File("src/main/java/soloMapling/ArtificialPlayer/BotMovementSystem/movementDataPackets/map" + this.mapId);
+        this.mapId = mapId;
+        Path disk = soloMapling.server.SoloMaplingResource.resolveExisting(
+                "soloMapling/ArtificialPlayer/BotMovementSystem/movementDataPackets/map" + this.mapId);
+        this.directory = disk == null ? new File("") : disk.toFile();
         this.setMainAreas();
         this.setConnectors();
         this.buildGraph();
@@ -146,7 +151,8 @@ public class MapGraph {
 
     public void setMainAreas() {
         if (!directory.exists()) {
-            System.out.println("Directory does not exist");
+            mainAreas.clear();
+            mainAreas.addAll(getMainPlatformIds(mapId));
             return;
         }
 
@@ -170,7 +176,8 @@ public class MapGraph {
 
     public void setConnectors() {
         if (!directory.exists()) {
-            System.out.println("Directory does not exist");
+            connectors.clear();
+            connectors.addAll(getConnectorPlatformIds(mapId));
             return;
         }
 

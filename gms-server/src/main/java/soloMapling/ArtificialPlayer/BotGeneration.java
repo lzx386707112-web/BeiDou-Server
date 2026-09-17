@@ -4,6 +4,7 @@ import org.gms.client.Character;
 import org.gms.client.Client;
 import org.gms.client.Job;
 import org.gms.server.maps.MapleMap;
+import soloMapling.Environment.PlatformSpawner;
 import soloMapling.ArtificialPlayer.BotMessagingSystem.CharacterStorage;
 import soloMapling.SoloMaplingConfig;
 import soloMapling.server.SoloMaplingConstants;
@@ -98,7 +99,15 @@ public class BotGeneration {
     }
 
     public static int createBot(Point pos, MapleMap map) {
-        int botId = reserveBotId();
+        return createBot(pos, map, false);
+    }
+
+    public static int createBot(Point pos, MapleMap map, boolean ignoreEnvironmentLimit) {
+        return createBot(pos, map, ignoreEnvironmentLimit, true);
+    }
+
+    public static int createBot(Point pos, MapleMap map, boolean ignoreEnvironmentLimit, boolean playArrival) {
+        int botId = reserveBotId(ignoreEnvironmentLimit);
         if (botId < 0) {
             debugprint("Environment bot limit reached; skipping bot creation.");
             return -1;
@@ -111,22 +120,24 @@ public class BotGeneration {
         }
         addBotToServer(bot);
         placeBotOnMap(bot, pos, map);
-        // Decorate before the drop-down plays so the bot arrives fully dressed
-        // (decoration is an in-memory cache lookup, takes microseconds).
         setBotVariables(bot);
-        // Choreography sleeps ~2.5-6s in total; play it on a virtual thread so
-        // mass spawning isn't gated on each bot's arrival animation. Drop-down ->
-        // turn-around ordering is preserved because it's one sequential task.
-        Character finalBot = bot;
-        runAsync(() -> playSpawnChoreography(finalBot));
+        if (playArrival) {
+            Character finalBot = bot;
+            runAsync(() -> playSpawnChoreography(finalBot));
+        }
         return botId;
     }
 
     private static int reserveBotId() {
+        return reserveBotId(false);
+    }
+
+    private static int reserveBotId(boolean ignoreEnvironmentLimit) {
         while (true) {
             int current = currentBotCount.get();
             int limitedCreated = Math.max(0, current - 100 - environmentBotLimitStartCount.get());
-            if (environmentBotLimitActive.get() && limitedCreated >= SoloMaplingConfig.environmentBotMax()) {
+            if (!ignoreEnvironmentLimit && environmentBotLimitActive.get()
+                    && limitedCreated >= SoloMaplingConfig.environmentBotMax()) {
                 return -1;
             }
             if (currentBotCount.compareAndSet(current, current + 1)) {
@@ -136,13 +147,8 @@ public class BotGeneration {
     }
 
     private static Character loadBotTemplate() {
-        Client client = getBotClient();
-        if (client == null || client.getPlayer() == null) {
-            throw new IllegalStateException("Bot client is not initialized. Run a SoloMapling command from an online character first.");
-        }
-
-        int templateCid = client.getPlayer().getId();
-        return Character.loadCharFromDB(templateCid, client, false);
+        Client client = BotClientHandler.ensureStandaloneClient();
+        return Character.getDefault(client);
     }
 
 
@@ -166,7 +172,7 @@ public class BotGeneration {
             fakechar.getMap().removePlayer(fakechar);
         }
         fakechar.setMap(map);
-        fakechar.setPosition(pos);
+        fakechar.setPosition(PlatformSpawner.snapToGround(map, pos));
         fakechar.setStance(5);
         map.addPlayer(fakechar);
     }
@@ -217,7 +223,7 @@ public class BotGeneration {
     }
 
     private static void attachMockClient(Character bot) {
-        Client source = getBotClient();
+        Client source = BotClientHandler.ensureStandaloneClient();
         Client mock = Client.createMock();
         mock.setWorld(source.getWorld());
         mock.setChannel(source.getChannel());
@@ -255,7 +261,7 @@ public class BotGeneration {
         int fmMap = 910000000;
         MapleMap spawnMap = getBotClient().getChannelServer().getMapFactory().getMap(fmMap);
         fakechar.setMap(spawnMap);
-        fakechar.setPosition(pt);
+        fakechar.setPosition(PlatformSpawner.snapToGround(spawnMap, pt));
         fakechar.setStance(5);
         spawnMap.addPlayer(fakechar);
     }
@@ -266,7 +272,15 @@ public class BotGeneration {
     loop only kicks in as a fallback. If the bot isn't ready after 3000ms, returns null.
      */
     public static Character createBotPollReadiness(Point position, int mapId) {
-        int botId = BotGeneration.createBot(position, getMapleMapById(mapId));
+        return createBotPollReadiness(position, mapId, false);
+    }
+
+    public static Character createBotPollReadiness(Point position, int mapId, boolean ignoreEnvironmentLimit) {
+        return createBotPollReadiness(position, mapId, ignoreEnvironmentLimit, true);
+    }
+
+    public static Character createBotPollReadiness(Point position, int mapId, boolean ignoreEnvironmentLimit, boolean playArrival) {
+        int botId = BotGeneration.createBot(position, getMapleMapById(mapId), ignoreEnvironmentLimit, playArrival);
         if (botId < 0) {
             return null;
         }

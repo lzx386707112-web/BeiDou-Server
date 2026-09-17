@@ -9,6 +9,9 @@ import soloMapling.ArtificialPlayer.BotMessagingSystem.MessageQueue;
 import soloMapling.ArtificialPlayer.BotMovementSystem.NavigationSystem.PortalConnection;
 import soloMapling.ArtificialPlayer.BotSM;
 import soloMapling.ArtificialPlayer.BotTypeManager;
+import soloMapling.ArtificialPlayer.BotFlavorSystem.BotFlavor;
+import soloMapling.ArtificialPlayer.BotWanderSystem.BotWanderSystem;
+import soloMapling.ArtificialPlayer.GCMoveSystem.GCMovement;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -100,6 +103,11 @@ public class HenesysBot extends BotSM {
     }
 
     @Override
+    public boolean isAvailableForAmbientActions() {
+        return getState() != BotState.TRADING;
+    }
+
+    @Override
     public void updateState() {
         super.updateState();
         if (checkIfNotRunningOrPaused()) {
@@ -154,6 +162,7 @@ public class HenesysBot extends BotSM {
             return;
         }
 
+        BotFlavor.maybeExpress(this);
         boolean mapChangeCooledDown = (System.currentTimeMillis() - lastMapChangeTime) > MAP_CHANGE_COOLDOWN_MS;
 
         if (isMapRoamingEnabled() && mapChangeCooledDown && rollChanceInverse(10)) {
@@ -186,6 +195,18 @@ public class HenesysBot extends BotSM {
      * sometimes moves to a nearby one, sometimes picks from the full map.
      */
     private void wanderPlatforms() {
+        Character chr = getChr();
+        if (chr != null && GCMovement.isMapObserved(chr.getMapId())) {
+            GCMovement.enable(chr);
+            if (!BotWanderSystem.isWandering(chr)) {
+                BotWanderSystem.start(chr);
+            }
+            return;
+        }
+        if (chr != null) {
+            BotWanderSystem.stop(chr);
+            return;
+        }
         List<String> platforms = getWanderablePlatforms(getChr().getMapId());
         if (platforms.isEmpty()) return;
 

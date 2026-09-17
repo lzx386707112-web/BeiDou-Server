@@ -112,6 +112,7 @@
       <div class="tree-filter">
         <input id="treeSearch" type="search" placeholder="筛选节点或值" autocomplete="off">
         <label class="toggle-label compact-toggle"><input id="diffOnly" type="checkbox"> 仅差异</label>
+        <label class="toggle-label compact-toggle"><input id="uolOnly" type="checkbox"> 仅引用</label>
       </div>
       <div class="tree-guide" aria-label="节点对比说明">
         <div class="tree-source-guide">
@@ -192,6 +193,7 @@
           <h2>检查器</h2>
           <span id="selectedPath" class="panel-meta path-meta">未选择节点</span>
         </div>
+        <button id="openNodeDetailBtn" class="text-button" type="button">打开节点详情</button>
         <div id="mobControlsInline" class="preview-controls" hidden>
           <select id="actionSelectInline" aria-label="怪物动作"></select>
           <button id="resetBtnInline" class="icon-button small" type="button" title="重置" aria-label="重置">⏮</button>
@@ -225,6 +227,7 @@
         <button id="compatibilityTab" class="active" type="button" role="tab" aria-selected="true">兼容分析 <span id="compatibilityCount">0</span></button>
         <button id="diagnosticTab" type="button" role="tab" aria-selected="false">崩溃诊断 <span id="diagnosticCount">–</span></button>
         <button id="nodeDetailTab" type="button" role="tab" aria-selected="false">节点详情</button>
+        <button id="serverControlTab" type="button" role="tab" aria-selected="false">服务端控制</button>
       </div>
       <div class="inspector-content">
         <div id="compatibility" class="compatibility"></div>
@@ -244,18 +247,40 @@
             <button id="runDiagnosticBtn" class="primary-button" type="button">运行崩溃诊断</button>
           </div>
         </div>
-        <div id="inspector" class="inspector empty-state compact" hidden>
-          <span class="empty-mark small" aria-hidden="true">⌖</span>
-          <strong>选择左侧节点</strong>
-          <span>这里会显示属性、差异与可编辑值。</span>
+        <div id="serverControlHelp" class="server-control-help" hidden>
+          <div class="empty-state compact">
+            <strong>服务端控制技能</strong>
+            <span>复制 TMS 节点只恢复本体动作。光球个数、轨迹、延迟圈伤要在 Java Encounter 里写。打开本页查看模板和当前节点分类。</span>
+          </div>
         </div>
-      </div>
-      <div id="editActions" class="edit-actions" hidden>
-        <button id="saveBtn" class="primary-button" type="button">写入主文件</button>
       </div>
       <pre id="operationResult" class="operation-result" hidden></pre>
     </aside>
   </main>
+
+  <div id="nodeDetailDialog" class="node-detail-overlay" hidden>
+    <div class="node-detail-dialog" role="dialog" aria-modal="true" aria-labelledby="nodeDetailTitle">
+    <div class="dialog-head">
+      <div>
+        <h2 id="nodeDetailTitle">节点详情</h2>
+        <span id="nodeDetailPath" class="dialog-parent-path">未选择节点</span>
+      </div>
+      <button id="closeNodeDetailBtn" class="icon-button small" type="button" aria-label="关闭">×</button>
+    </div>
+    <div id="inspector" class="inspector empty-state compact">
+      <span class="empty-mark small" aria-hidden="true">⌖</span>
+      <strong>选择左侧节点</strong>
+      <span>对比树里点选节点后，会在这里显示属性、差异和可编辑值。</span>
+    </div>
+    <div id="editActions" class="edit-actions node-detail-footer">
+      <button id="dialogCopyBtn" class="node-copy-button" type="button" disabled>复制选中的 TMS 节点到 A</button>
+      <button id="dialogAddChildBtn" class="node-action-button" type="button" disabled>＋ 添加子节点</button>
+      <button id="dialogDeleteBtn" class="node-action-button danger" type="button" disabled>删除节点</button>
+      <span class="node-detail-footer-spacer"></span>
+      <button id="saveBtn" class="primary-button" type="button">写入主文件</button>
+    </div>
+    </div>
+  </div>
 
   <dialog id="addDialog">
     <form method="dialog" id="addForm">

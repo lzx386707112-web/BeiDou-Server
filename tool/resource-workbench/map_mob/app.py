@@ -33,6 +33,7 @@ for dependency in (_WZPY, _MIGRATION):
     if str(dependency) not in sys.path:
         sys.path.insert(0, str(dependency))
 from flask import Flask, jsonify, render_template, request, send_file  # noqa: E402
+from PIL import Image  # noqa: E402
 from wzpy import (  # noqa: E402
     StaticWzKey,
     WzImage,
@@ -60,6 +61,8 @@ from wzpy.properties import (  # noqa: E402
     WzVideoProperty,
 )
 from . import compat as map_compat  # noqa: E402
+from . import server_control_help  # noqa: E402
+from . import mob_skill_resolve  # noqa: E402
 import migrate_arcane_river_expansion as arc  # noqa: E402
 
 app = Flask(__name__)
@@ -69,8 +72,12 @@ _SCALAR_TYPES = {"short", "int", "long", "float", "double", "string", "uol", "ve
 _TMS_ROOT = _ROOT.parent / "TMS"
 _TMS_DATA = _ROOT.parent / "TMS" / "MapleStory-IMG" / "Data"
 _MS_PACKS = _TMS_ROOT / "MapleStory" / "Data" / "Packs"
+# Thin .NET shim: Java 21 + /Users/lizixian/Documents/mxd/orange-wz MsRawExtract (Snow2/ChaCha).
 _MS_PROBE = _TMS_ROOT / "black_mage_report_tools" / "ms_probe" / "bin" / "Debug" / "net8.0" / "MSProbe.dll"
-_MS_CACHE_ROOT = Path.home() / "Library" / "Caches" / "BeiDouMapMobWorkbench" / "ms"
+_MS_CACHE_ROOT = _TMS_ROOT / "ms-extract"
+_LEGACY_MS_CACHE_ROOT = Path.home() / "Library" / "Caches" / "BeiDouMapMobWorkbench" / "ms"
+# tool/scripts/migration/migrate_arcane_river_expansion.extract_mob 的落盘目录
+_ARCANE_MOB_CACHE = Path("/private/tmp/arcane-river-mob-cache")
 _DEFAULT_EXPORT_ROOT = Path.home() / "Downloads" / "MapMobWorkbenchExport"
 
 
@@ -150,10 +157,7 @@ def default_paths(kind: str, item_id: str) -> tuple[Path, Path]:
         tms_canvas = _TMS_DATA / "Mob" / "_Canvas" / f"{item_id}.img"
         return (
             _ROOT / "clien" / "Data" / "Mob" / f"{item_id}.img",
-            tms if tms.is_file() else (
-                tms_canvas if tms_canvas.is_file()
-                else _ROOT / "gms-server" / "wz" / "Mob.wz" / f"{item_id}.img.xml"
-            ),
+            tms_canvas if tms_canvas.is_file() else tms if tms.is_file() else tms_canvas,
         )
     if kind != "map" or not re.fullmatch(r"\d{9}", item_id):
         raise ValueError("地图 ID 必须是 9 位数字")
@@ -182,6 +186,7 @@ def _ms_mob_index_cached(
     if not dotnet:
         return {}
     output: dict[str, Path] = {}
+    failures: list[str] = []
     for pack_text, _mtime_ns, _size in signature:
         pack = Path(pack_text)
         result = subprocess.run(
@@ -191,13 +196,15 @@ def _ms_mob_index_cached(
             check=False,
         )
         if result.returncode != 0:
-            raise ValueError(
-                f"无法读取 {pack.name}: {result.stderr.strip() or result.stdout.strip()}"
-            )
+            detail = (result.stderr.strip() or result.stdout.strip()).splitlines()
+            failures.append(f"{pack.name}: {detail[0] if detail else 'exit ' + str(result.returncode)}")
+            continue
         for line in result.stdout.splitlines():
             match = re.fullmatch(r"Mob/(\d{7})\.img", line.strip(), re.IGNORECASE)
             if match:
                 output.setdefault(match.group(1), pack)
+    if not output:
+        raise ValueError("无法读取任何 Mob MS 包: " + "; ".join(failures) if failures else "MS 包没有 Mob 条目")
     return output
 
 
@@ -205,17 +212,65 @@ def ms_mob_index() -> dict[str, Path]:
     return _ms_mob_index_cached(ms_pack_signature())
 
 
+def _ms_extract_roots() -> tuple[Path, ...]:
+    return (_MS_CACHE_ROOT, _LEGACY_MS_CACHE_ROOT, _ARCANE_MOB_CACHE)
+
+
+def find_extracted_ms_mob(item_id: str) -> Path | None:
+    """Find a previously unpacked MS logical record without calling MSProbe."""
+    if not re.fullmatch(r"\d{7}", item_id):
+        return None
+    names = (f"Mob_{item_id}.img", f"{item_id}.img")
+    for root in _ms_extract_roots():
+        if not root.is_dir():
+            continue
+        for name in names:
+            for candidate in (root / item_id / name, root / name):
+                if candidate.is_file():
+                    return candidate
+        try:
+            for child in root.iterdir():
+                if not child.is_dir():
+                    continue
+                for name in names:
+                    candidate = child / name
+                    if candidate.is_file():
+                        return candidate
+        except OSError:
+            continue
+    return None
+
+
+def _existing_ms_extract(item_id: str, pack: Path) -> Path | None:
+    for root in _ms_extract_roots():
+        target = root / pack.stem / f"Mob_{item_id}.img"
+        if target.is_file():
+            return target
+    return find_extracted_ms_mob(item_id)
+
+
 def extract_ms_mob(item_id: str) -> tuple[Path, Path] | None:
     if not re.fullmatch(r"\d{7}", item_id):
         raise ValueError("怪物 ID 必须是 7 位数字")
+    cached = find_extracted_ms_mob(item_id)
     pack = ms_mob_index().get(item_id)
     if pack is None:
-        return None
+        if cached is None:
+            return None
+        load_image(cached)
+        return cached, cached.parent
     target_dir = _MS_CACHE_ROOT / pack.stem
     target = target_dir / f"Mob_{item_id}.img"
-    if target.is_file() and target.stat().st_mtime_ns >= pack.stat().st_mtime_ns:
-        load_image(target)
-        return target, pack
+    existing = _existing_ms_extract(item_id, pack) or cached
+    if existing is not None and existing.stat().st_mtime_ns >= pack.stat().st_mtime_ns:
+        if existing.resolve() != target.resolve():
+            target_dir.mkdir(parents=True, exist_ok=True)
+            if not target.is_file() or target.stat().st_mtime_ns < existing.stat().st_mtime_ns:
+                atomic_write(target, existing.read_bytes(), backup=False)
+            load_image(target)
+            return target, pack
+        load_image(existing)
+        return existing, pack
     if not _MS_PROBE.is_file():
         raise ValueError(f"MSProbe 不存在: {_MS_PROBE}")
     dotnet = shutil.which("dotnet")
@@ -310,8 +365,8 @@ def mob_source_options(item_id: str) -> dict[str, Any]:
     tms_names = mob_names(_TMS_DATA / "String" / "Mob.img")
     client_names = mob_names(_ROOT / "clien" / "Data" / "String" / "Mob.img")
     comparison = next(
-        (source["path"] for source in sources if source["kind"] in {"ms", "img", "canvas"}),
-        relative_path(server),
+        (source["path"] for source in sources if source["kind"] == "canvas"),
+        next((source["path"] for source in sources if source["kind"] == "img"), relative_path(canvas)),
     )
     return {
         "id": item_id,
@@ -398,6 +453,9 @@ def property_meta(prop: WzProperty, *, include_children: bool = True) -> dict[st
         origin = prop.child("origin")
         if isinstance(origin, WzVectorProperty):
             out["origin"] = {"x": int(origin.x), "y": int(origin.y)}
+        outlink = prop.child("_outlink")
+        if isinstance(outlink, WzStringProperty):
+            out["_outlink"] = str(outlink.value)
     elif isinstance(prop, WzVideoProperty):
         out["type"] = "video"
         out["videoType"] = prop.video_type
@@ -423,7 +481,122 @@ def property_meta(prop: WzProperty, *, include_children: bool = True) -> dict[st
     return out
 
 
-def flatten_img(path: Path) -> tuple[dict[str, dict[str, Any]], dict[str, Any]]:
+def is_mob_canvas_store(path: Path) -> bool:
+    parts = Path(path).parts
+    try:
+        canvas_index = parts.index("_Canvas")
+    except ValueError:
+        return False
+    return path.suffix.lower() == ".img" and canvas_index > 0 and parts[canvas_index - 1] == "Mob"
+
+
+def logical_companion_for_canvas_store(path: Path) -> Path | None:
+    item_id = path.stem
+    if not re.fullmatch(r"\d{7}", item_id):
+        return None
+    extracted = find_extracted_ms_mob(item_id)
+    if extracted is not None:
+        return extracted
+    direct = _TMS_DATA / "Mob" / f"{item_id}.img"
+    if direct.is_file() and direct.resolve() != path.resolve():
+        return direct
+    pack = None
+    try:
+        pack = ms_mob_index().get(item_id)
+    except Exception:
+        pack = None
+    if pack is not None:
+        extracted = _existing_ms_extract(item_id, pack)
+        if extracted is not None:
+            return extracted
+    json_dump = _ROOT / "clien" / "Data" / "Mob" / f"{item_id}.img.json"
+    if json_dump.is_file():
+        return json_dump
+    fallback_json = _HERE.parents[2] / "clien" / "Data" / "Mob" / f"{item_id}.img.json"
+    if fallback_json.is_file():
+        return fallback_json
+    return None
+
+
+def _parent_path(node_path: str) -> str:
+    return node_path.rsplit("/", 1)[0] if "/" in node_path else ""
+
+
+def normalize_node_meta(meta: dict[str, Any]) -> dict[str, Any]:
+    out = dict(meta)
+    node_type = str(out.get("type") or "")
+    if node_type in {"SubProperty", "subproperty"}:
+        out["type"] = "imgdir"
+    elif node_type.lower() == "uol":
+        out["type"] = "uol"
+        if out.get("value") in (None, "") and out.get("target") not in (None, ""):
+            out["value"] = str(out["target"])
+    elif node_type:
+        out["type"] = node_type.lower()
+    return out
+
+
+def _refresh_direct_child_counts(nodes: dict[str, dict[str, Any]]) -> None:
+    counts: Counter[str] = Counter()
+    for node_path in nodes:
+        if node_path:
+            counts[_parent_path(node_path)] += 1
+    for node_path, count in counts.items():
+        if node_path in nodes:
+            nodes[node_path]["childCount"] = count
+    if "" in nodes:
+        nodes[""]["childCount"] = counts.get("", nodes[""].get("childCount", 0))
+
+
+def overlay_canvas_store_tree(
+    path: Path, nodes: dict[str, dict[str, Any]], info: dict[str, Any],
+) -> dict[str, Any]:
+    extra = merge_canvas_metadata_tables(path, allow_extract=False)
+    canvas_roots = {node_path.split("/")[0] for node_path in nodes if node_path}
+    canvas_roots.add("info")
+    if extra:
+        for node_path, meta in extra.items():
+            if not node_path or node_path in nodes:
+                continue
+            root = node_path.split("/")[0]
+            if root not in canvas_roots:
+                continue
+            nodes[node_path] = {
+                **normalize_node_meta(meta),
+                "canvasStoreMissing": True,
+                "logicalSource": True,
+            }
+        companions = canvas_metadata_companion_paths(path, allow_extract=False)
+        if companions:
+            info["logicalCompanion"] = relative_path(companions[0])
+    children_by_parent: dict[str, list[str]] = {}
+    for node_path in nodes:
+        if not node_path:
+            continue
+        children_by_parent.setdefault(_parent_path(node_path), []).append(node_path.rsplit("/", 1)[-1])
+    for parent, names in children_by_parent.items():
+        digits = [int(name) for name in names if name.isdigit()]
+        if len(digits) < 2:
+            continue
+        present = {str(value) for value in digits}
+        for index in range(min(digits), max(digits) + 1):
+            name = str(index)
+            if name in present:
+                continue
+            node_path = f"{parent}/{name}".strip("/")
+            if node_path in nodes:
+                continue
+            nodes[node_path] = {
+                "name": name, "type": "gap", "canvasStoreMissing": True,
+                "value": "Canvas 库未收录",
+            }
+    _refresh_direct_child_counts(nodes)
+    info["canvasStore"] = True
+    return info
+
+
+def flatten_img_records(path: Path) -> dict[str, dict[str, Any]]:
+    """Walk one IMG's properties. Do not overlay canvas companions (avoids recursion)."""
     image = load_image(path)
     nodes: dict[str, dict[str, Any]] = {
         "": {"name": path.name, "type": "imgdir", "childCount": len(image.root.children())}
@@ -435,9 +608,22 @@ def flatten_img(path: Path) -> tuple[dict[str, dict[str, Any]], dict[str, Any]]:
             nodes[node_path] = property_meta(child)
             if isinstance(child, WzSubProperty):
                 walk(child, node_path)
+            elif isinstance(child, WzCanvasProperty):
+                for grandchild in child.children():
+                    nodes[f"{node_path}/{grandchild.name}"] = property_meta(
+                        grandchild, include_children=False,
+                    )
 
     walk(image.root, "")
-    return nodes, {"format": "img", "warnings": [], "truncated": False}
+    return nodes
+
+
+def flatten_img(path: Path) -> tuple[dict[str, dict[str, Any]], dict[str, Any]]:
+    nodes = flatten_img_records(path)
+    info: dict[str, Any] = {"format": "img", "warnings": [], "truncated": False}
+    if is_mob_canvas_store(path):
+        overlay_canvas_store_tree(path, nodes, info)
+    return nodes, info
 
 
 def xml_meta(node: ET.Element) -> dict[str, Any]:
@@ -501,8 +687,7 @@ def flatten_json(path: Path) -> tuple[dict[str, dict[str, Any]], dict[str, Any]]
             name = str(node.get("name", fallback_name))
             meta = {key: value for key, value in node.items() if key != "children"}
             meta.setdefault("name", name)
-            if meta.get("type") == "SubProperty":
-                meta["type"] = "imgdir"
+            meta = normalize_node_meta(meta)
             children = node.get("children") or []
             if children:
                 meta["childCount"] = len(children)
@@ -736,6 +921,8 @@ def annotate_rows(rows: list[dict[str, Any]], mode: str, item_id: str) -> None:
     for row in rows:
         row["left"] = annotate_meta(row["path"], row["left"], mode, item_id)
         row["right"] = annotate_meta(row["path"], row["right"], mode, item_id)
+    if mode == "boss":
+        server_control_help.attach(rows, item_id)
 
 
 def merge_sources(
@@ -843,7 +1030,8 @@ def catalog_rows(kind: str, query: str) -> list[dict[str, Any]]:
 
 def data_root_for(path: Path) -> Path:
     try:
-        if path.resolve().is_relative_to(_MS_CACHE_ROOT.resolve()):
+        resolved = path.resolve()
+        if any(resolved.is_relative_to(root.resolve()) for root in _ms_extract_roots()):
             return _TMS_DATA
     except OSError:
         pass
@@ -918,7 +1106,8 @@ _PLACEHOLDER_MAX_SIZE = 4
 _LINK_KEYS = ("_outlink", "_inlink")
 _RESOURCE_LABEL_ROOTS = (
     (_TMS_DATA, "TMS/Data"),
-    (_MS_CACHE_ROOT, "MS缓存"),
+    (_MS_CACHE_ROOT, "TMS/ms-extract"),
+    (_LEGACY_MS_CACHE_ROOT, "MS缓存"),
 )
 
 
@@ -954,7 +1143,7 @@ def resource_owner_label(path: Path) -> str:
         return "server"
     if resolved.is_relative_to(_TMS_DATA.resolve()):
         return "tms"
-    if resolved.is_relative_to(_MS_CACHE_ROOT.resolve()):
+    if any(resolved.is_relative_to(root.resolve()) for root in _ms_extract_roots()):
         return "ms"
     return "other"
 
@@ -1329,7 +1518,8 @@ def mob_preview(path: Path) -> dict[str, Any]:
             frames.append(mob_frame_descriptor(path, property_path(child), child))
         if frames:
             real_files = sorted({
-                frame["resolved"]["fileLabel"] for frame in frames if frame["resolved"]
+                frame["resolved"].get("absPath") or frame["resolved"]["fileLabel"]
+                for frame in frames if frame["resolved"]
             })
             actions.append({
                 "name": action.name,
@@ -3655,35 +3845,1343 @@ _LEGACY_MOB_ACTION = re.compile(
 )
 
 
-def clone_compatible_mob_action(
-    source: WzSubProperty, source_image: WzImage, source_path: Path,
-) -> tuple[WzSubProperty, arc.CanvasMaterializer]:
-    if not _LEGACY_MOB_ACTION.fullmatch(source.name):
-        raise ValueError(f"动作名称不属于旧端已知结构: {source.name}")
-    materializer = arc.CanvasMaterializer()
+# onlyFsm / randDelayAttack are TMS FSM timers and must not be written to GMS.
+# onlyFsm bodies are projected to stand UOLs (see ensure_fsm_only_stand_body).
+# Old-client area attacks need effectAfter + range start/areaCount/attackCount
+# (Zakum 8800000, Cygnus 8850011, Karing 8880301). bulletCount belongs on
+# type=2 (Lucid 8880141).
+_MOB_ATTACK_INFO_SKIP = frozenset({"onlyFsm", "randDelayAttack"})
+_MOB_RANGE_SKIP = frozenset({"reverse"})
+_MOB_ROOT_INFO_SKIP = frozenset({
+    "forcedSeperateSoul", "activeStopAttackExceptFirstAttackRange", "activeStopAttackExceptMob",
+})
+_LEGACY_BULLET_SPEED_MIN = 40
+_LEGACY_BULLET_SPEED_SAFE = 220
+_UNSAFE_MOB_SKILL_IDS = frozenset({170, 215})
+# TMS 170/215 cannot enter v83. Do not occupy Lucid 185 / Akayrum 176:
+# those applyEffect paths play other bosses' field skills.
+# 100/101 are generic ATK buffs; 123/128 are shared diseases, not boss-specific VFX.
+_LIFEFACTORY_REQUIRED_INTS = ("level", "PADamage", "PDDamage", "MADamage", "MDDamage")
+_LEGACY_INFO_RATE_MAX = 70
+_PROJECTED_MOB_SKILL_TABLES = {
+    "8880110": (
+        {"skill": 100, "level": 1, "action": 1},
+        {"skill": 101, "level": 1, "action": 2},
+        {"skill": 123, "level": 4, "action": 3},
+        {"skill": 128, "level": 6, "action": 4},
+    ),
+    "8880111": (
+        {"skill": 100, "level": 1, "action": 1},
+        {"skill": 101, "level": 1, "action": 2},
+        {"skill": 123, "level": 4, "action": 3},
+        {"skill": 128, "level": 6, "action": 4},
+        {"skill": 126, "level": 1, "action": 5},
+        {"skill": 120, "level": 4, "action": 6},
+        {"skill": 122, "level": 1, "action": 7},
+        {"skill": 124, "level": 1, "action": 8},
+        {"skill": 125, "level": 1, "action": 9},
+        {"skill": 133, "level": 1, "action": 10},
+    ),
+}
+_LEGACY_MOB_CANVAS_CHILDREN = ("origin", "delay", "z", "head", "lt", "rb")
+_POSE_CANVAS_CHILDREN = frozenset({"origin", "head", "lt", "rb", "z"})
+_DEFAULT_FRAME_DELAY = 90
+# Signed 32-bit max. TMS often writes info/maxHP as "??????"; old client needs an int.
+_CLIENT_MAXHP_INT = 2_147_483_647
 
-    def clone_node(node: WzProperty, parent: WzProperty | None) -> WzProperty:
-        if isinstance(node, WzUolProperty) and node.name.isdigit():
-            try:
-                linked_image, linked_canvas, linked_path = resolve_canvas_node(
-                    source_image, property_path(node), source_path,
-                )
-            except ValueError:
-                pass
-            else:
-                return arc.clone_property(
-                    linked_canvas, parent, linked_image, linked_path, materializer, node.name,
-                )
+
+def _positive_int(value: object) -> int | None:
+    try:
+        parsed = int(str(value).strip())
+    except (TypeError, ValueError):
+        return None
+    return parsed if parsed > 0 else None
+
+
+def _legacy_client_maxhp(source_value: object, existing: WzProperty | None) -> int:
+    """Numeric source HP, else target HP, else signed-int max (21亿)."""
+    parsed = _positive_int(source_value)
+    if parsed is not None:
+        return min(parsed, _CLIENT_MAXHP_INT)
+    if isinstance(existing, (WzIntProperty, WzLongProperty, WzShortProperty)):
+        inherited = _positive_int(existing.value)
+        if inherited is not None:
+            return min(inherited, _CLIENT_MAXHP_INT)
+    return _CLIENT_MAXHP_INT
+
+
+def resolve_uol_absolute(from_path: str, target: str) -> str:
+    parts = [part for part in from_path.split("/") if part]
+    if parts:
+        parts.pop()
+    for segment in str(target).replace("\\", "/").split("/"):
+        if not segment or segment == ".":
+            continue
+        if segment == "..":
+            if parts:
+                parts.pop()
+            continue
+        parts.append(segment)
+    return "/".join(parts)
+
+
+def skip_companion_leaf(path: str) -> bool:
+    parts = [part for part in path.split("/") if part]
+    name = parts[-1] if parts else ""
+    parent_name = parts[-2] if len(parts) > 1 else ""
+    if name in {"_inlink", "_outlink"} or name in map_compat.SPINE_NAMES:
+        return True
+    if name.startswith("directionAct"):
+        return True
+    if parent_name == "info" and name in _MOB_ATTACK_INFO_SKIP:
+        return True
+    if parent_name == "range" and name in _MOB_RANGE_SKIP:
+        return True
+    if _is_mob_root_info_path(parts):
+        root_child = parts[1]
+        if (
+            root_child in map_compat.BOSS_INFO_INCOMPATIBLE
+            or root_child in map_compat.BOSS_INFO_MODERN_REVIEW
+            or root_child in _MOB_ROOT_INFO_SKIP
+        ):
+            return True
+    return False
+
+
+def _is_mob_root_info_path(parts: list[str]) -> bool:
+    return len(parts) >= 2 and parts[0] == "info"
+
+
+def _under_action_info(node: WzProperty) -> bool:
+    current = node.parent
+    while current is not None:
+        if re.fullmatch(r"(?:attack|skill)\d+", current.name or "", re.I):
+            return True
+        current = current.parent
+    return False
+
+
+def find_tms_canvas_store_match(
+    source_path: Path, width: int, height: int, frame: str, folder: str,
+) -> tuple[WzImage, WzCanvasProperty, Path] | None:
+    """Find unique pixels for a logical canvas that the current _Canvas file omitted."""
+    if not is_mob_canvas_store(source_path) or width <= 1 or height <= 1:
+        return None
+    canvas_dir = source_path.parent
+    ordered: list[Path] = []
+    stem = source_path.stem
+    if stem.isdigit():
+        for delta in (1, -1, 2, -2, 10, 11):
+            neighbor = canvas_dir / f"{int(stem) + delta:07d}.img"
+            if neighbor.is_file() and neighbor.resolve() != source_path.resolve():
+                ordered.append(neighbor)
+    for path in sorted(canvas_dir.glob("*.img")):
+        if path.resolve() != source_path.resolve() and path not in ordered:
+            ordered.append(path)
+
+    def match_canvas(node: WzProperty, parent_name: str) -> WzCanvasProperty | None:
         if isinstance(node, WzCanvasProperty):
-            return arc.clone_property(node, parent, source_image, source_path, materializer)
+            if (
+                node.name == frame
+                and int(node.width) == width
+                and int(node.height) == height
+                and (not folder or parent_name == folder)
+                and node.has_pixels()
+            ):
+                return node
+            return None
+        if isinstance(node, WzSubProperty):
+            for child in node.children():
+                found = match_canvas(child, node.name)
+                if found is not None:
+                    return found
+        return None
+
+    for path in ordered:
+        image = load_image(path)
+        found = match_canvas(image.root, "")
+        if found is not None:
+            return image, found, path
+    return None
+
+
+def clamp_legacy_bullet_speed(value: int) -> int:
+    """Keep old-client ballistic speed in the proven GMS cluster used here.
+
+    Repo Mob XML speeds are 40..600. Damien flying knives already land at 220;
+    树妖王 is 140. TMS JSON often writes 300, which is valid on 8641002 but
+    faster than this project's Damien analogue.
+    """
+    if value < _LEGACY_BULLET_SPEED_MIN:
+        return 140
+    if value > _LEGACY_BULLET_SPEED_SAFE:
+        return _LEGACY_BULLET_SPEED_SAFE
+    return int(value)
+
+
+def ensure_ballistic_contract(node: WzProperty) -> None:
+    """Project attack/info/ball onto the 8641002 / 树妖王 type=2 analogue."""
+    if not isinstance(node, WzSubProperty):
+        return
+    infos: list[WzSubProperty] = []
+    if node.name == "info" and node.child("ball") is not None:
+        infos.append(node)
+    info = node.child("info")
+    if isinstance(info, WzSubProperty) and info.child("ball") is not None:
+        infos.append(info)
+    for child in node.children():
+        nested = child.child("info") if isinstance(child, WzSubProperty) else None
+        if isinstance(nested, WzSubProperty) and nested.child("ball") is not None:
+            infos.append(nested)
+    seen: set[int] = set()
+    for info in infos:
+        if id(info) in seen:
+            continue
+        seen.add(id(info))
+        if info.child("type") is None:
+            info.add(WzIntProperty("type", 2, info))
+        speed = info.child("bulletSpeed")
+        if speed is None:
+            info.add(WzIntProperty("bulletSpeed", _LEGACY_BULLET_SPEED_SAFE, info))
+        elif isinstance(speed, (WzIntProperty, WzLongProperty, WzShortProperty)):
+            speed._value = clamp_legacy_bullet_speed(int(speed.value))
+        hit = info.child("hit")
+        if isinstance(hit, WzSubProperty) and hit.child("attach") is None:
+            hit.add(WzIntProperty("attach", 1, hit))
+
+
+def _iter_action_infos(node: WzProperty) -> list[WzSubProperty]:
+    infos: list[WzSubProperty] = []
+    if node.name == "info" and isinstance(node, WzSubProperty):
+        infos.append(node)
+    info = node.child("info") if isinstance(node, WzSubProperty) else None
+    if isinstance(info, WzSubProperty):
+        infos.append(info)
+    if isinstance(node, WzSubProperty):
+        for child in node.children():
+            nested = child.child("info") if isinstance(child, WzSubProperty) else None
+            if isinstance(nested, WzSubProperty):
+                infos.append(nested)
+    seen: set[int] = set()
+    unique: list[WzSubProperty] = []
+    for info in infos:
+        if id(info) in seen:
+            continue
+        seen.add(id(info))
+        unique.append(info)
+    return unique
+
+
+def ensure_area_attack_contract(node: WzProperty) -> None:
+    """Zakum/Cygnus/Karing: areaWarning attacks carry type=3 unless already typed."""
+    for info in _iter_action_infos(node):
+        if info.child("areaWarning") is None:
+            continue
+        if info.child("type") is None:
+            info.add(WzIntProperty("type", 3, info))
+
+
+def _read_three_field_skill_table(skill: WzSubProperty) -> list[dict[str, int]] | None:
+    entries: list[dict[str, int]] = []
+    for child in skill.children():
+        if not child.name.isdigit():
+            return None
+        record = {
+            item.name: int(item.value)
+            for item in child.children()
+            if isinstance(item, (WzIntProperty, WzLongProperty, WzShortProperty))
+        }
+        if set(record) != {"skill", "action", "level"}:
+            return None
+        if int(record["skill"]) in _UNSAFE_MOB_SKILL_IDS:
+            return None
+        entries.append(record)
+    return entries or None
+
+
+def _build_skill_table(entries: tuple[dict[str, int], ...] | list[dict[str, int]]) -> WzSubProperty:
+    skill = WzSubProperty("skill")
+    for index, entry in enumerate(entries):
+        record = WzSubProperty(str(index), skill)
+        for name in ("skill", "action", "level"):
+            record.add(WzIntProperty(name, int(entry[name]), record))
+        skill.add(record)
+    return skill
+
+
+def _mob_root_info(node: WzProperty) -> WzSubProperty | None:
+    if isinstance(node, WzSubProperty) and node.name == "info" and not _under_action_info(node):
+        return node
+    if isinstance(node, WzSubProperty):
+        candidate = node.child("info")
+        if isinstance(candidate, WzSubProperty) and not _under_action_info(candidate):
+            return candidate
+    return None
+
+
+def _skill_action_has_frames(image: WzImage | None, action: int) -> bool:
+    if image is None:
+        return False
+    folder = image.root.child(f"skill{int(action)}")
+    return isinstance(folder, WzSubProperty) and any(child.name.isdigit() for child in folder.children())
+
+
+def _projected_skill_entries(dest_mob_id: str, existing_image: WzImage | None) -> list[dict[str, int]] | None:
+    projected = _PROJECTED_MOB_SKILL_TABLES.get(dest_mob_id)
+    if projected is None:
+        return None
+    present = [dict(entry) for entry in projected if _skill_action_has_frames(existing_image, entry["action"])]
+    return present or [dict(entry) for entry in projected]
+
+
+def ensure_projected_root_skill_table(
+    node: WzProperty,
+    *,
+    existing_image: WzImage | None = None,
+    dest_mob_id: str = "",
+) -> None:
+    """Damien always uses the proven v83 table. Other mobs reuse A's three-field table."""
+    info = _mob_root_info(node)
+    if info is None:
+        return
+    entries = _projected_skill_entries(dest_mob_id, existing_image)
+    if entries is None:
+        existing = existing_image.root.get("info/skill") if existing_image is not None else None
+        if isinstance(existing, WzSubProperty):
+            entries = _read_three_field_skill_table(existing)
+    skill = info.child("skill")
+    if entries is None:
+        if isinstance(skill, WzSubProperty) and _read_three_field_skill_table(skill) is None:
+            raise ValueError("Mob info/skill 使用旧端未验证的技能；目标没有可沿用的三字段技能表")
+        return
+    if skill is not None:
+        info._children.pop("skill", None)
+    info.add(_build_skill_table(entries))
+
+
+def compact_mob_tree(node: WzProperty) -> int:
+    """Densify nested folders (areaWarning). Keep action-root frame indices.
+
+    skill2 UOLs target sibling names such as 23; compacting 10..n down to 0
+    would retarget those loops onto the wrong canvases.
+    """
+    if not isinstance(node, WzSubProperty):
+        return 0
+    renamed = 0
+    if not re.fullmatch(r"(?:attack|skill|skillAfter)\d+", node.name):
+        renamed = compact_numeric_children(node)
+    for child in list(node.children()):
+        renamed += compact_mob_tree(child)
+    return renamed
+
+
+def missing_mob_inserts(
+    clone: WzProperty, existing: WzProperty | None, prefix: str,
+) -> list[tuple[str, WzProperty]]:
+    if existing is None:
+        parent = prefix.rpartition("/")[0]
+        return [(parent, clone)]
+    leaf_types = (WzCanvasProperty, WzUolProperty, WzVideoProperty)
+    if isinstance(clone, leaf_types) or isinstance(existing, leaf_types):
+        return []
+    if not isinstance(clone, WzSubProperty) or not isinstance(existing, WzSubProperty):
+        return []
+    inserts: list[tuple[str, WzProperty]] = []
+    present = {child.name: child for child in existing.children()}
+    for child in clone.children():
+        child_path = f"{prefix}/{child.name}".strip("/")
+        if child.name not in present:
+            inserts.append((prefix, child))
+        else:
+            inserts.extend(missing_mob_inserts(child, present[child.name], child_path))
+    return inserts
+
+
+def _attack_has_usable_payload(action: WzProperty) -> bool:
+    """Body frames, or a type=2 ball attack that never had a pose (Damien attack2)."""
+    if not isinstance(action, WzSubProperty):
+        return False
+    if any(child.name.isdigit() for child in action.children()):
+        return True
+    info = action.child("info")
+    if not isinstance(info, WzSubProperty):
+        return False
+    attack_type = info.child("type")
+    typed = (
+        isinstance(attack_type, (WzIntProperty, WzLongProperty, WzShortProperty))
+        and int(attack_type.value) == 2
+    )
+    ball = info.child("ball")
+    has_ball = isinstance(ball, WzSubProperty) and any(
+        child.name.isdigit() or isinstance(child, WzCanvasProperty) for child in ball.children()
+    )
+    return typed and has_ball
+
+
+def ensure_legacy_speed_without_move(
+    clone: WzProperty, client_image: WzImage | None,
+) -> None:
+    """TMS Damien uses speed=-60 with no move; the old client crashes on spawn."""
+    info = _mob_root_info(clone)
+    if info is None:
+        return
+    has_move = isinstance(clone, WzSubProperty) and clone.child("move") is not None
+    if client_image is not None and client_image.root.child("move") is not None:
+        has_move = True
+    speed = info.child("speed")
+    if has_move or not isinstance(speed, (WzIntProperty, WzLongProperty, WzShortProperty)):
+        return
+    if int(speed.value) != 0:
+        speed._value = 0
+
+
+def ensure_legacy_lifefactory_info(
+    clone: WzProperty, client_image: WzImage | None,
+) -> None:
+    """LifeFactory.getIntConvert(level/PA/PD/MA/MDDamage) has no default; missing → 怪物不存在."""
+    info = _mob_root_info(clone)
+    if info is None:
+        return
+    for name in _LIFEFACTORY_REQUIRED_INTS:
+        current = info.child(name)
+        if isinstance(current, (WzIntProperty, WzLongProperty, WzShortProperty)):
+            continue
+        existing = client_image.root.get(f"info/{name}") if client_image is not None else None
+        value = 1 if name == "level" else 0
+        if isinstance(existing, (WzIntProperty, WzLongProperty, WzShortProperty)):
+            value = int(existing.value)
+        info.add(WzIntProperty(name, value, info))
+    for name in ("PDRate", "MDRate"):
+        rate = info.child(name)
+        if isinstance(rate, (WzIntProperty, WzLongProperty, WzShortProperty)):
+            if int(rate.value) > _LEGACY_INFO_RATE_MAX:
+                rate._value = 0
+
+
+def sync_clamped_info_rates(
+    client_path: Path, server_path: Path, clone: WzProperty, node_path: str,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Insert-only copy leaves TMS PDRate=300 on A; clamp dest scalars to the clone."""
+    info = _mob_root_info(clone)
+    if info is None or node_path not in {"", "info"}:
+        return [], []
+    dest = _verified_img_from_bytes(client_path, client_path.read_bytes()).root.child("info")
+    if not isinstance(dest, WzSubProperty):
+        return [], []
+    client_result: list[dict[str, Any]] = []
+    server_result: list[dict[str, Any]] = []
+    for name in ("PDRate", "MDRate"):
+        wanted = info.child(name)
+        have = dest.child(name)
+        if not isinstance(wanted, (WzIntProperty, WzLongProperty, WzShortProperty)):
+            continue
+        if not isinstance(have, (WzIntProperty, WzLongProperty, WzShortProperty)):
+            continue
+        if int(have.value) == int(wanted.value):
+            continue
+        client_result.append(patch_img(
+            client_path, f"info/{name}", int(wanted.value), dry_run=False, backup=False,
+        ))
+        server_result.append(patch_xml_value(
+            server_path, f"info/{name}", int(wanted.value), dry_run=False, backup=False,
+        ))
+    return client_result, server_result
+
+
+def _skill_table_entries(skill: WzProperty | None) -> list[dict[str, int]] | None:
+    if not isinstance(skill, WzSubProperty):
+        return None
+    return _read_three_field_skill_table(skill)
+
+
+def replace_existing_mob_skill_table(
+    client_path: Path, server_path: Path, clone: WzProperty, node_path: str,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Insert-only copy cannot overwrite Cygnus/TMS skill IDs; swap info/skill when projection differs."""
+    info = _mob_root_info(clone)
+    wanted = info.child("skill") if info is not None else None
+    wanted_entries = _skill_table_entries(wanted)
+    if wanted_entries is None or not isinstance(wanted, WzSubProperty):
+        return [], []
+    dest_skill_path = "info/skill" if node_path in {"", "info"} else f"{node_path.rstrip('/')}/skill"
+    dest_parent = dest_skill_path.rpartition("/")[0]
+    dest_image = _verified_img_from_bytes(client_path, client_path.read_bytes())
+    existing = dest_image.root.get(dest_skill_path)
+    if _skill_table_entries(existing) == wanted_entries:
+        return [], []
+    client_result: list[dict[str, Any]] = []
+    server_result: list[dict[str, Any]] = []
+    if existing is not None:
+        client_result.append(patch_img_delete(client_path, dest_skill_path, dry_run=False, backup=False))
+        server_result.append(xml_delete_node(server_path, dest_skill_path, dry_run=False, backup=False))
+    client_result.append(patch_img_add(
+        client_path, dest_parent, "skill", "imgdir", None,
+        dry_run=False, backup=False, node=wanted,
+    ))
+    server_result.append(xml_add_cloned_node(
+        server_path, dest_parent, wanted, dry_run=False, backup=False,
+    ))
+    return client_result, server_result
+
+
+def _legacy_stub_canvas(name: str, parent: WzProperty | None) -> WzCanvasProperty:
+    """GMS ARGB4444 1x1 transparent canvas. Zakum/Cygnus areaWarning/0 uses this."""
+    pixels = Image.new("RGBA", (1, 1), (0, 0, 0, 0))
+    canvas = WzCanvasProperty(name, parent)
+    canvas.width, canvas.height = 1, 1
+    canvas.format, canvas.format2 = 1, 0
+    canvas._png_data = encode_canvas_payload(pixels, 1, 1, 1, key=arc.GMS_KEY, listwz=False, zlib_level=9)
+    canvas._png_length = len(canvas._png_data)
+    canvas.add(WzVectorProperty("origin", 0, 0, canvas))
+    canvas.add(WzIntProperty("delay", _DEFAULT_FRAME_DELAY, canvas))
+    pixels.close()
+    return canvas
+
+
+def _is_tiny_canvas(node: WzProperty | None) -> bool:
+    if not isinstance(node, WzCanvasProperty):
+        return False
+    return int(node.width) <= _PLACEHOLDER_MAX_SIZE and int(node.height) <= _PLACEHOLDER_MAX_SIZE
+
+
+def _is_area_warning_frame(path: str, node: WzProperty) -> bool:
+    parts = [part for part in path.split("/") if part]
+    if len(parts) >= 2 and parts[-2] == "areaWarning":
+        return True
+    parent = node.parent
+    return parent is not None and parent.name == "areaWarning"
+
+
+def _keep_area_warning_stub(node: WzProperty, lookup_path: str) -> bool:
+    """Frame 0 of areaWarning must stay 1x1; do not follow _outlink to a real warning image."""
+    if not _is_area_warning_frame(lookup_path or property_path(node) or node.name, node):
+        return False
+    return node.name == "0"
+
+
+def _digit_action_frames(action: WzSubProperty) -> list[WzProperty]:
+    return [child for child in action.children() if child.name.isdigit()]
+
+
+def _pose_frame_is_empty_stub(node: WzProperty) -> bool:
+    """1x1 with no origin/head/lt is TMS FSM leftover, not a playable old-client pose."""
+    if isinstance(node, WzUolProperty):
+        return False
+    if not isinstance(node, WzCanvasProperty):
+        return False
+    if not _is_tiny_canvas(node):
+        return False
+    return not _logical_pose_usable(node)
+
+
+def _action_has_ball(action: WzSubProperty) -> bool:
+    info = action.child("info")
+    if not isinstance(info, WzSubProperty):
+        return False
+    if info.child("ball") is not None:
+        return True
+    attack_type = info.child("type")
+    return (
+        isinstance(attack_type, (WzIntProperty, WzLongProperty, WzShortProperty))
+        and int(attack_type.value) == 2
+    )
+
+
+def _stand_frame_names(image: WzImage | None) -> list[str]:
+    if image is None:
+        return []
+    stand = image.root.child("stand")
+    if not isinstance(stand, WzSubProperty):
+        return []
+    names = [child.name for child in stand.children() if child.name.isdigit()]
+    names.sort(key=lambda name: int(name))
+    return names
+
+
+def _read_only_fsm(
+    source: WzProperty | None,
+    copied_root: str,
+    companion_nodes: dict[str, dict[str, Any]],
+) -> bool:
+    info = source.child("info") if isinstance(source, WzSubProperty) else None
+    if isinstance(info, WzSubProperty):
+        value = info.child("onlyFsm")
+        if isinstance(value, (WzIntProperty, WzLongProperty, WzShortProperty)) and int(value.value) == 1:
+            return True
+    prefix = (copied_root or "").strip("/")
+    keys = [f"{prefix}/info/onlyFsm"] if prefix else []
+    keys.append("info/onlyFsm")
+    for key in keys:
+        meta = companion_nodes.get(key)
+        if not meta:
+            continue
+        try:
+            if int(meta.get("value") or 0) == 1:
+                return True
+        except (TypeError, ValueError):
+            continue
+    return False
+
+
+def ensure_fsm_only_stand_body(
+    clone: WzProperty,
+    *,
+    source: WzProperty,
+    client_image: WzImage | None,
+    companion_nodes: dict[str, dict[str, Any]],
+    copied_root: str,
+) -> int:
+    """TMS onlyFsm attacks keep a 1x1 empty pose; the old client plays it as the body.
+
+    That flickers the sprite and attaches hit/status VFX at origin=(0,0) (the feet).
+    Project onto Damien attack3: UOL every target stand frame. Do not UOL ballistic
+    stubs or real pose bodies — UOL attack1 crashes Brandish/Styx ReleaseFlash.
+    """
+    if not isinstance(clone, WzSubProperty) or not re.fullmatch(r"(?:attack|skill)\d+", clone.name):
+        return 0
+    if _action_has_ball(clone):
+        return 0
+    frames = _digit_action_frames(clone)
+    empty_pose = (not frames) or all(_pose_frame_is_empty_stub(child) for child in frames)
+    if not empty_pose:
+        return 0
+    only_fsm = _read_only_fsm(source, copied_root, companion_nodes)
+    stand_names = _stand_frame_names(client_image)
+    if not stand_names:
+        if only_fsm or not frames:
+            raise ValueError(
+                f"{clone.name} 是 TMS onlyFsm/空姿势动作，旧端会把 1×1 origin(0,0) 当身体播放"
+                "（闪烁、特效掉到脚下）。请先在目标 IMG 保留 stand 帧，复制时会投影为 ../stand/N UOL"
+            )
+        return 0
+    for child in frames:
+        clone._children.pop(child.name, None)
+    added = 0
+    for name in stand_names:
+        if clone.child(name) is not None:
+            continue
+        clone.add(WzUolProperty(name, f"../stand/{name}", clone))
+        added += 1
+    return added
+
+
+def ensure_legacy_attack_body_frame(clone: WzProperty) -> None:
+    """Ball-only TMS attacks still need attackN/0; UOL those bodies crash Brandish Flash."""
+    if not isinstance(clone, WzSubProperty) or not re.fullmatch(r"attack\d+", clone.name):
+        return
+    if any(child.name.isdigit() for child in clone.children()):
+        return
+    clone.add(_legacy_stub_canvas("0", clone))
+
+
+def ensure_area_warning_leading_stub(node: WzProperty) -> int:
+    """Old-client areaWarning walks 0..max; Zakum/Cygnus keep 0 as 1x1 and visuals at 1..n.
+
+    TMS Canvas stores often omit 0 and start at 1. Densify must not promote the first
+    real warning frame into slot 0.
+    """
+    changed = 0
+    if isinstance(node, WzSubProperty) and node.name == "areaWarning":
+        children = list(node.children())
+        numeric = [child for child in children if child.name.isdigit()]
+        numeric.sort(key=lambda child: int(child.name))
+        others = [child for child in children if not child.name.isdigit()]
+        zero = numeric[0] if numeric and numeric[0].name == "0" else None
+        if zero is not None and _is_tiny_canvas(zero):
+            visuals = numeric[1:]
+            stub = zero
+        else:
+            visuals = numeric
+            stub = _legacy_stub_canvas("0", node)
+            changed += 1
+        renamed = []
+        for index, child in enumerate(visuals, start=1):
+            if child.name != str(index):
+                child.name = str(index)
+                changed += 1
+            renamed.append(child)
+        stub.name = "0"
+        stub.parent = node
+        node._children = {child.name: child for child in [*others, stub, *renamed]}
+        return changed
+    if isinstance(node, WzSubProperty):
+        for child in list(node.children()):
+            changed += ensure_area_warning_leading_stub(child)
+    return changed
+
+
+def validate_copied_mob_info(image: WzImage) -> None:
+    """Reject a stale incompatible target after an insert-only root info copy."""
+    roots = list(image.root.children())
+    info = image.root.child("info")
+    if not isinstance(info, WzSubProperty):
+        raise ValueError("Mob info 未创建")
+    if roots[0] is not info:
+        raise ValueError("Mob info 不在首节点；现有文件须从旧端兼容基线重建")
+    hp = info.child("maxHP")
+    if not isinstance(hp, (WzIntProperty, WzLongProperty)) or int(hp.value) <= 0:
+        raise ValueError("Mob info/maxHP 仍不是正数整数；现有 info 须从兼容基线重建")
+    for name in _LIFEFACTORY_REQUIRED_INTS:
+        if not isinstance(info.child(name), (WzIntProperty, WzLongProperty, WzShortProperty)):
+            raise ValueError(
+                f"Mob info/{name} 缺失；LifeFactory 无默认值会 NPE，客户端显示怪物不存在"
+            )
+    for name in sorted(map_compat.BOSS_INFO_INCOMPATIBLE | _MOB_ROOT_INFO_SKIP):
+        if info.child(name) is not None:
+            raise ValueError(f"Mob info/{name} 仍是旧端不兼容节点；须从兼容基线重建")
+    mob_type = info.child("mobType")
+    if isinstance(mob_type, WzStringProperty) and not re.fullmatch(r"[0-4]N", str(mob_type.value)):
+        raise ValueError("Mob info/mobType 仍是未经验证的现代字符串；须从兼容基线重建")
+    for action in roots:
+        if not re.fullmatch(r"attack\d+", action.name):
+            continue
+        if not _attack_has_usable_payload(action):
+            raise ValueError(f"Mob {action.name} 没有动作帧，不能完成 info 复制")
+    skill = info.child("skill")
+    if isinstance(skill, WzSubProperty):
+        for slot in skill.children():
+            target_name = f"skill{int(slot.child('action').value)}" if slot.child("action") is not None else ""
+            target = image.root.child(target_name)
+            if target is None or not any(frame.name.isdigit() for frame in target.children()):
+                raise ValueError(f"Mob info/skill/{slot.name}/action 没有对应动作帧: {target_name}")
+
+
+_OUTLINK_ACTION_FRAME = re.compile(r"/((?:attack|skill|skillAfter)\d+)/(\d+)$")
+
+
+def _outlink_frame_uol(path: str, extra: dict[str, dict[str, Any]]) -> str | None:
+    """1x1 _outlink → sibling '23' or '../skill3/0'. skill4/0 points at skill3, not skill1."""
+    parts = [part for part in path.split("/") if part]
+    if len(parts) != 2 or not parts[1].isdigit():
+        return None
+    if not re.fullmatch(r"(?:attack|skill|skillAfter)\d+", parts[0]):
+        return None
+    meta = extra.get(path) or {}
+    raw = str(meta.get("_outlink") or "")
+    if not raw:
+        raw = str((extra.get(f"{path}/_outlink") or {}).get("value") or "")
+    raw = raw.replace("\\", "/")
+    match = _OUTLINK_ACTION_FRAME.search(raw)
+    if match is None:
+        return None
+    action, frame = match.group(1), match.group(2)
+    if action == parts[0]:
+        if frame == parts[1]:
+            return None
+        return f"../{action}/{frame}"
+    return f"../{action}/{frame}"
+
+
+def _same_action_outlink_uol(path: str, extra: dict[str, dict[str, Any]]) -> str | None:
+    """skill2/72 is a 1x1 whose _outlink points at skill2/23 — old client gets a sibling UOL."""
+    value = _outlink_frame_uol(path, extra)
+    if value is None or value.startswith("../"):
+        return None
+    return value
+
+
+def _uol_target_in_clone(clone: WzProperty, prefix: str, abs_target: str) -> bool:
+    if not abs_target or not isinstance(clone, WzSubProperty):
+        return False
+    prefix = prefix.strip("/")
+    if prefix and abs_target == prefix:
+        return True
+    if prefix and abs_target.startswith(f"{prefix}/"):
+        return clone.get(abs_target[len(prefix) + 1:]) is not None
+    return clone.get(abs_target) is not None
+
+
+def action_frame_gaps(action: WzSubProperty) -> list[int]:
+    names = sorted(int(child.name) for child in action.children() if child.name.isdigit())
+    if not names:
+        return []
+    present = set(names)
+    return [index for index in range(names[-1] + 1) if index not in present]
+
+
+def validate_action_frame_timeline(clone: WzProperty) -> None:
+    """Old client walks 0..max. skill2 must keep TMS indices, not densify from 10."""
+    if not isinstance(clone, WzSubProperty) or not re.fullmatch(
+        r"(?:attack|skill|skillAfter)\d+", clone.name,
+    ):
+        return
+    gaps = action_frame_gaps(clone)
+    if not gaps:
+        return
+    hint = ""
+    if clone.name.startswith("skill"):
+        hint = (
+            f"；{clone.name} 的缺口应是 TMS 1×1 _outlink 转成的 UOL"
+            "（skill2 的 0–9 才是 ../skill1/N；skill4 的 0–1 是 ../skill3/N）"
+        )
+    preview = ",".join(str(gap) for gap in gaps[:12])
+    more = "…" if len(gaps) > 12 else ""
+    raise ValueError(
+        f"{clone.name} 复制后帧不连续，缺 {preview}{more}。"
+        "TMS 从 0 播到最后一帧，不要把缺口压成 0..n-1，也不要用 stand 去填"
+        f"{hint}"
+    )
+
+
+def compact_numeric_children(parent: WzSubProperty) -> int:
+    """Renumber digit children to 0..n-1 in existing order. Do not invent frames."""
+    children = list(parent.children())
+    numeric = [child for child in children if child.name.isdigit()]
+    if len(numeric) < 2:
+        return 0
+    numeric.sort(key=lambda child: int(child.name))
+    if [int(child.name) for child in numeric] == list(range(len(numeric))):
+        return 0
+    renamed = 0
+    for index, child in enumerate(numeric):
+        if child.name != str(index):
+            child.name = str(index)
+            renamed += 1
+    ordered = [child for child in children if not child.name.isdigit()]
+    ordered.extend(numeric)
+    parent._children = {child.name: child for child in ordered}
+    return renamed
+
+
+def _skip_incompatible_mob_node(node: WzProperty) -> bool:
+    name = node.name
+    parent_name = node.parent.name if node.parent is not None else ""
+    if name in {"_inlink", "_outlink"} or name in map_compat.SPINE_NAMES:
+        return True
+    if name.startswith("directionAct"):
+        return True
+    if isinstance(node, WzVideoProperty):
+        return True
+    if parent_name == "info" and name in _MOB_ATTACK_INFO_SKIP:
+        return True
+    if parent_name == "range" and name in _MOB_RANGE_SKIP:
+        return True
+    if parent_name == "info" and not _under_action_info(node):
+        if (
+            name in map_compat.BOSS_INFO_INCOMPATIBLE
+            or name in map_compat.BOSS_INFO_MODERN_REVIEW
+            or name in _MOB_ROOT_INFO_SKIP
+        ):
+            return True
+    return False
+
+
+def _uol_target_available(
+    abs_path: str, *, client_image: WzImage | None, source_image: WzImage, copied_root: str,
+) -> bool:
+    if not abs_path:
+        return False
+    if client_image is not None and client_image.root.get(abs_path) is not None:
+        return True
+    source_node = source_image.root.get(abs_path)
+    if source_node is None:
+        return False
+    if not copied_root:
+        return True
+    return abs_path == copied_root or abs_path.startswith(f"{copied_root}/")
+
+
+_JSON_METADATA_LEAVES = frozenset({"origin", "delay", "z", "head", "lt", "rb"})
+
+
+def _json_companion_key_allowed(key: str, authoritative: set[str]) -> bool:
+    """JSON dumps may fill origin/delay on existing frames, not invent ball/type."""
+    if key in authoritative:
+        return True
+    if "/" not in key:
+        return False
+    parent, leaf = key.rsplit("/", 1)
+    return leaf in _JSON_METADATA_LEAVES and parent in authoritative
+
+
+def canvas_metadata_companion_paths(source_path: Path, *, allow_extract: bool = False) -> list[Path]:
+    """MS extract first, then TMS logical Mob.img, then JSON dump. Never the _Canvas store itself."""
+    if not is_mob_canvas_store(source_path):
+        return []
+    item_id = source_path.stem
+    if not re.fullmatch(r"\d{7}", item_id):
+        return []
+    ordered: list[Path] = []
+    seen: set[str] = set()
+
+    def add(path: Path | None) -> None:
+        if path is None or not path.is_file():
+            return
+        resolved = path.resolve()
+        if resolved == source_path.resolve():
+            return
+        key = str(resolved)
+        if key in seen:
+            return
+        seen.add(key)
+        ordered.append(path)
+
+    pack = None
+    try:
+        pack = ms_mob_index().get(item_id)
+    except Exception:
+        pack = None
+    if pack is not None:
+        extracted = _existing_ms_extract(item_id, pack)
+        if extracted is None and allow_extract:
+            try:
+                found = extract_ms_mob(item_id)
+                extracted = found[0] if found else None
+            except Exception:
+                extracted = None
+        add(extracted)
+    add(find_extracted_ms_mob(item_id))
+    add(_TMS_DATA / "Mob" / f"{item_id}.img")
+    add(_ROOT / "clien" / "Data" / "Mob" / f"{item_id}.img.json")
+    return ordered
+
+
+def merge_canvas_metadata_tables(source_path: Path, *, allow_extract: bool = False) -> dict[str, dict[str, Any]]:
+    """IMG trees win. JSON only supplies origin/delay/pose scalars on paths those IMGs already have.
+
+    ``clien/Data/Mob/<id>.img.json`` is a flattened dump and can contain folders the live
+    TMS ``_Canvas`` / MS logical record never had (Damien 8880100 attack2 ``ball``).
+    """
+    merged: dict[str, dict[str, Any]] = {}
+    json_tables: list[dict[str, dict[str, Any]]] = []
+    if is_mob_canvas_store(source_path) and source_path.is_file():
+        for key, meta in flatten_img_records(source_path).items():
+            merged.setdefault(key, meta)
+    for companion in canvas_metadata_companion_paths(source_path, allow_extract=allow_extract):
+        nodes, _ = flatten_source(companion)
+        if companion.suffix.lower() == ".json":
+            json_tables.append(nodes)
+            continue
+        for key, meta in nodes.items():
+            merged.setdefault(key, meta)
+    authoritative = set(merged)
+    for nodes in json_tables:
+        for key, meta in nodes.items():
+            if key in merged:
+                continue
+            if _json_companion_key_allowed(key, authoritative):
+                merged[key] = meta
+    return merged
+
+
+def _is_placeholder_canvas_meta(meta: dict[str, Any] | None) -> bool:
+    if not meta:
+        return False
+    try:
+        width = int(meta.get("width") or 0)
+        height = int(meta.get("height") or 0)
+    except (TypeError, ValueError):
+        return False
+    return 0 < width <= _PLACEHOLDER_MAX_SIZE and 0 < height <= _PLACEHOLDER_MAX_SIZE
+
+
+def _origin_nonzero(value: Any) -> bool:
+    if isinstance(value, WzVectorProperty):
+        return int(value.x) != 0 or int(value.y) != 0
+    if isinstance(value, dict):
+        return int(value.get("x", 0) or 0) != 0 or int(value.get("y", 0) or 0) != 0
+    return False
+
+
+def _logical_pose_usable(logical: WzCanvasProperty) -> bool:
+    """MS logical frames are often 1x1 + _outlink, but origin/head are still real."""
+    if logical.child("head") is not None or logical.child("lt") is not None:
+        return True
+    origin = logical.child("origin")
+    if _origin_nonzero(origin):
+        return True
+    return int(logical.width) > _PLACEHOLDER_MAX_SIZE or int(logical.height) > _PLACEHOLDER_MAX_SIZE
+
+
+def _companion_pose_usable(abs_path: str, companion_nodes: dict[str, dict[str, Any]]) -> bool:
+    origin_meta = companion_nodes.get(f"{abs_path}/origin") or {}
+    if _origin_nonzero(origin_meta.get("value")):
+        return True
+    if companion_nodes.get(f"{abs_path}/head") or companion_nodes.get(f"{abs_path}/lt"):
+        return True
+    return not _is_placeholder_canvas_meta(companion_nodes.get(abs_path))
+
+
+def _clone_canvas_child(name: str, source: WzProperty, parent: WzCanvasProperty) -> WzProperty | None:
+    if isinstance(source, WzVectorProperty):
+        return WzVectorProperty(name, int(source.x), int(source.y), parent)
+    if isinstance(source, (WzIntProperty, WzShortProperty, WzLongProperty)):
+        return WzIntProperty(name, int(source.value), parent)
+    return None
+
+
+def _child_from_flatten_meta(name: str, meta: dict[str, Any], parent: WzCanvasProperty) -> WzProperty | None:
+    node_type = str(meta.get("type") or "").lower()
+    if name in {"origin", "head", "lt", "rb"} or node_type == "vector":
+        value = meta.get("value") or {}
+        if not isinstance(value, dict):
+            return None
+        return WzVectorProperty(name, int(value.get("x", 0)), int(value.get("y", 0)), parent)
+    if name in {"delay", "z"} or node_type in {"int", "short", "long"}:
+        value = meta.get("value")
+        if value is None:
+            return None
+        return WzIntProperty(name, int(value), parent)
+    return None
+
+
+def attach_legacy_canvas_metadata(
+    canvas: WzCanvasProperty,
+    logical: WzCanvasProperty | None,
+    abs_path: str,
+    companion_nodes: dict[str, dict[str, Any]],
+) -> int:
+    """Copy origin/delay/pose scalars from the logical/MS/JSON tree onto a materialized canvas.
+
+    Pixel stores usually have empty Canvas children. Placeholder 1x1 origin=(0,0) is not
+    applied onto a larger decoded frame; delay still copies. Missing origin/delay get
+    Zakum-style defaults: (width/2, height) and 90ms, or (0,0) on a 1x1 stub.
+    """
+    added = 0
+    companion_usable = _companion_pose_usable(abs_path, companion_nodes)
+    logical_usable = logical is not None and _logical_pose_usable(logical)
+
+    for name in _LEGACY_MOB_CANVAS_CHILDREN:
+        if canvas.child(name) is not None:
+            continue
+        pose_field = name in _POSE_CANVAS_CHILDREN
+        if logical is not None and (not pose_field or logical_usable):
+            child = logical.child(name)
+            cloned = _clone_canvas_child(name, child, canvas) if child is not None else None
+            if cloned is not None:
+                canvas.add(cloned)
+                added += 1
+                continue
+        if pose_field and not companion_usable:
+            continue
+        meta = companion_nodes.get(f"{abs_path}/{name}")
+        if meta is None:
+            continue
+        cloned = _child_from_flatten_meta(name, meta, canvas)
+        if cloned is None:
+            continue
+        canvas.add(cloned)
+        added += 1
+
+    if canvas.child("origin") is None:
+        width, height = int(canvas.width), int(canvas.height)
+        origin = (0, 0) if width <= 1 and height <= 1 else (width // 2, height)
+        canvas.add(WzVectorProperty("origin", origin[0], origin[1], canvas))
+        added += 1
+    if canvas.child("delay") is None:
+        canvas.add(WzIntProperty("delay", _DEFAULT_FRAME_DELAY, canvas))
+        added += 1
+    return added
+
+
+def attach_companion_uols(
+    clone: WzProperty,
+    source_path: Path,
+    copied_root: str,
+    client_image: WzImage | None,
+    skipped: list[str],
+    source_image: WzImage | None = None,
+    materializer: arc.CanvasMaterializer | None = None,
+) -> int:
+    """Copy logical UOLs, scalars, and store-missing frames from the TMS companion."""
+    if not isinstance(clone, WzSubProperty) or not is_mob_canvas_store(source_path):
+        return 0
+    extra = merge_canvas_metadata_tables(source_path, allow_extract=True)
+    if not extra:
+        return 0
+    prefix = copied_root.strip("/")
+    kept = 0
+
+    def ensure_parent(relative: str) -> tuple[WzSubProperty, str] | None:
+        parent: WzProperty = clone
+        parts = [part for part in relative.split("/") if part]
+        if not parts:
+            return None
+        for name in parts[:-1]:
+            if not isinstance(parent, WzSubProperty):
+                return None
+            child = parent.get(name)
+            if child is None:
+                child = WzSubProperty(name, parent)
+                parent.add(child)
+            parent = child
+        if not isinstance(parent, WzSubProperty):
+            return None
+        return parent, parts[-1]
+
+    for path in sorted(extra, key=lambda item: (item.count("/"), item)):
+        if str(extra[path].get("type") or "").lower() not in {
+            "uol", "canvas", "imgdir", "short", "int", "long", "float", "double", "string", "vector",
+        }:
+            continue
+        if prefix and path != prefix and not path.startswith(f"{prefix}/"):
+            continue
+        if path == prefix:
+            continue
+        ancestor = path
+        under_canvas = False
+        while "/" in ancestor:
+            ancestor = ancestor.rsplit("/", 1)[0]
+            if str(extra.get(ancestor, {}).get("type") or "").lower() in {"canvas", "uol"}:
+                under_canvas = True
+                break
+        if under_canvas:
+            continue
+        if skip_companion_leaf(path):
+            skipped.append(path)
+            continue
+        relative = path[len(prefix) + 1:] if prefix and path.startswith(f"{prefix}/") else path
+        if not relative or clone.get(relative) is not None:
+            continue
+        meta = extra[path]
+        node_type = str(meta.get("type") or "").lower()
+        if path == "info/mobType" and node_type == "string" and not re.fullmatch(
+            r"[0-4]N", str(meta.get("value") or ""),
+        ):
+            skipped.append(path)
+            continue
+        if path == "info/maxHP" and node_type == "string":
+            existing_hp = client_image.root.get(path) if client_image is not None else None
+            meta = {
+                **meta,
+                "type": "int",
+                "value": _legacy_client_maxhp(meta.get("value"), existing_hp),
+            }
+            node_type = "int"
+        parent_leaf = ensure_parent(relative)
+        if parent_leaf is None:
+            continue
+        parent, leaf = parent_leaf
+        if parent.get(leaf) is not None:
+            continue
+        added: WzProperty | None = None
+        if node_type == "uol":
+            value = str(meta.get("value") or meta.get("target") or "")
+            if leaf.isdigit() and "/info/" in f"/{path}/":
+                skipped.append(path)
+                continue
+            if not value:
+                skipped.append(path)
+                continue
+            action = path.split("/", 1)[0]
+            if value.isdigit() and re.fullmatch(r"(?:attack|skill|skillAfter)\d+", action):
+                value = f"../{action}/{value}"
+            abs_target = resolve_uol_absolute(path, value)
+            if not _uol_target_in_clone(clone, prefix, abs_target):
+                if client_image is None or client_image.root.get(abs_target) is None:
+                    skipped.append(path)
+                    continue
+            added = WzUolProperty(leaf, value, parent)
+            kept += 1
+        elif node_type == "canvas":
+            folder = None
+            for candidate in ("ball", "hit", "areaWarning", "effect"):
+                if f"/info/{candidate}/" in f"{path}/":
+                    folder = candidate
+                    break
+            if folder is None:
+                uol_value = _outlink_frame_uol(path, extra)
+                if not uol_value:
+                    skipped.append(path)
+                    continue
+                abs_target = resolve_uol_absolute(path, uol_value)
+                if not _uol_target_in_clone(clone, prefix, abs_target):
+                    if client_image is None or client_image.root.get(abs_target) is None:
+                        action = abs_target.split("/", 1)[0] if abs_target else ""
+                        raise ValueError(
+                            f"{path} 是 1×1 _outlink → {uol_value}，"
+                            f"目标 {abs_target or uol_value} 不在当前怪物上，请先复制 {action or '被引用的动作'}"
+                        )
+                added = WzUolProperty(leaf, uol_value, parent)
+                kept += 1
+            else:
+                width = int(meta.get("width") or 0)
+                height = int(meta.get("height") or 0)
+                if folder == "areaWarning" and leaf == "0":
+                    added = _legacy_stub_canvas(leaf, parent)
+                    if isinstance(added, WzCanvasProperty):
+                        attach_legacy_canvas_metadata(added, None, path, extra)
+                    parent.add(added)
+                    continue
+                found = find_tms_canvas_store_match(source_path, width, height, leaf, folder)
+                if found is None and source_image is not None:
+                    for candidate_path in (path, re.sub(r"attack\d+/info/hit/", "attack1/info/hit/", path)):
+                        alt = source_image.root.get(candidate_path)
+                        if isinstance(alt, WzCanvasProperty) and int(alt.width) > 1 and int(alt.height) > 1:
+                            found = (source_image, alt, source_path)
+                            break
+                if found is None or materializer is None:
+                    skipped.append(path)
+                    continue
+                linked_image, linked_canvas, linked_path = found
+                added = arc.clone_property(
+                    linked_canvas, parent, linked_image, linked_path, materializer, leaf,
+                )
+                if isinstance(added, WzCanvasProperty):
+                    attach_legacy_canvas_metadata(added, None, path, extra)
+        elif node_type == "vector":
+            value = meta.get("value") or {}
+            added = WzVectorProperty(leaf, int(value.get("x", 0)), int(value.get("y", 0)), parent)
+        elif node_type in {"short", "int", "long", "float", "double", "string"}:
+            value = meta.get("value")
+            if value is None:
+                skipped.append(path)
+                continue
+            makers = {
+                "short": WzShortProperty, "int": WzIntProperty, "long": WzLongProperty,
+                "float": WzFloatProperty, "double": WzDoubleProperty, "string": WzStringProperty,
+            }
+            added = makers[node_type](leaf, value, parent)
+        elif node_type == "imgdir":
+            continue
+        if added is not None:
+            parent.add(added)
+    return kept
+
+
+def clone_compatible_mob_node(
+    source: WzProperty,
+    source_image: WzImage,
+    source_path: Path,
+    *,
+    client_image: WzImage | None = None,
+    copied_root: str = "",
+    dest_mob_id: str = "",
+) -> tuple[WzProperty, arc.CanvasMaterializer, dict[str, Any]]:
+    """Project a mob subtree onto GMS canvases, keep resolvable UOLs, skip modern fields."""
+    materializer = arc.CanvasMaterializer()
+    materializer.max_edge = None
+    skipped: list[str] = []
+    stats = {"skipped": skipped, "uolsKept": 0, "densified": 0, "canvasMeta": 0}
+    copied_root = copied_root.strip("/") or property_path(source)
+    companion_nodes = merge_canvas_metadata_tables(source_path, allow_extract=True)
+
+    def materialize_canvas(node: WzProperty, parent: WzProperty | None, lookup_path: str) -> WzProperty | None:
+        if _keep_area_warning_stub(node, lookup_path):
+            cloned = _legacy_stub_canvas(node.name, parent)
+            if isinstance(cloned, WzCanvasProperty):
+                logical = node if isinstance(node, WzCanvasProperty) else None
+                stats["canvasMeta"] += attach_legacy_canvas_metadata(
+                    cloned, logical, lookup_path, companion_nodes,
+                )
+            return cloned
+        try:
+            linked_image, linked_canvas, linked_path = resolve_canvas_node(
+                source_image, property_path(node), source_path,
+            )
+        except ValueError:
+            if _is_area_warning_frame(lookup_path or property_path(node) or node.name, node) and _is_tiny_canvas(node):
+                cloned = _legacy_stub_canvas(node.name, parent)
+                if isinstance(cloned, WzCanvasProperty):
+                    logical = node if isinstance(node, WzCanvasProperty) else None
+                    stats["canvasMeta"] += attach_legacy_canvas_metadata(
+                        cloned, logical, lookup_path, companion_nodes,
+                    )
+                return cloned
+            skipped.append(property_path(node) or node.name)
+            return None
+        cloned = arc.clone_property(
+            linked_canvas, parent, linked_image, linked_path, materializer, node.name,
+        )
+        if isinstance(cloned, WzCanvasProperty):
+            logical = node if isinstance(node, WzCanvasProperty) else None
+            stats["canvasMeta"] += attach_legacy_canvas_metadata(
+                cloned, logical, lookup_path, companion_nodes,
+            )
+        return cloned
+
+    def project_uol(node: WzUolProperty, parent: WzProperty | None) -> WzProperty | None:
+        target = str(node.value)
+        action = copied_root.split("/", 1)[0] if copied_root else (parent.name if parent is not None else "")
+        if target.isdigit() and re.fullmatch(r"(?:attack|skill|skillAfter)\d+", action):
+            target = f"../{action}/{target}"
+        abs_path = resolve_uol_absolute(property_path(node), target)
+        if _uol_target_available(
+            abs_path, client_image=client_image, source_image=source_image, copied_root=copied_root,
+        ):
+            stats["uolsKept"] += 1
+            return WzUolProperty(node.name, target, parent)
+        return materialize_canvas(node, parent, abs_path)
+
+    def clone_node(node: WzProperty, parent: WzProperty | None) -> WzProperty | None:
+        if _skip_incompatible_mob_node(node):
+            skipped.append(property_path(node) or node.name)
+            return None
+        if node.name == "maxHP" and not _under_action_info(node):
+            existing = client_image.root.get("info/maxHP") if client_image is not None else None
+            return WzIntProperty(node.name, _legacy_client_maxhp(getattr(node, "value", None), existing), parent)
+        if node.name == "mobType" and isinstance(node, WzStringProperty) and not _under_action_info(node):
+            if not re.fullmatch(r"[0-4]N", str(node.value)):
+                skipped.append(property_path(node) or node.name)
+                return None
+        if isinstance(node, WzUolProperty):
+            return project_uol(node, parent)
+        if isinstance(node, WzCanvasProperty):
+            return materialize_canvas(node, parent, property_path(node))
         if isinstance(node, WzSubProperty):
             output = WzSubProperty(node.name, parent)
             for child in node.children():
-                output.add(clone_node(child, output))
+                cloned = clone_node(child, output)
+                if cloned is not None:
+                    output.add(cloned)
             return output
+        if node.name == "maxHP" and isinstance(node, (WzIntProperty, WzLongProperty)):
+            capped = min(int(node.value), _CLIENT_MAXHP_INT)
+            return type(node)(node.name, capped, parent)
+        if node.name == "eva" and isinstance(node, (WzIntProperty, WzLongProperty)):
+            capped = min(int(node.value), map_compat.BOSS_EVA_CAP)
+            return type(node)(node.name, capped, parent)
         return arc.clone_property(node, parent, source_image, source_path, materializer)
 
     clone = clone_node(source, None)
+    if clone is None:
+        raise ValueError(f"节点 {copied_root or source.name} 没有可投影到旧端的内容")
+    stats["uolsKept"] += attach_companion_uols(
+        clone, source_path, copied_root, client_image, skipped, source_image, materializer,
+    )
+    info = clone if clone.name == "info" else clone.child("info") if isinstance(clone, WzSubProperty) else None
+    if isinstance(info, WzSubProperty) and not _under_action_info(info):
+        hp = info.child("maxHP")
+        existing_hp = client_image.root.get("info/maxHP") if client_image is not None else None
+        if not isinstance(hp, (WzIntProperty, WzLongProperty)) or int(hp.value) <= 0:
+            if hp is not None:
+                info._children.pop("maxHP", None)
+            info.add(WzIntProperty("maxHP", _legacy_client_maxhp(getattr(hp, "value", None), existing_hp), info))
+    ensure_ballistic_contract(clone)
+    ensure_area_attack_contract(clone)
+    ensure_projected_root_skill_table(
+        clone, existing_image=client_image, dest_mob_id=dest_mob_id,
+    )
+    ensure_legacy_speed_without_move(clone, client_image)
+    ensure_legacy_lifefactory_info(clone, client_image)
+    stats["uolsKept"] += ensure_fsm_only_stand_body(
+        clone,
+        source=source,
+        client_image=client_image,
+        companion_nodes=companion_nodes,
+        copied_root=copied_root,
+    )
+    ensure_legacy_attack_body_frame(clone)
+    stats["densified"] += compact_mob_tree(clone)
+    stats["densified"] += ensure_area_warning_leading_stub(clone)
+    validate_action_frame_timeline(clone)
+    return clone, materializer, stats
+
+
+def clone_compatible_mob_action(
+    source: WzSubProperty,
+    source_image: WzImage,
+    source_path: Path,
+    *,
+    client_image: WzImage | None = None,
+    dest_mob_id: str = "",
+) -> tuple[WzSubProperty, arc.CanvasMaterializer]:
+    if not _LEGACY_MOB_ACTION.fullmatch(source.name):
+        raise ValueError(f"动作名称不属于旧端已知结构: {source.name}")
+    clone, materializer, _stats = clone_compatible_mob_node(
+        source, source_image, source_path,
+        client_image=client_image, copied_root=source.name, dest_mob_id=dest_mob_id,
+    )
     if not isinstance(clone, WzSubProperty):
         raise ValueError(f"动作根节点不是 imgdir: {source.name}")
     return clone, materializer
@@ -4054,15 +5552,18 @@ def migrate_mob_action_with_server_sync(
     source_action = source_image.root.get(action_name)
     if not isinstance(source_action, WzSubProperty):
         raise ValueError(f"TMS 动作不存在或不是 imgdir: {action_name}")
-    clone, materializer = clone_compatible_mob_action(source_action, source_image, source_path)
-
     server_path = server_xml_for_client(client_path)
     if server_path is None or not server_path.is_file():
         raise ValueError("当前项目缺少对应的服务端 Mob XML，不能执行动作级同步")
     client_original = client_path.read_bytes()
     if detect_region_from_img(client_original) != "GMS":
         raise ValueError("当前项目怪物 IMG 不是 GMS 格式")
-    current = _verified_img_from_bytes(client_path, client_original).root.get(action_name)
+    client_image = _verified_img_from_bytes(client_path, client_original)
+    clone, materializer = clone_compatible_mob_action(
+        source_action, source_image, source_path,
+        client_image=client_image, dest_mob_id=client_path.stem,
+    )
+    current = client_image.root.get(action_name)
     if current is not None and not isinstance(current, WzSubProperty):
         raise ValueError(f"当前项目同名节点不是动作目录: {action_name}")
 
@@ -4157,21 +5658,97 @@ def migrate_mob_action_with_server_sync(
     }
 
 
+def companion_logical_image(source_path: Path) -> WzImage | None:
+    """Load the MS / logical Mob.img that holds root info the _Canvas store omits."""
+    companion = logical_companion_for_canvas_store(source_path)
+    if companion is None and is_mob_canvas_store(source_path):
+        try:
+            found = extract_ms_mob(source_path.stem)
+            companion = found[0] if found else None
+        except Exception:
+            companion = None
+    if companion is None or companion.suffix.lower() != ".img":
+        return None
+    return load_image(companion)
+
+
+def companion_logical_node(source_path: Path, node_path: str) -> WzProperty | None:
+    image = companion_logical_image(source_path)
+    if image is None:
+        return None
+    if not node_path:
+        return image.root
+    return image.root.get(node_path)
+
+
+def resolve_mob_copy_source(
+    source_image: WzImage, source_path: Path, node_path: str,
+) -> WzProperty | None:
+    canvas_node = source_image.root if not node_path else source_image.root.get(node_path)
+    companion_node = companion_logical_node(source_path, node_path) if is_mob_canvas_store(source_path) else None
+    if canvas_node is None:
+        return companion_node
+    if (
+        isinstance(canvas_node, WzSubProperty)
+        and not canvas_node.has_children()
+        and companion_node is not None
+    ):
+        return companion_node
+    return canvas_node
+
+
+def companion_uol_property(source_path: Path, node_path: str) -> WzUolProperty | None:
+    if not node_path or not is_mob_canvas_store(source_path):
+        return None
+    companion = logical_companion_for_canvas_store(source_path)
+    if companion is None:
+        return None
+    extra, _ = flatten_source(companion)
+    meta = extra.get(node_path)
+    if meta is None or str(meta.get("type") or "").lower() != "uol":
+        return None
+    value = str(meta.get("value") or meta.get("target") or "")
+    if not value:
+        return None
+    action = node_path.split("/", 1)[0]
+    if value.isdigit() and re.fullmatch(r"(?:attack|skill|skillAfter)\d+", action):
+        value = f"../{action}/{value}"
+    dummy = WzSubProperty("root")
+    parent = dummy
+    parts = node_path.split("/")
+    for name in parts[:-1]:
+        child = WzSubProperty(name, parent)
+        parent.add(child)
+        parent = child
+    uol = WzUolProperty(parts[-1], str(value), parent)
+    parent.add(uol)
+    return uol
+
+
 def copy_tms_node_with_server_sync(
     client_path: Path, source_path: Path, node_path: str,
 ) -> dict[str, Any]:
     require_repo_write(client_path)
     source_image = load_image(source_path)
-    source_node = source_image.root if not node_path else source_image.root.get(node_path)
+    is_map_source = "/Data/Map/Map/" in source_path.as_posix()
+    is_mob_copy = client_path.parent.name == "Mob" or "Mob" in source_path.parts
+    if is_mob_copy and is_mob_canvas_store(source_path):
+        source_node = resolve_mob_copy_source(source_image, source_path, node_path)
+        if source_node is None:
+            source_node = companion_uol_property(source_path, node_path)
+    else:
+        source_node = source_image.root if not node_path else source_image.root.get(node_path)
     if source_node is None:
         raise ValueError(f"TMS 节点不存在: {node_path}")
-    is_map_source = "/Data/Map/Map/" in source_path.as_posix()
     resource_references = selected_map_resource_references(source_image.root, node_path) if is_map_source else []
     server_path = server_xml_for_client(client_path)
     if server_path is None:
         raise ValueError("找不到对应的服务端 XML 路径")
 
     existing_target = None
+    existing_image = None
+    densified_frames = 0
+    uols_kept = 0
     if client_path.is_file():
         existing_image = load_image(client_path)
         existing_target = existing_image.root if not node_path else existing_image.root.get(node_path)
@@ -4190,8 +5767,19 @@ def copy_tms_node_with_server_sync(
 
     if is_map_source:
         clone, skipped_paths = clone_compatible_map_node(source_node, client_path)
+        materializer = None
+    elif is_mob_copy:
+        clone, materializer, projection = clone_compatible_mob_node(
+            source_node, source_image, source_path,
+            client_image=existing_image, copied_root=node_path,
+            dest_mob_id=client_path.stem,
+        )
+        skipped_paths = list(projection.get("skipped") or [])
+        densified_frames = int(projection.get("densified") or 0)
+        uols_kept = int(projection.get("uolsKept") or 0)
     else:
         clone, skipped_paths = clone_supported_node(source_node), []
+        materializer = None
     parent_path = node_path.rpartition("/")[0]
 
     client_original = client_path.read_bytes() if client_path.is_file() else None
@@ -4212,6 +5800,8 @@ def copy_tms_node_with_server_sync(
             for name in (part for part in parent_path.split("/") if part):
                 ancestor_path = f"{current_parent}/{name}".strip("/")
                 source_ancestor = source_image.root.get(ancestor_path)
+                if not isinstance(source_ancestor, WzSubProperty) and is_mob_copy:
+                    source_ancestor = companion_logical_node(source_path, ancestor_path)
                 if not isinstance(source_ancestor, WzSubProperty):
                     raise ValueError(f"TMS 父节点不是目录: {ancestor_path}")
 
@@ -4257,13 +5847,34 @@ def copy_tms_node_with_server_sync(
                         staged_server, "", child, dry_run=False,
                     ))
             elif existing_target is None:
-                client_result: Any = patch_img_add(
-                    staged_client, parent_path, clone.name, "imgdir", None,
-                    dry_run=False, backup=False, node=clone,
-                )
-                server_result: Any = xml_add_cloned_node(
-                    staged_server, parent_path, clone, dry_run=False,
-                )
+                if is_mob_copy and node_path == "info" and staged_image.root.children():
+                    anchor = staged_image.root.children()[0].name
+                    before = staged_client.read_bytes()
+                    inserted = arc.insert_property_record_before(before, (), clone, anchor)
+                    arc.verify_raw_record_insert_scope(before, inserted, {("info",)})
+                    staged_client.write_bytes(inserted)
+                    server_text = staged_server.read_text(encoding="utf-8")
+                    server_root = ET.fromstring(server_text)
+                    xml_anchor = next((child.get("name") for child in server_root if child.get("name")), None)
+                    if xml_anchor is not None:
+                        staged_server.write_text(
+                            arc.insert_xml_properties_before(server_text, (), [clone], xml_anchor),
+                            encoding="utf-8",
+                        )
+                        server_result = {"path": "info", "before": xml_anchor}
+                    else:
+                        server_result = xml_add_cloned_node(
+                            staged_server, parent_path, clone, dry_run=False, backup=False,
+                        )
+                    client_result = {"path": "info", "before": anchor}
+                else:
+                    client_result = patch_img_add(
+                        staged_client, parent_path, clone.name, "imgdir", None,
+                        dry_run=False, backup=False, node=clone,
+                    )
+                    server_result = xml_add_cloned_node(
+                        staged_server, parent_path, clone, dry_run=False,
+                    )
             elif (
                 isinstance(existing_target, WzSubProperty)
                 and isinstance(clone, WzSubProperty)
@@ -4286,11 +5897,36 @@ def copy_tms_node_with_server_sync(
                     server_result.append(xml_add_cloned_node(
                         staged_server, node_path, child, dry_run=False,
                     ))
+            elif is_mob_copy and isinstance(clone, WzSubProperty):
+                inserts = missing_mob_inserts(clone, existing_target, node_path)
+                client_result = []
+                server_result = []
+                for parent, child in inserts:
+                    client_result.append(patch_img_add(
+                        staged_client, parent, child.name, "imgdir", None,
+                        dry_run=False, backup=False, node=child,
+                    ))
+                    server_result.append(xml_add_cloned_node(
+                        staged_server, parent, child, dry_run=False,
+                    ))
+                if node_path in {"", "info"}:
+                    skill_client, skill_server = replace_existing_mob_skill_table(
+                        staged_client, staged_server, clone, node_path,
+                    )
+                    client_result.extend(skill_client)
+                    server_result.extend(skill_server)
+                    rate_client, rate_server = sync_clamped_info_rates(
+                        staged_client, staged_server, clone, node_path,
+                    )
+                    client_result.extend(rate_client)
+                    server_result.extend(rate_server)
             else:
                 raise ValueError(f"客户端同名节点已存在且不是空目录: {node_path}")
             client_data = staged_client.read_bytes()
             server_data = staged_server.read_bytes()
-            _verified_img_from_bytes(client_path, client_data)
+            checked_image = _verified_img_from_bytes(client_path, client_data)
+            if is_mob_copy and node_path in {"", "info"}:
+                validate_copied_mob_info(checked_image)
             ET.fromstring(server_data)
 
         client_path.parent.mkdir(parents=True, exist_ok=True)
@@ -4322,6 +5958,13 @@ def copy_tms_node_with_server_sync(
         "createdClient": client_original is None, "createdServer": server_original is None,
         "createdAncestors": created_ancestors, "skippedPaths": skipped_paths,
         "resources": resource_result,
+        "densifiedFrames": densified_frames,
+        "uolsKept": uols_kept,
+        "materialized": None if materializer is None else {
+            "canvases": materializer.canvases,
+            "links": materializer.links,
+            "resized": materializer.resized,
+        },
         "modifiedFiles": list(dict.fromkeys([
             relative_path(client_path), relative_path(server_path), *resource_result.get("files", []),
         ])),
@@ -4515,6 +6158,27 @@ def api_compare():
     })
 
 
+@app.get("/api/server-control-help")
+def api_server_control_help():
+    path = str(request.args.get("path") or "skill2")
+    mob_id = str(request.args.get("mobId") or "")
+    return jsonify({"ok": True, **server_control_help.help_for(path, [], mob_id)})
+
+
+@app.get("/api/mob-skill-resolve")
+def api_mob_skill_resolve():
+    skill_id = request.args.get("skillId", type=int)
+    level = request.args.get("level", type=int)
+    action = request.args.get("action", type=int)
+    tms_skill_id = request.args.get("tmsSkillId", type=int)
+    mob_id = str(request.args.get("mobId") or "")
+    intercept = str(request.args.get("intercept") or "").lower() in {"1", "true"}
+    return jsonify({"ok": True, **mob_skill_resolve.mapping_card(
+        skill_id, level, action,
+        tms_skill_id=tms_skill_id, intercept=intercept, mob_id=mob_id,
+    )})
+
+
 @app.post("/api/create-main")
 def api_create_main():
     body = request.get_json(silent=True) or {}
@@ -4604,8 +6268,12 @@ def api_mob_resource_manifest():
 
 
 def require_mob_action_source(path: Path) -> None:
-    allowed_roots = ((_TMS_DATA / "Mob").resolve(), _MS_CACHE_ROOT.resolve())
-    if not any(path == root or path.is_relative_to(root) for root in allowed_roots):
+    allowed_roots = (
+        (_TMS_DATA / "Mob").resolve(),
+        *(_ms_extract_roots()),
+    )
+    resolved = path.resolve()
+    if not any(resolved == root.resolve() or resolved.is_relative_to(root.resolve()) for root in allowed_roots):
         raise ValueError("动作迁移来源必须是 TMS Mob IMG 或已提取的 Mob MS 记录")
 
 
@@ -4716,12 +6384,45 @@ def api_child_frames():
                 except Exception:
                     pass
             children.append(desc)
+    if is_mob_canvas_store(source_path):
+        overlay_nodes, _ = flatten_img(source_path)
+        present = {child["name"] for child in children}
+        extras = []
+        for path, meta in overlay_nodes.items():
+            if _parent_path(path) != node_path:
+                continue
+            name = str(meta.get("name") or path.rsplit("/", 1)[-1])
+            if name in present:
+                continue
+            extras.append({
+                "name": name,
+                "type": str(meta.get("type") or "gap").lower(),
+                "path": path,
+                "meaning": (
+                    server_control_help.action_frame_meaning(
+                        node_path.split("/")[0],
+                        name,
+                        value=str(meta.get("value") or ""),
+                        outlink=str(meta.get("_outlink") or ""),
+                    )
+                    or "Canvas 像素库未收录该帧；完整逻辑记录里仍有 UOL/_outlink。"
+                ),
+                "canvasStoreMissing": True,
+                "width": meta.get("width"),
+                "height": meta.get("height"),
+                "value": meta.get("value"),
+                "_outlink": meta.get("_outlink"),
+                "isPlaceholder": True,
+            })
+        children.extend(extras)
+        children.sort(key=lambda item: natural_key(item["name"]))
     return jsonify({
         "ok": True,
         "nodePath": node_path,
         "nodeType": node.type_name.lower(),
         "childCount": len(children),
         "children": children,
+        "playback": list(server_control_help.SKILL2_PLAYBACK) if node_path == "skill2" else [],
     })
 
 
@@ -4733,7 +6434,7 @@ _MOB_NODE_MEANINGS = {
     "lt": "命中框左上角 (left, top)",
     "rb": "命中框右下角 (right, bottom)",
     "attackAfter": "攻击后硬直时间 (ms)，动作结束后等待该时长才可执行下一动作",
-    "onlyFsm": "是否仅由 FSM 控制触发（1=是，不响应普通输入）",
+    "onlyFsm": "TMS 仅 FSM 触发；旧端不识别。复制时去掉该字段，空 1×1 身体投影为 ../stand/N UOL",
     "mobCount": "召唤怪物数量",
     "mob": "召唤的怪物 ID",
     "type": "攻击类型（0=近身，1=远程，2=魔法）",
@@ -4759,6 +6460,21 @@ def _mob_node_meaning(name: str, parent_path: str, node) -> str:
         return _MOB_NODE_MEANINGS[name]
     # Numeric names = animation frames
     if name.isdigit():
+        value = ""
+        outlink = ""
+        if isinstance(node, WzUolProperty):
+            value = str(node.value or "")
+        elif isinstance(node, WzCanvasProperty):
+            linked = node.child("_outlink")
+            if linked is not None:
+                outlink = str(getattr(linked, "value", "") or "")
+        action = (parent_path or "").split("/")[0] if parent_path else ""
+        if parent_path == action:
+            explained = server_control_help.action_frame_meaning(
+                action, name, value=value, outlink=outlink,
+            )
+            if explained:
+                return explained
         return f"动画帧 #{name}"
     # Common mob action names
     action_names = {

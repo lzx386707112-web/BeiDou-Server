@@ -8,7 +8,6 @@ import org.gms.server.maps.PlayerShopItem;
 import soloMapling.itemPool.ScrolledItemComparator;
 
 import java.io.BufferedReader;
-import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -19,26 +18,32 @@ import java.util.Random;
 
 public class FMShopDescGen {
 
-    static String filePath_FMNameDesc = "src/main/java/soloMapling/FreeMarket/FMNameDesc/";
+    static String filePath_FMNameDesc = "soloMapling/FreeMarket/FMNameDesc/";
     static List<String> topFMClans = new ArrayList<>();
+    private static final List<String> FALLBACK_IGNS = List.of(
+            "小枫", "阿糖", "云鹿", "星橙", "枫眠", "南茶", "北雪", "青竹",
+            "白舟", "洛安", "夏宁", "秋澈", "雨遥", "风然", "月梨", "川豆",
+            "阿禾", "晚晴", "疏影", "清欢", "拾光", "半夏", "听雨", "折柳",
+            "顾南", "沈夜", "林深", "江晚", "苏晚", "陈舟", "陆青", "叶安"
+    );
 
     protected static final Map<String, String> typeToFilePath;
 
     static {
         typeToFilePath = new HashMap<>();
-        typeToFilePath.put("ign", filePath_FMNameDesc + "randomRealMaplestoryIGNs.txt");
-        typeToFilePath.put("thief", filePath_FMNameDesc + "thiefDesc.txt");
-        typeToFilePath.put("warrior", filePath_FMNameDesc + "warriorDesc.txt");
-        typeToFilePath.put("mage", filePath_FMNameDesc + "mageDesc.txt");
-        typeToFilePath.put("bowman", filePath_FMNameDesc + "bowmanDesc.txt");
-        typeToFilePath.put("chair", filePath_FMNameDesc + "chairDesc.txt");
-        typeToFilePath.put("scrolls", filePath_FMNameDesc + "scrollsDesc.txt");
-        typeToFilePath.put("useable", filePath_FMNameDesc + "useableDesc.txt");
-        typeToFilePath.put("etc", filePath_FMNameDesc + "etcDesc.txt");
-        typeToFilePath.put("common", filePath_FMNameDesc + "commonDesc.txt");
-        typeToFilePath.put("fmclan", filePath_FMNameDesc + "FMClans.txt");
-        typeToFilePath.put("shortword", filePath_FMNameDesc + "shortWordDesc.txt");
-        typeToFilePath.put("emojis", filePath_FMNameDesc + "emojiFaces.txt");
+        typeToFilePath.put("ign", "randomRealMaplestoryIGNs.txt");
+        typeToFilePath.put("thief", "thiefDesc.txt");
+        typeToFilePath.put("warrior", "warriorDesc.txt");
+        typeToFilePath.put("mage", "mageDesc.txt");
+        typeToFilePath.put("bowman", "bowmanDesc.txt");
+        typeToFilePath.put("chair", "chairDesc.txt");
+        typeToFilePath.put("scrolls", "scrollsDesc.txt");
+        typeToFilePath.put("useable", "useableDesc.txt");
+        typeToFilePath.put("etc", "etcDesc.txt");
+        typeToFilePath.put("common", "commonDesc.txt");
+        typeToFilePath.put("fmclan", "FMClans.txt");
+        typeToFilePath.put("shortword", "shortWordDesc.txt");
+        typeToFilePath.put("emojis", "emojiFaces.txt");
     }
 
     protected static final Map<String, String> ITEM_ACRONYM_MAP = Map.ofEntries(
@@ -89,21 +94,7 @@ public class FMShopDescGen {
     }
 
     protected static String FMClanAdvertisement() {
-        String fmClan = getRandomTopFMClan();
-        fmClan = emblemizeFirstLetter(fmClan);
-
-        if (Math.random() < 0.99) { // .7
-            fmClan = asciiBorderString(fmClan, 19);
-        }
-
-        if (fmClan.length() < 14) { // Pad out with white space
-            int spacesToAdd = 18 - fmClan.length() + 6;
-            fmClan += " ".repeat(spacesToAdd);
-        } else if (fmClan.length() < 18) { // Pad out with white space
-            int spacesToAdd = 18 - fmClan.length() + 2;
-            fmClan += " ".repeat(spacesToAdd);
-        }
-        return fmClan;
+        return "【" + getRandomTopFMClan() + "】";
     }
 
     protected static String randomShortWordsPhrases() {
@@ -143,35 +134,11 @@ public class FMShopDescGen {
     }
 
     protected static String advertiseRWTCurrencies() {
-        // Define the list of currencies
-        List<String> rwtCurrencies = new ArrayList<>(List.of("NX", "PP", "WS", "WU", "MP"));
-
-        Random random = new Random();
-        int numberOfCurrencies = random.nextInt(3) + 1; // Random number between 1 and 5
-
-        List<String> selectedCurrencies = rwtCurrencies.subList(0, numberOfCurrencies);
-
-        StringBuilder result = new StringBuilder("|");
-        for (String currency : selectedCurrencies) {
-            String curr = transformTwoLetterString(currency);
-            result.append(curr).append("|");
-        }
-
-        return result.toString();
+        return MarketShopTitles.randomCurrency();
     }
 
     protected static String getOfferableDescription() {
-        List<String> offerStrings = new ArrayList<>(List.of("L/O", "L/N/O"));
-        offerStrings.add("Offer");
-        offerStrings.add("Leave Offer");
-        offerStrings.add("Buy or Offer");
-        // "H/O", "C/O"
-        // Add more dynamically as needed
-
-        Random random = new Random();
-        int randomIndex = random.nextInt(offerStrings.size());
-        String selectedString = offerStrings.get(randomIndex);
-        return convertToLowerCaseWithChance(selectedString);
+        return MarketShopTitles.randomOffer();
     }
 
     protected static String convertToLowerCaseWithChance(String input) {
@@ -183,7 +150,10 @@ public class FMShopDescGen {
 
 
     protected static String itemNameAcronymConverter(String str) {
-        return ITEM_ACRONYM_MAP.getOrDefault(str, str); // Return the acronym or the original string if not found
+        if (str == null || MarketShopTitles.hasLatin(str)) {
+            return "";
+        }
+        return str;
     }
 
 
@@ -243,15 +213,16 @@ public class FMShopDescGen {
         String bestStatName = bestEq.getHighestStatType();
         int highestStatValue = bestEq.getHighestStatValue();
 
+        if (itemName == null || itemName.isBlank()) {
+            return MarketShopTitles.randomTitle("common");
+        }
         if (numSuccessfulScrolls != 0) {
             if (writeStat) {
-                return (highestStatValue + " " + bestStatName + " " + itemName);
-            } else {
-                return ("Godly" + " " + itemName);
+                return itemName + MarketShopTitles.statLabel(bestStatName) + highestStatValue;
             }
-        } else {
-            return ("clean " + itemName);
+            return "神砸" + itemName;
         }
+        return "未砸" + itemName;
     }
 
     protected static String getMostExpensiveItemName(HiredMerchantArtificial merchant) {
@@ -336,59 +307,61 @@ public class FMShopDescGen {
      * only when the entire pool is exhausted.
      */
     public static synchronized String getRandomIGN() {
-        if (namePool == null || namePoolIndex >= namePool.size()) {
+        if (namePool == null || namePool.isEmpty() || namePoolIndex >= namePool.size()) {
             namePool = loadAndShuffleNames();
             namePoolIndex = 0;
+        }
+        if (namePool.isEmpty()) {
+            return FALLBACK_IGNS.get(new Random().nextInt(FALLBACK_IGNS.size()))
+                    + (new Random().nextInt(90) + 10);
         }
         return namePool.get(namePoolIndex++);
     }
 
     private static List<String> loadAndShuffleNames() {
-        String filePath = resolveFilePath("ign");
-        List<String> names = new ArrayList<>();
-        try (BufferedReader reader = new BufferedReader(new FileReader(filePath))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                if (!line.isEmpty() && line.length() <= 12) {
-                    names.add(line);
-                }
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
+        List<String> names = readLines("ign");
+        names.removeIf(line -> line.isEmpty() || line.length() > 12 || MarketShopTitles.hasLatin(line));
+        if (names.isEmpty()) {
+            names.addAll(FALLBACK_IGNS);
+            MarketBotLog.warn("IGN name file missing or empty; using {} fallback names", names.size());
+        } else {
+            MarketBotLog.info("Loaded {} shop/bot IGNs", names.size());
         }
         Collections.shuffle(names);
         return names;
     }
 
     protected static String resolveFilePath(String type) {
-        return typeToFilePath.getOrDefault(type, ""); // Default to empty string if type not found
+        return filePath_FMNameDesc + typeToFilePath.getOrDefault(type, "");
     }
 
     protected static String getRandomStoreDescription(String type) {
-        String filePath = resolveFilePath(type);
+        List<String> lines = readLines(type);
+        lines.removeIf(line -> line.isEmpty() || MarketShopTitles.hasLatin(line));
+        if (lines.isEmpty()) {
+            return MarketShopTitles.randomTitle(type);
+        }
+        return lines.get(new Random().nextInt(lines.size()));
+    }
 
-        try (BufferedReader reader = new BufferedReader(new FileReader(filePath))) {
+    private static List<String> readLines(String type) {
+        String fileName = typeToFilePath.getOrDefault(type, "");
+        if (fileName.isBlank()) {
+            return List.of();
+        }
+        String classpath = filePath_FMNameDesc + fileName;
+        List<String> lines = new ArrayList<>();
+        try (BufferedReader reader = new BufferedReader(soloMapling.server.SoloMaplingResource.openReader(classpath))) {
             String line;
-            String result = null;
-            Random random = new Random();
-            int count = 0;
-
             while ((line = reader.readLine()) != null) {
-                count++;
-                if (random.nextInt(count) == 0) {
-                    result = line;
+                if (!line.isEmpty()) {
+                    lines.add(line);
                 }
             }
-
-            if (result == null) {
-                throw new IOException("File is empty: " + filePath);
-            }
-
-            return result;
         } catch (IOException e) {
-            e.printStackTrace();
+            MarketBotLog.error("Failed to read " + classpath, e);
         }
-        return "null";
+        return lines;
     }
 
     protected static String emblemizeFirstLetter(String str) {

@@ -1,3 +1,6 @@
+/**
+ * 戴米安副本：两阶段只刷怪。DamienBossCompat 仅 skill2 光球，换图时 stop。
+ */
 var minPlayers = 1, maxPlayers = 30;
 var minLevel = 180, maxLevel = 255;
 var entryMap = 350160240;
@@ -11,6 +14,7 @@ var spawnX = 800;
 var spawnY = 17;
 const maxLobbies = 1;
 const LifeFactory = Java.type("org.gms.server.life.LifeFactory");
+const DamienBossCompat = Java.type("org.gms.server.life.DamienBossCompat");
 const Point = Java.type("java.awt.Point");
 
 function init() {
@@ -54,13 +58,15 @@ function setup(channel) {
         map.killAllMonsters();
     }
     var phaseOneMap = eim.getInstanceMap(entryMap);
-    phaseOneMap.spawnMonsterOnGroundBelow(LifeFactory.getMonster(phaseOneBoss), new Point(spawnX, spawnY));
+    var boss = LifeFactory.getMonster(phaseOneBoss);
+    phaseOneMap.spawnMonsterOnGroundBelow(boss, new Point(spawnX, spawnY));
     eim.startEventTimer(eventTime * 60000);
     setEventRewards(eim);
     setEventExclusives(eim);
     return eim;
 }
 
+// 一阶段与希纳斯相同：地上刷怪后不挂 Encounter。
 function afterSetup(eim) {}
 
 function playerEntry(eim, player) {
@@ -105,9 +111,6 @@ function monsterValue(eim, mobId) {
 }
 
 function monsterKilled(mob, eim, hasKiller) {
-    if (!hasKiller) {
-        return;
-    }
     if (mob.getId() == phaseOneBoss && eim.getIntProperty("phase") == 1) {
         eim.setIntProperty("phase", 2);
         eim.schedule("advanceToPhaseTwo", 2500);
@@ -118,14 +121,19 @@ function monsterKilled(mob, eim, hasKiller) {
 }
 
 function advanceToPhaseTwo(eim) {
+    var fromMap = eim.getInstanceMap(entryMap);
     var targetMap = eim.getInstanceMap(phaseTwoMap);
-    eim.getInstanceMap(entryMap).killAllMonsters();
+    DamienBossCompat.stop(fromMap);
+    fromMap.killAllMonsters();
     targetMap.killAllMonsters();
-    targetMap.spawnMonsterOnGroundBelow(LifeFactory.getMonster(phaseTwoBoss), new Point(spawnX, spawnY));
+    var phaseTwo = LifeFactory.getMonster(phaseTwoBoss);
+    targetMap.spawnMonsterOnGroundBelow(phaseTwo, new Point(spawnX, spawnY));
     var players = eim.getPlayers();
     for (var i = 0; i < players.size(); i++) {
         players.get(i).changeMap(targetMap, targetMap.getPortal(0));
     }
+    // 进图后再刷场地怪：单独召唤不崩、进图崩时用来区分地图资源和 8880113/8880114。
+    DamienBossCompat.startPhase(targetMap, phaseTwo, 2);
 }
 
 function allMonstersDead(eim, hasKiller) {}
@@ -135,6 +143,8 @@ function clearPQ(eim) {
     eim.stopEventTimer();
     eim.setProperty("canJoin", "0");
     eim.setEventCleared();
+    DamienBossCompat.stop(eim.getInstanceMap(entryMap));
+    DamienBossCompat.stop(eim.getInstanceMap(phaseTwoMap));
     eim.startEventTimer(300000);
 }
 
@@ -144,6 +154,8 @@ function playerExit(eim, player) {
 }
 
 function end(eim) {
+    DamienBossCompat.stop(eim.getInstanceMap(entryMap));
+    DamienBossCompat.stop(eim.getInstanceMap(phaseTwoMap));
     var players = eim.getPlayers();
     for (var i = 0; i < players.size(); i++) {
         playerExit(eim, players.get(i));
@@ -153,10 +165,15 @@ function end(eim) {
 
 function disposeIfEmpty(eim) {
     if (eim.getPlayers().isEmpty()) {
+        DamienBossCompat.stop(eim.getInstanceMap(entryMap));
+        DamienBossCompat.stop(eim.getInstanceMap(phaseTwoMap));
         eim.dispose();
     }
 }
 
 function giveRandomEventReward(eim, player) {}
 function cancelSchedule() {}
-function dispose(eim) {}
+function dispose(eim) {
+    DamienBossCompat.stop(eim.getInstanceMap(entryMap));
+    DamienBossCompat.stop(eim.getInstanceMap(phaseTwoMap));
+}

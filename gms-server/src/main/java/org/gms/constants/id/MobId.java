@@ -111,11 +111,33 @@ public class MobId {
         return mobId == MORI_RANMARU_HARD;
     }
 
+    /**
+     * 戴米安 TMS「暗影區」。旧端直接召唤会崩（CMob + WzFlashRenderer.ReleaseFlash）。
+     * MapleMap 必须拒绝刷出。不是 skill2 金火球。
+     */
+    public static final int DAMIEN_CRASH_ON_SUMMON = 8880102;
+    /**
+     * 一阶段 skill2 球体射手。像素来自 TMS 8880101 attack3/info/ball，弹道合同同 8880165。
+     */
+    public static final int DAMIEN_SKILL2_ORB = 8880112;
+    /**
+     * 二阶段暗影球。像素来自 TMS 8880102，禁止召唤 8880102 本体。
+     */
+    public static final int DAMIEN_SHADOW_ORB = 8880113;
+    /**
+     * 二阶段飞剑。像素来自 Etc/BossDemian flyingSword。
+     */
+    public static final int DAMIEN_FLYING_SWORD = 8880114;
+    /** 戴米安一阶段本体。 */
     public static final int DAMIEN_PHASE_ONE = 8880110;
     public static final int DAMIEN_PHASE_TWO = 8880111;
 
     public static boolean isDamien(int mobId) {
         return mobId == DAMIEN_PHASE_ONE || mobId == DAMIEN_PHASE_TWO;
+    }
+
+    public static boolean crashesOldClientOnSummon(int mobId) {
+        return mobId == DAMIEN_CRASH_ON_SUMMON;
     }
 
     public static final int CYGNUS_BOSS_MIN = 8850000;

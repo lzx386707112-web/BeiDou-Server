@@ -1,5 +1,5 @@
 function start() {
-    cm.sendOk("堕落世界树已经和鲁塔比斯连通。");
+    cm.sendOk("世界树祭坛暂时没有反应。");
     cm.dispose();
 }
 

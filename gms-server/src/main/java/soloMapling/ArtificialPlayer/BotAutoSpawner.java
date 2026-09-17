@@ -10,22 +10,22 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 
 public final class BotAutoSpawner {
-    private static final int FM_ENTRANCE = 910000000;
     private static final long MARKET_STARTUP_DELAY_MS = 2_500L;
     private static final AtomicBoolean marketStartupQueued = new AtomicBoolean(false);
 
-    private BotAutoSpawner() {
+    public static void allowMarketStartupRetry() {
+        marketStartupQueued.set(false);
     }
 
     public static void onPlayerEnterMap(Character player) {
         if (player == null || player.getClient() == null || player.getMap() == null || BotHelpers.isBot(player)) {
             return;
         }
-        BotClientHandler.createBotClient(player.getClient());
+        BotClientHandler.ensureStandaloneClient();
+    }
 
-        if (player.getMapId() != FM_ENTRANCE
-                || !SoloMaplingConfig.autoEnvironmentEnabled()
-                || !SoloMaplingConfig.autoMapBotsEnabled()) {
+    public static void requestStartupIfEnabled() {
+        if (!SoloMaplingConfig.marketAutoStartEnabled()) {
             return;
         }
         if (!marketStartupQueued.compareAndSet(false, true)) {

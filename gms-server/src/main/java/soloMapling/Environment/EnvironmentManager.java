@@ -14,14 +14,17 @@ import soloMapling.ArtificialPlayer.BotDecoratorSystem.BotEquipChecker;
 import soloMapling.ArtificialPlayer.BotHelpers;
 import soloMapling.ArtificialPlayer.BotSM;
 import soloMapling.ArtificialPlayer.BotTypeManager;
+import soloMapling.ArtificialPlayer.BotTownSystem.TownPresenceConfig;
+import soloMapling.ArtificialPlayer.BotTownSystem.TownPresenceSampler;
+import soloMapling.ArtificialPlayer.BotMapEntryResponder;
 import soloMapling.ArtificialPlayer.BotTypes.Blackjack.BlackjackDealerBot;
 import soloMapling.ArtificialPlayer.ConversationManager;
 import soloMapling.ArtificialPlayer.SocialHotPotatoManager;
+import soloMapling.FreeMarket.ArtificialFreeMarket;
 import soloMapling.SoloMaplingConfig;
 import soloMapling.server.ExecutorServiceManager;
 
 import java.awt.*;
-import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -41,6 +44,7 @@ import static soloMapling.DebugUtilities.debugprint;
 import static soloMapling.DebugUtilities.fmt;
 import static soloMapling.Environment.PlatformSpawner.findUnoccupiedPoint;
 import static soloMapling.Environment.PlatformSpawner.findUnoccupiedPoints;
+import static soloMapling.Environment.PlatformSpawner.snapToGround;
 import static soloMapling.FreeMarket.ArtificialFreeMarket.populateFreeMarketRegion;
 import static soloMapling.server.SoloMaplingUtilities.getMapleMapById;
 
@@ -57,7 +61,6 @@ import java.util.stream.Collectors;
 
 public class EnvironmentManager {
 
-    private static final String BASE_PATH = "src/main/java/soloMapling/ArtificialPlayer/BotMovementSystem/movementDataPackets";
     private static final AtomicBoolean startupStarted = new AtomicBoolean(false);
     private static final AtomicBoolean marketAmbientLoopsStarted = new AtomicBoolean(false);
     private static final AtomicInteger marketEntranceBotCount = new AtomicInteger(0);
@@ -87,8 +90,24 @@ public class EnvironmentManager {
     private static final int MAPLE_ISLAND_TUTORIAL = 10000;
     private static final int OPQ_LOBBY = 200080101;
 
+    public static int getMarketEntranceBotCount() {
+        return marketEntranceBotCount.get();
+    }
+
+    public static boolean isMarketStartupComplete() {
+        return startupComplete;
+    }
+
+    public static boolean isMarketStartupRunning() {
+        return startupStarted.get() && !startupComplete;
+    }
+
     public static void environmentLoadStartup() {
         marketEnvironmentStartup();
+    }
+
+    public static void requestMarketStartup() {
+        ExecutorServiceManager.getScheduledExecutorService().execute(EnvironmentManager::marketEnvironmentStartup);
     }
 
     public static void marketEnvironmentStartup() {
@@ -105,11 +124,10 @@ public class EnvironmentManager {
         BotGeneration.enableEnvironmentBotLimit();
 
         try {
+            BotMapEntryResponder.register();
             runWave(1, "Free Market core", List.of(
-                    () -> populateFreeMarketRegion("henesys"),
-                    () -> spawnFMEntranceBotsBatch(2, 2, 2),
-                    () -> spawnMerchBotsBatch("m1", 1, 1, 0),
-                    () -> spawnMerchBotsBatch("m2", 1, 0, 0),
+                    () -> ArtificialFreeMarket.populateMarketRooms(910000001, 910000012),
+                    () -> spawnScaledFMEntranceBots(),
                     () -> spawnMarketSocialBots()
             ));
 
@@ -118,6 +136,8 @@ public class EnvironmentManager {
                     () -> spawnBlackjackTables(),
                     () -> spawnOPQBotsInLobby()
             ));
+
+            runWave(3, "Town wanderers", List.of(EnvironmentManager::spawnTownWanderers));
 
             if (SoloMaplingConfig.hotPotatoEnabled()) {
                 SocialHotPotatoManager.getInstance().start();
@@ -137,7 +157,10 @@ public class EnvironmentManager {
                     "[EnvironmentManager] === All bots initialized: %d bots in %.1fs ===",
                     BotGeneration.getBotsCreatedCount(), totalSeconds));
         } catch (RuntimeException e) {
-            System.err.println("[EnvironmentManager] Environment startup failed; duplicate startup remains blocked to avoid over-spawning.");
+            startupStarted.set(false);
+            startupComplete = false;
+            soloMapling.ArtificialPlayer.BotAutoSpawner.allowMarketStartupRetry();
+            System.err.println("[EnvironmentManager] Environment startup failed; retry is allowed.");
             throw e;
         }
     }
@@ -163,6 +186,28 @@ public class EnvironmentManager {
                 number, name, botsSpawned, seconds));
     }
 
+    private static void spawnScaledFMEntranceBots() {
+        int[] parts = distributeMarketEntranceWanderers(SoloMaplingConfig.marketBotMax());
+        spawnFMEntranceBotsBatch(parts[0], parts[1], parts[2]);
+    }
+
+    /**
+     * About two thirds of the entrance cap become wanderers, split across the
+     * three main platforms so raising the cap to ~30 fills the map without
+     * stacking everyone on one ledge.
+     */
+    public static int[] distributeMarketEntranceWanderers(int cap) {
+        int limit = Math.max(0, cap);
+        int wanderBudget = (limit * 2) / 3;
+        if (limit > 0 && wanderBudget < 3) {
+            wanderBudget = Math.min(limit, 3);
+        }
+        int m1 = wanderBudget / 3;
+        int m2 = wanderBudget / 3;
+        int m5 = wanderBudget - m1 - m2;
+        return new int[]{m1, m2, m5};
+    }
+
     private static void spawnFMEntranceBotsBatch(int m1Count, int m2Count, int m5Count) {
         if (!SoloMaplingConfig.fmBotsEnabled()) {
             debugprint("FM entrance bots disabled by config.");
@@ -182,6 +227,16 @@ public class EnvironmentManager {
         }
     }
 
+    private static void spawnScaledMerchantBots() {
+        int cap = SoloMaplingConfig.marketBotMax();
+        int selling = Math.max(2, cap / 6);
+        int buying = Math.max(1, cap / 8);
+        int nx = Math.max(1, cap / 15);
+        spawnMerchBotsBatch("m1", Math.max(1, selling / 2), Math.max(1, buying / 2), 0);
+        spawnMerchBotsBatch("m2", selling - selling / 2, buying - buying / 2, 0);
+        spawnMerchBotsBatch("m5", 0, 0, nx);
+    }
+
     private static void spawnMerchBotsBatch(String platform, int selling, int buying, int nx) {
         if (!SoloMaplingConfig.fmMerchantsEnabled()) {
             debugprint("FM merchant bots disabled by config.");
@@ -198,6 +253,38 @@ public class EnvironmentManager {
         if (nx > 0) {
             List<Integer> bots = spawnBotsOnMapOnPlatform(nx, FM_ENTRANCE, platform);
             setAndStartBots(bots, BotTypeManager.BotType.NX_MERCHANT_BOT);
+        }
+    }
+
+    public static void spawnTownWanderers() {
+        List<TownPresenceConfig.TownEntry> towns = TownPresenceConfig.towns();
+        if (towns.isEmpty()) {
+            System.out.println("[EnvironmentManager] Town wanderers skipped: TownPresence.yaml loaded 0 towns.");
+            return;
+        }
+        for (TownPresenceConfig.TownEntry town : towns) {
+            int n = Math.min(2, town.wanderers());
+            int mapId = town.mainMapId();
+            if (n <= 0 || mapId <= 0) {
+                continue;
+            }
+            MapleMap map = getMapleMapById(mapId);
+            if (map == null || map.getPortal(0) == null) {
+                System.out.println("[EnvironmentManager] Town wanderers skipped map=" + mapId + " name=" + town.name());
+                continue;
+            }
+            Point anchor = map.getPortal(0).getPosition();
+            List<Point> spots = TownPresenceSampler.sample(map, anchor, n, TownPresenceConfig.overridesFor(mapId));
+            List<Integer> ids = new ArrayList<>();
+            for (int i = 0; i < n; i++) {
+                Point spawnAt = i < spots.size() ? spots.get(i) : snapToGround(map, anchor);
+                Character fakechar = createTownBotWithRetry(spawnAt, mapId, 5);
+                if (fakechar != null) {
+                    ids.add(fakechar.getId());
+                }
+            }
+            setAndStartBots(ids, BotTypeManager.BotType.TOWN_WANDERER_BOT);
+            System.out.println("[EnvironmentManager] Town wanderers map=" + mapId + " name=" + town.name() + " spawned=" + ids.size());
         }
     }
 
@@ -855,10 +942,10 @@ public class EnvironmentManager {
 
         debugprint(fmt("Spawning {} bots on {} at platform: {}", numBots, mapId, platform_id));
 
-        // Pre-generate all spawn points (must be sequential to avoid overlaps)
+        MapleMap map = getMapleMapById(mapId);
         List<Point> spawnPoints = new ArrayList<>();
         for (int i = 0; i < numBots; i++) {
-            Point spawn = findUnoccupiedPoint(flatPlatform, occupied);
+            Point spawn = snapToGround(map, findUnoccupiedPoint(flatPlatform, occupied));
             occupied.add(spawn);
             spawnPoints.add(spawn);
         }
@@ -923,8 +1010,9 @@ public class EnvironmentManager {
                 debugprint(fmt("Could not find unoccupied point for bot {} within radius", i));
                 continue;
             }
-            occupied.add(spawn);
-            spawnPoints.add(spawn);
+            Point grounded = snapToGround(getMapleMapById(mapId), spawn);
+            occupied.add(grounded);
+            spawnPoints.add(grounded);
         }
 
         CountDownLatch latch = new CountDownLatch(spawnPoints.size());
@@ -980,8 +1068,10 @@ public class EnvironmentManager {
         debugprint(fmt("Spawning {} filler bots between ({},{}) and ({},{}) on map {}",
                 numBots, p1.x, p1.y, p2.x, p2.y, mapId));
 
-        List<Point> spawnPoints = findUnoccupiedPoints(adHocPlatform, occupied, numBots);
-        occupied.addAll(spawnPoints);
+        List<Point> spawnPoints = findUnoccupiedPoints(adHocPlatform, occupied, numBots)
+                .stream()
+                .map(point -> snapToGround(getMapleMapById(mapId), point))
+                .collect(Collectors.toList());
 
         CountDownLatch latch = new CountDownLatch(spawnPoints.size());
         double chairChance = 0.20;
@@ -1110,6 +1200,32 @@ public class EnvironmentManager {
     }
 
 
+    private static Character createTownBotWithRetry(Point spawn, int mapId, int maxRetries) {
+        for (int attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                Character fakechar = createBotPollReadiness(spawn, mapId, true);
+                if (fakechar != null) {
+                    return fakechar;
+                }
+                if (attempt < maxRetries) {
+                    Thread.sleep(200 * attempt);
+                }
+            } catch (Exception e) {
+                debugprint(fmt("Town wanderer attempt {}/{} failed at {}: {}",
+                        attempt, maxRetries, spawn, e.getMessage()));
+                if (attempt < maxRetries) {
+                    try {
+                        Thread.sleep(200 * attempt);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        return null;
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
     private static Character createBotWithRetry(Point spawn, int mapId, int maxRetries) {
         for (int attempt = 1; attempt <= maxRetries; attempt++) {
             if (BotGeneration.environmentBotLimitReached()) {
@@ -1178,7 +1294,7 @@ public class EnvironmentManager {
 
         List<Point> occupiedPointsOnPlatform = getListOfCharacterCoordinates(getAllCharsOnPlatform(mapId, platform));
         Platform flatPlatform = PlatformParser.parsePlatform(mapId, platform);
-        Point unoccupiedPt = findUnoccupiedPoint(flatPlatform, occupiedPointsOnPlatform);
+        Point unoccupiedPt = snapToGround(fakechar.getMap(), findUnoccupiedPoint(flatPlatform, occupiedPointsOnPlatform));
         MovementCommands.pathFinderBeta(fakechar, unoccupiedPt);
     }
 
@@ -1287,24 +1403,7 @@ public class EnvironmentManager {
      * @return List of platform IDs (e.g., ["m1", "m2", "m3"])
      */
     public static List<String> getAvailablePlatformIds(int mapId) {
-        List<String> platformIds = new ArrayList<>();
-        File mapDir = new File(BASE_PATH + "/map" + mapId);
-
-        if (!mapDir.exists() || !mapDir.isDirectory()) {
-            return platformIds;
-        }
-
-        File[] files = mapDir.listFiles((dir, name) -> name.endsWith(".csv"));
-
-        if (files != null) {
-            for (File file : files) {
-                String name = file.getName();
-                // Remove .csv extension to get platform ID
-                platformIds.add(name.substring(0, name.length() - 4));
-            }
-        }
-        //debugprint("MapID", mapId, "Platform ids: ", platformIds);
-        return platformIds;
+        return PlatformParser.listPlatformIds(mapId);
     }
 
     public static List<String> getMainPlatformIds(int mapId) {

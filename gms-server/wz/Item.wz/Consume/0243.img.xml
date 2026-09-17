@@ -147,6 +147,46 @@
                                                             <string name="script" value="damage_cap_breakthrough"/>
                                                           </imgdir>
                                                         </imgdir>
+                                                        <imgdir name="02431158">
+                                                          <imgdir name="info">
+                                                            <canvas name="icon" width="32" height="32" format="1">
+                                                              <vector name="origin" x="0" y="32"/>
+                                                            </canvas>
+                                                            <canvas name="iconRaw" width="32" height="32" format="1">
+                                                              <vector name="origin" x="0" y="32"/>
+                                                            </canvas>
+                                                            <int name="notSale" value="1"/>
+                                                            <int name="price" value="1"/>
+                                                            <int name="slotMax" value="100"/>
+                                                            <int name="tradeBlock" value="1"/>
+                                                          </imgdir>
+                                                          <imgdir name="spec">
+                                                            <int name="npc" value="9900001"/>
+                                                            <int name="time" value="600000"/>
+                                                            <int name="pdd" value="1"/>
+                                                            <string name="script" value="consume_2431158"/>
+                                                          </imgdir>
+                                                        </imgdir>
+                                                        <imgdir name="02431159">
+                                                          <imgdir name="info">
+                                                            <canvas name="icon" width="32" height="32" format="1">
+                                                              <vector name="origin" x="0" y="32"/>
+                                                            </canvas>
+                                                            <canvas name="iconRaw" width="32" height="32" format="1">
+                                                              <vector name="origin" x="0" y="32"/>
+                                                            </canvas>
+                                                            <int name="notSale" value="1"/>
+                                                            <int name="price" value="1"/>
+                                                            <int name="slotMax" value="100"/>
+                                                            <int name="tradeBlock" value="1"/>
+                                                          </imgdir>
+                                                          <imgdir name="spec">
+                                                            <int name="npc" value="9900001"/>
+                                                            <int name="pdd" value="1"/>
+                                                            <int name="time" value="1800000"/>
+                                                            <string name="script" value="consume_2431159"/>
+                                                          </imgdir>
+                                                        </imgdir>
                                                         <imgdir name="02436037">
                                                           <imgdir name="info">
                                                             <canvas name="icon" width="38" height="38" format="1">

@@ -318,6 +318,15 @@ public class BotDecorate {
         if ((SoloMaplingConfig.normalEquipsEnabled() || SoloMaplingConfig.nxEquipsEnabled()) && !hasWeapon(bot)) {
             BotCustomization.EquipBot(bot, 1302000);
         }
+        applyVisibleHpMp(bot);
+    }
+
+    public static void applyVisibleHpMp(Character bot) {
+        if (bot == null) {
+            return;
+        }
+        bot.recalcLocalStats();
+        bot.healHpMp();
     }
 
     private static boolean hasClothing(Character bot) {

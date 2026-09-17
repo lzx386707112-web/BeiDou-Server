@@ -2,6 +2,7 @@ package soloMapling.ArtificialPlayer;
 
 import org.gms.client.Character;
 import org.gms.client.Client;
+import soloMapling.server.SoloMaplingConstants;
 
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -13,12 +14,26 @@ public class BotClientHandler {
     static Client botClient = null;
 
 
+    public static synchronized Client ensureStandaloneClient() {
+        if (botClient != null && botClient.getWorldServer() != null) {
+            return botClient;
+        }
+        Client mock = Client.createMock();
+        mock.setWorld(SoloMaplingConstants.GameConstants.WORLD_SCANIA);
+        mock.setChannel(SoloMaplingConstants.GameConstants.CHANNEL_1);
+        Character host = Character.getDefault(mock);
+        host.setID(0);
+        mock.setPlayer(host);
+        botClient = mock;
+        return botClient;
+    }
+
     public static void createBotClient(Client c) {
-        botClient = c;
+        ensureStandaloneClient();
     }
 
     public static Client getBotClient() {
-        return botClient;
+        return ensureStandaloneClient();
     }
 
     public static void disconnectFirstClient(Client c) {

@@ -9,14 +9,10 @@ import java.util.Random;
 
 public class QuantitySelector {
     private static ItemQuantityConfig config;
-    static String filePath = "src/main/java/soloMapling/itemPool/itemConfig/itemQuantities.yaml";
+    static String filePath = "soloMapling/itemPool/itemConfig/itemQuantities.yaml";
 
-    // Load configuration at the start
     public static void loadConfig() {
         config = ItemQuantityConfig.readYaml(filePath);
-        if (config == null) {
-            throw new RuntimeException("Failed to load configuration.");
-        }
     }
 
     public static int quantitySelector(String type, String tier) {
@@ -25,18 +21,18 @@ public class QuantitySelector {
             QuantitySelector.loadConfig();
         }
 
-        if (config == null) {
-            throw new IllegalStateException("Configuration is not loaded.");
+        if (config == null || config.itemQuantities == null) {
+            return 5;
         }
 
         ItemQuantityConfig.ItemType itemType = config.itemQuantities.get(type);
         if (itemType == null) {
-            throw new IllegalArgumentException("Unknown type: " + type);
+            return 5;
         }
 
         ItemQuantityConfig.TierRange range = itemType.tiers.get(tier);
         if (range == null) {
-            throw new IllegalArgumentException("Unknown tier: " + tier + " for type: " + type);
+            return 5;
         }
 
         Random random = new Random();

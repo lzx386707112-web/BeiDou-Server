@@ -43,6 +43,8 @@ public final class BotAttack {
 
     /** Equip slot id for the main-hand weapon in v83. */
     private static final short EQUIP_SLOT_WEAPON = -11;
+    /** Active Slash Blast. {@code Warrior.SLASH_BLAST} is the passive 1000005 id. */
+    private static final int WARRIOR_SLASH_BLAST = 1001005;
 
     private BotAttack() {}
 
@@ -56,6 +58,52 @@ public final class BotAttack {
         if (chr == null) return;
 
         broadcastCloseRangeAttack(chr, 0, 0, Collections.emptyMap());
+    }
+
+    /**
+     * Close-range swing the old client can actually play: include the monster oid,
+     * face the target, and keep skill id 0 so display/body-action is used.
+     * Job skill overlay is a separate foreign effect, not a MAGIC/RANGED packet.
+     */
+    public static void visibleHit(Character chr, Monster monster, int damage) {
+        if (chr == null || monster == null || chr.getMap() == null) {
+            return;
+        }
+        if (monster.getPosition().x < chr.getPosition().x) {
+            chr.setStance(5);
+        } else {
+            chr.setStance(4);
+        }
+        int hit = Math.max(1, damage);
+        Map<Integer, List<Integer>> targets = Collections.singletonMap(
+                monster.getObjectId(),
+                Collections.singletonList(hit)
+        );
+        broadcastCloseRangeAttack(chr, 0, 0, targets);
+        broadcastSkillDamageNumbers(chr, monster, targets.get(monster.getObjectId()));
+    }
+
+    /** Party-grind hit: job skill only when the equipped weapon can cast it. */
+    public static void grindHit(Character chr, Monster monster, int damage) {
+        if (chr == null || monster == null || damage <= 0) {
+            return;
+        }
+        BossAttackSkill skill = resolveGrindSkill(chr.getJob(), resolveEquippedWeaponType(chr));
+        if (skill.skillId() > 0 && skill.hitCount() > 0) {
+            Map<Integer, List<Integer>> targetDamage = Collections.singletonMap(
+                    monster.getObjectId(),
+                    splitDamage(damage, skill.hitCount())
+            );
+            if (monster.getPosition().x < chr.getPosition().x) {
+                chr.setStance(5);
+            } else {
+                chr.setStance(4);
+            }
+            broadcastAttack(chr, skill, targetDamage);
+            broadcastSkillDamageNumbers(chr, monster, targetDamage.get(monster.getObjectId()));
+            return;
+        }
+        visibleHit(chr, monster, damage);
     }
 
     /**
@@ -123,8 +171,10 @@ public final class BotAttack {
     }
 
     private static void broadcastCloseRangeAttack(Character chr, int skill, int skillLevel, Map<Integer, List<Integer>> targets) {
+        if (chr == null || chr.getMap() == null) {
+            return;
+        }
         int facingMask = facingLeft(chr) ? BotAttackData.FACING_LEFT_MASK : BotAttackData.FACING_RIGHT_MASK;
-        int direction = facingLeft(chr) ? 0 : 1;
         WeaponType weaponType = resolveEquippedWeaponType(chr);
         int bodyActionId = BotAttackData.randomActionFor(weaponType);
         int targetCount = targets.size();
@@ -137,14 +187,14 @@ public final class BotAttack {
                         chr,
                         skill,
                         skillLevel,
-                        /* stance       */ facingMask,
+                        facingMask,
                         numAttackedAndDamage,
                         targets,
-                        /* speed        */ BotAttackData.DEFAULT_ATTACK_SPEED,
-                        /* direction    */ direction,
-                        /* display      */ bodyActionId
+                        BotAttackData.DEFAULT_ATTACK_SPEED,
+                        bodyActionId,
+                        0
                 ),
-                /* repeatToSource */ false
+                false
         );
     }
 
@@ -204,12 +254,138 @@ public final class BotAttack {
         return ItemInformationProvider.getInstance().getWeaponType(weapon.getItemId());
     }
 
+    static int grindSkillId(Job job, WeaponType weapon) {
+        return resolveGrindSkill(job, weapon).skillId();
+    }
+
+    static BossAttackSkill resolveGrindSkill(Job job, WeaponType weapon) {
+        BossAttackSkill preferred = resolveBossAttackSkill(job);
+        if (preferred.skillId() > 0 && weaponSupports(weapon, preferred)) {
+            return preferred;
+        }
+        BossAttackSkill fallback = fallbackSkillForWeapon(job, weapon);
+        if (fallback.skillId() > 0 && weaponSupports(weapon, fallback)) {
+            return fallback;
+        }
+        return new BossAttackSkill(0, 0, 1, PacketKind.CLOSE);
+    }
+
+    private static BossAttackSkill fallbackSkillForWeapon(Job job, WeaponType weapon) {
+        if (job == null || weapon == null) {
+            return new BossAttackSkill(0, 0, 1, PacketKind.CLOSE);
+        }
+        if (isMagicJob(job) && (weapon == WeaponType.WAND || weapon == WeaponType.STAFF)) {
+            return new BossAttackSkill(Magician.MAGIC_CLAW, 20, 2, PacketKind.MAGIC);
+        }
+        if (isBowJob(job) && weapon == WeaponType.BOW) {
+            return new BossAttackSkill(Archer.ARROW_BLOW, 20, 2, PacketKind.RANGED);
+        }
+        if (isBowJob(job) && weapon == WeaponType.CROSSBOW) {
+            return new BossAttackSkill(Crossbowman.IRON_ARROW, 20, 1, PacketKind.RANGED);
+        }
+        if (isThiefJob(job) && weapon == WeaponType.CLAW) {
+            return new BossAttackSkill(Rogue.LUCKY_SEVEN, 20, 2, PacketKind.RANGED);
+        }
+        if (isThiefJob(job) && isDagger(weapon)) {
+            return new BossAttackSkill(Rogue.DOUBLE_STAB, 20, 2, PacketKind.CLOSE);
+        }
+        if (isPirateJob(job) && weapon == WeaponType.GUN) {
+            return new BossAttackSkill(Pirate.DOUBLE_SHOT, 20, 2, PacketKind.RANGED);
+        }
+        if (isPirateJob(job) && weapon == WeaponType.KNUCKLE) {
+            return new BossAttackSkill(Pirate.SOMERSAULT_KICK, 20, 1, PacketKind.CLOSE);
+        }
+        if (isWarriorJob(job) && isMeleeWeapon(weapon)) {
+            return new BossAttackSkill(WARRIOR_SLASH_BLAST, 20, 1, PacketKind.CLOSE);
+        }
+        return new BossAttackSkill(0, 0, 1, PacketKind.CLOSE);
+    }
+
+    private static boolean weaponSupports(WeaponType weapon, BossAttackSkill skill) {
+        if (weapon == null || weapon == WeaponType.NOT_A_WEAPON || skill == null || skill.skillId() <= 0) {
+            return false;
+        }
+        return switch (skill.packetKind()) {
+            case MAGIC -> weapon == WeaponType.WAND || weapon == WeaponType.STAFF;
+            case RANGED -> rangedWeaponOk(weapon, skill.skillId());
+            case CLOSE -> meleeWeaponOk(weapon, skill.skillId());
+        };
+    }
+
+    private static boolean rangedWeaponOk(WeaponType weapon, int skillId) {
+        if (skillId == Rogue.LUCKY_SEVEN || skillId == Hermit.AVENGER || skillId == NightLord.TRIPLE_THROW
+                || skillId == NightWalker.TRIPLE_THROW) {
+            return weapon == WeaponType.CLAW;
+        }
+        if (skillId == Pirate.DOUBLE_SHOT || skillId == Outlaw.BURST_FIRE || skillId == Corsair.BATTLESHIP_CANNON) {
+            return weapon == WeaponType.GUN;
+        }
+        if (skillId == Crossbowman.IRON_ARROW || skillId == Sniper.STRAFE) {
+            return weapon == WeaponType.CROSSBOW;
+        }
+        if (skillId == Archer.ARROW_BLOW) {
+            return weapon == WeaponType.BOW || weapon == WeaponType.CROSSBOW;
+        }
+        return weapon == WeaponType.BOW;
+    }
+
+    private static boolean meleeWeaponOk(WeaponType weapon, int skillId) {
+        if (skillId == DragonKnight.SPEAR_CRUSHER) {
+            return isSpearFamily(weapon);
+        }
+        if (skillId == Rogue.DOUBLE_STAB || skillId == Bandit.SAVAGE_BLOW
+                || skillId == ChiefBandit.BAND_OF_THIEVES || skillId == Shadower.BOOMERANG_STEP) {
+            return isDagger(weapon);
+        }
+        if (skillId == Pirate.SOMERSAULT_KICK || skillId == Brawler.DOUBLE_UPPERCUT
+                || skillId == Marauder.ENERGY_BLAST || skillId == Buccaneer.BARRAGE
+                || skillId == ThunderBreaker.ENERGY_BLAST || skillId == ThunderBreaker.BARRAGE) {
+            return weapon == WeaponType.KNUCKLE;
+        }
+        return isMeleeWeapon(weapon);
+    }
+
+    private static boolean isMeleeWeapon(WeaponType weapon) {
+        return weapon != WeaponType.BOW && weapon != WeaponType.CROSSBOW && weapon != WeaponType.GUN
+                && weapon != WeaponType.CLAW && weapon != WeaponType.WAND && weapon != WeaponType.STAFF
+                && weapon != WeaponType.NOT_A_WEAPON;
+    }
+
+    private static boolean isSpearFamily(WeaponType weapon) {
+        return weapon == WeaponType.SPEAR_STAB || weapon == WeaponType.SPEAR_SWING
+                || weapon == WeaponType.POLE_ARM_SWING || weapon == WeaponType.POLE_ARM_STAB;
+    }
+
+    private static boolean isDagger(WeaponType weapon) {
+        return weapon == WeaponType.DAGGER_THIEVES || weapon == WeaponType.DAGGER_OTHER;
+    }
+
+    private static boolean isMagicJob(Job job) {
+        return job.isA(Job.MAGICIAN) || job.isA(Job.BLAZEWIZARD1);
+    }
+
+    private static boolean isBowJob(Job job) {
+        return job.isA(Job.BOWMAN) || job.isA(Job.WINDARCHER1);
+    }
+
+    private static boolean isThiefJob(Job job) {
+        return job.isA(Job.THIEF) || job.isA(Job.NIGHTWALKER1);
+    }
+
+    private static boolean isPirateJob(Job job) {
+        return job.isA(Job.PIRATE) || job.isA(Job.THUNDERBREAKER1);
+    }
+
+    private static boolean isWarriorJob(Job job) {
+        return job.isA(Job.WARRIOR) || job.isA(Job.DAWNWARRIOR1);
+    }
+
     private static BossAttackSkill resolveBossAttackSkill(Job job) {
         if (job == null) {
             return new BossAttackSkill(0, 0, 1, PacketKind.CLOSE);
         }
         if (job == Job.WARRIOR || job == Job.FIGHTER || job == Job.PAGE || job == Job.SPEARMAN) {
-            return new BossAttackSkill(Warrior.SLASH_BLAST, 20, 1, PacketKind.CLOSE);
+            return new BossAttackSkill(WARRIOR_SLASH_BLAST, 20, 1, PacketKind.CLOSE);
         }
         if (job == Job.CRUSADER) {
             return new BossAttackSkill(Crusader.SWORD_COMA, 30, 1, PacketKind.CLOSE);

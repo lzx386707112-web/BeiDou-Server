@@ -15,6 +15,7 @@ import equipmentCatalog from '@/views/game/equipmentCatalog/locale/en-US';
 import mapDetect from '@/views/game/mapDetect/locale/en-US';
 import questBrowse from '@/views/game/questBrowse/locale/en-US';
 import weather from '@/views/game/weather/locale/en-US';
+import botControl from '@/views/game/botControl/locale/en-US';
 import itemCatalog from '@/views/game/itemCatalog/locale/en-US';
 import base from './en-US/base';
 
@@ -27,6 +28,7 @@ export default {
   'menu.game.config': 'Config',
   'menu.game.setItem': 'Set Bonuses',
   'menu.game.weather': 'Weather',
+  'menu.game.botControl': 'Bot Control',
   'menu.game.equipmentCatalog': 'Equipment Preview',
   'menu.game.itemCatalog': 'Item Preview',
   'menu.game.mobCatalog': 'Mob Preview',
@@ -77,4 +79,5 @@ export default {
   ...mapDetect,
   ...questBrowse,
   ...weather,
+  ...botControl,
 };

@@ -7,13 +7,15 @@ import org.gms.server.maps.PlayerShop;
 import org.gms.server.maps.PlayerShopItem;
 import soloMapling.ArtificialPlayer.BotCommandsPack.SocialCommands;
 import soloMapling.ArtificialPlayer.BotHelpers;
-import soloMapling.ArtificialPlayer.BotMessagingSystem.ChatMessage;
-import soloMapling.ArtificialPlayer.BotMessagingSystem.MessageQueue;
 import soloMapling.ArtificialPlayer.BotSM;
 import soloMapling.FreeMarket.HiredMerchantAdapter;
+import soloMapling.FreeMarket.MarketBotAmbient;
+import soloMapling.FreeMarket.MarketBotFlavor;
 import soloMapling.FreeMarket.PlayerShopAdapter;
 import soloMapling.FreeMarket.ShopKeeper;
+import soloMapling.SoloMaplingConfig;
 import soloMapling.itemPool.ItemUtilities;
+import soloMapling.server.MarketBotDirector;
 
 import java.awt.*;
 import java.util.ArrayList;
@@ -21,10 +23,11 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 import java.util.Random;
 
 
+import static soloMapling.ArtificialPlayer.BotCommandsPack.SocialCommands.BotEmote;
+import static soloMapling.ArtificialPlayer.BotCommandsPack.SocialCommands.BotSpeak;
 import static soloMapling.ArtificialPlayer.BotCommandsPack.WarpCommands.FMRoomWarpPortalId;
 import static soloMapling.ArtificialPlayer.BotCommandsPack.WarpCommands.botEnterFMRoom;
 import static soloMapling.ArtificialPlayer.BotCommandsPack.WarpCommands.botExitFMRoom;
@@ -57,7 +60,7 @@ public class FMBot extends BotSM {
     private Set<Integer> segmentStartIndices = new HashSet<>();
 
     // Escalating walk chance (pity timer)
-    private static final double BASE_WALK_CHANCE = 0.40;
+    private static final double BASE_WALK_CHANCE = 0.85;
     private static final double WALK_CHANCE_INCREMENT = 0.10;
     private double walkChance = BASE_WALK_CHANCE;
 
@@ -67,12 +70,23 @@ public class FMBot extends BotSM {
         botType = "FMBot";
     }
 
+    @Override
+    public boolean usesSharedMarketTick() {
+        return true;
+    }
+
+    @Override
+    public boolean isAvailableForAmbientActions() {
+        return getState() != BotState.TRADING;
+    }
+
     private void setFMBotState(FMBotState state) {
         this.fmBotState = state;
     }
 
     protected enum FMBotState {
         RESET,
+        AMBIENT,
         NAV_TO_FM_ROOM,
         PROCESS_ROOM,
         BROWSING_ROOM,
@@ -96,7 +110,7 @@ public class FMBot extends BotSM {
             botExitFMRoom(getChr(), 1);
         }
         moveToFMDoor(this.getChr(), this.fmRoom);
-        BotHelpers.sleepAmountSeconds(1500);
+        busyFor(1600);
         botEnterFMRoom(this.getChr(), this.fmRoom);
     }
 
@@ -215,20 +229,14 @@ public class FMBot extends BotSM {
      */
     private void walkToShop(ShopKeeper shop) {
         currentTarget = shop;
-        boolean isSegmentStart = segmentStartIndices.contains(visitIndex);
-
         try {
-            boolean shouldWalk;
-            if (isSegmentStart) {
-                shouldWalk = true;
-            } else {
-                shouldWalk = Math.random() < walkChance;
-            }
-
+            boolean shouldWalk = SoloMaplingConfig.marketWanderEnabled();
             if (shouldWalk) {
                 walkChance = BASE_WALK_CHANCE;
                 Point pos = BotHelpers.getRandomizedPointXAxis(currentTarget.getPosition());
-                pathFinderBeta(this.getChr(), pos);
+                if (!MarketBotDirector.get().runPathfind(() -> pathFinderBeta(this.getChr(), pos))) {
+                    BotMoveSmallDistanceX(this.getChr(), pos);
+                }
             } else {
                 walkChance = Math.min(1.0, walkChance + WALK_CHANCE_INCREMENT);
             }
@@ -241,10 +249,14 @@ public class FMBot extends BotSM {
     //
 
     private void actionPhase() {
-//        SocialCommands.BotChatbubble(getChr(), "Action Phase");
-        // handle any desired action (comments, resting, scrolling etc)
-        // possibly an action phase 2 after processing shop
-        return;
+        int flavor = generateRandomNumber(1, 100);
+        if (flavor <= 35 && MarketBotDirector.get().trySpeak(getChr())) {
+            BotSpeak(getChr(), MarketBotFlavor.browse());
+        } else if (flavor <= 55) {
+            BotEmote(getChr());
+        } else if (flavor <= 80 && MarketBotDirector.get().trySpeak(getChr())) {
+            BotSpeak(getChr(), MarketBotFlavor.wander());
+        }
     }
 
     private void enterShop() {
@@ -263,7 +275,7 @@ public class FMBot extends BotSM {
             return;
         }
         purchaseShopItems();
-        BotHelpers.sleepAmountSeconds(1000);
+        busyFor(900 + generateRandomNumber(400, 1600));
     }
 
     private List<PlayerShopItem> readShopItems() {
@@ -325,7 +337,9 @@ public class FMBot extends BotSM {
             return;
         }
         Point doorPoint = getFMRoomDoorPortalPoint();
-        pathFinderBeta(getChr(), doorPoint);
+        if (!MarketBotDirector.get().runPathfind(() -> pathFinderBeta(getChr(), doorPoint))) {
+            BotMoveSmallDistanceX(this.getChr(), doorPoint);
+        }
         if (!isPointNear(this.getChr().getPosition(), doorPoint, 20)) {
             BotMoveSmallDistanceX(this.getChr(), doorPoint);
         }
@@ -386,52 +400,33 @@ public class FMBot extends BotSM {
         if (checkIfNotRunningOrPaused()) {
             return;
         }
+        if (getState() == BotState.TRADING) {
+            return;
+        }
+        MarketBotAmbient.act(this);
+        if (MarketBotAmbient.isSitting(getChr()) || isBusy()) {
+            return;
+        }
         getDebugger().debugLoggingFull(String.format("%s TutorialBotState: %s", this.getChr().getName(), fmBotState), String.format("%s", fmBotState));
 
         switch (fmBotState) {
             case RESET:
                 resetFMBotState();
-                setFMBotState(FMBotState.NAV_TO_FM_ROOM);
+                setFMBotState(FMBotState.AMBIENT);
+                break;
+            case AMBIENT:
                 break;
             case NAV_TO_FM_ROOM:
-                navToFMRoom();
-                setFMBotState(FMBotState.PROCESS_ROOM);
+                setFMBotState(FMBotState.AMBIENT);
                 break;
             case PROCESS_ROOM:
-                processRoom();
-                if (isAllShopsVisited()) {
-                    setFMBotState(FMBotState.EXIT_FM_ROOM);
-                    return;
-                }
-                setFMBotState(FMBotState.BROWSING_ROOM);
-                break;
             case BROWSING_ROOM:
-                browsingRoom();
-                setFMBotState(FMBotState.ACTION_PHASE);
-                break;
             case ACTION_PHASE:
-                actionPhase();
-                setFMBotState(FMBotState.ENTER_SHOP);
-                break;
             case ENTER_SHOP:
-                enterShop();
-                setFMBotState(FMBotState.PROCESS_SHOP);
-                break;
             case PROCESS_SHOP:
-                processShop();
-                setFMBotState(FMBotState.EXIT_SHOP);
-                break;
             case EXIT_SHOP:
-                exitShop();
-                if (isAllShopsVisited()) {
-                    setFMBotState(FMBotState.EXIT_FM_ROOM);
-                    return;
-                }
-                setFMBotState(FMBotState.BROWSING_ROOM);
-                break;
             case EXIT_FM_ROOM:
-                exitRoom();
-                setFMBotState(FMBotState.NAV_TO_FM_ROOM);
+                setFMBotState(FMBotState.AMBIENT);
                 break;
             default:
                 log("Unexpected state: " + fmBotState);
@@ -448,15 +443,6 @@ public class FMBot extends BotSM {
 
     @Override
     public void processMessages() {
-        try {
-            ChatMessage message = MessageQueue.getInstance().getMessageWithTimeout("secondary", 1, TimeUnit.SECONDS);
-            if (message == null) {
-                return;
-            }
-//            handleBetCommand(message);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
     }
 
 }

@@ -101,7 +101,7 @@ def errors() -> list[str]:
         if name is None or "戴米安" not in str(name.value):
             found.append(f"String/Mob missing {mob_id}")
 
-    for mob_id in migration.BOSS_IDS:
+    for mob_id in (migration.PHASE_TWO_BOSS,):
         image = migration.load_checked(migration.client_mob_path(mob_id), migration.arc.GMS_KEY)
         info = image.root.child("info")
         if info.child("attack") is not None:
@@ -128,7 +128,7 @@ def errors() -> list[str]:
                 actual.add((skill_id, level, action))
                 if skill_id in {170, 215, 201, 214}:
                     found.append(f"{mob_id} still uses modern skill {skill_id}")
-                if skill_id not in {120, 122, 123, 124, 125, 126, 128, 133, 176, 185}:
+                if skill_id not in {100, 101, 120, 122, 123, 124, 125, 126, 128, 133}:
                     found.append(f"{mob_id} unexpected skill {skill_id}")
             expected = {
                 (slot["skill"], slot["level"], slot["action"])
@@ -157,11 +157,6 @@ def errors() -> list[str]:
                 info_node = attack.child("info")
                 if isinstance(info_node, WzSubProperty) and info_node.child("areaWarning") is not None:
                     found.append(f"{mob_id} leftover {name}/info/areaWarning")
-        if mob_id == migration.PHASE_ONE_BOSS:
-            attack2 = image.root.child("attack2")
-            info2 = attack2.child("info") if isinstance(attack2, WzSubProperty) else None
-            if info2 is not None and info2.child("ball") is not None:
-                found.append("8880110 attack2 must not borrow P2 flying-knife ball")
         if mob_id == migration.PHASE_TWO_BOSS:
             attack3 = image.root.child("attack3")
             info3 = attack3.child("info") if isinstance(attack3, WzSubProperty) else None
@@ -176,7 +171,7 @@ def errors() -> list[str]:
             if isinstance(node, WzCanvasProperty) and (int(node.format), int(node.format2)) != (1, 0):
                 found.append(f"{mob_id} {path} is not ARGB4444")
                 break
-    leftover = migration.iter_incomplete_ballistic_attacks(migration.BOSS_IDS)
+    leftover = migration.iter_incomplete_ballistic_attacks((migration.PHASE_TWO_BOSS,))
     if leftover:
         found.append(f"incomplete ballistic attacks {leftover}")
 
@@ -199,6 +194,14 @@ def errors() -> list[str]:
     event = (ROOT / "gms-server/scripts/event/DamienBattle.js").read_text(encoding="utf-8")
     if "8880110" not in event or "8880111" not in event:
         found.append("DamienBattle missing boss IDs")
+    if "onPlayerEnter" in event or "tryClearStigma" in event:
+        found.append("DamienBattle still calls removed DamienBossCompat combat hooks")
+    if "startPhase(targetMap, phaseTwo, 2)" not in event:
+        found.append("DamienBattle must startPhase phase 2 field mobs")
+    warp_at = event.find("players.get(i).changeMap(targetMap")
+    phase_at = event.find("startPhase(targetMap, phaseTwo, 2)")
+    if warp_at < 0 or phase_at < 0 or phase_at < warp_at:
+        found.append("DamienBattle must warp into phase 2 before spawning 8880113/8880114")
     if "350160240" not in event or "350160280" not in event:
         found.append("DamienBattle missing fight maps")
     if "170" in event.split("skill")[-1][:20]:
@@ -215,19 +218,54 @@ def errors() -> list[str]:
     compat = (ROOT / "gms-server/src/main/java/org/gms/server/life/DamienBossCompat.java").read_text(encoding="utf-8")
     if "handleSkillCast" in compat or "schedulePercentDamage" in compat:
         found.append("DamienBossCompat must not replace MobSkill.applyEffect")
-    if "skillCooldownMillis" not in compat or "attackCooldownMillis" not in compat:
-        found.append("DamienBossCompat missing Cygnus/monk cooldown projection")
-    if "ignoresMobSkillHpGate" not in compat:
-        found.append("DamienBossCompat missing MobSkill hp-gate bypass")
+    if "onSkill2Cast" not in compat or "planSkill2Orbs" not in compat:
+        found.append("DamienBossCompat missing skill2 orb routing")
+    if "onAttack3Cast" not in compat or "planAttack3Balls" not in compat:
+        found.append("DamienBossCompat missing phase-two attack3 balls")
+    if "SHADOW_ORB_MOB" not in compat or "FLYING_SWORD_MOB" not in compat:
+        found.append("DamienBossCompat missing 8880113/8880114 field mobs")
+    if "getMonster(8880102)" in compat:
+        found.append("DamienBossCompat must not LifeFactory.getMonster 8880102")
+    if "STAND_LEFT_STANCE" not in compat:
+        found.append("DamienBossCompat must fly-patrol with stand facing")
+    if "SWORD_SPAWN_DELAY_MS" not in compat:
+        found.append("DamienBossCompat missing sword spawn delay constant")
+    if "spawnFakeMonster" in compat or "resetMobPosition(" in compat:
+        found.append("DamienBossCompat must not fake-spawn or relocate shooters")
+    if "spawnMonster(" not in compat or "8880112" not in compat:
+        found.append("DamienBossCompat must spawn 8880112 sphere shooters")
+    if "LifeFactory.getMonster(SKILL2_ORB_MOB)" not in compat:
+        found.append("DamienBossCompat must LifeFactory.getMonster the skill2 shooter")
+    if "SKILL2_ORB_MOB = 8880102" in compat or "SKILL2_ORB_MOB = MobId.DAMIEN_CRASH_ON_SUMMON" in compat:
+        found.append("DamienBossCompat must not summon 8880102")
+    if "SKILL2_ORB_MOB = 8880165" in compat:
+        found.append("DamienBossCompat must not reuse Lucid 8880165 for Damien gold fire")
+    maple = (ROOT / "gms-server/src/main/java/org/gms/server/maps/MapleMap.java").read_text(encoding="utf-8")
+    if "crashesOldClientOnSummon" not in maple or "refuseCrashSummon" not in maple:
+        found.append("MapleMap must refuse 8880102 crash-on-summon")
+    mob_id = (ROOT / "gms-server/src/main/java/org/gms/constants/id/MobId.java").read_text(encoding="utf-8")
+    if "DAMIEN_CRASH_ON_SUMMON" not in mob_id:
+        found.append("MobId must mark 8880102 as crash-on-summon")
+    if "STIGMA_CAP" in compat:
+        found.append("DamienBossCompat still has stigma combat")
+    if "SKILL2_GROUND_EFFECT" not in compat:
+        found.append("DamienBossCompat missing skill2 ground-burst scene")
     mob_skill = (ROOT / "gms-server/src/main/java/org/gms/server/life/MobSkill.java").read_text(encoding="utf-8")
-    if "customBossDemian/groundBurst" not in mob_skill or "customBossDemian/scene" not in mob_skill:
-        found.append("MobSkill missing Damien field-effect routing")
     if "character.sendPacket(packet)" not in mob_skill:
         found.append("MobSkill must send hit packet to the victim")
-    if "resolveCastSkill" not in (ROOT / "gms-server/src/main/java/org/gms/net/server/channel/handlers/MoveLifeHandler.java").read_text(encoding="utf-8"):
+    move = (ROOT / "gms-server/src/main/java/org/gms/net/server/channel/handlers/MoveLifeHandler.java").read_text(encoding="utf-8")
+    if "resolveCastSkill" not in move:
         found.append("MoveLifeHandler must resolve Damien skills by action when packet ids mismatch")
-    if "isDamien(monster.getId())" not in (ROOT / "gms-server/src/main/java/org/gms/net/server/channel/handlers/MoveLifeHandler.java").read_text(encoding="utf-8"):
-        found.append("MoveLifeHandler must apply Damien MobSkill immediately")
+    if "onSkill2Cast" not in move:
+        found.append("MoveLifeHandler must queue Damien skill2 orbs")
+    if "onAttack3Cast" not in move:
+        found.append("MoveLifeHandler must queue Damien attack3 balls")
+    if move.find("DamienBossCompat.onAttack3Cast") > move.find("attackStatus = monster.canUseAttack"):
+        found.append("MoveLifeHandler must queue attack3 balls before canUseAttack")
+    if "skillEffectDelayMs" not in move or "allowClientAttack" not in move:
+        found.append("MoveLifeHandler must align Damien skill/attack hit timing")
+    if "addHP(" in compat:
+        found.append("DamienBossCompat must not apply skill2 HP before the client ball")
     if "MobSkillType" in compat:
         found.append("DamienBossCompat must not apply dummy MobSkill buffs")
     return found

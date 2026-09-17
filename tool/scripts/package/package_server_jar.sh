@@ -155,6 +155,9 @@ EOF
   exit 2
 fi
 
+echo "使用 JDK: $jdk_home"
+"$jdk_home/bin/java" -version
+
 mkdir -p "$(dirname "$output")"
 
 if [[ "$build_ui" -eq 1 ]]; then
@@ -190,11 +193,14 @@ else
   echo "跳过 gms-ui 构建，仅打包服务端。"
 fi
 
-# Maven clean 会在 IDE/JDT 回写 class 时失败：删除 target/classes/org/gms
-# 时目录被重新填满。前端构建期间尤其容易发生。改由脚本先重试删除，再 package。
+# 不要 rm -rf 整个 gms-server/target：Cursor/JDT 会边删边写 class。
+# 也不要把 Maven 输出写到 target/classes：删 APT 后 JDT 会把
+# 「Unresolved compilation problems」桩 class（例如 GAME_CONFIG_D_O）
+# 盖进 target/classes，随后 spring-boot:repackage 打进 BeiDou.jar，
+# 启动时 setItemConfigService 直接失败。
 remove_dir_retry() {
   local dir="$1"
-  local max_attempts="${2:-15}"
+  local max_attempts="${2:-20}"
   local attempt
   [[ -e "$dir" ]] || return 0
   echo "正在删除 $dir ..."
@@ -206,23 +212,32 @@ remove_dir_retry() {
     fi
     sleep 0.4
   done
-  echo "警告: 未能完全删除 $dir（可能被 IDE/Java 语言服务占用），将跳过 Maven clean 继续打包。" >&2
+  echo "未能完全删除 $dir（可能被 IDE/正在运行的服务端占用）。" >&2
+  return 1
 }
 
-remove_dir_retry "$SERVER_DIR/target"
+maven_build_dir="target/maven-package"
+server_maven_dir="$SERVER_DIR/$maven_build_dir"
+if ! remove_dir_retry "$server_maven_dir"; then
+  cat >&2 <<EOF
+打包中止：Maven 隔离输出目录删不干净: $server_maven_dir
+请先停掉本机正在跑的 BeiDou.jar / mvn，再执行本脚本。不要手动半删 gms-server/target。
+EOF
+  exit 1
+fi
 
-args=(-pl gms-server -am package)
+args=(-pl gms-server -am package "-Dbeidou.build.directory=${maven_build_dir}")
 if [[ "$skip_tests" -eq 1 ]]; then
   args+=(-Dmaven.test.skip=true)
 fi
 
-echo "开始打包服务端..."
+echo "开始打包服务端（输出目录 ${maven_build_dir}，避开 IDE target/classes）..."
 (
   cd "$ROOT"
   JAVA_HOME="$jdk_home" PATH="$jdk_home/bin:$PATH" mvn "${args[@]}"
 )
 
-built_jar="$SERVER_DIR/target/BeiDou.jar"
+built_jar="$server_maven_dir/BeiDou.jar"
 if [[ ! -f "$built_jar" ]]; then
   echo "打包完成但找不到产物: $built_jar" >&2
   exit 1
@@ -241,17 +256,25 @@ mkdir -p "$resource_overlay/BOOT-INF/classes"
 "$jdk_home/bin/jar" tf "$built_jar" \
   | sed -n 's#^BOOT-INF/classes/##p' \
   > "$resource_overlay/existing-classpath-entries.txt"
-(
-  cd "$SERVER_DIR/target/classes"
-  while IFS= read -r resource; do
-    entry="${resource#./}"
-    if [[ "$entry" == *.class ]] && grep -Fxq "$entry" "$resource_overlay/existing-classpath-entries.txt"; then
-      continue
-    fi
-    mkdir -p "$resource_overlay/BOOT-INF/classes/$(dirname "$entry")"
-    cp "$resource" "$resource_overlay/BOOT-INF/classes/$entry"
-  done < <(find . -type f ! -name '.DS_Store')
-)
+maven_classes_dir="$server_maven_dir/classes"
+if [[ -d "$maven_classes_dir" ]]; then
+  (
+    cd "$maven_classes_dir"
+    while IFS= read -r resource; do
+      entry="${resource#./}"
+      # 禁止从 IDE 的 target/classes 补 class。这里只补 Maven 自己产出、
+      # 但未被 spring-boot 打进 fat jar 的非 class 资源。
+      if [[ "$entry" == *.class ]]; then
+        continue
+      fi
+      if grep -Fxq "$entry" "$resource_overlay/existing-classpath-entries.txt"; then
+        continue
+      fi
+      mkdir -p "$resource_overlay/BOOT-INF/classes/$(dirname "$entry")"
+      cp "$resource" "$resource_overlay/BOOT-INF/classes/$entry"
+    done < <(find . -type f ! -name '.DS_Store')
+  )
+fi
 if [[ -d "$SERVER_DIR/scripts-zh-CN" ]]; then
   mkdir -p "$resource_overlay/BOOT-INF/classes/scripts-zh-CN"
   cp -R "$SERVER_DIR/scripts-zh-CN/." "$resource_overlay/BOOT-INF/classes/scripts-zh-CN/"
@@ -266,5 +289,24 @@ if ! "$jdk_home/bin/jar" tf "$built_jar" | awk '$0 == "BOOT-INF/classes/applicat
   exit 1
 fi
 
-cp "$built_jar" "$output"
+stub_hits="$(python3 -c '
+import sys, zipfile
+needle = b"Unresolved compilation"
+hits = []
+with zipfile.ZipFile(sys.argv[1]) as zf:
+    for name in zf.namelist():
+        if name.endswith(".class") and needle in zf.read(name):
+            hits.append(name)
+print("\n".join(hits))
+' "$built_jar")"
+if [[ -n "$stub_hits" ]]; then
+  echo "打包中止：jar 含 Eclipse 未解析编译桩，不能启动：" >&2
+  printf '%s\n' "$stub_hits" >&2
+  exit 1
+fi
+
+if ! cp "$built_jar" "$output"; then
+  echo "已打出 $built_jar，但复制到 $output 失败（检查目录权限）。" >&2
+  exit 1
+fi
 echo "已输出: $output"

@@ -174,6 +174,10 @@ rtk tool/scripts/package/package_server_jar.sh
 rtk tool/scripts/package/package_server_jar.sh --skip-ui
 ```
 
+需要 **JDK 21**。Maven 输出写到 `gms-server/target/maven-package`，避开 Cursor/JDT 的 `target/classes`。不要先手动半删 `gms-server/target`。若 jar 启动报 `Unresolved compilation problems` / `GAME_CONFIG_D_O`，说明打进了 IDE 桩 class，用当前脚本重打。
+
+只打服务端、不刷新后台页面时用 `--skip-ui`。
+
 ### `start_server.sh`
 
 启动当前服务端。优先运行 `gms-server/BeiDou.jar`；如果 jar 不存在，则改用 Spring Boot Maven 插件从源码启动。

@@ -387,6 +387,12 @@ public class Character extends AbstractCharacterObject {
     private ScheduledFuture<?> chairRecoveryTask = null;
     private ScheduledFuture<?> pendantOfSpirit = null; //1122017
     private ScheduledFuture<?> cpqSchedule = null;
+    private ScheduledFuture<?> monsterVacTask = null;
+    private Point monsterVacPos = null;
+    private int monsterVacMapId = 0;
+    private long monsterVacExpireAt = 0;
+    private ScheduledFuture<?> partyGrindTask = null;
+    private long partyGrindExpireAt = 0;
 
     private ScheduledFuture<?> FamilyBuffTimer = null;
     private final Lock chrLock = new ReentrantLock(true);
@@ -1946,9 +1952,11 @@ public class Character extends AbstractCharacterObject {
         sendPacket(warpPacket);
         map.removePlayer(this);
         if (client.getChannelServer().getPlayerStorage().getCharacterById(getId()) != null) {
+            int previousMapId = map.getId();
             map = to;
             setPosition(pos);
             map.addPlayer(this);
+            stopMonsterVacIfMapChanged(previousMapId, to.getId());
             visitMap(map);
 
             prtLock.lock();
@@ -7147,10 +7155,228 @@ public class Character extends AbstractCharacterObject {
     }
 
     public Mount mount(int id, int skillid) {
-        Mount mount = mapleMount;
-        mount.setItemId(id);
-        mount.setSkillId(skillid);
-        return mount;
+        if (mapleMount == null) {
+            mapleMount = new Mount(this, id, skillid);
+            return mapleMount;
+        }
+        mapleMount.setItemId(id);
+        mapleMount.setSkillId(skillid);
+        return mapleMount;
+    }
+
+    public boolean isMonsterVacActive() {
+        chrLock.lock();
+        try {
+            return monsterVacTask != null;
+        } finally {
+            chrLock.unlock();
+        }
+    }
+
+    public boolean startMonsterVac() {
+        boolean alreadyActive;
+        boolean started = false;
+        chrLock.lock();
+        try {
+            alreadyActive = monsterVacTask != null;
+            if (MonsterVacCompat.canStart(alreadyActive)) {
+                MapleMap current = getMap();
+                if (current == null) {
+                    return false;
+                }
+                Point raw = new Point(getPosition());
+                Point below = current.getPointBelow(new Point(raw.x, raw.y - 1));
+                monsterVacPos = below != null ? new Point(below.x, below.y - 1) : raw;
+                monsterVacMapId = current.getId();
+                monsterVacExpireAt = System.currentTimeMillis() + MonsterVacCompat.durationMillis();
+                monsterVacTask = TimerManager.getInstance().register(
+                        this::runMonsterVac,
+                        MonsterVacCompat.PULL_INTERVAL_MS,
+                        MonsterVacCompat.PULL_INTERVAL_MS);
+                started = true;
+            }
+        } finally {
+            chrLock.unlock();
+        }
+        if (alreadyActive) {
+            dropMessage(5, "怪物吸星大法仍在生效中，无法叠加使用。");
+            return false;
+        }
+        if (!started) {
+            return false;
+        }
+        StatEffect vacEffect = ItemInformationProvider.getInstance().getItemEffect(ItemId.MONSTER_VAC);
+        if (vacEffect != null) {
+            vacEffect.applyTo(this);
+        }
+        dropMessage(5, "怪物吸星大法生效，持续" + MonsterVacCompat.durationMinutes() + "分钟。吸怪点已固定，不会跟随移动。");
+        return true;
+    }
+
+    private void runMonsterVac() {
+        Point dest;
+        int mapId;
+        chrLock.lock();
+        try {
+            if (!MonsterVacCompat.isActive(System.currentTimeMillis(), monsterVacExpireAt)) {
+                dest = null;
+                mapId = 0;
+            } else {
+                dest = monsterVacPos;
+                mapId = monsterVacMapId;
+            }
+        } finally {
+            chrLock.unlock();
+        }
+        if (dest == null) {
+            stopMonsterVac("怪物吸星大法已结束。");
+            return;
+        }
+        MapleMap current = getMap();
+        if (current == null || current.getId() != mapId) {
+            stopMonsterVac("换图后怪物吸星大法已停止。");
+            return;
+        }
+        current.pullMonstersTo(dest);
+    }
+
+    private void stopMonsterVacIfMapChanged(int previousMapId, int nextMapId) {
+        if (previousMapId == nextMapId) {
+            return;
+        }
+        if (!isMonsterVacActive()) {
+            return;
+        }
+        MapleMap previous = getClient().getChannelServer().getMapFactory().getMap(previousMapId);
+        if (previous != null) {
+            previous.clearMonsterVacDest();
+        }
+        stopMonsterVac("换图后怪物吸星大法已停止。");
+    }
+
+    public void stopMonsterVac() {
+        stopMonsterVac(null);
+    }
+
+    public void stopMonsterVac(String message) {
+        ScheduledFuture<?> task;
+        int vacMapId;
+        chrLock.lock();
+        try {
+            task = monsterVacTask;
+            vacMapId = monsterVacMapId;
+            monsterVacTask = null;
+            monsterVacPos = null;
+            monsterVacMapId = 0;
+            monsterVacExpireAt = 0;
+        } finally {
+            chrLock.unlock();
+        }
+        if (task != null) {
+            task.cancel(false);
+            MapleMap current = getMap();
+            if (current != null && current.getId() == vacMapId) {
+                current.clearMonsterVacDest();
+            }
+            cancelEffect(ItemId.MONSTER_VAC);
+            if (message != null && !message.isEmpty()) {
+                dropMessage(5, message);
+            }
+        }
+    }
+
+    public boolean isPartyGrindActive() {
+        chrLock.lock();
+        try {
+            return partyGrindTask != null;
+        } finally {
+            chrLock.unlock();
+        }
+    }
+
+    public boolean startPartyGrindCompanions() {
+        boolean alreadyActive;
+        chrLock.lock();
+        try {
+            alreadyActive = partyGrindTask != null;
+        } finally {
+            chrLock.unlock();
+        }
+        if (alreadyActive) {
+            dropMessage(5, "基友集合仍在生效中，无法重复使用。");
+            return false;
+        }
+        if (getParty() == null) {
+            dropMessage(5, "请先开启组队后再使用基友集合。未消耗道具。");
+            return false;
+        }
+        if (!org.gms.server.life.PartyGrindCompat.canSummonFive(getParty().getMembers().size())) {
+            dropMessage(5, "队伍空位不足，需要5个空位才能召唤基友。未消耗道具。");
+            return false;
+        }
+        if (!soloMapling.ArtificialPlayer.BotPartySystem.PartyGrindService.spawnFor(this)) {
+            dropMessage(5, "基友召唤失败，未消耗道具。");
+            return false;
+        }
+        chrLock.lock();
+        try {
+            partyGrindExpireAt = System.currentTimeMillis() + org.gms.server.life.PartyGrindCompat.durationMillis();
+            partyGrindTask = TimerManager.getInstance().register(
+                    this::watchPartyGrindCompanions,
+                    org.gms.server.life.PartyGrindCompat.WATCH_INTERVAL_MS,
+                    org.gms.server.life.PartyGrindCompat.WATCH_INTERVAL_MS);
+        } finally {
+            chrLock.unlock();
+        }
+        StatEffect grindEffect = ItemInformationProvider.getInstance().getItemEffect(ItemId.PARTY_GRIND_COMPANIONS);
+        if (grindEffect != null) {
+            grindEffect.applyTo(this);
+        }
+        dropMessage(5, "基友集合生效，持续" + org.gms.server.life.PartyGrindCompat.durationMinutes() + "分钟。");
+        return true;
+    }
+
+    private void watchPartyGrindCompanions() {
+        boolean expired;
+        chrLock.lock();
+        try {
+            expired = !org.gms.server.life.PartyGrindCompat.isActive(System.currentTimeMillis(), partyGrindExpireAt);
+        } finally {
+            chrLock.unlock();
+        }
+        if (expired) {
+            stopPartyGrindCompanions("搬砖时间结束，基友已离开。");
+            return;
+        }
+        if (getParty() == null) {
+            stopPartyGrindCompanions("组队已解散，基友集合结束。");
+        }
+    }
+
+    public void stopPartyGrindCompanions() {
+        stopPartyGrindCompanions(null);
+    }
+
+    public void stopPartyGrindCompanions(String message) {
+        ScheduledFuture<?> task;
+        chrLock.lock();
+        try {
+            task = partyGrindTask;
+            partyGrindTask = null;
+            partyGrindExpireAt = 0;
+        } finally {
+            chrLock.unlock();
+        }
+        if (task == null) {
+            soloMapling.ArtificialPlayer.BotPartySystem.PartyGrindService.dismiss(getId());
+            return;
+        }
+        task.cancel(false);
+        soloMapling.ArtificialPlayer.BotPartySystem.PartyGrindService.dismiss(getId());
+        cancelEffect(ItemId.PARTY_GRIND_COMPANIONS);
+        if (message != null && !message.isEmpty()) {
+            dropMessage(5, message);
+        }
     }
 
     private void playerDead() {
@@ -10000,6 +10226,8 @@ public class Character extends AbstractCharacterObject {
         }
         pendantOfSpirit = null;
 
+        stopMonsterVac();
+        stopPartyGrindCompanions();
         clearCpqTimer();
 
         evtLock.lock();

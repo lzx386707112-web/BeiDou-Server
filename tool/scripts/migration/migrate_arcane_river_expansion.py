@@ -674,7 +674,9 @@ class CanvasMaterializer:
             decoded = decode_source_canvas(pixel_source)
             self.decoded[cache_key] = decoded
         bitmap = decoded.copy()
-        scale = min(1.0, MAX_CANVAS_EDGE / max(bitmap.width, bitmap.height))
+        max_edge = getattr(self, "max_edge", MAX_CANVAS_EDGE)
+        longest = max(bitmap.width, bitmap.height, 1)
+        scale = 1.0 if not max_edge else min(1.0, max_edge / longest)
         if scale < 1.0:
             size = (max(1, round(bitmap.width * scale)), max(1, round(bitmap.height * scale)))
             bitmap = bitmap.resize(size, Image.Resampling.LANCZOS)

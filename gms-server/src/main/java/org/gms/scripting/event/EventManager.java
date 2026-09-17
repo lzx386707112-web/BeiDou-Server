@@ -119,7 +119,7 @@ public class EventManager {
         try {
             iv.invokeFunction("cancelSchedule", (Object) null);
         } catch (ScriptException | NoSuchMethodException ex) {
-            ex.printStackTrace();
+            log.error("Event script cancelSchedule failed name={}", name, ex);
         }
 
         Collection<EventInstanceManager> eimList;
@@ -1004,7 +1004,7 @@ public class EventManager {
                 return eligibleParty;
             }
         } catch (ScriptException | NoSuchMethodException ex) {
-            ex.printStackTrace();
+            log.error("Event script getEligibleParty failed name={}", name, ex);
         }
 
         return new ArrayList<>();

@@ -190,14 +190,18 @@ public class ArtificialShopGenerator {
     }
 
     public static List<FMItem> generateThiefStarsList(String tier) {
-        List<FMItem> itemList = new ArrayList<>() {
-        };
+        List<FMItem> itemList = new ArrayList<>();
         for (int i = 0; i < 2; i++) {
-            tier = distributedTierSelector(tier);
-            ItemNode item = getRandomItemFull("thief.yaml", "Stars", tier);
-            int itemId = pickRandomVariantId(item.getVariantId());
-            int price = item.getCurrentPrice();
-            itemList.add(new FMItem(itemId, price, 1));
+            String pickedTier = distributedTierSelector(tier);
+            ItemNode item = getRandomItemFull("thief.yaml", "Stars", pickedTier);
+            if (item == null) {
+                continue;
+            }
+            Integer itemId = pickRandomVariantId(item.getVariantId());
+            if (itemId == null) {
+                continue;
+            }
+            itemList.add(new FMItem(itemId, item.getCurrentPrice(), 1));
         }
         return itemList;
     }
@@ -218,7 +222,7 @@ public class ArtificialShopGenerator {
         if (MapleVersionManager.getItemPoolVersion() >= 39) {
             return generateScrollsList(items, "darkscrolls.yaml", tier);
         }
-        return null;
+        return List.of();
     }
 
     private static List<FMItem> generateScrollsList(List<String> items, String scrollList, String tier) {
@@ -229,9 +233,12 @@ public class ArtificialShopGenerator {
             tier = distributedTierSelector(tier);
             ItemNode item = getRandomItemFull(scrollList, randomItem, tier);
             if (item != null) {
-                int itemId = pickRandomVariantId(item.getVariantId());
+                Integer itemId = pickRandomVariantId(item.getVariantId());
+                if (itemId == null) {
+                    continue;
+                }
                 int price = item.getCurrentPrice();
-                int qty = quantitySelector("Scroll", tier); // getRandomIntInRange(5, 13);
+                int qty = quantitySelector("Scroll", tier);
                 itemList.add(new FMItem(itemId, price, qty));
             }
         }
