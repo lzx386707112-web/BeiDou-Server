@@ -10,6 +10,7 @@ public final class WeatherRuntime {
     public static final int MINUTES_PER_DAY = 1440;
     public static final byte FLAG_SNAP = 0x01;
     public static final byte FLAG_FROZEN = 0x02;
+    public static final byte FLAG_BARESKY = 0x04;
     public static final byte FLAG_DISABLED = 0x08;
 
     private static final AtomicReference<WeatherConfigSnapshot> CONFIG =
@@ -78,6 +79,15 @@ public final class WeatherRuntime {
         if (minute < 420) return 1f - (minute - 300) / 120f;
         if (minute < 1020) return 0f;
         return (minute - 1020) / 120f;
+    }
+
+    /** 黎明 05:00-07:00，正午 07:00-17:00，黄昏 17:00-19:00，夜晚其余时间。 */
+    public static String phaseOfDay() {
+        int minute = minuteOfDay();
+        if (minute >= 300 && minute < 420) return "dawn";
+        if (minute >= 420 && minute < 1020) return "noon";
+        if (minute >= 1020 && minute < 1140) return "dusk";
+        return "night";
     }
 
     public static boolean isTimeFrozen() {
@@ -151,7 +161,8 @@ public final class WeatherRuntime {
             for (WeatherRegion region : WeatherRegion.values()) {
                 WeatherConfigSnapshot.RegionConfig config = snapshot.region(region);
                 setSky(region, config.forcedProfile() == null
-                        ? pick(config.weights()) : config.forcedProfile(), now);
+                        ? pick(applySeason(config.weights(), snapshot.seasonDrift()))
+                        : config.forcedProfile(), now);
             }
         }
         return true;
@@ -191,6 +202,15 @@ public final class WeatherRuntime {
         return Math.max(0L, (NEXT_ROLL_AT.get() - System.currentTimeMillis()) / 1000L);
     }
 
+    /** 重新播种各区主导阵风（雪斜飞、沙暴平飞），不改变当前天气类型。 */
+    public static void rerollWind() {
+        synchronized (STATE_LOCK) {
+            for (WeatherRegion region : WeatherRegion.values()) {
+                SKY_TOKEN.put(region, ThreadLocalRandom.current().nextInt());
+            }
+        }
+    }
+
     private static void expireOverride() {
         if (overrideUntil > 0L && overrideUntil <= System.currentTimeMillis()) clearOverride();
     }
@@ -206,6 +226,33 @@ public final class WeatherRuntime {
             if (cursor < 0d) return profiles[i];
         }
         return WeatherProfile.CLEAR;
+    }
+
+    static double[] applySeason(double[] weights, boolean drift) {
+        if (!drift || weights == null || weights.length < WeatherProfile.values().length) {
+            return weights;
+        }
+        double[] adjusted = weights.clone();
+        int month = java.time.LocalDate.now().getMonthValue();
+        // clear rain snow overcast storm blizzard leaves blossom sandstorm
+        if (month == 12 || month <= 2) {
+            scale(adjusted, 2, 1.8); scale(adjusted, 5, 1.5);
+            scale(adjusted, 1, 0.7); scale(adjusted, 6, 0.4); scale(adjusted, 7, 0.3);
+        } else if (month <= 5) {
+            scale(adjusted, 7, 1.8); scale(adjusted, 1, 1.2);
+            scale(adjusted, 2, 0.5); scale(adjusted, 5, 0.4);
+        } else if (month <= 8) {
+            scale(adjusted, 1, 1.4); scale(adjusted, 4, 1.3);
+            scale(adjusted, 2, 0.3); scale(adjusted, 5, 0.2); scale(adjusted, 6, 0.6);
+        } else {
+            scale(adjusted, 6, 1.8); scale(adjusted, 3, 1.2);
+            scale(adjusted, 7, 0.4); scale(adjusted, 2, 0.7);
+        }
+        return adjusted;
+    }
+
+    private static void scale(double[] weights, int index, double factor) {
+        weights[index] = Math.max(0d, weights[index] * factor);
     }
 
     private static void setSky(WeatherRegion region, WeatherProfile profile, long now) {

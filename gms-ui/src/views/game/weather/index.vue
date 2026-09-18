@@ -8,6 +8,10 @@
           <strong>{{ formattedTime }}</strong>
         </div>
         <div class="status-item">
+          <span>{{ $t('weather.state.phase') }}</span>
+          <strong>{{ phaseLabel }}</strong>
+        </div>
+        <div class="status-item">
           <span>{{ $t('weather.state.night') }}</span>
           <strong>{{ Math.round((state?.nightLevel || 0) * 100) }}%</strong>
         </div>
@@ -87,7 +91,22 @@
           ><template #icon><icon-send /></template
           >{{ $t('weather.action.broadcast') }}</a-button
         >
+        <a-button :loading="acting" @click="rerollWind"
+          ><template #icon><icon-swap /></template
+          >{{ $t('weather.action.wind') }}</a-button
+        >
       </a-space>
+      <div class="phase-row">
+        <span>{{ $t('weather.override.phases') }}</span>
+        <a-button
+          v-for="phase in dayPhases"
+          :key="phase.id"
+          size="small"
+          :loading="acting"
+          @click="freezePhase(phase.minute)"
+          >{{ $t(`weather.phase.${phase.id}`) }}</a-button
+        >
+      </div>
 
       <a-divider />
       <h3>{{ $t('weather.config.title') }}</h3>
@@ -102,12 +121,27 @@
               ><a-switch v-model="configForm.enabled" /></a-form-item
           ></a-col>
           <a-col :xs="24" :sm="12" :lg="5"
+            ><a-form-item :label="$t('weather.config.injectSky')"
+              ><a-switch v-model="configForm.injectSky" />
+              <template #extra>{{
+                $t('weather.config.injectSkyHint')
+              }}</template></a-form-item
+          ></a-col>
+          <a-col :xs="24" :sm="12" :lg="5"
+            ><a-form-item :label="$t('weather.config.seasonDrift')"
+              ><a-switch v-model="configForm.seasonDrift" />
+              <template #extra>{{
+                $t('weather.config.seasonDriftHint')
+              }}</template></a-form-item
+          ></a-col>
+          <a-col :xs="24" :sm="12" :lg="5"
             ><a-form-item :label="$t('weather.config.dayHours')"
               ><a-input-number
                 v-model="configForm.dayHours"
                 :min="1"
                 :max="24"
-                :step="0.5" /></a-form-item
+                :step="0.5" />
+              <template #extra>{{ dayHoursHint }}</template></a-form-item
           ></a-col>
           <a-col :xs="24" :sm="12" :lg="5"
             ><a-form-item :label="$t('weather.config.changeMinutes')"
@@ -137,6 +171,18 @@
         >
       </a-form>
 
+      <a-alert class="effects" type="info" :show-icon="false">
+        <template #title>{{ $t('weather.effects.title') }}</template>
+        <ul>
+          <li>{{ $t('weather.effects.clock') }}</li>
+          <li>{{ $t('weather.effects.sky') }}</li>
+          <li>{{ $t('weather.effects.particles') }}</li>
+          <li>{{ $t('weather.effects.wind') }}</li>
+          <li>{{ $t('weather.effects.lamps') }}</li>
+          <li>{{ $t('weather.effects.sound') }}</li>
+        </ul>
+      </a-alert>
+
       <a-divider />
       <h3>{{ $t('weather.regions.title') }}</h3>
       <a-table
@@ -148,11 +194,12 @@
         :bordered="{ cell: true }"
       >
         <template #columns>
-          <a-table-column
-            :title="$t('weather.regions.region')"
-            data-index="region"
-            :width="190"
-          />
+          <a-table-column :title="$t('weather.regions.region')" :width="240"
+            ><template #cell="{ record }">
+              <strong>{{ regionLabel(record) }}</strong>
+              <small class="region-hint">{{ regionHint(record) }}</small>
+            </template></a-table-column
+          >
           <a-table-column :title="$t('weather.regions.current')" :width="120"
             ><template #cell="{ record }"
               ><a-tag>{{
@@ -204,12 +251,13 @@
 
     <a-modal
       v-model:visible="regionVisible"
-      :title="editingRegion?.region"
+      :title="editingRegion ? regionLabel(editingRegion) : ''"
       :width="'min(760px, calc(100vw - 32px))'"
       :ok-loading="savingRegion"
       @ok="saveRegion"
     >
       <a-form v-if="editingRegion" :model="regionForm" layout="vertical">
+        <p class="region-hint">{{ regionHint(editingRegion) }}</p>
         <a-row :gutter="16">
           <a-col :xs="24" :sm="12"
             ><a-form-item :label="$t('weather.regions.forced')"
@@ -264,6 +312,7 @@
   import { useI18n } from 'vue-i18n';
   import useLoading from '@/hooks/loading';
   import {
+    DAY_PHASES,
     WEATHER_PROFILES,
     WeatherRegion,
     broadcastWeather,
@@ -271,14 +320,16 @@
     getWeatherConfig,
     getWeatherRegions,
     getWeatherState,
+    rerollWeatherWind,
     setWeatherOverride,
     updateWeatherConfig,
     updateWeatherRegion,
   } from '@/api/weather';
 
-  const { t } = useI18n();
+  const { t, te } = useI18n();
   const { loading, setLoading } = useLoading(false);
   const profiles = WEATHER_PROFILES;
+  const dayPhases = DAY_PHASES;
   const state = ref<Awaited<ReturnType<typeof getWeatherState>>['data']>();
   const regions = ref<WeatherRegion[]>([]);
   const saving = ref(false);
@@ -292,6 +343,8 @@
     changeMinutes: 15,
     holdMinutes: 60,
     rainbowSeconds: 180,
+    injectSky: true,
+    seasonDrift: true,
   });
   const overrideForm = reactive<{
     profile?: string;
@@ -305,12 +358,31 @@
     paletteId: number;
   }>({ weights: [], tint: '#4A5A8C', paletteId: 26 });
   const profileLabel = (profile: string) => t(`weather.profile.${profile}`);
+  const regionLabel = (record: WeatherRegion) => {
+    const key = `weather.region.${record.region}`;
+    return te(key) ? t(key) : record.label || record.region;
+  };
+  const regionHint = (record: WeatherRegion) =>
+    record.mapHint || record.region;
   const formattedTime = computed(() => {
     const minute = state.value?.minuteOfDay || 0;
     return `${String(Math.floor(minute / 60)).padStart(2, '0')}:${String(
       minute % 60
     ).padStart(2, '0')}`;
   });
+  const phaseLabel = computed(() => {
+    const phase = state.value?.phase || 'noon';
+    const key = `weather.phase.${phase}`;
+    return te(key) ? t(key) : phase;
+  });
+  const dayHoursHint = computed(() =>
+    t('weather.config.dayHoursHint', {
+      hours: configForm.dayHours,
+      ms:
+        state.value?.msPerGameMinute ||
+        Math.round((configForm.dayHours * 3600000) / 1440),
+    })
+  );
   const overrideDetail = computed(() =>
     t('weather.state.remaining', {
       profile: state.value?.overrideProfile
@@ -342,6 +414,8 @@
       configForm.changeMinutes = value.changeIntervalMs / 60000;
       configForm.holdMinutes = value.overrideHoldMs / 60000;
       configForm.rainbowSeconds = value.rainbowDurationSec;
+      configForm.injectSky = value.injectSky !== false;
+      configForm.seasonDrift = value.seasonDrift !== false;
       overrideForm.durationMinutes = configForm.holdMinutes;
     } finally {
       setLoading(false);
@@ -364,6 +438,8 @@
         changeIntervalMs: Math.round(configForm.changeMinutes * 60000),
         overrideHoldMs: Math.round(configForm.holdMinutes * 60000),
         rainbowDurationSec: Math.round(configForm.rainbowSeconds),
+        injectSky: configForm.injectSky,
+        seasonDrift: configForm.seasonDrift,
       });
       Message.success(t('weather.message.saved', { count: data }));
       await refreshRuntime();
@@ -400,6 +476,29 @@
     try {
       const { data } = await broadcastWeather();
       Message.success(t('weather.message.broadcast', { count: data }));
+    } finally {
+      acting.value = false;
+    }
+  };
+  const rerollWind = async () => {
+    acting.value = true;
+    try {
+      const { data } = await rerollWeatherWind();
+      Message.success(t('weather.message.wind', { count: data }));
+      await refreshRuntime();
+    } finally {
+      acting.value = false;
+    }
+  };
+  const freezePhase = async (minuteOfDay: number) => {
+    acting.value = true;
+    try {
+      const { data } = await setWeatherOverride({
+        minuteOfDay,
+        durationMinutes: overrideForm.durationMinutes,
+      });
+      Message.success(t('weather.message.broadcast', { count: data }));
+      await refreshRuntime();
     } finally {
       acting.value = false;
     }
@@ -446,7 +545,7 @@
   }
   .status-band {
     display: grid;
-    grid-template-columns: repeat(4, minmax(120px, 1fr)) auto;
+    grid-template-columns: repeat(5, minmax(120px, 1fr)) auto;
     gap: 20px;
     align-items: center;
   }
@@ -471,6 +570,23 @@
   .control {
     width: 190px;
   }
+  .phase-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    margin-top: 12px;
+    color: var(--color-text-3);
+  }
+  .effects {
+    margin-top: 20px;
+  }
+  .effects ul {
+    margin: 8px 0 0;
+    padding-left: 18px;
+    color: var(--color-text-2);
+    line-height: 1.7;
+  }
   .swatch {
     display: inline-block;
     width: 16px;
@@ -479,10 +595,17 @@
     vertical-align: -3px;
     border: 1px solid var(--color-border-2);
   }
-  .weights {
+  .weights,
+  .region-hint {
+    display: block;
     color: var(--color-text-2);
     white-space: normal;
     line-height: 1.7;
+  }
+  .region-hint {
+    margin-top: 4px;
+    color: var(--color-text-3);
+    font-size: 12px;
   }
   @media (max-width: 767px) {
     .container {

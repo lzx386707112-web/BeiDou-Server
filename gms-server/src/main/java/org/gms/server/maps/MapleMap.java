@@ -213,6 +213,11 @@ public class MapleMap {
     private final Lock lootLock = new ReentrantLock(true);
     private final Lock frenzyLock = new ReentrantLock(true);
 
+    private String skillBackdropPath;
+    private int skillBackdropDurationMs;
+    private long skillBackdropExpireAt;
+    private ScheduledFuture<?> skillBackdropTask;
+
     // due to the nature of loadMapFromWz (synchronized), sole function that calls 'generateMapDropRangeCache', this lock remains optional.
     private static final Lock bndLock = new ReentrantLock(true);
     //是否随机刷新位置
@@ -3034,6 +3039,59 @@ public class MapleMap {
         chr.receivePartyMemberHP();
         announcePlayerDiseases(chr.getClient());
         org.gms.server.weather.WeatherPackets.sendTo(chr);
+        sendSkillBackdropTo(chr);
+    }
+
+    private void cancelSkillBackdropTask() {
+        ScheduledFuture<?> task = skillBackdropTask;
+        skillBackdropTask = null;
+        if (task != null) {
+            task.cancel(false);
+        }
+    }
+
+    public void showSkillBackdrop(String wzPath, int durationMs) {
+        String path = org.gms.server.skill.SkillBackdropPackets.normalizePath(wzPath);
+        if (path == null) {
+            clearSkillBackdrop();
+            return;
+        }
+        cancelSkillBackdropTask();
+        skillBackdropPath = path;
+        skillBackdropDurationMs = Math.max(0, Math.min(durationMs,
+                org.gms.server.skill.SkillBackdropPackets.MAX_DURATION_MS));
+        if (skillBackdropDurationMs > 0) {
+            skillBackdropExpireAt = System.currentTimeMillis() + skillBackdropDurationMs;
+            skillBackdropTask = TimerManager.getInstance().schedule(this::clearSkillBackdrop,
+                    skillBackdropDurationMs);
+        } else {
+            skillBackdropExpireAt = 0L;
+        }
+        broadcastMessage(org.gms.server.skill.SkillBackdropPackets.show(path, skillBackdropDurationMs));
+    }
+
+    public void clearSkillBackdrop() {
+        cancelSkillBackdropTask();
+        skillBackdropPath = null;
+        skillBackdropDurationMs = 0;
+        skillBackdropExpireAt = 0L;
+        broadcastMessage(org.gms.server.skill.SkillBackdropPackets.clear());
+    }
+
+    private void sendSkillBackdropTo(Character chr) {
+        if (chr == null || skillBackdropPath == null) {
+            return;
+        }
+        int remaining = skillBackdropDurationMs;
+        if (skillBackdropExpireAt > 0L) {
+            long left = skillBackdropExpireAt - System.currentTimeMillis();
+            if (left <= 0L) {
+                clearSkillBackdrop();
+                return;
+            }
+            remaining = (int) Math.min(Integer.MAX_VALUE, left);
+        }
+        chr.sendPacket(org.gms.server.skill.SkillBackdropPackets.show(skillBackdropPath, remaining));
     }
 
     private static void announcePlayerDiseases(final Client c) {

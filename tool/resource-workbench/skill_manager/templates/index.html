@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>技能管理 · BeiDou 资源工作台</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  {% set embedded = request.args.get('embedded') == '1' %}
+  {% if request.script_root and not embedded %}<link rel="stylesheet" href="/workbench-static/shell.css">{% endif %}
+</head>
+<body class="{% if request.script_root and not embedded %}suite-integrated{% elif embedded %}module-embedded{% endif %}" data-api-base="{{ request.script_root }}">
+  {% if request.script_root and not embedded %}
+  <nav class="suite-nav" aria-label="资源工作台模块">
+    <a class="suite-brand" href="/"><span class="suite-brand-mark">BD</span><span>BeiDou 资源工作台</span></a>
+    <div class="suite-links">
+      <a class="suite-link" href="/?module=map-mob"><span class="suite-link-icon">MM</span>地图与怪物</a>
+      <a class="suite-link" href="/?module=img-editor"><span class="suite-link-icon">IMG</span>IMG 节点</a>
+      <a class="suite-link" href="/?module=quests"><span class="suite-link-icon">Q</span>任务管理</a>
+      <a class="suite-link" href="/?module=items"><span class="suite-link-icon">IT</span>物品管理</a>
+      <a class="suite-link active" href="/?module=skills"><span class="suite-link-icon">SK</span>技能管理</a>
+    </div>
+    <span class="suite-context">本地资源管理</span>
+  </nav>
+  {% endif %}
+
+  <header class="module-header">
+    <div><h1>技能管理</h1><p>Job Skill / TMS Compare / MS Metadata / Frame Preview</p></div>
+    <div class="header-state"><span id="stateText">就绪</span></div>
+  </header>
+
+  <main class="workspace">
+    <aside class="browser-pane">
+      <div class="filters">
+        <label>职业分组<select id="jobGroup"></select></label>
+        <label>职业<select id="job"></select></label>
+        <label>搜索<input id="search" type="search" placeholder="技能名称或 ID" autocomplete="off"></label>
+      </div>
+      <div class="scope-tabs" role="group" aria-label="技能范围">
+        <button class="active" type="button" data-availability="all">全部</button>
+        <button type="button" data-availability="both">两边都有</button>
+        <button type="button" data-availability="missing">仅 TMS</button>
+        <button type="button" data-availability="local">仅本地</button>
+      </div>
+      <div class="summary"><strong id="total">0</strong><span>个技能</span><small id="sourceHint"></small></div>
+      <div id="skillList" class="item-list"></div>
+      <div id="listEmpty" class="empty">没有匹配的技能</div>
+    </aside>
+
+    <section class="detail-pane">
+      <div id="detailEmpty" class="detail-empty"><strong>选择职业和技能</strong><span>对比本地与 TMS（含 MS 元数据），预览特效帧，并增量编辑本地节点。</span></div>
+      <div id="detail" hidden>
+        <div class="detail-head">
+          <img id="skillIcon" alt="">
+          <div class="identity">
+            <div><code id="skillId"></code><span id="jobLabel"></span><span id="availability"></span></div>
+            <h2 id="skillName"></h2>
+            <p id="skillFile"></p>
+          </div>
+          <div class="detail-actions">
+            <button id="openPreviewBtn" class="primary" type="button">打开预览面板</button>
+            <button id="addLocalNodeBtn" type="button">＋ 添加本地节点</button>
+            <button id="reloadBtn" type="button">重新载入</button>
+          </div>
+        </div>
+        <div class="detail-scroll">
+          <div class="meta-bar"><div id="sourceBadges" class="source-badges"></div></div>
+          <section class="compare-workspace">
+            <aside class="tree-panel">
+              <div class="panel-head">
+                <div>
+                  <h3>节点树</h3>
+                  <p id="compareHint">本地 A ↔ TMS B</p>
+                </div>
+                <div class="panel-tools">
+                  <button id="collapseBtn" type="button" title="全部折叠">−</button>
+                  <button id="expandBtn" type="button" title="展开差异">+</button>
+                </div>
+              </div>
+              <div class="tree-filter">
+                <select id="compareSource" aria-label="TMS 来源"></select>
+                <input id="nodeSearch" type="search" placeholder="筛选节点或值" autocomplete="off">
+                <label class="toggle-label"><input id="diffOnly" type="checkbox" checked> 仅差异</label>
+              </div>
+              <div class="tree-guide">
+                <div class="tree-source-guide">
+                  <strong>合并节点树</strong>
+                  <span class="source-chip a"><b>A</b>本地</span>
+                  <span class="source-chip b"><b>B</b>TMS</span>
+                </div>
+                <div class="legend">
+                  <span><i class="legend-dot changed"></i>修改</span>
+                  <span><i class="legend-dot local-only"></i>仅 A</span>
+                  <span><i class="legend-dot tms-only"></i>仅 B</span>
+                </div>
+              </div>
+              <div id="tree" class="tree" role="tree"></div>
+            </aside>
+            <aside class="inspector-panel">
+              <div class="panel-head">
+                <div>
+                  <h3>节点详情</h3>
+                  <p id="selectedPath">点选左侧节点查看对照</p>
+                </div>
+              </div>
+              <div id="inspector" class="inspector empty-state"></div>
+              <div id="editActions" class="edit-actions">
+                <button id="editNodeBtn" class="action-btn" type="button" disabled>修改本地</button>
+                <button id="addChildBtn" class="action-btn" type="button" disabled>添加子节点</button>
+                <button id="applyTmsBtn" class="action-btn tms" type="button" disabled>采用 TMS 值</button>
+                <button id="copyTmsBtn" class="action-btn tms" type="button" disabled>复制到本地</button>
+                <button id="fillChildrenBtn" class="action-btn tms" type="button" disabled>补齐子节点</button>
+                <button id="removeNodeBtn" class="action-btn danger" type="button" disabled>删除本地</button>
+              </div>
+            </aside>
+          </section>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="previewDialog" class="preview-dialog">
+    <div class="dialog-head">
+      <div>
+        <strong>技能预览</strong>
+        <p id="previewHint">选择轨道后播放或查看每一帧</p>
+      </div>
+      <button type="button" data-close="previewDialog">×</button>
+    </div>
+    <div class="preview-toolbar">
+      <select id="trackSelect"></select>
+      <select id="previewSource"></select>
+      <button id="playBtn" class="primary" type="button">播放</button>
+    </div>
+    <div class="preview-stage"><canvas id="previewCanvas" width="480" height="300"></canvas></div>
+    <div id="frameStrip" class="frame-strip"></div>
+  </dialog>
+  <dialog id="nodeDialog">
+    <form id="nodeForm" method="dialog">
+      <div class="dialog-head"><strong id="nodeDialogTitle">添加本地技能节点</strong><button type="button" data-close="nodeDialog">×</button></div>
+      <p id="nodeDialogHint" class="dialog-hint">写入客户端 Skill IMG 与对应服务端 XML</p>
+      <label id="nodeParentLabel">父节点路径<input id="nodeParent" placeholder="例如 level/1，留空表示技能根"></label>
+      <label>节点名称<input id="nodeName" required></label>
+      <label>节点类型<select id="nodeType"><option>Int</option><option>String</option><option>Short</option><option>Long</option><option>Float</option><option>Double</option><option>Vector</option><option>UOL</option><option>SubProperty</option><option>Null</option></select></label>
+      <label id="nodeValueLabel">值<input id="nodeValue"></label>
+      <div id="vectorInputs" class="vector-inputs" hidden><label>X<input id="nodeX" type="number"></label><label>Y<input id="nodeY" type="number"></label></div>
+      <div class="dialog-actions"><button type="button" data-close="nodeDialog">取消</button><button id="nodeSubmitBtn" class="primary" type="submit">添加</button></div>
+    </form>
+  </dialog>
+  <div id="toast" class="toast" hidden></div>
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

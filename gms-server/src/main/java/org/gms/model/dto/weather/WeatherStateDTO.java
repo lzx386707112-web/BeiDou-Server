@@ -1,7 +1,7 @@
 package org.gms.model.dto.weather;
 
 public record WeatherStateDTO(boolean enabled, int minuteOfDay, float nightLevel,
-                              boolean weatherOverridden, String overrideProfile,
+                              String phase, boolean weatherOverridden, String overrideProfile,
                               boolean timeFrozen, long overrideRemainingSec,
-                              long nextRollInSec, int onlinePlayers) {
+                              long nextRollInSec, int onlinePlayers, int msPerGameMinute) {
 }

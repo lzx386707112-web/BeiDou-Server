@@ -35,7 +35,7 @@ add_library(BeiDouWeatherCompat SHARED
     src/weather.cpp src/weatherfx.cpp src/weathercanvas.cpp
     src/weathersound.cpp src/weathersplash.cpp src/weatherwind.cpp
     src/weatheraccum.cpp src/weatherpuddle.cpp
-    src/weathersway.cpp src/lamps.cpp)
+    src/weathersway.cpp src/lamps.cpp src/skillback.cpp)
 target_compile_features(BeiDouWeatherCompat PRIVATE cxx_std_17)
 target_compile_definitions(BeiDouWeatherCompat PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX)
 target_compile_options(BeiDouWeatherCompat PRIVATE /Brepro)

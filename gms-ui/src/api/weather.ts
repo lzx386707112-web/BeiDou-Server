@@ -12,16 +12,25 @@ export const WEATHER_PROFILES = [
   'sandstorm',
 ] as const;
 
+export const DAY_PHASES = [
+  { id: 'dawn', minute: 360 },
+  { id: 'noon', minute: 720 },
+  { id: 'dusk', minute: 1080 },
+  { id: 'night', minute: 1320 },
+] as const;
+
 export interface WeatherState {
   enabled: boolean;
   minuteOfDay: number;
   nightLevel: number;
+  phase?: string;
   weatherOverridden: boolean;
   overrideProfile?: string;
   timeFrozen: boolean;
   overrideRemainingSec: number;
   nextRollInSec: number;
   onlinePlayers: number;
+  msPerGameMinute?: number;
 }
 
 export interface WeatherConfig {
@@ -30,10 +39,14 @@ export interface WeatherConfig {
   changeIntervalMs: number;
   overrideHoldMs: number;
   rainbowDurationSec: number;
+  injectSky: boolean;
+  seasonDrift: boolean;
 }
 
 export interface WeatherRegion {
   region: string;
+  label?: string;
+  mapHint?: string;
   currentProfile: string;
   forcedProfile?: string;
   weights: number[];
@@ -57,7 +70,7 @@ export const getWeatherRegions = () =>
   axios.get<WeatherRegion[]>('/weather/v1/regions');
 export const updateWeatherRegion = (
   region: string,
-  data: Omit<WeatherRegion, 'region' | 'currentProfile'>
+  data: Omit<WeatherRegion, 'region' | 'currentProfile' | 'label' | 'mapHint'>
 ) => axios.put<number>(`/weather/v1/regions/${region}`, data);
 export const setWeatherOverride = (data: WeatherOverride) =>
   axios.post<number>('/weather/v1/override', data);
@@ -65,3 +78,4 @@ export const clearWeatherOverride = () =>
   axios.delete<number>('/weather/v1/override');
 export const broadcastWeather = () =>
   axios.post<number>('/weather/v1/broadcast');
+export const rerollWeatherWind = () => axios.post<number>('/weather/v1/wind');

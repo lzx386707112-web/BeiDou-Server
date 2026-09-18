@@ -32,9 +32,19 @@ public enum WZFiles {
         return Path.of(DIRECTORY, fileName);
     }
 
+    /**
+     * 直接按语言解析路径，不依赖 ServerManager 的 ApplicationContext。
+     */
+    public Path getLanguageFile(String language) {
+        if (language == null || language.isBlank()) {
+            return getBaseFile();
+        }
+        return Path.of(DIRECTORY + "-" + language, fileName);
+    }
+
     public Path getLanguageFile() {
         ServiceProperty serviceProperty = ServerManager.getApplicationContext().getBean(ServiceProperty.class);
-        return Path.of(DIRECTORY + "-" + serviceProperty.getLanguage(), fileName);
+        return getLanguageFile(serviceProperty.getLanguage());
     }
 
     public Path getFile() {

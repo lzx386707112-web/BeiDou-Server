@@ -202,6 +202,16 @@ const GAME: AppRouteRecordRaw = {
         roles: ['admin'],
       },
     },
+    {
+      path: 'skillCatalog',
+      name: 'SkillCatalog',
+      component: () => import('@/views/game/skillCatalog/index.vue'),
+      meta: {
+        locale: 'menu.game.skillCatalog',
+        requiresAuth: true,
+        roles: ['admin'],
+      },
+    },
   ],
 };
 

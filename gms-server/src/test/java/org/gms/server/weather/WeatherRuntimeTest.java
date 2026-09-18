@@ -29,7 +29,9 @@ class WeatherRuntimeTest {
         assertTrue(Short.toUnsignedInt(data.getShort()) < 1440);
         assertTrue(data.getInt() > 0);
         assertEquals(WeatherProfile.SNOW.id(), data.get());
-        assertEquals(WeatherRuntime.FLAG_SNAP, data.get() & WeatherRuntime.FLAG_SNAP);
+        int flags = Byte.toUnsignedInt(data.get());
+        assertEquals(WeatherRuntime.FLAG_SNAP, flags & WeatherRuntime.FLAG_SNAP);
+        assertEquals(WeatherRuntime.FLAG_BARESKY, flags & WeatherRuntime.FLAG_BARESKY);
         data.getInt();
         assertEquals(0x41, Byte.toUnsignedInt(data.get()));
         assertEquals(0x50, Byte.toUnsignedInt(data.get()));
@@ -46,7 +48,8 @@ class WeatherRuntimeTest {
         WeatherConfigSnapshot defaults = WeatherConfigSnapshot.defaults();
         WeatherRuntime.replaceConfig(new WeatherConfigSnapshot(false, defaults.dayLengthMs(),
                 defaults.changeIntervalMs(), defaults.overrideHoldMs(),
-                defaults.rainbowDurationSec(), defaults.regions()));
+                defaults.rainbowDurationSec(), defaults.injectSky(), defaults.seasonDrift(),
+                defaults.regions()));
         ByteBuffer data = ByteBuffer.wrap(WeatherPackets.weatherSync(211000000, false).getBytes())
                 .order(ByteOrder.LITTLE_ENDIAN);
         data.getShort();
@@ -67,7 +70,8 @@ class WeatherRuntimeTest {
                 null, new double[]{0, 0, 0, 0, 0, 0, 0, 0, 1}, 0x123456, 19));
         WeatherRuntime.replaceConfig(new WeatherConfigSnapshot(true, defaults.dayLengthMs(),
                 defaults.changeIntervalMs(), defaults.overrideHoldMs(),
-                defaults.rainbowDurationSec(), regions));
+                defaults.rainbowDurationSec(), defaults.injectSky(), defaults.seasonDrift(),
+                regions));
 
         assertTrue(WeatherRuntime.rollIfDue());
         assertEquals(WeatherProfile.SANDSTORM,
@@ -80,6 +84,16 @@ class WeatherRuntimeTest {
         assertEquals(WeatherRegion.MUSHROOM_SHRINE, WeatherRegion.forMap(800000000));
         assertEquals(WeatherRegion.ZIPANGU, WeatherRegion.forMap(800010000));
         assertEquals(WeatherRegion.DEFAULT, WeatherRegion.forMap(910000000));
+        assertEquals("冰峰雪域", WeatherRegion.EL_NATH.displayName());
+        assertEquals("射手村", WeatherRegion.HENESYS.displayName());
+    }
+
+    @Test
+    void seasonDriftKeepsWeightVectorLength() {
+        double[] adjusted = WeatherRuntime.applySeason(
+                new double[]{1, 1, 1, 1, 1, 1, 1, 1, 1}, true);
+        assertEquals(9, adjusted.length);
+        assertTrue(java.util.Arrays.stream(adjusted).allMatch(value -> value >= 0d));
     }
 
     @Test
@@ -92,7 +106,8 @@ class WeatherRuntimeTest {
                 0x123456, 19));
         WeatherRuntime.replaceConfig(new WeatherConfigSnapshot(true, defaults.dayLengthMs(),
                 defaults.changeIntervalMs(), defaults.overrideHoldMs(),
-                defaults.rainbowDurationSec(), regions));
+                defaults.rainbowDurationSec(), defaults.injectSky(), defaults.seasonDrift(),
+                regions));
 
         WeatherRuntime.override(WeatherProfile.CLEAR, null, 60_000L);
         assertEquals(WeatherProfile.CLEAR, WeatherRuntime.skyForRegion(WeatherRegion.HENESYS));

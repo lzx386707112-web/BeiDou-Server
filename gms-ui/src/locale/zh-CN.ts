@@ -17,6 +17,7 @@ import questBrowse from '@/views/game/questBrowse/locale/zh-CN';
 import weather from '@/views/game/weather/locale/zh-CN';
 import botControl from '@/views/game/botControl/locale/zh-CN';
 import itemCatalog from '@/views/game/itemCatalog/locale/zh-CN';
+import skillCatalog from '@/views/game/skillCatalog/locale/zh-CN';
 import baseConfig from './zh-CN/base';
 
 export default {
@@ -83,4 +84,5 @@ export default {
   ...questBrowse,
   ...weather,
   ...botControl,
+  ...skillCatalog,
 };

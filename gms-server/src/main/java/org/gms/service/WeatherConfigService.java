@@ -56,7 +56,7 @@ public class WeatherConfigService {
         WeatherConfigSnapshot snapshot = WeatherRuntime.config();
         return new WeatherConfigDTO(snapshot.enabled(), snapshot.dayLengthMs(),
                 snapshot.changeIntervalMs(), snapshot.overrideHoldMs(),
-                snapshot.rainbowDurationSec());
+                snapshot.rainbowDurationSec(), snapshot.injectSky(), snapshot.seasonDrift());
     }
 
     public List<WeatherRegionDTO> regions() {
@@ -64,7 +64,7 @@ public class WeatherConfigService {
         return Arrays.stream(WeatherRegion.values()).map(region -> {
             WeatherConfigSnapshot.RegionConfig value = snapshot.region(region);
             List<Double> weights = Arrays.stream(value.weights()).boxed().toList();
-            return new WeatherRegionDTO(region.name(),
+            return new WeatherRegionDTO(region.name(), region.displayName(), region.mapHint(),
                     WeatherRuntime.skyForRegion(region).profileName(),
                     value.forcedProfile() == null ? null : value.forcedProfile().profileName(),
                     weights, value.nightTint(), value.paletteId());
@@ -80,9 +80,11 @@ public class WeatherConfigService {
         }
         WeatherProfile override = WeatherRuntime.overrideProfile();
         return new WeatherStateDTO(WeatherRuntime.config().enabled(), WeatherRuntime.minuteOfDay(),
-                WeatherRuntime.nightLevel(), WeatherRuntime.isWeatherOverridden(),
+                WeatherRuntime.nightLevel(), WeatherRuntime.phaseOfDay(),
+                WeatherRuntime.isWeatherOverridden(),
                 override == null ? null : override.profileName(), WeatherRuntime.isTimeFrozen(),
-                WeatherRuntime.overrideRemainingSec(), WeatherRuntime.nextRollInSec(), online);
+                WeatherRuntime.overrideRemainingSec(), WeatherRuntime.nextRollInSec(), online,
+                WeatherRuntime.msPerGameMinute());
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -94,6 +96,8 @@ public class WeatherConfigService {
         value.setChangeIntervalMs(request.getChangeIntervalMs());
         value.setOverrideHoldMs(request.getOverrideHoldMs());
         value.setRainbowDurationSec(request.getRainbowDurationSec());
+        value.setInjectSky(request.getInjectSky());
+        value.setSeasonDrift(request.getSeasonDrift());
         value.setUpdateTime(new Date());
         weatherConfigMapper.update(value);
         reload();
@@ -150,6 +154,11 @@ public class WeatherConfigService {
         return WeatherPackets.broadcastAll(true);
     }
 
+    public synchronized int rerollWind() {
+        WeatherRuntime.rerollWind();
+        return WeatherPackets.broadcastAll(true);
+    }
+
     private void reload() {
         WeatherConfigDO global = weatherConfigMapper.selectOneById(1);
         Map<WeatherRegion, WeatherConfigSnapshot.RegionConfig> regions = new EnumMap<>(WeatherRegion.class);
@@ -163,7 +172,10 @@ public class WeatherConfigService {
         }
         WeatherRuntime.replaceConfig(new WeatherConfigSnapshot(global.getEnabled(),
                 global.getDayLengthMs(), global.getChangeIntervalMs(), global.getOverrideHoldMs(),
-                global.getRainbowDurationSec(), regions));
+                global.getRainbowDurationSec(),
+                Boolean.TRUE.equals(global.getInjectSky()),
+                Boolean.TRUE.equals(global.getSeasonDrift()),
+                regions));
         WeatherRuntime.rollIfDue();
     }
 
@@ -172,7 +184,23 @@ public class WeatherConfigService {
             weatherConfigMapper.insert(WeatherConfigDO.builder().id(1).enabled(true)
                     .dayLengthMs(14_400_000L).changeIntervalMs(900_000L)
                     .overrideHoldMs(3_600_000L).rainbowDurationSec(180)
+                    .injectSky(true).seasonDrift(true)
                     .updateTime(new Date()).build());
+        } else {
+            WeatherConfigDO existing = weatherConfigMapper.selectOneById(1);
+            boolean dirty = false;
+            if (existing.getInjectSky() == null) {
+                existing.setInjectSky(true);
+                dirty = true;
+            }
+            if (existing.getSeasonDrift() == null) {
+                existing.setSeasonDrift(true);
+                dirty = true;
+            }
+            if (dirty) {
+                existing.setUpdateTime(new Date());
+                weatherConfigMapper.update(existing);
+            }
         }
         Map<String, WeatherRegionConfigDO> existing = new HashMap<>();
         weatherRegionConfigMapper.selectAll().forEach(row -> existing.put(row.getRegion(), row));
@@ -190,7 +218,8 @@ public class WeatherConfigService {
     private void validateConfig(WeatherConfigUpdateDTO value) {
         if (value == null || value.getEnabled() == null || value.getDayLengthMs() == null
                 || value.getChangeIntervalMs() == null || value.getOverrideHoldMs() == null
-                || value.getRainbowDurationSec() == null) {
+                || value.getRainbowDurationSec() == null || value.getInjectSky() == null
+                || value.getSeasonDrift() == null) {
             throw BizException.illegalArgument("全局天气配置字段不完整");
         }
         if (value.getDayLengthMs() < MIN_DAY_MS || value.getDayLengthMs() > MAX_DAY_MS)

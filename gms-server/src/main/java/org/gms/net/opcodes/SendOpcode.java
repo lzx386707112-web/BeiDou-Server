@@ -360,6 +360,7 @@ public enum SendOpcode implements Opcode {
     NAMEPLATE_POWER_UPDATE(0x17C), // 名片戒指战力行
 
     WEATHER_SYNC(0x373D), // 世界时间与纯视觉区域天气
+    SKILL_BACKDROP(0x373F), // 五六转独立后景平面（天气之上、地砖之下）
 
     UPDATE_HPMPAALERT(0x1000), // 更新HP/MP/EXP警报
     ;

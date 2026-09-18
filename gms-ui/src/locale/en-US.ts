@@ -31,6 +31,7 @@ export default {
   'menu.game.botControl': 'Bot Control',
   'menu.game.equipmentCatalog': 'Equipment Preview',
   'menu.game.itemCatalog': 'Item Preview',
+  'menu.game.skillCatalog': 'Skill Preview',
   'menu.game.mobCatalog': 'Mob Preview',
   'menu.game.npcShop': 'NPC Shop',
   'menu.game.cashShop': 'Cash Shop',

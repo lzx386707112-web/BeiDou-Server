@@ -14,16 +14,23 @@ from werkzeug.serving import run_simple
 HERE = Path(__file__).resolve().parent
 REPO_ROOT = HERE.parents[1]
 WZPY_ROOT = REPO_ROOT / "tool" / "wz-python"
+MIGRATION_ROOT = REPO_ROOT / "tool" / "scripts" / "migration"
 
 
 def create_app():
-    if str(WZPY_ROOT) not in sys.path:
-        sys.path.insert(0, str(WZPY_ROOT))
+    for path in (HERE, WZPY_ROOT, MIGRATION_ROOT):
+        if str(path) not in sys.path:
+            sys.path.insert(0, str(path))
+    if not (MIGRATION_ROOT / "migrate_arcane_river_expansion.py").is_file():
+        raise FileNotFoundError(
+            f"缺少工作台依赖: {MIGRATION_ROOT / 'migrate_arcane_river_expansion.py'}"
+        )
 
     from map_mob.app import app as map_mob_app
     from img_editor.app import create_app as create_img_editor
     from quest_manager.app import app as quest_manager_app
     from item_manager.app import app as item_manager_app
+    from skill_manager.app import app as skill_manager_app
 
     shell = Flask(
         __name__,
@@ -35,7 +42,7 @@ def create_app():
     @shell.get("/")
     def index():
         module = request.args.get("module", "map-mob")
-        if module not in ("map-mob", "img-editor", "quests", "items"):
+        if module not in ("map-mob", "img-editor", "quests", "items", "skills"):
             module = "map-mob"
         return render_template("index.html", initial_module=module)
 
@@ -44,7 +51,7 @@ def create_app():
         return jsonify({
             "ok": True,
             "name": "BeiDou Resource Workbench",
-            "modules": ["map-mob", "img-editor", "quests", "items"],
+            "modules": ["map-mob", "img-editor", "quests", "items", "skills"],
         })
 
     return DispatcherMiddleware(shell, {
@@ -52,6 +59,7 @@ def create_app():
         "/img-editor": create_img_editor(),
         "/quests": quest_manager_app,
         "/items": item_manager_app,
+        "/skills": skill_manager_app,
     })
 
 

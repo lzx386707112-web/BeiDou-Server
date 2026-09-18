@@ -14,6 +14,7 @@
       <a class="suite-link" href="/?module=img-editor" data-module="img-editor"><span class="suite-link-icon" aria-hidden="true">IMG</span>IMG 节点</a>
       <a class="suite-link" href="/?module=quests" data-module="quests"><span class="suite-link-icon" aria-hidden="true">Q</span>任务管理</a>
       <a class="suite-link" href="/?module=items" data-module="items"><span class="suite-link-icon" aria-hidden="true">IT</span>物品管理</a>
+      <a class="suite-link" href="/?module=skills" data-module="skills"><span class="suite-link-icon" aria-hidden="true">SK</span>技能管理</a>
     </div>
     <span class="suite-context">本地资源管理</span>
   </nav>
@@ -29,6 +30,9 @@
     </section>
     <section class="suite-module" data-module-panel="items" hidden>
       <iframe title="物品管理" data-src="/items/?embedded=1"></iframe>
+    </section>
+    <section class="suite-module" data-module-panel="skills" hidden>
+      <iframe title="技能管理" data-src="/skills/?embedded=1"></iframe>
     </section>
   </main>
   <script src="{{ url_for('static', filename='shell.js') }}"></script>

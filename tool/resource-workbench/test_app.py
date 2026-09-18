@@ -18,7 +18,7 @@ class ResourceWorkbenchTests(unittest.TestCase):
         body = response.get_data(as_text=True)
         self.assertEqual(response.status_code, 200)
         self.assertIn('data-initial-module="map-mob"', body)
-        self.assertIn('data-src="/quests/?embedded=1"', body)
+        self.assertIn('data-src="/skills/?embedded=1"', body)
 
     def test_root_accepts_initial_module(self):
         response = self.client.get("/?module=quests")
@@ -26,7 +26,7 @@ class ResourceWorkbenchTests(unittest.TestCase):
 
     def test_health_lists_mounted_modules(self):
         payload = self.client.get("/api/health").get_json()
-        self.assertEqual(payload["modules"], ["map-mob", "img-editor", "quests", "items"])
+        self.assertEqual(payload["modules"], ["map-mob", "img-editor", "quests", "items", "skills"])
 
     def test_map_mob_page_uses_integrated_navigation(self):
         response = self.client.get("/map-mob/")
@@ -55,6 +55,16 @@ class ResourceWorkbenchTests(unittest.TestCase):
         self.assertEqual(page.status_code, 200)
         self.assertIn('data-api-base="/quests"', body)
         self.assertIn("任务管理", body)
+
+
+    def test_skill_manager_page_is_mounted(self):
+        page = self.client.get("/skills/")
+        body = page.get_data(as_text=True)
+        self.assertEqual(page.status_code, 200)
+        self.assertIn('data-api-base="/skills"', body)
+        self.assertIn("技能管理", body)
+        embedded = self.client.get("/skills/?embedded=1").get_data(as_text=True)
+        self.assertNotIn('class="suite-nav"', embedded)
 
 
 if __name__ == "__main__":

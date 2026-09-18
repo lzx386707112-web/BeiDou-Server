@@ -8,6 +8,7 @@
 #include "weather.h"
 #include "weatherfx.h"
 #include "lamps.h"
+#include "skillback.h"
 #include <atomic>
 #include <climits>
 #include <cmath>
@@ -1993,6 +1994,7 @@ static void ReleaseField() {
     g_vFHEdge.clear();
     WeatherFx::OnLeaveField();
     Lamps_OnLeaveField();
+    SkillBack_OnLeaveField();
     g_bInSkyField  = false;
     g_bFallingSkyField = false;
     g_pOwningField = nullptr;

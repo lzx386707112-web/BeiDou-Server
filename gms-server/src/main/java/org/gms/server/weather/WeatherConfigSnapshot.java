@@ -5,7 +5,8 @@ import java.util.Map;
 
 public record WeatherConfigSnapshot(boolean enabled, long dayLengthMs,
                                     long changeIntervalMs, long overrideHoldMs,
-                                    int rainbowDurationSec,
+                                    int rainbowDurationSec, boolean injectSky,
+                                    boolean seasonDrift,
                                     Map<WeatherRegion, RegionConfig> regions) {
     public WeatherConfigSnapshot {
         regions = Map.copyOf(regions);
@@ -22,7 +23,7 @@ public record WeatherConfigSnapshot(boolean enabled, long dayLengthMs,
                     region.tint(), region.paletteId()));
         }
         return new WeatherConfigSnapshot(true, 14_400_000L, 900_000L,
-                3_600_000L, 180, regions);
+                3_600_000L, 180, true, true, regions);
     }
 
     public record RegionConfig(WeatherProfile forcedProfile, double[] weights,

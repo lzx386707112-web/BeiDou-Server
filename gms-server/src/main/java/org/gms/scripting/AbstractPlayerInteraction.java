@@ -1181,6 +1181,24 @@ public class AbstractPlayerInteraction {
         c.sendPacket(PacketCreator.showEffect(effect));
     }
 
+    /** Backdrop plane above weather, below tiles. Prefer {@code Video/name.mcv} for large FX. durationMs 0 lasts until clear. */
+    public void showSkillBackdrop(String wzPath, int durationMs) {
+        getMap().showSkillBackdrop(wzPath, durationMs);
+    }
+
+    public void clearSkillBackdrop() {
+        getMap().clearSkillBackdrop();
+    }
+
+    /** Local-player only; not stored on the map for later arrivals. */
+    public void showLocalSkillBackdrop(String wzPath, int durationMs) {
+        c.sendPacket(org.gms.server.skill.SkillBackdropPackets.show(wzPath, durationMs));
+    }
+
+    public void clearLocalSkillBackdrop() {
+        c.sendPacket(org.gms.server.skill.SkillBackdropPackets.clear());
+    }
+
     public void dojoEnergy() {
         c.sendPacket(PacketCreator.getEnergy("energy", getPlayer().getDojoEnergy()));
     }

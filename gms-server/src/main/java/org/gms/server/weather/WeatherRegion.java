@@ -51,6 +51,70 @@ public enum WeatherRegion {
     public int tint() { return tint; }
     public int paletteId() { return ordinal(); }
 
+    public String displayName() {
+        return switch (this) {
+            case EL_NATH -> "冰峰雪域";
+            case RIEN -> "瑞恩";
+            case MUSHROOM_SHRINE -> "蘑菇神社";
+            case ELLINIA -> "魔法密林";
+            case PERION -> "勇士部落";
+            case KERNING_CITY -> "废弃都市";
+            case SHOWA -> "昭和村";
+            case ORBIS -> "天空之城";
+            case MU_LUNG -> "武陵";
+            case ARIANT -> "阿里安特";
+            case SLEEPYWOOD -> "林中之城";
+            case AQUA_ROAD -> "水下世界";
+            case LEAFRE -> "神木村";
+            case LUDIBRIUM -> "玩具城";
+            case FLORINA -> "黄金海滩";
+            case AMORIA -> "结婚岛";
+            case LITH_HARBOUR -> "明珠港";
+            case MAGATIA -> "玛加提亚";
+            case NAUTILUS -> "诺特勒斯";
+            case HENESYS -> "射手村";
+            case EREVE -> "圣地";
+            case TEMPLE_OF_TIME -> "时间神殿";
+            case ELLIN_FOREST -> "艾琳森林";
+            case NEW_LEAF_CITY -> "新叶城";
+            case FORMOSA -> "福尔摩沙";
+            case ZIPANGU -> "日本";
+            case DEFAULT -> "其他地图";
+        };
+    }
+
+    public String mapHint() {
+        return switch (this) {
+            case HENESYS -> "100xxxxxx 射手村一带";
+            case ELLINIA -> "101xxxxxx 魔法密林一带";
+            case PERION -> "102xxxxxx 勇士部落一带";
+            case KERNING_CITY -> "103xxxxxx 废弃都市一带";
+            case LITH_HARBOUR -> "104xxxxxx 明珠港一带";
+            case SLEEPYWOOD -> "105xxxxxx 林中之城一带";
+            case FLORINA -> "110xxxxxx 黄金海滩";
+            case NAUTILUS -> "120xxxxxx 诺特勒斯";
+            case EREVE -> "130xxxxxx 圣地";
+            case RIEN -> "140xxxxxx 瑞恩";
+            case ORBIS -> "200xxxxxx 天空之城";
+            case EL_NATH -> "211xxxxxx 冰峰雪域（常雪）";
+            case LUDIBRIUM -> "220-222xxxxxx 玩具城";
+            case AQUA_ROAD -> "230xxxxxx 水下世界";
+            case LEAFRE -> "240xxxxxx 神木村";
+            case MU_LUNG -> "250-251xxxxxx 武陵";
+            case ARIANT -> "260xxxxxx 阿里安特（沙暴）";
+            case MAGATIA -> "261xxxxxx 玛加提亚";
+            case TEMPLE_OF_TIME -> "270xxxxxx 时间神殿";
+            case ELLIN_FOREST -> "300xxxxxx 艾琳森林";
+            case NEW_LEAF_CITY -> "600/610xxxxxx 新叶城";
+            case AMORIA -> "680xxxxxx 结婚岛";
+            case FORMOSA -> "740-742xxxxxx 福尔摩沙";
+            case MUSHROOM_SHRINE -> "800000000 蘑菇神社（樱花）";
+            case ZIPANGU -> "800xxxxxx 日本其他地图";
+            case SHOWA -> "801xxxxxx 昭和村";
+            case DEFAULT -> "未单独分区的地图";
+        };
+    }
+
     private static double[] weights(double... values) { return values; }
 
     public static WeatherRegion forMap(int mapId) {

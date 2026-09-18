@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "hook.h"
 #include "weather.h"
+#include "skillback.h"
 #include "wvs/packet.h"
 #include "wvs/wvsapp.h"
 #include "ztl/ztl.h"
@@ -20,6 +21,7 @@ extern void AttachWeatherWindMod();
 
 void CWvsApp::CallUpdate_hook(int currentTime) {
     Weather_Tick();
+    SkillBack_Frame();
     if (Weather::IsFieldActive()) {
         if (Weather::HasFallingSky()) {
             WeatherSplash_Frame();
@@ -37,9 +39,17 @@ using RegisterPacketHandlerFn = BOOL(WINAPI*)(BOOL(WINAPI*)(void*));
 
 BOOL WINAPI HandlePacket(void* rawPacket) {
     auto* packet = static_cast<CInPacket*>(rawPacket);
-    if (packet == nullptr || packet->Peek2Public() != 0x373D) return FALSE;
-    Weather_HandleWorldState(packet);
-    return TRUE;
+    if (packet == nullptr) return FALSE;
+    const uint16_t opcode = packet->Peek2Public();
+    if (opcode == 0x373D) {
+        Weather_HandleWorldState(packet);
+        return TRUE;
+    }
+    if (opcode == 0x373F) {
+        SkillBack_HandlePacket(packet);
+        return TRUE;
+    }
+    return FALSE;
 }
 
 bool RegisterPacketHandler() {

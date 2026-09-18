@@ -23,5 +23,7 @@ public class WeatherConfigDO {
     private Long changeIntervalMs;
     private Long overrideHoldMs;
     private Integer rainbowDurationSec;
+    private Boolean injectSky;
+    private Boolean seasonDrift;
     private Date updateTime;
 }

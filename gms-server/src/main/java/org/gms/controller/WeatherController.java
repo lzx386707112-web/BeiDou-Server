@@ -59,4 +59,7 @@ public class WeatherController {
 
     @PostMapping("/broadcast")
     public ResultBody<Integer> broadcast() { return ResultBody.success(weatherConfigService.broadcast()); }
+
+    @PostMapping("/wind")
+    public ResultBody<Integer> rerollWind() { return ResultBody.success(weatherConfigService.rerollWind()); }
 }

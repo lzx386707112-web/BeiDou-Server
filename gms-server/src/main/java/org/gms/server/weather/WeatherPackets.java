@@ -19,6 +19,9 @@ public final class WeatherPackets {
         WeatherConfigSnapshot.RegionConfig regionConfig = snapshot.region(region);
         int flags = snap ? WeatherRuntime.FLAG_SNAP : 0;
         if (WeatherRuntime.isTimeFrozen() || !snapshot.enabled()) flags |= WeatherRuntime.FLAG_FROZEN;
+        // FLAG_BARESKY: admin "injected sky". Client hides the map sky at night,
+        // shows moon/stars/clouds, and skips scenery tint. Off keeps the original sky.
+        if (snapshot.injectSky()) flags |= WeatherRuntime.FLAG_BARESKY;
         if (!snapshot.enabled()) flags |= WeatherRuntime.FLAG_DISABLED;
         long elapsedMs = WeatherRuntime.skyElapsedMs(region);
 

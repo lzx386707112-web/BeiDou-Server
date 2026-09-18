@@ -30,8 +30,19 @@ import java.nio.file.Path;
 
 public class DataProviderFactory {
     public static DataProvider getDataProvider(WZFiles in) {
+        return getDataProvider(in, in.getLanguageFile());
+    }
+
+    /**
+     * 按指定语言构建数据提供者，不需要 ServerManager 的 ApplicationContext，
+     * 避免在 Spring 启动早期（ApplicationContext 尚未注入静态字段时）触发 NPE。
+     */
+    public static DataProvider getDataProvider(WZFiles in, String language) {
+        return getDataProvider(in, in.getLanguageFile(language));
+    }
+
+    private static DataProvider getDataProvider(WZFiles in, Path language) {
         Path base = in.getBaseFile();
-        Path language = in.getLanguageFile();
         if (Files.exists(language) && Files.exists(base) && !language.equals(base)) {
             return new OverlayXMLWZFile(base, language);
         }

@@ -3,7 +3,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 SERVER_DIR="$ROOT/gms-server"
-DEFAULT_JAR="$SERVER_DIR/BeiDou.jar"
+DEFAULT_JAR="$HOME/Downloads/BeiDou.jar"
 TARGET_JAR="$SERVER_DIR/target/BeiDou.jar"
 DEFAULT_PID_FILE="$SERVER_DIR/BeiDou.pid"
 DEFAULT_LOG_FILE="$SERVER_DIR/logs/BeiDou.out.log"
@@ -16,11 +16,11 @@ usage() {
   rtk tool/scripts/runtime/start_server.sh --config gms-server/application.yml
   rtk tool/scripts/runtime/start_server.sh -- --server.port=8687
 
-启动当前服务端。优先运行 gms-server/BeiDou.jar；若没有则使用
+启动当前服务端。优先运行 ~/Downloads/BeiDou.jar；若没有则使用
 gms-server/target/BeiDou.jar；两者都不存在时，才用 Spring Boot Maven 插件从源码启动。
 
 选项:
-  --jar PATH       指定 jar，默认: gms-server/BeiDou.jar
+  --jar PATH       指定 jar，默认: ~/Downloads/BeiDou.jar
   --config PATH    指定外部 application.yml
   --background     后台启动，并写入 PID 文件
   --pid-file PATH  PID 文件，默认: gms-server/BeiDou.pid
