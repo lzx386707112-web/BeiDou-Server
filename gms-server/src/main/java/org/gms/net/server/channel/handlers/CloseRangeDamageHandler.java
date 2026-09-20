@@ -179,7 +179,6 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
         2790, 2820, 2880, 2940, 3000
     };
     private static final int[] RAGE_UPRISING_VI_TIMES_MS = {0, 60, 180, 300};
-    private static final int[] BURNING_SOUL_BLADE_TIMES_MS = intervalTimes(0, 1000, 19000);
     private static final int[] SPIRIT_CALIBER_TIMES_MS = {
         840, 900, 960, 1020, 1080, 1140, 1200, 1260, 1320, 1380, 1440,
         1500, 1560, 1620, 1680, 1740, 1800, 1860, 1920, 1980, 2040, 2100,
@@ -496,8 +495,7 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
     }
 
     private static boolean usesFixedThunderBreakerOrigin(int skillId) {
-        return skillId == Hero.BURNING_SOUL_BLADE
-                || skillId == ThunderBreaker.LIGHTNING_SPEAR_MULTISTRIKE
+        return skillId == ThunderBreaker.LIGHTNING_SPEAR_MULTISTRIKE
                 || skillId == ThunderBreaker.WAVE_RIDING_THUNDER
                 || skillId == ThunderBreaker.SWIFT_ANNIHILATION
                 || skillId == Hero.SPIRIT_CALIBER
@@ -505,45 +503,6 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
                 || skillId == Paladin.DOMINUS_OBRION
                 || skillId == DarkKnight.DEAD_SPACE
                 || skillId == DarkKnight.DARK_HALIDOM;
-    }
-
-    private static void removeTimedSummon(
-            Character chr,
-            int skillId,
-            MapleMap expectedMap,
-            Summon expectedSummon
-    ) {
-        if (!chr.removeSummon(skillId, expectedSummon)) {
-            return;
-        }
-        expectedMap.broadcastMessage(PacketCreator.removeSummon(expectedSummon, true));
-        expectedMap.removeMapObject(expectedSummon);
-        chr.removeVisibleMapObject(expectedSummon);
-    }
-
-    private static void spawnTimedSummon(
-            Character chr,
-            int skillId,
-            SummonMovementType movementType,
-            int durationMs
-    ) {
-        MapleMap expectedMap = chr.getMap();
-        Summon previous = chr.getSummonByKey(skillId);
-        if (previous != null) {
-            removeTimedSummon(chr, skillId, expectedMap, previous);
-        }
-        Summon summon = new Summon(
-                chr,
-                skillId,
-                new Point(chr.getPosition()),
-                movementType
-        );
-        expectedMap.spawnSummon(summon);
-        chr.addSummon(skillId, summon);
-        TimerManager.getInstance().schedule(
-                () -> removeTimedSummon(chr, skillId, expectedMap, summon),
-                durationMs
-        );
     }
 
     private static void removeTransientSummon(
@@ -667,6 +626,60 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
         return result;
     }
 
+    private static Map<Integer, List<Integer>> collectSwordIllusionTargets(
+            AttackInfo attack,
+            Character chr,
+            MapleMap expectedMap,
+            StatEffect targetingEffect,
+            Point attackOrigin,
+            int mobCount,
+            List<Integer> damageTemplate
+    ) {
+        Map<Integer, List<Integer>> result = new LinkedHashMap<>();
+        List<Monster> monsters = new ArrayList<>(expectedMap.getAllMonsters());
+        monsters.removeIf(monster -> !monster.isAlive()
+                || !isWithinAttackBox(chr, monster, targetingEffect, attack, null, null));
+        monsters.sort(Comparator
+                .comparing((Monster monster) -> !monster.isBoss())
+                .thenComparingDouble(monster -> monster.getPosition().distanceSq(attackOrigin))
+                .thenComparingInt(Monster::getObjectId));
+        int targetLimit = Math.max(1, Math.min(8, mobCount));
+        for (Monster monster : monsters) {
+            result.put(monster.getObjectId(), new ArrayList<>(damageTemplate));
+            if (result.size() >= targetLimit) {
+                break;
+            }
+        }
+        return result;
+    }
+
+    private static Map<Integer, List<Integer>> collectMcvCloseTargets(
+            AttackInfo attack,
+            Character chr,
+            MapleMap expectedMap,
+            StatEffect targetingEffect,
+            Point attackOrigin,
+            int mobCount,
+            List<Integer> damageTemplate
+    ) {
+        Map<Integer, List<Integer>> result = new LinkedHashMap<>();
+        List<Monster> monsters = new ArrayList<>(expectedMap.getAllMonsters());
+        monsters.removeIf(monster -> !monster.isAlive()
+                || !isWithinAttackBox(chr, monster, targetingEffect, attack, attackOrigin, null));
+        monsters.sort(Comparator
+                .comparing((Monster monster) -> !monster.isBoss())
+                .thenComparingDouble(monster -> monster.getPosition().distanceSq(attackOrigin))
+                .thenComparingInt(Monster::getObjectId));
+        int targetLimit = Math.max(1, Math.min(15, mobCount));
+        for (Monster monster : monsters) {
+            result.put(monster.getObjectId(), new ArrayList<>(damageTemplate));
+            if (result.size() >= targetLimit) {
+                break;
+            }
+        }
+        return result;
+    }
+
     private static void repeatTrackingCloseAttack(
             AttackInfo attack,
             Character chr,
@@ -713,9 +726,24 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
                     ? targetingEffect.calculateBoundingBox(attackOrigin, attack.direction == 0)
                     : null;
         }
-        Map<Integer, List<Integer>> damage = collectTrackingCloseTargets(
-                expectedMap, attackOrigin, attackBounds, mobCount, damageTemplate
-        );
+        Map<Integer, List<Integer>> damage;
+        if (attack.skill == Hero.SWORD_ILLUSION) {
+            damage = collectSwordIllusionTargets(
+                    attack, chr, expectedMap, targetingEffect, attackOrigin, mobCount, damageTemplate
+            );
+        } else if (attack.skill == Hero.SPIRIT_CALIBER
+                || attack.skill == Paladin.SACRED_BASTION
+                || attack.skill == Paladin.DOMINUS_OBRION
+                || attack.skill == DarkKnight.DEAD_SPACE
+                || attack.skill == DarkKnight.DARK_HALIDOM) {
+            damage = collectMcvCloseTargets(
+                    attack, chr, expectedMap, targetingEffect, attackOrigin, mobCount, damageTemplate
+            );
+        } else {
+            damage = collectTrackingCloseTargets(
+                    expectedMap, attackOrigin, attackBounds, mobCount, damageTemplate
+            );
+        }
         if (traceBuccaneerSerpent) {
             log.info(
                     "BUCCANEER_SERPENT_TRACE stage={} targets={} bounds={} origin={} packet=CLOSE_RANGE_ATTACK",
@@ -803,7 +831,7 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
                 attackTimesMs,
                 replaySkillId,
                 applyOriginalFirst,
-                attack.skill == DawnWarrior.COSMOS
+                LocalDamageNumberMode.NONE
         );
     }
 
@@ -870,39 +898,105 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
             boolean applyOriginalFirst,
             boolean showLocalDamageNumbers
     ) {
+        scheduleTrackingCloseAttacks(
+                attack,
+                chr,
+                attackTimesMs,
+                replaySkillId,
+                applyOriginalFirst,
+                showLocalDamageNumbers
+                        ? LocalDamageNumberMode.TOTAL
+                        : LocalDamageNumberMode.NONE
+        );
+    }
+
+    void scheduleTrackingCloseAttacks(
+            AttackInfo attack,
+            Character chr,
+            int[] attackTimesMs,
+            int replaySkillId,
+            boolean applyOriginalFirst,
+            LocalDamageNumberMode damageNumberMode
+    ) {
         MapleMap expectedMap = chr.getMap();
         Skill originalSkill = SkillFactory.getSkill(attack.skill);
         StatEffect originalEffect = originalSkill.getEffect(chr.getSkillLevel(originalSkill));
         Skill replaySkill = SkillFactory.getSkill(replaySkillId);
         int replayLevel = Math.max(1, Math.min(attack.skilllevel, replaySkill.getMaxLevel()));
         StatEffect replayEffect = replaySkill.getEffect(replayLevel);
-        StatEffect targetingEffect = attack.skill == ThunderBreaker.LIGHTNING_SPEAR_MULTISTRIKE ? originalEffect : replayEffect;
-        int replayAttackCount = Math.max(1, Math.min(15, replayEffect.getAttackCount()));
-        int mobCount = Math.max(1, Math.min(15, replayEffect.getMobCount()));
+        boolean explorerWarriorMcv =
+                attack.skill == Hero.SPIRIT_CALIBER
+                        || attack.skill == Paladin.SACRED_BASTION
+                        || attack.skill == Paladin.DOMINUS_OBRION
+                        || attack.skill == DarkKnight.DEAD_SPACE
+                        || attack.skill == DarkKnight.DARK_HALIDOM;
+        StatEffect targetingEffect =
+                attack.skill == ThunderBreaker.LIGHTNING_SPEAR_MULTISTRIKE
+                        || attack.skill == Hero.SWORD_ILLUSION
+                        || explorerWarriorMcv
+                        ? originalEffect
+                        : replayEffect;
+        final int replayAttackCount;
+        final int mobCount;
+        final int templateHitCount;
+        if (attack.skill == Hero.SWORD_ILLUSION) {
+            replayAttackCount = Math.max(1, Math.min(15, replayEffect.getAttackCount()));
+            mobCount = Math.max(1, Math.min(8, originalEffect.getMobCount()));
+            templateHitCount = replayAttackCount;
+        } else if (explorerWarriorMcv) {
+            StatEffect countEffect = applyOriginalFirst ? originalEffect : replayEffect;
+            replayAttackCount = Math.max(1, Math.min(15, countEffect.getAttackCount()));
+            mobCount = Math.max(1, Math.min(15, originalEffect.getMobCount()));
+            templateHitCount = replayAttackCount;
+        } else {
+            replayAttackCount = Math.max(1, Math.min(15, replayEffect.getAttackCount()));
+            mobCount = Math.max(1, Math.min(15, replayEffect.getMobCount()));
+            templateHitCount = replayAttackCount;
+        }
         List<Integer> sourceDamageTemplate = copyCapturedDamageTemplate(attack);
-        List<Integer> damageTemplate = adaptDamageTemplate(
+        List<Integer> adaptedDamageTemplate = adaptDamageTemplate(
                 chr,
                 sourceDamageTemplate,
-                replayAttackCount,
+                templateHitCount,
                 originalEffect.getDamage(),
-                replayEffect.getDamage()
+                explorerWarriorMcv && applyOriginalFirst
+                        ? originalEffect.getDamage()
+                        : replayEffect.getDamage()
         );
+        if (adaptedDamageTemplate.isEmpty() && explorerWarriorMcv) {
+            adaptedDamageTemplate = createFallbackCloseDamageTemplate(
+                    chr, originalEffect, templateHitCount
+            );
+        }
+        final List<Integer> damageTemplate = adaptedDamageTemplate;
         Point fixedAttackOrigin = usesFixedThunderBreakerOrigin(attack.skill)
                 ? new Point(chr.getPosition())
                 : null;
         for (int index = 0; index < attackTimesMs.length; index++) {
             final boolean originalTick = applyOriginalFirst && index == 0;
-            final boolean logReplayTargets = showLocalDamageNumbers
+            final boolean logReplayTargets = damageNumberMode == LocalDamageNumberMode.TOTAL
                     && (index == 0 || index == attackTimesMs.length - 1);
+            final int attackTimeMs = attackTimesMs[index];
             TimerManager.getInstance().schedule(() -> {
                 if (!canContinueAnimatedAttack(chr, expectedMap)) {
                     return;
                 }
                 if (originalTick) {
-                    if (showLocalDamageNumbers) {
-                        showCapturedDamageNumbers(attack, chr, expectedMap);
+                    if (!explorerWarriorMcv) {
+                        if (damageNumberMode == LocalDamageNumberMode.INDEXED) {
+                            showCapturedIndexedDamageNumbers(attack, chr, expectedMap);
+                        } else if (damageNumberMode == LocalDamageNumberMode.TOTAL) {
+                            showCapturedDamageNumbers(attack, chr, expectedMap);
+                        }
                     }
-                    applyAttack(attack, chr, originalEffect.getAttackCount());
+                    if (explorerWarriorMcv) {
+                        originalEffect.applyTo(chr);
+                    } else {
+                        applyAttack(attack, chr, originalEffect.getAttackCount());
+                        return;
+                    }
+                }
+                if (damageNumberMode == LocalDamageNumberMode.INDEXED && damageTemplate.isEmpty()) {
                     return;
                 }
                 repeatTrackingCloseAttack(
@@ -916,12 +1010,10 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
                         replayEffect,
                         targetingEffect,
                         fixedAttackOrigin,
-                        showLocalDamageNumbers
-                                ? LocalDamageNumberMode.TOTAL
-                                : LocalDamageNumberMode.NONE,
+                        damageNumberMode,
                         logReplayTargets
                 );
-            }, attackTimesMs[index]);
+            }, attackTimeMs);
         }
     }
 
@@ -1390,14 +1482,20 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
                         replay.timesMs(),
                         replay.skillId(),
                         index == 0,
-                        showLocalDamageNumbers
+                        explorerVideoLayer != null
+                                ? LocalDamageNumberMode.INDEXED
+                                : showLocalDamageNumbers
+                                        ? LocalDamageNumberMode.TOTAL
+                                        : LocalDamageNumberMode.NONE
                 );
             }
             triggerDualBladeFollowUps(attack, chr);
         } else if (attack.skill == Hero.SWORD_ILLUSION) {
+            // Replay packets stay CLOSE_RANGE_ATTACK. Local numbers come from the
+            // native 0x0066B05E constructor via IndexedDamageNumberCompat, not F6.
             scheduleTrackingCloseAttacks(
                     attack, chr, SWORD_ILLUSION_SLASH_TIMES_MS,
-                    Hero.SWORD_ILLUSION_SLASH, true
+                    Hero.SWORD_ILLUSION_SLASH, false
             );
             scheduleTrackingCloseAttacks(
                     attack, chr, SWORD_ILLUSION_EXPLOSION_TIMES_MS,
@@ -1407,25 +1505,15 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
             chr.getMap().broadcastMessage(PacketCreator.showEffect(DEATH_FAULT_FIELD_EFFECT));
             final int delayedAttackCount = attackCount;
             TimerManager.getInstance().schedule(() -> applyAttack(attack, chr, delayedAttackCount), DEATH_FAULT_HIT_DELAY_MS);
-        } else if (attack.skill == Hero.BURNING_SOUL_BLADE) {
-            spawnTimedSummon(
-                    chr,
-                    Hero.BURNING_SOUL_BLADE,
-                    SummonMovementType.STATIONARY,
-                    20000
-            );
-            scheduleTrackingCloseAttacks(
-                    attack, chr, BURNING_SOUL_BLADE_TIMES_MS,
-                    Hero.BURNING_SOUL_BLADE_ATTACK, true
-            );
         } else if (attack.skill == Hero.SPIRIT_CALIBER) {
             chr.sendPacket(PacketCreator.showEffect(SPIRIT_CALIBER_VIDEO_LAYER));
             scheduleTrackingCloseAttacks(
-                    attack, chr, SPIRIT_CALIBER_TIMES_MS, Hero.SPIRIT_CALIBER, true
+                    attack, chr, SPIRIT_CALIBER_TIMES_MS,
+                    Hero.SPIRIT_CALIBER_FINISH, true, LocalDamageNumberMode.INDEXED
             );
             scheduleTrackingCloseAttacks(
                     attack, chr, SPIRIT_CALIBER_FINISH_TIMES_MS,
-                    Hero.SPIRIT_CALIBER_FINISH, false
+                    Hero.SPIRIT_CALIBER_FINISH, false, LocalDamageNumberMode.INDEXED
             );
         } else if (attack.skill == Hero.RAGE_UPRISING_VI) {
             scheduleTrackingCloseAttacks(
@@ -1448,15 +1536,16 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
         } else if (attack.skill == Paladin.SACRED_BASTION) {
             chr.sendPacket(PacketCreator.showEffect(SACRED_BASTION_VIDEO_LAYER));
             scheduleTrackingCloseAttacks(
-                    attack, chr, SACRED_BASTION_TIMES_MS, Paladin.SACRED_BASTION, true
+                    attack, chr, SACRED_BASTION_TIMES_MS,
+                    Paladin.SACRED_BASTION_STRIKE, true, LocalDamageNumberMode.INDEXED
             );
             scheduleTrackingCloseAttacks(
                     attack, chr, SACRED_BASTION_FINISH_TIMES_MS,
-                    Paladin.SACRED_BASTION_FINISH, false
+                    Paladin.SACRED_BASTION_FINISH, false, LocalDamageNumberMode.INDEXED
             );
             scheduleTrackingCloseAttacks(
                     attack, chr, SACRED_BASTION_FIELD_TIMES_MS,
-                    Paladin.SACRED_BASTION_STRIKE, false
+                    Paladin.SACRED_BASTION_STRIKE, false, LocalDamageNumberMode.INDEXED
             );
         } else if (attack.skill == Paladin.HEAVENS_HAMMER_VI) {
             scheduleTrackingCloseAttacks(
@@ -1469,11 +1558,12 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
         } else if (attack.skill == Paladin.DOMINUS_OBRION) {
             chr.sendPacket(PacketCreator.showEffect(DOMINUS_OBRION_VIDEO_LAYER));
             scheduleTrackingCloseAttacks(
-                    attack, chr, DOMINUS_OBRION_TIMES_MS, Paladin.DOMINUS_OBRION, true
+                    attack, chr, DOMINUS_OBRION_TIMES_MS,
+                    Paladin.DOMINUS_OBRION_FINISH, true, LocalDamageNumberMode.INDEXED
             );
             scheduleTrackingCloseAttacks(
                     attack, chr, DOMINUS_OBRION_FINISH_TIMES_MS,
-                    Paladin.DOMINUS_OBRION_FINISH, false
+                    Paladin.DOMINUS_OBRION_FINISH, false, LocalDamageNumberMode.INDEXED
             );
         } else if (attack.skill == DarkKnight.CALAMITOUS_CYCLONE) {
             scheduleTrackingCloseAttacks(
@@ -1487,38 +1577,44 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
         } else if (attack.skill == DarkKnight.DEAD_SPACE) {
             chr.sendPacket(PacketCreator.showEffect(DEAD_SPACE_VIDEO_LAYER));
             scheduleTrackingCloseAttacks(
-                    attack, chr, DEAD_SPACE_TIMES_MS, DarkKnight.DEAD_SPACE, true
+                    attack, chr, DEAD_SPACE_TIMES_MS,
+                    DarkKnight.DEAD_SPACE_FINISH, true, LocalDamageNumberMode.INDEXED
             );
             scheduleTrackingCloseAttacks(
-                    attack, chr, DEAD_SPACE_FINISH_TIMES_MS, DarkKnight.DEAD_SPACE_FINISH, false
+                    attack, chr, DEAD_SPACE_FINISH_TIMES_MS,
+                    DarkKnight.DEAD_SPACE_FINISH, false, LocalDamageNumberMode.INDEXED
             );
         } else if (attack.skill == DarkKnight.DARK_HALIDOM) {
             chr.sendPacket(PacketCreator.showEffect(DARK_HALIDOM_VIDEO_LAYER));
             scheduleTrackingCloseAttacks(
-                    attack, chr, DARK_HALIDOM_TIMES_MS, DarkKnight.DARK_HALIDOM, true
+                    attack, chr, DARK_HALIDOM_TIMES_MS,
+                    DarkKnight.DARK_HALIDOM_FINISH, true, LocalDamageNumberMode.INDEXED
             );
             scheduleTrackingCloseAttacks(
                     attack, chr, DARK_HALIDOM_FINISH_TIMES_MS,
-                    DarkKnight.DARK_HALIDOM_FINISH, false
+                    DarkKnight.DARK_HALIDOM_FINISH, false, LocalDamageNumberMode.INDEXED
             );
         } else if (attack.skill == DawnWarrior.GALAXY_STAR_BURST) {
             chr.sendPacket(PacketCreator.showEffect(GALAXY_STAR_BURST_VIDEO_LAYER));
             scheduleAnimatedAttacks(
-                    attack, chr, attackCount, GALAXY_STAR_BURST_ATTACK_TIMES_MS,
+                    attack, chr, attackCount,
+                    GALAXY_STAR_BURST_ATTACK_TIMES_MS,
                     LocalDamageNumberMode.INDEXED,
                     GALAXY_STAR_BURST_DAMAGE_NUMBER_HIT_INTERVAL_MS
             );
         } else if (attack.skill == DawnWarrior.ECLIPSE_FORCE) {
             chr.sendPacket(PacketCreator.showEffect(ECLIPSE_FORCE_VIDEO_LAYER));
             scheduleAnimatedAttacks(
-                    attack, chr, attackCount, ECLIPSE_FORCE_ATTACK_TIMES_MS,
+                    attack, chr, attackCount,
+                    ECLIPSE_FORCE_ATTACK_TIMES_MS,
                     LocalDamageNumberMode.INDEXED,
                     INDEXED_DAMAGE_NUMBER_HIT_INTERVAL_MS
             );
         } else if (attack.skill == DawnWarrior.SOUL_ECLIPSE) {
             chr.sendPacket(PacketCreator.showEffect(SOUL_ECLIPSE_VIDEO_LAYER));
             scheduleAnimatedAttacks(
-                    attack, chr, attackCount, SOUL_ECLIPSE_ATTACK_TIMES_MS,
+                    attack, chr, attackCount,
+                    SOUL_ECLIPSE_ATTACK_TIMES_MS,
                     LocalDamageNumberMode.INDEXED,
                     INDEXED_DAMAGE_NUMBER_HIT_INTERVAL_MS
             );
@@ -1544,26 +1640,29 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
             advanceLightningSpearCombo(attack, chr, attackCount);
         } else if (attack.skill == ThunderBreaker.GOD_OF_THE_SEA_VI) {
             chr.sendPacket(PacketCreator.showEffect(GOD_OF_THE_SEA_VI_VIDEO_LAYER));
+            showCapturedIndexedDamageNumbers(attack, chr, chr.getMap());
             applyAttack(attack, chr, attackCount);
         } else if (attack.skill == ThunderBreaker.WAVE_RIDING_THUNDER) {
             chr.sendPacket(PacketCreator.showEffect(WAVE_RIDING_THUNDER_VIDEO_LAYER));
             scheduleTrackingCloseAttacks(
                     attack, chr, WAVE_RIDING_THUNDER_OPENING_TIMES_MS,
-                    ThunderBreaker.WAVE_RIDING_THUNDER, true
+                    ThunderBreaker.WAVE_RIDING_THUNDER, true, LocalDamageNumberMode.INDEXED
             );
             scheduleTrackingCloseAttacks(
                     attack, chr, WAVE_RIDING_THUNDER_SHOCK_TIMES_MS,
-                    ThunderBreaker.WAVE_RIDING_THUNDER_SHOCK, false
+                    ThunderBreaker.WAVE_RIDING_THUNDER_SHOCK, false,
+                    LocalDamageNumberMode.INDEXED
             );
         } else if (attack.skill == ThunderBreaker.SWIFT_ANNIHILATION) {
             chr.sendPacket(PacketCreator.showEffect(SWIFT_ANNIHILATION_VIDEO_LAYER));
             scheduleTrackingCloseAttacks(
                     attack, chr, SWIFT_ANNIHILATION_OPENING_TIMES_MS,
-                    ThunderBreaker.SWIFT_ANNIHILATION, true
+                    ThunderBreaker.SWIFT_ANNIHILATION, true, LocalDamageNumberMode.INDEXED
             );
             scheduleTrackingCloseAttacks(
                     attack, chr, SWIFT_ANNIHILATION_SURGE_TIMES_MS,
-                    ThunderBreaker.SWIFT_ANNIHILATION_SURGE, false
+                    ThunderBreaker.SWIFT_ANNIHILATION_SURGE, false,
+                    LocalDamageNumberMode.INDEXED
             );
         } else {
             applyAttack(attack, chr, attackCount);

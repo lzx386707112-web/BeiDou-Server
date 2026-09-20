@@ -1,108 +1,241 @@
-# Indexed replay damage-number workflow
+# Caster-local replay damage numbers
 
-Use this workflow only when a skill's first client attack is followed by
-server-scheduled replay attacks and the old client does not render the local
-player's replayed `CLOSE_RANGE_ATTACK` damage lines. Do not apply it to ordinary
-client-owned attacks or as a substitute for fixing targeting, timing, damage,
-or hit effects.
+Use this reference when a skill’s **first client-owned attack** shows native
+player numbers, but **server-scheduled replay** `CLOSE_RANGE_ATTACK (0xBA)`
+ticks do not show the same numbers on the caster.
 
-## Evidence gate
+This is not a targeting, timing, HP, or hit-effect fix. Do not apply it to
+ordinary client-owned attacks.
 
-Confirm the runtime path before editing:
+Read this file completely before adding a hook, an F6 supplement, or a
+`LocalDamageNumberMode` change.
 
-1. The server sends the replay `CLOSE_RANGE_ATTACK (0xBA)` to the caster and
-   other map characters.
-2. The caster's local client rejects its own replay at the local-CID/remote-
-   character lookup, while another player can render the replay's hit list.
-3. The local fallback currently sends one ordinary `DAMAGE_MONSTER (0xF6)` per
-   monster, which always uses native hit index `0` and therefore overlaps.
+## Two native constructors (do not mix)
 
-Do not force a local player object through the remote attack decoder. That path
-has action/state side effects and is not a display-only API.
+| Path | Address | Look | When it is correct |
+| --- | --- | --- | --- |
+| Player / Brandish | `0x0066B05E` | 轻舞飞扬 `1121008` style; default cadence `baseTime + 120ms * hitIndex` | **Default for new skills** that must match the first half |
+| Monster wrapper | `0x006691D3` | Different height/stacking; used by `DAMAGE_MONSTER (0xF6)` | Legacy only: already-shipped Dawn Warrior `INDEXED` skills |
 
-## Protocol and client bridge
+`TOTAL` `damageMonster()` and `INDEXED` F6 (`0x80..0x8E` → `0x006691D3`) do
+**not** match `0x0066B05E`. Do not use them to “copy the first half”.
 
-Use `PacketCreator.indexedDamageMonsterNumber(oid, damage, hitIndex)` for local
-display-only packets. Keep ordinary `damageMonster()` unchanged:
+Do **not** call remote decoder `0x009803AB` from a hook. Native `0xBA`
+handling already reaches it. The working bridge only substitutes `CUserLocal`
+at the failed lookup, then skips the two local action writes.
 
-- `0x80..0x8E` in the `DAMAGE_MONSTER` direction byte represent native hit
-  indices `0..14`.
-- Every other direction value keeps native hit index `0` behavior.
-- Preserve the raw signed damage value so the client's critical/sign marker is
-  not lost.
+## Evidence gate (required before any edit)
 
-`IndexedDamageNumberCompat.dll` must validate the exact 30-byte client span at
-`0x0066C6CB`, then call the native number routine `0x006691D3` with the decoded
-index. It must not read a skill ID, enter the remote-player path, or apply
-damage. Load it from the diagnostics watchdog thread, outside `DllMain`.
+1. First-half numbers come from a **client-owned** `0xBA` that the local
+   player processes itself (constructor `0x0066B05E`).
+2. Server already sends later ticks as `0xBA` to the caster **and** the map.
+3. Local replay dies at `0x0097250B` → `call 0x00971709`: `CUserLocal` is not
+   in the remote-user map; `esi == 0` at `0x00972512` jumps to `0x00972626`.
+4. Another player can already render the same replay hit list.
+5. Confirm whether the missing piece is numbers, target count, or both.
+   Target count is a server collect problem; do not “fix” it with F6.
 
-## Timing template
+If step 1 is not `0x0066B05E`, stop. Do not copy the Brandish bridge.
 
-The native player attack constructor at `0x0066B05E` schedules the default
-multi-hit line as `baseTime + 120ms * hitIndex`; legacy Brandish/轻舞飞扬
-`1121008` uses this default path. Therefore the shared server helper must:
+## New skill: Brandish-identical numbers (default)
 
-1. Send hit index `0` immediately.
-2. Schedule hit index `n` at `n * 120ms` for `n = 1..14`.
-3. Send all monsters' same hit index in the same scheduled callback, so one
-   replay tick remains synchronized across targets.
-4. Capture the damage lists before scheduling and stop a callback when the
-   character has changed maps.
+Follow these steps in order. Sword Illusion `1121020` (hidden `1121021` /
+`1121022`) is the proven analogue.
 
-Keep `120ms` as the generic default. A skill-specific interval is allowed only
-when its verified source attack timeline requires it and overlapping replay
-ticks would otherwise create concurrent indexed sequences. Record that source
-evidence and keep the override at the skill call site; Dawn Warrior Galaxy Star
-Burst `11121005` uses `60ms`, matching its TMS multi-attack cadence.
+### 1. Server: replay is `0xBA`, display mode is `NONE`
 
-The helper only sends display packets. For each monster, calculate the decoded
-total separately, call `aggroMonsterDamage()` once, and call
-`MapleMap.damageMonster()` once. Never apply damage once per display line.
+In `CloseRangeDamageHandler`:
 
-## Empty-cast damage template
+- Call `scheduleTrackingCloseAttacks(..., applyOriginalFirst, NONE)`.
+- Keep a verified TMS replay schedule. Fullscreen MCV ultimates keep the
+  skill’s current stage times and WZ `attackCount` for the video duration.
+- Do **not** pass `LocalDamageNumberMode.INDEXED` or `TOTAL`.
+- Do **not** call `damageMonster()` / `indexedDamageMonsterNumber()` /
+  `showIndexedDamageNumbers()` for this skill.
+- Damage settlement stays `aggroMonsterDamage()` + `map.damageMonster()`
+  **once per monster per tick**, from the replay hit list.
 
-For a client-owned duration or scheduled replay skill, an empty initial target
-list is not a damage event. Keep the schedule alive, but skip every replay tick
-that has no captured client damage template before creating a packet,
-damage-number packet, aggro, or HP settlement. A later client attack packet is
-parsed independently by the normal attack handler; the original `AttackInfo`
-does not become populated asynchronously. Do not manufacture a fallback from
-the character's server-side damage range unless a separately verified legacy
-skill is explicitly server-authoritative. Dawn Warrior's four scheduled V/VI
-attacks must never substitute an estimated value such as `500000` for missing
-client damage.
+`applyOriginalFirst`:
 
-## Skill integration
+- `true` only when the opening client packet already has the correct mob
+  list (same box and `mobCount` as the skill).
+- `false` when the client action is a small analogue (Sword Illusion uses
+  `brandish1` / `1121008` `mobCount=3`). Then **every** tick, including the
+  first slash, must server-collect.
 
-Use an explicit local display mode in the handler:
+### 2. Server: collect the skill box, not feet and not the first packet
 
-- `NONE`: no caster-only compensation.
-- `TOTAL`: preserve an existing single aggregate number.
-- `INDEXED`: use the shared timed helper.
+Each replay tick:
 
-For a duration skill such as Dawn Warrior `11121012` (宇宙之花), the first
-scheduled tick and every replay tick that needs caster-local numbers must use
-`INDEXED`. Keep the skill's existing replay schedule, target collection,
-attack packet broadcast, and one-time damage settlement unchanged.
+- Use the **cast skill** `StatEffect` (`originalEffect`) for `lt`/`rb` and
+  `mobCount`, not a tighter hidden-skill box, unless evidence says otherwise.
+- Select with `isWithinAttackBox(...)` (monster bbox ∩ skill box; try
+  packet direction, stance, and current facing).
+- Cap at the skill `mobCount` (Sword Illusion: **8**).
+- Do **not** use `attackBounds.contains(monster.getPosition())` (feet-only).
+- Do **not** reuse `attack.allDamage` when that list is the Brandish-sized
+  client packet.
 
-## Verification and delivery
+Copy the captured per-hit template onto every collected monster. If this
+skill is server-authoritative and the template is empty, the existing
+fallback template is allowed. Dawn Warrior duration skills must still skip
+empty templates (see legacy section).
 
-Before delivery, verify all of the following:
+### 3. DLL: allowlist the hidden replay skill IDs
 
-- Ordinary `DAMAGE_MONSTER` still writes marker `0`; indexed packets accept only
-  hit indices `0..14`.
-- The client executable bytes at the hook span still match the recorded 30-byte
-  baseline; a mismatch aborts installation without patching.
-- Static tests cover packet layout, signed damage preservation, timing constant,
-  map-change cancellation, and the skill's `INDEXED` call site.
-- Java 21 targeted tests, 32-bit DLL syntax checks, and `git diff --check` pass.
-- The generated DLL is PE32, is built reproducibly twice, and is copied only
-  after source/delivery hashes match.
+Edit only `tool/client-debug/indexed-damage-number-compat/IndexedDamageNumberCompat.cpp`.
 
-Offline checks cannot prove old-client playback. On Windows/Winlator verify
-launch/login, DLL load logs, first and later ticks, 120ms per-line cadence,
-vertical stacking, critical styling, target death/map changes, repeated casts,
-other-player view, and that HP decreases only once per replay target.
+Keep the three existing hooks. **Add new work only as extra `cmp` skill IDs
+in `HookLocalCloseRangeLookup`.** Do not add a fourth hook, do not call
+`0x009803AB`, and do not change the F6 hook unless the EXE bytes moved.
 
-The project implementation record is maintained at
-`docs/patches/indexed-replay-damage-numbers.md`.
+Lookup hook (`0x00972512`, original `85 F6 0F 84 0C 01 00 00`):
+
+1. If `esi != 0`, continue at `0x0097251A` (normal remote user).
+2. Peek `CInPacket`: `eax = [edi+8] + [edi+0x14]`.
+3. Require `[eax+1] == 0x5B` and `[eax+2] != 0` (matches
+   `PacketCreator.addAttackBody`: packedCount, `0x5B`, skilllevel, skill).
+   4. Compare `[eax+3]` (u32 skill id) to the **hidden replay IDs**, not the
+   visible cast ID. Current allowlist: `0x00111AFD` (`1121021`),
+   `0x00111AFE` (`1121022`), `   0x00111B00` (`1121024`), `0x0012A19D`
+   (`1221021`), `0x0012A19E` (`1221022`), `0x0012A1A7` (`1221031`),
+   `0x0014283B` (`1321019`), `0x00142842` (`1321026`).
+5. On match: `esi = [0x00BEBF98]` (`CUserLocal`). If null, skip.
+6. Otherwise jump `0x00972626` (drop packet), same as stock client.
+
+Required skips (already installed; do not remove when adding a skill):
+
+- `0x0098046E`: if the decoded user is `CUserLocal`, skip `SetMoveAction`
+  (`0x009804BB`); else original `lea esi, [eax+0x88]` → `0x00980477`.
+- `0x009803E5`: if `esi` is `CUserLocal`, skip `[esi+0x2AE0] = al`; else
+  write and continue `0x009803EB`.
+
+These skips are what make entering the native `0xBA` decoder safe. Without
+them the local player restarts Brandish.
+
+Load from the diagnostics watchdog thread, not `DllMain` work. Image base
+must be `0x00400000`. Every hook span must match recorded original bytes or
+install aborts.
+
+### 4. Tests and build
+
+Update `tool/client-debug/indexed-damage-number-compat/test_indexed_damage_number_contract.py`:
+
+- New replay IDs appear as `0x00......` in the DLL source.
+- The `CLOSE_RANGE_ATTACK` handler block for the **cast** skill (search
+  `} else if (attack.skill == ...)` , not an earlier `==` in collect code)
+  contains no `INDEXED`, `TOTAL`, or `damageMonster(`.
+- Existing EXE byte spans still match.
+
+Rebuild with the checked-in script, twice, require identical SHA-256:
+
+```bash
+tool/client-debug/indexed-damage-number-compat/build.sh
+rtk python3 tool/client-debug/indexed-damage-number-compat/test_indexed_damage_number_contract.py
+rtk git diff --check
+```
+
+Do not rebuild the server JAR unless the user asks. Deliver only this task’s
+changed runtime files (`IndexedDamageNumberCompat.dll` if the allowlist
+changed). Java-only targeting changes have nothing to copy until a JAR is
+requested.
+
+### 5. In-game checks this file cannot prove
+
+Launch, login, DLL `LOAD`/`OK` in `IndexedDamageNumberCompat.log`, first
+tick and later ticks, 120ms line cadence, Brandish-identical style,
+critical sign bit, up to `mobCount` monsters in the skill box (both
+facings), other-player view, map change, repeat cast. HP drops once per
+replay target per tick.
+
+## Fullscreen MCV ultimates (required template)
+
+Use this section when the skill is a **fullscreen MCV 大招**: a full-screen
+video layer (`showEffect` / `Data/Video/*.mcv`). Keep the video. Do **not**
+replace the skill’s current hit stages with a 500ms full-map pulse. Do **not**
+use F6 `INDEXED`/`TOTAL` for caster numbers, including Dawn Warrior video ults
+when they are converted.
+
+The point of these skills is: during the MCV duration, keep attacking on the
+**current stage times** (`multiAttackInfo` / existing Java arrays) with the
+**current WZ `attackCount`**, and show **native player/Brandish numbers**
+(`0x0066B05E`) via hidden-ID `0xBA` replay.
+
+Proven analogue: 圣剑降临 `1121023` / hidden replay `1121024`.
+
+| Skill | Cast ID | Hidden replay IDs | MCV duration |
+| --- | --- | --- | --- |
+| 圣剑降临 | `1121023` | `1121024` (`0x00111B00`) | 7020ms |
+| 圣域展开 | `1221020` | `1221021` / `1221022` | 5340ms |
+| 圣狮之主 | `1221030` | `1221031` (`0x0012A1A7`) | 2820ms |
+| 灭世永恒之枪 | `1321018` | `1321019` (`0x0014283B`) | 6180ms |
+| 黑暗契约 | `1321025` | `1321026` (`0x00142842`) | 2460ms |
+
+Do not allowlist the visible cast ID.
+
+### Steps (do in order)
+
+1. Keep `showEffect` for the MCV. Do not guess a new hit clock.
+2. Keep the existing slash/finish (and field, if already shipped) time arrays.
+   Opening stage `applyOriginalFirst=true`; later hidden stages `false`.
+3. Replay packets use the **hidden** ID so `IndexedDamageNumberCompat` can
+   show local `0xBA` numbers. Opening-stage `attackCount`/`mobCount` come from
+   the **visible** WZ node; finish-stage counts come from that hidden node.
+4. `scheduleTrackingCloseAttacks(..., NONE)`. Empty client templates may use
+   the visible-skill fallback. Collect with the visible skill box, not a
+   rewritten 500ms full-map pulse.
+5. Settle HP once per monster per tick (`aggroMonsterDamage` +
+   `damageMonster`).
+6. Add only the hidden replay IDs to `HookLocalCloseRangeLookup`. Keep the two
+   local action skips. Rebuild `IndexedDamageNumberCompat.dll` twice.
+7. Contract tests lock: TMS stage arrays present, WZ `attackCount` unchanged
+   from the skill node, no `INDEXED`/`TOTAL`/`damageMonster(` in the cast
+   `handlePacket` block, and the hidden hex IDs in the DLL source.
+
+### Do not
+
+- Replace stage times with `intervalTimes(500, 500, duration)`.
+- Collapse WZ `attackCount` to 1 to work around packet occupancy.
+- Mix a 500ms full-map pulse with leftover TMS stages.
+- Use the visible cast ID as the `0xBA` replay skill.
+- Use F6 to imitate Brandish numbers.
+
+## Forbidden (already failed)
+
+- `TOTAL` F6 aggregate numbers.
+- `INDEXED` F6 → `0x006691D3` to imitate Brandish.
+- Calling `0x009803AB` from the DLL.
+- Substituting `CUserLocal` for **every** failed `0xBA` lookup (not
+  skill-filtered).
+- Allowlisting a skill without the two local action skips.
+- Treating “packet parses” or “other players see hits” as proof that the
+  caster sees `0x0066B05E` numbers.
+
+## Legacy: F6 `INDEXED` (do not use for new Brandish-style skills)
+
+Already shipped: 宇宙之花 `11121012`, 银河星爆 `11121005` (60ms override),
+全蚀之力 `11121006`, 灵魂蚀日 `11121008`.
+
+Those skills keep `LocalDamageNumberMode.INDEXED` and
+`showIndexedDamageNumbers` **until** they are converted as fullscreen MCV
+ultimates. A converted video ult must drop `INDEXED` and follow the MCV
+template above (current stages + WZ `attackCount` + hidden `0xBA` numbers).
+
+- `PacketCreator.indexedDamageMonsterNumber(oid, damage, hitIndex)`
+- direction `0x80..0x8E` → native index `0..14`; other values stay index `0`
+- helper sends index `0` immediately, then `n * 120ms` (or the verified
+  skill override)
+- F6 hook at `0x0066C6CB` (30-byte baseline) still calls `0x006691D3` only
+- empty client damage template: skip the tick; no `500000` fallback
+
+`TOTAL` remains only for older aggregate-number skills that already used it.
+
+## Implementation files
+
+- DLL: `tool/client-debug/indexed-damage-number-compat/IndexedDamageNumberCompat.cpp`
+- Build: `tool/client-debug/indexed-damage-number-compat/build.sh`
+- Output: `clien/IndexedDamageNumberCompat.dll`
+- Server schedule / collect: `CloseRangeDamageHandler`
+- Box test: `AbstractDealDamageHandler.isWithinAttackBox`
+- F6 helper: `AbstractDealDamageHandler.showIndexedDamageNumbers`
+- Record: `docs/patches/indexed-replay-damage-numbers.md`

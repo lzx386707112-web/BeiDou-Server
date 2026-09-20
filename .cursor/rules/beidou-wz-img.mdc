@@ -9,6 +9,10 @@ For any task that diagnoses, reads, changes, migrates, verifies, or delivers cli
 
 1. Read and follow `.cursor/skills/beidou-wz-img/SKILL.md` (same contract as `.codex/skills/beidou-wz-img/SKILL.md`).
 2. Read `references/wzskill.md` and `references/verification.md` before editing.
+   Server-scheduled replay damage numbers that must match native player/Brandish
+   style also require `references/indexed-replay-damage-numbers.md`. Fullscreen
+   MCV ultimates keep current stage count and WZ `attackCount` during the video,
+   with native `0xBA` numbers. Do not convert them to 500ms full-map pulses.
 3. Map/mob migrations must follow `references/map-npc-mob.md` for numeric
    `obj`/`back` gaps, `connect` ropes, and `ball` projectile fields.
 4. `gms-server/wz-zh-CN` may contain only Etc.wz, Quest.wz, and String.wz.

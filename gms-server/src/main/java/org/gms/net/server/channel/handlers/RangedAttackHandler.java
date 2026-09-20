@@ -477,7 +477,8 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
             List<Integer> damageTemplate,
             StatEffect replayEffect,
             Point fixedAttackOrigin,
-            int attackTimeMs
+            int attackTimeMs,
+            boolean useIndexedDamageNumbers
     ) {
         if (!canContinueTrackingAttack(chr, expectedMap)) {
             return;
@@ -532,6 +533,9 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
         );
         chr.sendPacket(packet);
         expectedMap.broadcastMessage(chr, packet, false, true);
+        if (useIndexedDamageNumbers) {
+            showIndexedDamageNumbers(chr, expectedMap, damage);
+        }
         for (Map.Entry<Integer, List<Integer>> entry : damage.entrySet()) {
             Monster monster = expectedMap.getMonsterByOid(entry.getKey());
             if (monster == null || !monster.isAlive()) {
@@ -541,7 +545,9 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
             for (Integer hit : entry.getValue()) {
                 total = (int) Math.min(Integer.MAX_VALUE, (long) total + decodeRepeatedDamage(hit));
             }
-            chr.sendPacket(PacketCreator.damageMonster(monster.getObjectId(), total));
+            if (!useIndexedDamageNumbers) {
+                chr.sendPacket(PacketCreator.damageMonster(monster.getObjectId(), total));
+            }
             monster.aggroMonsterDamage(chr, total);
             expectedMap.damageMonster(chr, monster, total);
         }
@@ -554,6 +560,21 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
             int replaySkillId,
             int replayAttackCount,
             Map<Integer, List<Integer>> damage
+    ) {
+        return replayTargetedAttack(
+                attack, chr, expectedMap, replaySkillId, replayAttackCount,
+                damage, false
+        );
+    }
+
+    private static boolean replayTargetedAttack(
+            AttackInfo attack,
+            Character chr,
+            MapleMap expectedMap,
+            int replaySkillId,
+            int replayAttackCount,
+            Map<Integer, List<Integer>> damage,
+            boolean useIndexedDamageNumbers
     ) {
         if (!canContinueTrackingAttack(chr, expectedMap) || damage.isEmpty()) {
             return false;
@@ -573,6 +594,9 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
         );
         chr.sendPacket(packet);
         expectedMap.broadcastMessage(chr, packet, false, true);
+        if (useIndexedDamageNumbers) {
+            showIndexedDamageNumbers(chr, expectedMap, damage);
+        }
         boolean damaged = false;
         for (Map.Entry<Integer, List<Integer>> entry : damage.entrySet()) {
             Monster monster = expectedMap.getMonsterByOid(entry.getKey());
@@ -583,7 +607,9 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
             for (Integer hit : entry.getValue()) {
                 total = (int) Math.min(Integer.MAX_VALUE, (long) total + decodeRepeatedDamage(hit));
             }
-            chr.sendPacket(PacketCreator.damageMonster(monster.getObjectId(), total));
+            if (!useIndexedDamageNumbers) {
+                chr.sendPacket(PacketCreator.damageMonster(monster.getObjectId(), total));
+            }
             monster.aggroMonsterDamage(chr, total);
             expectedMap.damageMonster(chr, monster, total);
             damaged = true;
@@ -765,6 +791,16 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
             int[] attackTimesMs,
             int replaySkillId
     ) {
+        scheduleTrackingAttacks(attack, chr, attackTimesMs, replaySkillId, false);
+    }
+
+    private static void scheduleTrackingAttacks(
+            AttackInfo attack,
+            Character chr,
+            int[] attackTimesMs,
+            int replaySkillId,
+            boolean useIndexedDamageNumbers
+    ) {
         MapleMap expectedMap = chr.getMap();
         Skill originalSkill = SkillFactory.getSkill(attack.skill);
         StatEffect originalEffect = originalSkill.getEffect(chr.getSkillLevel(originalSkill));
@@ -807,7 +843,8 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
                     damageTemplate,
                     replayEffect,
                     fixedAttackOrigin,
-                    attackTimeMs
+                    attackTimeMs,
+                    useIndexedDamageNumbers
             ), attackTimeMs);
         }
     }
@@ -1095,7 +1132,8 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
                     expectedMap,
                     replaySkillId,
                     replayAttackCount,
-                    damage
+                    damage,
+                    true
             )) {
                 return;
             }
@@ -1235,22 +1273,27 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
                 break;
             case NightWalker.DOMINION_VI:
                 chr.sendPacket(PacketCreator.showEffect(DOMINION_VIDEO_LAYER));
-                scheduleTrackingAttacks(attack, chr, DOMINION_VI_ATTACK_TIMES_MS,
-                        NightWalker.DOMINION_VI_TICK);
+                scheduleTrackingAttacks(attack, chr,
+                        DOMINION_VI_ATTACK_TIMES_MS,
+                        NightWalker.DOMINION_VI_TICK, true);
                 break;
             case NightWalker.SILENT_NIGHT:
                 chr.sendPacket(PacketCreator.showEffect(SILENT_NIGHT_VIDEO_LAYER));
-                scheduleTrackingAttacks(attack, chr, SILENT_NIGHT_OPENING_TIMES_MS,
-                        NightWalker.SILENT_NIGHT_DART);
-                scheduleTrackingAttacks(attack, chr, SILENT_NIGHT_DART_TIMES_MS,
-                        NightWalker.SILENT_NIGHT_PROJECTILE);
+                scheduleTrackingAttacks(attack, chr,
+                        SILENT_NIGHT_OPENING_TIMES_MS,
+                        NightWalker.SILENT_NIGHT_DART, true);
+                scheduleTrackingAttacks(attack, chr,
+                        SILENT_NIGHT_DART_TIMES_MS,
+                        NightWalker.SILENT_NIGHT_PROJECTILE, true);
                 break;
             case NightWalker.STYGIAN_COMMAND:
                 chr.sendPacket(PacketCreator.showEffect(STYGIAN_COMMAND_VIDEO_LAYER));
-                scheduleTrackingAttacks(attack, chr, STYGIAN_COMMAND_TIMES_MS,
-                        NightWalker.STYGIAN_COMMAND_MAIN);
-                scheduleTrackingAttacks(attack, chr, STYGIAN_COMMAND_FINISH_TIMES_MS,
-                        NightWalker.STYGIAN_COMMAND_FINISH);
+                scheduleTrackingAttacks(attack, chr,
+                        STYGIAN_COMMAND_TIMES_MS,
+                        NightWalker.STYGIAN_COMMAND_MAIN, true);
+                scheduleTrackingAttacks(attack, chr,
+                        STYGIAN_COMMAND_FINISH_TIMES_MS,
+                        NightWalker.STYGIAN_COMMAND_FINISH, true);
                 break;
             default:
                 break;
@@ -1268,6 +1311,7 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
                 break;
             case WindArcher.MONSOON_VI:
                 chr.sendPacket(PacketCreator.showEffect(MONSOON_VIDEO_LAYER));
+                showIndexedDamageNumbers(chr, chr.getMap(), attack.allDamage);
                 break;
             case WindArcher.ANEMOI:
                 scheduleTrackingAttacks(attack, chr, ANEMOI_TIMES_MS,
@@ -1275,16 +1319,19 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
                 break;
             case WindArcher.MISTRAL_SPRING:
                 chr.sendPacket(PacketCreator.showEffect(MISTRAL_SPRING_VIDEO_LAYER));
-                scheduleTrackingAttacks(attack, chr, MISTRAL_WIND_BLADE_TIMES_MS,
-                        WindArcher.MISTRAL_WIND_BLADE);
+                scheduleTrackingAttacks(attack, chr,
+                        MISTRAL_WIND_BLADE_TIMES_MS,
+                        WindArcher.MISTRAL_WIND_BLADE, true);
                 scheduleMistralSpirits(attack, chr);
                 break;
             case WindArcher.ELEMENTAL_TEMPEST:
                 chr.sendPacket(PacketCreator.showEffect(ELEMENTAL_TEMPEST_VIDEO_LAYER));
-                scheduleTrackingAttacks(attack, chr, ELEMENTAL_TEMPEST_WAVE_TIMES_MS,
-                        WindArcher.ELEMENTAL_TEMPEST_WAVE);
-                scheduleTrackingAttacks(attack, chr, ELEMENTAL_TEMPEST_ARROW_TIMES_MS,
-                        WindArcher.ELEMENTAL_TEMPEST_ARROW_RAIN);
+                scheduleTrackingAttacks(attack, chr,
+                        ELEMENTAL_TEMPEST_WAVE_TIMES_MS,
+                        WindArcher.ELEMENTAL_TEMPEST_WAVE, true);
+                scheduleTrackingAttacks(attack, chr,
+                        ELEMENTAL_TEMPEST_ARROW_TIMES_MS,
+                        WindArcher.ELEMENTAL_TEMPEST_ARROW_RAIN, true);
                 break;
             default:
                 break;
@@ -1491,6 +1538,9 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
                 String explorerVideoLayer = ExplorerOtherSkillCompat.videoLayer(attack.skill);
                 if (explorerVideoLayer != null) {
                     chr.sendPacket(PacketCreator.showEffect(explorerVideoLayer));
+                    if (ExplorerOtherSkillCompat.multiAttacks(attack.skill) == null) {
+                        showIndexedDamageNumbers(chr, chr.getMap(), attack.allDamage);
+                    }
                 }
 
                 if (attack.skill != 0) {
@@ -1536,7 +1586,10 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
                 if (explorerReplays != null) {
                     for (ExplorerOtherSkillCompat.Replay replay : explorerReplays) {
                         scheduleTrackingAttacks(
-                                attack, chr, replay.timesMs(), replay.skillId()
+                                attack, chr,
+                                replay.timesMs(),
+                                replay.skillId(),
+                                explorerVideoLayer != null
                         );
                     }
                 }

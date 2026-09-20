@@ -1127,7 +1127,7 @@ public abstract class AbstractDealDamageHandler extends AbstractPacketHandler {
      * 优先用技能自身的范围框判断本次攻击是否合法命中怪物。
      * 命中技能框时，跳过后续基于中心点距离的 DISTANCE_HACK 检测。
      */
-    private static boolean isWithinAttackBox(Character player, Monster monster, StatEffect attackEffect, AttackInfo attack, Point alternatePlayerPos, Point secondaryAlternatePlayerPos) {
+    protected static boolean isWithinAttackBox(Character player, Monster monster, StatEffect attackEffect, AttackInfo attack, Point alternatePlayerPos, Point secondaryAlternatePlayerPos) {
         Rectangle monsterBounds = getMonsterBounds(monster);
         Point monsterPos = monster.getPosition();
         boolean directionFacingLeft = isFacingLeftByDirection(attack.direction);

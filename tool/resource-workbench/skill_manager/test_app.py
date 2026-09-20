@@ -92,6 +92,7 @@ class TemporarySkillWorkspace:
         ))
         real = make_icon("icon", None, 4, (255, 0, 0, 255))
         (self.canvas / "112.img").write_bytes(encode_img(skill_book(("1120010", 50), icons={"1120010": real}), "BMS"))
+        (self.canvas / "999.img").write_bytes(encode_img(skill_book(("9990001", 1)), "BMS"))
         (self.ms_cache / "Skill_40001.img").write_bytes(encode_img(skill_book(("400011088", 635)), "BMS"))
         (self.tms_string / "Skill.img").write_bytes(encode_img(string_img(("1120010", "鬥氣爆發"), ("1121008", "狂暴攻擊")), "BMS"))
         (self.server / "112.img.xml").write_text(
@@ -124,7 +125,10 @@ class TemporarySkillWorkspace:
             "BACKUP_ROOT": self.root / "backups",
         }
         self.patches = [mock.patch.object(skill_module, name, value) for name, value in replacements.items()]
-        self.patches.append(mock.patch.object(skill_module, "ms_skill_index", return_value={"40001": self.packs / "Skill_00005.ms"}))
+        self.patches.append(mock.patch.object(skill_module, "ms_skill_index", return_value={
+            "40001": self.packs / "Skill_00005.ms",
+            "6100": self.packs / "Skill_00005.ms",
+        }))
         self.patches.append(mock.patch.object(
             skill_module, "extract_ms_skill",
             side_effect=lambda book: (self.ms_cache / f"Skill_{book}.img", self.packs / "Skill_00005.ms")
@@ -167,12 +171,24 @@ class SkillManagerTests(unittest.TestCase):
             tms_only = next(row for row in skills["items"] if row["id"] == "1120010")
             self.assertEqual(tms_only["name"], "鬥氣爆發")
             self.assertEqual(tms_only["status"], "missing")
-            self.assertEqual(tms_only["iconSource"], "tms")
+            self.assertEqual(tms_only["iconSource"], "ms")
             icon = client.get("/api/skill/112/1120010/icon?source=ms")
             self.assertEqual(icon.status_code, 200, icon.get_data()[:80])
             self.assertEqual(Image.open(io.BytesIO(icon.get_data())).size, (4, 4))
             self.assertEqual(next(row for row in skills["items"] if row["id"] == "1121008")["status"], "both")
             self.assertEqual(next(row for row in skills["items"] if row["id"] == "1121010")["status"], "local")
+            local_only = client.get("/api/skills?job=112&side=local").get_json()
+            self.assertEqual([row["id"] for row in local_only["items"]], ["1121008", "1121010"])
+            tms_only = client.get("/api/skills?job=112&side=tms").get_json()
+            self.assertEqual([row["id"] for row in tms_only["items"]], ["1120010", "1121008"])
+            local_jobs = {row["id"] for row in client.get("/api/jobs?side=local").get_json()["jobs"]}
+            tms_jobs = {row["id"] for row in client.get("/api/jobs?side=tms").get_json()["jobs"]}
+            self.assertIn("112", local_jobs)
+            self.assertNotIn("40001", local_jobs)
+            self.assertIn("40001", tms_jobs)
+            self.assertIn("6100", tms_jobs)
+            self.assertNotIn("999", tms_jobs)
+            self.assertEqual(next(row["group"] for row in client.get("/api/jobs?side=tms").get_json()["jobs"] if row["id"] == "6100"), "超新星")
             ms_detail = client.get("/api/skill/40001/400011088").get_json()
             self.assertEqual(ms_detail["skill"]["name"], "灵魂蚀日")
             self.assertIsNone(ms_detail["local"])
@@ -233,6 +249,17 @@ class SkillManagerTests(unittest.TestCase):
             self.assertIn('<int name="damage" value="280"/>', xml)
             sibling = skill_module._load_image(client_path, "GMS").root.get("skill/1121010/level/1/damage")
             self.assertEqual(int(sibling.value), 11)
+            cross = client.post("/api/skill/node", json={
+                "book": "112", "id": "1121010", "operation": "copyFromTms",
+                "sourceBook": "112", "sourceId": "1121008", "source": "tms",
+                "paths": ["cooltime", "level/1/damage"], "recursive": False,
+            })
+            self.assertEqual(cross.status_code, 200, cross.get_json())
+            copied_nodes = {row["path"]: row["value"] for row in cross.get_json()["item"]["nodes"]}
+            self.assertEqual(copied_nodes["cooltime"], 5000)
+            self.assertEqual(copied_nodes["level/1/damage"], 280)
+            original = skill_module._load_image(client_path, "GMS").root.get("skill/1121008/level/1/damage")
+            self.assertEqual(int(original.value), 280)
 
 
 if __name__ == "__main__":

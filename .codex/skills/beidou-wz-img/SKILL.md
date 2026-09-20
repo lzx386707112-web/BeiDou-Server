@@ -24,7 +24,7 @@ Then read only the references matching the requested surface:
   maps or mobs, that file’s gap / `connect` rope / ballistic sections are
   required, not optional.
 - Damien (`8880110`/`8880111`) combat, `DamienBossCompat`, skill2 orbs:
-  `.codex/skills/beidou-damien-boss/SKILL.md` (or `.cursor/skills/beidou-damien-boss/SKILL.md`).
+  `.cursor/skills/beidou-damien-boss/SKILL.md` (or `.codex/skills/beidou-damien-boss/SKILL.md`).
 - Items, icons, Etc/String records, quest drops, or inventory-facing resources:
   [references/item-string.md](references/item-string.md).
 
@@ -33,9 +33,12 @@ skill-contract and runtime-hook sections in addition to the shared workflow.
 
 For a server-scheduled multi-hit replay that needs caster-local damage numbers,
 read [references/indexed-replay-damage-numbers.md](references/indexed-replay-damage-numbers.md)
-before editing. It defines the evidence gate, reserved packet markers, native
-`120ms * hitIndex` cadence, display-vs-damage separation, and the reusable
-`NONE`/`TOTAL`/`INDEXED` integration pattern.
+before editing. New skills that must match native player/Brandish numbers
+(`0x0066B05E`) follow that file’s numbered steps: `0xBA` + skill-id allowlist,
+`LocalDamageNumberMode.NONE`, no F6. **Fullscreen MCV ultimates** use the same
+numbers path and keep the skill’s current stage count and WZ `attackCount`
+across the video duration. Do not replace that timeline with 500ms full-map
+pulses. Do not copy the legacy F6 `INDEXED`/`TOTAL` path for that look.
 
 ## Non-negotiable invariants
 

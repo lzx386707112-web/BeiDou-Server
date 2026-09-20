@@ -8,10 +8,14 @@ URL="http://${HOST}:${PORT}"
 VENV_BIN="$ROOT/tool/resource-workbench/envs/wz-python/bin/python"
 
 if lsof -nP -iTCP:"$PORT" -sTCP:LISTEN >/dev/null 2>&1; then
-  echo "端口 ${PORT} 已被占用，可能资源工作台已经启动。"
-  echo "访问: ${URL}"
-  lsof -nP -iTCP:"$PORT" -sTCP:LISTEN
-  exit 0
+  echo "端口 ${PORT} 已被占用，结束旧进程后重新启动以加载最新代码。"
+  lsof -nP -iTCP:"$PORT" -sTCP:LISTEN -t | xargs kill
+  sleep 1
+  if lsof -nP -iTCP:"$PORT" -sTCP:LISTEN >/dev/null 2>&1; then
+    echo "无法释放端口 ${PORT}，请手动结束后再试。"
+    lsof -nP -iTCP:"$PORT" -sTCP:LISTEN
+    exit 1
+  fi
 fi
 
 echo "启动 BeiDou 资源工作台..."

@@ -467,6 +467,7 @@ public final class MagicDamageHandler extends AbstractDealDamageHandler {
             List<Integer> damageTemplate,
             int replaySkillId,
             int replayAttackCount,
+            boolean useIndexedDamageNumbers,
             boolean applyDamage
     ) {
         if (!canContinueAnimatedAttack(chr, expectedMap)) {
@@ -482,7 +483,11 @@ public final class MagicDamageHandler extends AbstractDealDamageHandler {
                 attack, chr, expectedMap, damage, replaySkillId, replayAttackCount
         );
         if (applyDamage) {
-            showDamageNumbers(chr, expectedMap, damage);
+            if (useIndexedDamageNumbers) {
+                showIndexedDamageNumbers(chr, expectedMap, damage);
+            } else {
+                showDamageNumbers(chr, expectedMap, damage);
+            }
             applyAnimatedDamage(chr, expectedMap, damage);
         }
     }
@@ -495,7 +500,26 @@ public final class MagicDamageHandler extends AbstractDealDamageHandler {
             boolean applyInitialAttack
     ) {
         scheduleAnimatedAttacks(
-                attack, chr, attackTimesMs, replaySkillId, applyInitialAttack, null
+                attack, chr, attackTimesMs, replaySkillId, applyInitialAttack, null, false
+        );
+    }
+
+    private void scheduleAnimatedAttacks(
+            AttackInfo attack,
+            Character chr,
+            int[] attackTimesMs,
+            int replaySkillId,
+            boolean applyInitialAttack,
+            boolean useIndexedDamageNumbers
+    ) {
+        scheduleAnimatedAttacks(
+                attack,
+                chr,
+                attackTimesMs,
+                replaySkillId,
+                applyInitialAttack,
+                null,
+                useIndexedDamageNumbers
         );
     }
 
@@ -506,6 +530,21 @@ public final class MagicDamageHandler extends AbstractDealDamageHandler {
             int replaySkillId,
             boolean applyInitialAttack,
             Rectangle fixedBounds
+    ) {
+        scheduleAnimatedAttacks(
+                attack, chr, attackTimesMs, replaySkillId, applyInitialAttack,
+                fixedBounds, false
+        );
+    }
+
+    private void scheduleAnimatedAttacks(
+            AttackInfo attack,
+            Character chr,
+            int[] attackTimesMs,
+            int replaySkillId,
+            boolean applyInitialAttack,
+            Rectangle fixedBounds,
+            boolean useIndexedDamageNumbers
     ) {
         MapleMap expectedMap = chr.getMap();
         Skill originalSkill = SkillFactory.getSkill(attack.skill);
@@ -568,6 +607,7 @@ public final class MagicDamageHandler extends AbstractDealDamageHandler {
                                 damageTemplate,
                                 replaySkillId,
                                 replayAttackCount,
+                                useIndexedDamageNumbers,
                                 true
                         );
                     } else {
@@ -581,6 +621,7 @@ public final class MagicDamageHandler extends AbstractDealDamageHandler {
                                     damageTemplate,
                                     replaySkillId,
                                     replayAttackCount,
+                                    useIndexedDamageNumbers,
                                     false
                             );
                         } else {
@@ -592,7 +633,11 @@ public final class MagicDamageHandler extends AbstractDealDamageHandler {
                                     replayAttackCount
                             ));
                         }
-                        showDamageNumbers(chr, expectedMap, attack.allDamage);
+                        if (useIndexedDamageNumbers) {
+                            showIndexedDamageNumbers(chr, expectedMap, attack.allDamage);
+                        } else {
+                            showDamageNumbers(chr, expectedMap, attack.allDamage);
+                        }
                         applyAttack(attack, chr, originalEffect.getAttackCount());
                     }
                 } else {
@@ -605,6 +650,7 @@ public final class MagicDamageHandler extends AbstractDealDamageHandler {
                             damageTemplate,
                             replaySkillId,
                             replayAttackCount,
+                            useIndexedDamageNumbers,
                             true
                     );
                 }
@@ -654,6 +700,9 @@ public final class MagicDamageHandler extends AbstractDealDamageHandler {
         String explorerVideoLayer = ExplorerOtherSkillCompat.videoLayer(attack.skill);
         if (explorerVideoLayer != null) {
             chr.sendPacket(PacketCreator.showEffect(explorerVideoLayer));
+            if (ExplorerOtherSkillCompat.multiAttacks(attack.skill) == null) {
+                showIndexedDamageNumbers(chr, chr.getMap(), attack.allDamage);
+            }
         }
         if (effect_.getCooldown() > 0) {
             if (chr.skillIsCooling(attack.skill)) {
@@ -679,7 +728,10 @@ public final class MagicDamageHandler extends AbstractDealDamageHandler {
             for (int index = 0; index < explorerReplays.length; index++) {
                 ExplorerOtherSkillCompat.Replay replay = explorerReplays[index];
                 scheduleAnimatedAttacks(
-                        attack, chr, replay.timesMs(), replay.skillId(), index == 0
+                        attack, chr,
+                        replay.timesMs(),
+                        replay.skillId(), index == 0,
+                        explorerVideoLayer != null
                 );
             }
             if (attack.skill == FPArchMage.INFERNAL_ERUPTION_VI
@@ -714,21 +766,21 @@ public final class MagicDamageHandler extends AbstractDealDamageHandler {
             chr.sendPacket(PacketCreator.showEffect(ETERNAL_PHOENIX_VIDEO_LAYER));
             scheduleAnimatedAttacks(
                     attack, chr, ETERNAL_PHOENIX_MAIN_TIMES_MS,
-                    BlazeWizard.ETERNAL_PHOENIX_BURST, true
+                    BlazeWizard.ETERNAL_PHOENIX_BURST, true, true
             );
             scheduleAnimatedAttacks(
                     attack, chr, ETERNAL_PHOENIX_CYCLE_TIMES_MS,
-                    BlazeWizard.ETERNAL_PHOENIX_CYCLE, false
+                    BlazeWizard.ETERNAL_PHOENIX_CYCLE, false, true
             );
         } else if (attack.skill == BlazeWizard.FLAME_CONCERTO) {
             chr.sendPacket(PacketCreator.showEffect(FLAME_CONCERTO_VIDEO_LAYER));
             scheduleAnimatedAttacks(
                     attack, chr, FLAME_CONCERTO_MAIN_TIMES_MS,
-                    BlazeWizard.FLAME_CONCERTO_MAIN, true
+                    BlazeWizard.FLAME_CONCERTO_MAIN, true, true
             );
             scheduleAnimatedAttacks(
                     attack, chr, FLAME_CONCERTO_FINISH_TIMES_MS,
-                    BlazeWizard.FLAME_CONCERTO_FINISH, false
+                    BlazeWizard.FLAME_CONCERTO_FINISH, false, true
             );
         } else if (attack.skill == ILArchMage.SPIRIT_OF_SNOW) {
             Skill tickSkill = SkillFactory.getSkill(ILArchMage.SPIRIT_OF_SNOW_TICK);

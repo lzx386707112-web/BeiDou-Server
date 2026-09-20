@@ -171,6 +171,13 @@ Do not repeat a previously failed hook or direct visual-layer creation approach
 without new evidence that invalidates the earlier result. Keep probes versioned
 and remove obsolete experimental hooks and capture state during rollback.
 
+Caster-local replay damage numbers that must match native player/Brandish style
+follow `.cursor/skills/beidou-wz-img/references/indexed-replay-damage-numbers.md`
+(same file under `.codex/skills/beidou-wz-img/references/`). Do not use F6
+`TOTAL`/`INDEXED` for that look. Fullscreen MCV ultimates keep the skill’s
+current stage times and WZ `attackCount` for the video duration; replay packets
+stay `0xBA` so numbers use `0x0066B05E`.
+
 ## Skill Contract Checklist
 
 For every added, modified, or removed skill, audit the full contract:
@@ -186,8 +193,9 @@ For every added, modified, or removed skill, audit the full contract:
 - hidden replay-stage IDs and their visibility/grant behavior.
 
 Verify action name, damage, hit count, target count, range, MP cost, cooldown,
-duration, element, summon movement type, attack interval, hit timing, and hit
-effect. Damage must not be applied before the corresponding visual impact unless
+duration, element, summon movement type, attack interval, hit timing, hit
+effect, and caster-local replay numbers when the skill is server-scheduled.
+Damage must not be applied before the corresponding visual impact unless
 the source behavior and old-client limitation are explicitly documented.
 
 Deleting a passive or active skill requires removing all grant, keymap, client,

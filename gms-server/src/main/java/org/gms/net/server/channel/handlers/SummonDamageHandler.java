@@ -33,7 +33,6 @@ import org.gms.client.status.MonsterStatusEffect;
 import org.gms.constants.skills.Bishop;
 import org.gms.constants.skills.Bowmaster;
 import org.gms.constants.skills.Beginner;
-import org.gms.constants.skills.Hero;
 import org.gms.constants.skills.Marksman;
 import org.gms.constants.skills.Outlaw;
 import org.gms.net.packet.InPacket;
@@ -113,8 +112,7 @@ public final class SummonDamageHandler extends AbstractDealDamageHandler {
         }
         player.getMap().broadcastMessage(player, PacketCreator.summonAttack(player.getId(), summon.getObjectId(), direction, allDamage), summon.getPosition());
 
-        if (summon.getSkill() == Hero.BURNING_SOUL_BLADE
-                || summon.getSkill() == Beginner.FRENZY_TOTEM) {
+        if (summon.getSkill() == Beginner.FRENZY_TOTEM) {
             return;
         }
 

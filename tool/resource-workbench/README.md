@@ -51,10 +51,9 @@ rtk tool/resource-workbench/start-resource-workbench.sh
 
 ## 技能管理
 
-- 按职业分组选择技能书（含五转 `4000x` 等现代书）。
-- 列出该职业本地与 TMS 技能，并标明仅本地、两边都有、仅 TMS。
-- TMS 对比优先读取 `Skill_*.ms` 中的技能树；像素不足时回退 `Skill/_Canvas`。
-- 可预览 `effect` / `hit` / `special` 等轨道，并查看每一帧图像。
+- 左侧只浏览本仓库技能书和节点树，右侧只浏览 TMS（IMG / MS / `_Canvas`）。
+- 点击本仓库节点会打开操作面板：可增删改当前节点，并另选任意 TMS 技能对照。
+- 对照后可预览 TMS 动画帧，勾选节点后增量复制到本仓库当前技能（支持跨技能、跨技能书）。
 - 本地节点增删改走增量 IMG / XML 写入，不重写整本技能书，也不改 `String/Skill.img`。
 
 五个模块沿用原有的二进制安全和 XML 局部写入逻辑，不使用全树重写器修改现有客户端 IMG。

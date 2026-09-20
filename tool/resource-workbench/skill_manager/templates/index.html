@@ -24,115 +24,101 @@
   {% endif %}
 
   <header class="module-header">
-    <div><h1>技能管理</h1><p>Job Skill / TMS Compare / MS Metadata / Frame Preview</p></div>
+    <div><h1>技能管理</h1><p>本仓库节点树 · TMS 对照复制 · 增量增删改</p></div>
     <div class="header-state"><span id="stateText">就绪</span></div>
   </header>
 
   <main class="workspace">
-    <aside class="browser-pane">
+    <section class="side-pane local-pane" data-side="local">
+      <div class="pane-head">
+        <div><h2>本仓库</h2><p id="localHint">选择技能后展开节点；点击节点打开操作面板</p></div>
+        <button id="addLocalRootBtn" type="button" disabled>＋ 技能根节点</button>
+      </div>
       <div class="filters">
-        <label>职业分组<select id="jobGroup"></select></label>
-        <label>职业<select id="job"></select></label>
-        <label>搜索<input id="search" type="search" placeholder="技能名称或 ID" autocomplete="off"></label>
+        <label>职业分组<select id="localJobGroup"></select></label>
+        <label>职业<select id="localJob"></select></label>
+        <label>搜索<input id="localSearch" type="search" placeholder="技能名称或 ID" autocomplete="off"></label>
       </div>
-      <div class="scope-tabs" role="group" aria-label="技能范围">
-        <button class="active" type="button" data-availability="all">全部</button>
-        <button type="button" data-availability="both">两边都有</button>
-        <button type="button" data-availability="missing">仅 TMS</button>
-        <button type="button" data-availability="local">仅本地</button>
+      <div class="summary"><strong id="localTotal">0</strong><span>个技能</span><small id="localSourceHint"></small></div>
+      <div id="localSkillList" class="item-list"></div>
+      <div class="tree-toolbar">
+        <input id="localNodeSearch" type="search" placeholder="筛选本仓库节点" autocomplete="off">
+        <button id="localCollapseBtn" type="button" title="全部折叠">−</button>
+        <button id="localExpandBtn" type="button" title="全部展开">+</button>
       </div>
-      <div class="summary"><strong id="total">0</strong><span>个技能</span><small id="sourceHint"></small></div>
-      <div id="skillList" class="item-list"></div>
-      <div id="listEmpty" class="empty">没有匹配的技能</div>
-    </aside>
+      <div id="localTree" class="tree" role="tree"></div>
+    </section>
 
-    <section class="detail-pane">
-      <div id="detailEmpty" class="detail-empty"><strong>选择职业和技能</strong><span>对比本地与 TMS（含 MS 元数据），预览特效帧，并增量编辑本地节点。</span></div>
-      <div id="detail" hidden>
-        <div class="detail-head">
-          <img id="skillIcon" alt="">
-          <div class="identity">
-            <div><code id="skillId"></code><span id="jobLabel"></span><span id="availability"></span></div>
-            <h2 id="skillName"></h2>
-            <p id="skillFile"></p>
-          </div>
-          <div class="detail-actions">
-            <button id="openPreviewBtn" class="primary" type="button">打开预览面板</button>
-            <button id="addLocalNodeBtn" type="button">＋ 添加本地节点</button>
-            <button id="reloadBtn" type="button">重新载入</button>
-          </div>
-        </div>
-        <div class="detail-scroll">
-          <div class="meta-bar"><div id="sourceBadges" class="source-badges"></div></div>
-          <section class="compare-workspace">
-            <aside class="tree-panel">
-              <div class="panel-head">
-                <div>
-                  <h3>节点树</h3>
-                  <p id="compareHint">本地 A ↔ TMS B</p>
-                </div>
-                <div class="panel-tools">
-                  <button id="collapseBtn" type="button" title="全部折叠">−</button>
-                  <button id="expandBtn" type="button" title="展开差异">+</button>
-                </div>
-              </div>
-              <div class="tree-filter">
-                <select id="compareSource" aria-label="TMS 来源"></select>
-                <input id="nodeSearch" type="search" placeholder="筛选节点或值" autocomplete="off">
-                <label class="toggle-label"><input id="diffOnly" type="checkbox" checked> 仅差异</label>
-              </div>
-              <div class="tree-guide">
-                <div class="tree-source-guide">
-                  <strong>合并节点树</strong>
-                  <span class="source-chip a"><b>A</b>本地</span>
-                  <span class="source-chip b"><b>B</b>TMS</span>
-                </div>
-                <div class="legend">
-                  <span><i class="legend-dot changed"></i>修改</span>
-                  <span><i class="legend-dot local-only"></i>仅 A</span>
-                  <span><i class="legend-dot tms-only"></i>仅 B</span>
-                </div>
-              </div>
-              <div id="tree" class="tree" role="tree"></div>
-            </aside>
-            <aside class="inspector-panel">
-              <div class="panel-head">
-                <div>
-                  <h3>节点详情</h3>
-                  <p id="selectedPath">点选左侧节点查看对照</p>
-                </div>
-              </div>
-              <div id="inspector" class="inspector empty-state"></div>
-              <div id="editActions" class="edit-actions">
-                <button id="editNodeBtn" class="action-btn" type="button" disabled>修改本地</button>
-                <button id="addChildBtn" class="action-btn" type="button" disabled>添加子节点</button>
-                <button id="applyTmsBtn" class="action-btn tms" type="button" disabled>采用 TMS 值</button>
-                <button id="copyTmsBtn" class="action-btn tms" type="button" disabled>复制到本地</button>
-                <button id="fillChildrenBtn" class="action-btn tms" type="button" disabled>补齐子节点</button>
-                <button id="removeNodeBtn" class="action-btn danger" type="button" disabled>删除本地</button>
-              </div>
-            </aside>
-          </section>
-        </div>
+    <section class="side-pane tms-pane" data-side="tms">
+      <div class="pane-head">
+        <div><h2>TMS</h2><p id="tmsHint">独立浏览 TMS 技能书、节点和预览</p></div>
+        <select id="tmsSource" aria-label="TMS 来源"></select>
       </div>
+      <div class="filters">
+        <label>职业分组<select id="tmsJobGroup"></select></label>
+        <label>职业<select id="tmsJob"></select></label>
+        <label>搜索<input id="tmsSearch" type="search" placeholder="技能名称或 ID" autocomplete="off"></label>
+      </div>
+      <div class="summary"><strong id="tmsTotal">0</strong><span>个技能</span><small id="tmsSourceHint"></small></div>
+      <div id="tmsSkillList" class="item-list"></div>
+      <div class="preview-bar">
+        <select id="trackSelect"></select>
+        <button id="playBtn" class="primary" type="button">播放</button>
+        <canvas id="previewCanvas" width="220" height="72"></canvas>
+      </div>
+      <div class="tree-toolbar">
+        <input id="tmsNodeSearch" type="search" placeholder="筛选 TMS 节点" autocomplete="off">
+        <button id="tmsCollapseBtn" type="button" title="全部折叠">−</button>
+        <button id="tmsExpandBtn" type="button" title="全部展开">+</button>
+      </div>
+      <div id="tmsTree" class="tree" role="tree"></div>
     </section>
   </main>
 
-  <dialog id="previewDialog" class="preview-dialog">
+  <dialog id="opDialog" class="op-dialog">
     <div class="dialog-head">
       <div>
-        <strong>技能预览</strong>
-        <p id="previewHint">选择轨道后播放或查看每一帧</p>
+        <strong>节点操作</strong>
+        <p id="opLocalHint">对本仓库节点增删改，并挑选 TMS 节点复制进来</p>
       </div>
-      <button type="button" data-close="previewDialog">×</button>
+      <button type="button" data-close="opDialog">×</button>
     </div>
-    <div class="preview-toolbar">
-      <select id="trackSelect"></select>
-      <select id="previewSource"></select>
-      <button id="playBtn" class="primary" type="button">播放</button>
+    <div class="op-grid">
+      <section class="op-local">
+        <h3>本仓库节点</h3>
+        <p id="opLocalPath" class="mono"></p>
+        <dl id="opLocalMeta" class="meta-list"></dl>
+        <div id="opLocalCanvas" class="canvas-box" hidden></div>
+        <div class="op-actions">
+          <button id="opEditBtn" type="button">修改</button>
+          <button id="opAddBtn" type="button">添加子节点</button>
+          <button id="opRemoveBtn" class="danger" type="button">删除</button>
+        </div>
+      </section>
+      <section class="op-tms">
+        <h3>对比的 TMS 技能</h3>
+        <div class="op-tms-pick">
+          <label>职业<select id="opTmsJob"></select></label>
+          <label>搜索<input id="opTmsSearch" type="search" placeholder="筛选 TMS 技能" autocomplete="off"></label>
+        </div>
+        <div class="op-tms-pick-row">
+          <button id="opUseRightBtn" type="button">使用右侧当前技能</button>
+          <span id="opTmsSkillLabel">尚未选择</span>
+        </div>
+        <div id="opTmsSkillList" class="item-list compact"></div>
+        <div class="preview-bar compact">
+          <select id="opTrackSelect"></select>
+          <button id="opPlayBtn" type="button">播放</button>
+          <canvas id="opPreviewCanvas" width="240" height="80"></canvas>
+        </div>
+        <div class="tree-toolbar">
+          <input id="opTmsNodeSearch" type="search" placeholder="筛选可复制节点" autocomplete="off">
+          <label class="toggle-label"><input id="opSelectVisible" type="checkbox"> 勾选可见</label>
+          <button id="opCopyBtn" class="primary" type="button">复制勾选到本仓库</button>
+        </div>
+        <div id="opTmsTree" class="tree" role="tree"></div>
+      </section>
     </div>
-    <div class="preview-stage"><canvas id="previewCanvas" width="480" height="300"></canvas></div>
-    <div id="frameStrip" class="frame-strip"></div>
   </dialog>
   <dialog id="nodeDialog">
     <form id="nodeForm" method="dialog">

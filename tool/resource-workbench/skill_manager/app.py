@@ -58,6 +58,7 @@ ANIMATION_SKIP = {
     "elemAttr", "weapon", "subWeapon", "disable", "notRemoved", "timeLimited",
 }
 _WRITE_LOCK = threading.RLock()
+_MS_INDEX_LOCK = threading.Lock()
 
 JOB_NAMES = {
     0: "初心者", 100: "战士", 110: "剑客", 111: "勇士", 112: "英雄",
@@ -115,22 +116,66 @@ def _job_group(book: str) -> str:
     if not book.isdigit():
         return "其他"
     job_id = int(book)
-    if 40000 <= job_id <= 49999:
-        return "五六转"
+    if job_id >= 800000:
+        return "五转技能"
+    if 40000 <= job_id < 50000:
+        return "五转"
+    if 50000 <= job_id < 60000:
+        return "六转"
     if job_id < 1000:
         return "冒险家"
     if job_id < 2000:
         return "皇家骑士团"
-    if job_id < 2200:
+    if job_id in {2000} or 2100 <= job_id < 2200:
         return "战神"
-    if job_id < 3000:
+    if job_id in {2001} or 2200 <= job_id < 2300:
         return "龙神"
-    if job_id < 4000:
+    if job_id in {2002} or 2300 <= job_id < 2400:
         return "双弩精灵"
-    if job_id < 5000:
+    if job_id in {2003} or 2400 <= job_id < 2500:
         return "幻影"
-    if job_id < 6000:
+    if job_id in {2005} or 2500 <= job_id < 2600:
         return "隐月"
+    if job_id in {2004} or 2700 <= job_id < 2800:
+        return "夜光"
+    if job_id < 3000:
+        return "英雄职业"
+    if job_id in {3001} or 3100 <= job_id < 3200:
+        return "恶魔"
+    if 3200 <= job_id < 3300:
+        return "爆破手"
+    if 3300 <= job_id < 3400:
+        return "弩豹游侠"
+    if job_id in {3002} or 3500 <= job_id < 3700:
+        return "尖兵"
+    if job_id < 4000:
+        return "反抗者"
+    if job_id in {4001} or 4100 <= job_id < 4200:
+        return "剑豪"
+    if job_id in {4002} or 4200 <= job_id < 4300:
+        return "阴阳师"
+    if job_id < 5000:
+        return "晓之阵"
+    if job_id < 6000:
+        return "米哈逸"
+    if job_id in {6001} or 6500 <= job_id < 6600:
+        return "天使破坏者"
+    if job_id in {6003} or 6300 <= job_id < 6400:
+        return "凯殷"
+    if job_id < 7000:
+        return "超新星"
+    if 10000 <= job_id < 11000:
+        return "神之子"
+    if 14000 <= job_id < 15000:
+        return "超能力者"
+    if 15000 <= job_id < 16000:
+        return "阿戴尔 / 伊利恩 / 亚克"
+    if 16000 <= job_id < 17000:
+        return "阿尼玛"
+    if 17000 <= job_id < 18000:
+        return "墨玄 / 琳恩"
+    if 12000 <= job_id < 14000:
+        return "活动职业"
     return "其他"
 
 
@@ -351,7 +396,8 @@ def ms_pack_signature() -> tuple[tuple[str, int, int], ...]:
 
 
 def ms_skill_index() -> dict[str, Path]:
-    return _ms_skill_index_cached(ms_pack_signature())
+    with _MS_INDEX_LOCK:
+        return _ms_skill_index_cached(ms_pack_signature())
 
 
 def _ms_cache_books() -> dict[str, Path]:
@@ -455,15 +501,29 @@ def _source_paths(book: str) -> dict[str, dict[str, Any]]:
     }
 
 
-def _books() -> set[str]:
-    names: set[str] = set()
-    for base in (CLIENT_SKILL, TMS_DATA / "Skill"):
-        if not base.is_dir():
-            continue
-        for path in base.glob("*.img"):
-            names.add(path.stem)
+def _img_stems(folder: Path) -> set[str]:
+    if not folder.is_dir():
+        return set()
+    return {path.stem for path in folder.glob("*.img")}
+
+
+def _local_books() -> set[str]:
+    return _img_stems(CLIENT_SKILL)
+
+
+def _tms_books() -> set[str]:
+    names = _img_stems(TMS_DATA / "Skill")
     names.update(_ms_cache_books())
+    names.update(ms_skill_index())
     return names
+
+
+def _books(side: str = "all") -> set[str]:
+    if side == "local":
+        return _local_books()
+    if side == "tms":
+        return _tms_books()
+    return _local_books() | _tms_books()
 
 
 def _skill_ids_from_image(path: Path, region: str | None = None) -> list[str]:
@@ -724,12 +784,28 @@ def _copy_values(node) -> dict[str, Any]:
     return {} if value is None else {"value": value}
 
 
-def _plan_copy_from_tms(local_root, tms_root, relative: tuple[str, ...], recursive: bool) -> list[dict[str, Any]]:
-    if not relative:
-        raise ValueError("不能把整个技能根节点一次性复制进来")
-    target = tms_root.get("/".join(relative))
-    if target is None:
-        raise KeyError("TMS 没有这个节点")
+def _selected_relatives(paths: list[str] | tuple[str, ...]) -> list[tuple[str, ...]]:
+    relatives: list[tuple[str, ...]] = []
+    for raw in paths:
+        relative = tuple(part for part in str(raw or "").split("/") if part)
+        if not relative:
+            raise ValueError("不能把整个技能根节点一次性复制进来")
+        relatives.append(relative)
+    relatives.sort(key=len)
+    kept: list[tuple[str, ...]] = []
+    for relative in relatives:
+        if any(relative[:len(previous)] == previous for previous in kept):
+            continue
+        kept.append(relative)
+    return kept
+
+
+def _plan_copy_from_tms(
+    local_root, tms_root, relatives: tuple[str, ...] | list[tuple[str, ...]], recursive: bool,
+) -> list[dict[str, Any]]:
+    selected = [relatives] if relatives and isinstance(relatives[0], str) else list(relatives)
+    if not selected:
+        raise ValueError("没有选择要复制的节点")
     planned = {""}
     planned.update(row["path"] for row in _walk_nodes(local_root))
     ops: list[dict[str, Any]] = []
@@ -744,7 +820,7 @@ def _plan_copy_from_tms(local_root, tms_root, relative: tuple[str, ...], recursi
                 ops.append({"operation": "add", "path": parent, "name": part, "kind": "SubProperty", "values": {}})
                 planned.add(key)
 
-    def enqueue(node, path: tuple[str, ...], update_existing: bool) -> None:
+    def enqueue(node, path: tuple[str, ...], update_existing: bool, descend: bool) -> None:
         kind = node.type_name
         if kind not in COPYABLE_TYPES:
             return
@@ -758,11 +834,15 @@ def _plan_copy_from_tms(local_root, tms_root, relative: tuple[str, ...], recursi
             planned.add(key)
         elif update_existing and kind in EDITABLE_TYPES:
             ops.append({"operation": "edit", "path": key, "kind": kind, "values": _copy_values(node)})
-        if recursive and kind == "SubProperty":
+        if descend and kind == "SubProperty":
             for child in node.children():
-                enqueue(child, (*path, child.name), False)
+                enqueue(child, (*path, child.name), False, True)
 
-    enqueue(target, relative, True)
+    for relative in selected:
+        target = tms_root.get("/".join(relative))
+        if target is None:
+            raise KeyError(f"TMS 没有这个节点: {'/'.join(relative)}")
+        enqueue(target, relative, True, recursive)
     if not ops:
         raise ValueError("没有可复制的节点（画布等不能增量写入本地）")
     return ops
@@ -818,24 +898,35 @@ def index():
 
 @app.get("/api/jobs")
 def jobs():
+    side = str(request.args.get("side") or "all")
+    if side not in ("all", "local", "tms"):
+        raise ValueError("side 只能是 all、local 或 tms")
     _local_names, book_names = _strings()
-    ms_index = _ms_cache_books()
+    pack_index = ms_skill_index() if side != "local" else {}
+    ms_cache = _ms_cache_books()
+    if side == "tms":
+        _tms_skill_names, tms_book_names = _tms_strings()
+        names_for_books = dict(book_names)
+        names_for_books.update(tms_book_names)
+    else:
+        names_for_books = book_names
     rows = []
-    for book in sorted(_books(), key=_natural_key):
+    for book in sorted(_books(side), key=_natural_key):
         local = _client_path(book)
         tms_img = _tms_img_path(book)
         tms_canvas = _tms_canvas_path(book)
+        pack = ms_cache.get(book) or pack_index.get(book)
         rows.append({
             "id": book,
-            "name": _job_name(book, book_names),
+            "name": _job_name(book, names_for_books),
             "group": _job_group(book),
             "local": local.is_file(),
             "tms": tms_img.is_file(),
             "canvas": tms_canvas.is_file(),
-            "ms": book in ms_index,
-            "msPack": ms_index[book].name if book in ms_index else None,
+            "ms": pack is not None,
+            "msPack": pack.name if pack is not None else None,
         })
-    return _ok(jobs=rows, skillNames=len(_local_names), msReady=bool(ms_index) or MS_PROBE.is_file())
+    return _ok(jobs=rows, skillNames=len(_local_names), msReady=bool(ms_cache) or bool(pack_index) or MS_PROBE.is_file(), side=side)
 
 
 @app.get("/api/skills")
@@ -843,18 +934,39 @@ def skills():
     book = _book(request.args.get("job") or request.args.get("book"))
     query = str(request.args.get("q") or "").strip().lower()
     availability = str(request.args.get("availability") or "all")
-    names, _book_names = _merged_strings()
-    local_ids = set(_ids_for_path(_client_path(book), "GMS"))
-    tms_ids: set[str] = set(_ids_for_path(_tms_img_path(book), "BMS"))
+    side = str(request.args.get("side") or "all")
+    if side not in ("all", "local", "tms"):
+        raise ValueError("side 只能是 all、local 或 tms")
+    local_names, local_books = _strings()
+    tms_names, tms_books = ({}, {})
+    if side != "local":
+        tms_names, tms_books = _tms_strings()
+    names = dict(tms_names)
+    names.update({key: value for key, value in local_names.items() if value})
+    book_names = dict(tms_books)
+    book_names.update(local_books)
+    local_ids = set(_ids_for_path(_client_path(book), "GMS")) if side != "tms" else set()
+    tms_ids: set[str] = set()
     ms_ids: set[str] = set()
-    cached_ms = _extracted_ms_path(book)
-    if cached_ms is not None:
-        ms_ids.update(_ids_for_path(cached_ms, "BMS"))
-        tms_ids.update(ms_ids)
-    if not tms_ids:
-        tms_ids.update(_ids_for_path(_tms_canvas_path(book), "BMS"))
+    if side != "local":
+        tms_ids.update(_ids_for_path(_tms_img_path(book), "BMS"))
+        cached_ms = _extracted_ms_path(book)
+        if cached_ms is None and book in ms_skill_index():
+            extracted = extract_ms_skill(book)
+            cached_ms = extracted[0] if extracted is not None else None
+        if cached_ms is not None:
+            ms_ids.update(_ids_for_path(cached_ms, "BMS"))
+            tms_ids.update(ms_ids)
+    if side == "local":
+        skill_ids = local_ids
+    elif side == "tms":
+        skill_ids = tms_ids
+        names = dict(tms_names)
+        names.update({key: value for key, value in local_names.items() if key not in names and value})
+    else:
+        skill_ids = local_ids | tms_ids
     items = []
-    for skill_id in sorted(local_ids | tms_ids, key=_natural_key):
+    for skill_id in sorted(skill_ids, key=_natural_key):
         local = skill_id in local_ids
         tms = skill_id in tms_ids
         status = "both" if local and tms else "local" if local else "missing"
@@ -867,12 +979,12 @@ def skills():
         items.append({
             "id": skill_id, "name": name or f"技能 {skill_id}", "status": status,
             "local": local, "tms": tms, "ms": skill_id in ms_ids,
-            "iconSource": "local" if local else "tms",
+            "iconSource": "local" if local and side != "tms" else ("ms" if skill_id in ms_ids else "tms"),
         })
     sources = _source_paths(book)
     return _ok(
-        book=book, name=_job_name(book, _book_names), group=_job_group(book),
-        items=items, total=len(items), sources=sources, msError=None,
+        book=book, name=_job_name(book, book_names), group=_job_group(book),
+        items=items, total=len(items), sources=sources, msError=None, side=side,
     )
 
 
@@ -990,13 +1102,25 @@ def mutate_node():
     relative = tuple(part for part in str(body.get("path") or "").split("/") if part)
     with _WRITE_LOCK:
         if operation == "copyFromTms":
-            source = str(body.get("source") or _preferred_tms_source(book) or "")
+            source_book = _book(body.get("sourceBook") or book)
+            source_id = _skill_id(body.get("sourceId") or skill_id)
+            source = str(body.get("source") or _preferred_tms_source(source_book) or "")
             recursive = bool(body.get("recursive", True))
-            tms_path, region = _source_file(book, source)
+            raw_paths = body.get("paths")
+            if isinstance(raw_paths, list) and raw_paths:
+                relatives = _selected_relatives([str(path) for path in raw_paths])
+            else:
+                relatives = [relative]
+            tms_path, region = _source_file(source_book, source)
             local_root = _skill_node(_load_image(_client_path(book), "GMS"), skill_id)
-            tms_root = _skill_node(_load_image(tms_path, region), skill_id)
-            operations = _plan_copy_from_tms(local_root, tms_root, relative, recursive)
-            return _ok(item=_write_skill_ops(book, skill_id, operations), copied=len(operations))
+            tms_root = _skill_node(_load_image(tms_path, region), source_id)
+            operations = _plan_copy_from_tms(local_root, tms_root, relatives, recursive)
+            return _ok(
+                item=_write_skill_ops(book, skill_id, operations),
+                copied=len(operations),
+                sourceBook=source_book,
+                sourceId=source_id,
+            )
         item = _write_skill_ops(book, skill_id, [{
             "operation": operation,
             "path": "/".join(relative),
