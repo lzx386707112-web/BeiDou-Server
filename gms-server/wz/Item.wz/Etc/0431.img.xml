@@ -111,4 +111,24 @@
       <int name="tradeBlock" value="1"/>
     </imgdir>
   </imgdir>
+  <imgdir name="04310100">
+    <imgdir name="info">
+      <canvas name="icon" width="1" height="1" format="1">
+        <vector name="origin" x="-1" y="26"/>
+        <string name="_outlink" value="Item/Etc/_Canvas/0431.img/04310100/info/icon"/>
+      </canvas>
+      <canvas name="iconRaw" width="1" height="1" format="1">
+        <vector name="origin" x="-2" y="23"/>
+        <string name="_outlink" value="Item/Etc/_Canvas/0431.img/04310100/info/iconRaw"/>
+      </canvas>
+      <canvas name="iconShop" width="1" height="1" format="1">
+        <vector name="origin" x="0" y="0"/>
+        <string name="_outlink" value="Item/Etc/_Canvas/0431.img/04310100/info/iconShop"/>
+      </canvas>
+      <int name="price" value="1"/>
+      <int name="slotMax" value="9999"/>
+      <int name="notSale" value="1"/>
+      <int name="tradeBlock" value="1"/>
+    </imgdir>
+  </imgdir>
 </imgdir>

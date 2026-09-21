@@ -28333,7 +28333,7 @@
   <imgdir name="-8055">
     <string name="0" value="去枫叶丘陵找#b#p9130000##k，听取田野清剿委托。"/>
     <string name="1" value="在枫叶丘陵田野击杀以下怪物各200只：&#10;&#10;#o9421511# #r#a574811##k&#10;#o9421512# #r#a574812##k&#10;#o9421513# #r#a574813##k&#10;#o9421514# #r#a574814##k"/>
-    <string name="2" value="完成了枫叶丘陵田野清剿，获得了#b#t4000697##k。"/>
+    <string name="2" value="完成了枫叶丘陵田野清剿，获得了选择的挑战门票。"/>
     <int name="area" value="56"/>
     <string name="name" value="[每日] 枫叶丘陵的清剿"/>
   </imgdir>
@@ -28344,4 +28344,488 @@
     <int name="area" value="1"/>
     <string name="name" value="[每日] 堕落世界树的清剿"/>
   </imgdir>
+  <imgdir name="-27235">
+  <string name="name" value="[奧迪溫] 來自埃德爾斯坦的聯繫" />
+  <int name="area" value="286" />
+  <string name="0" value="末日反抗軍吉可穆德聯繫了我。&#13;&#10;說有事情要告訴我，叫我去#b祕密廣場#k．．．&#13;&#10;" />
+  <string name="2" value="末日反抗軍吉可穆德聯繫了我。&#13;&#10;說有事情要告訴我，叫我去#b祕密廣場#k．．．" />
+  <string name="1" value="末日反抗軍吉可穆德聯繫了我。&#13;&#10;說有事情要告訴我，叫我去#b祕密廣場#k．．．" />
+  <int name="autoStart" value="1" />
+  <string name="category" value="0|1" />
+</imgdir>
+  <imgdir name="-27234">
+  <int name="area" value="286" />
+  <string name="name" value="[奧迪溫] 無法修理的機器人" />
+  <string name="0" value="聽聽吉可穆德的說明。" />
+  <string name="1" value="聽聽吉可穆德的說明。" />
+  <string name="2" value="從吉可穆德那裡聽到了末日反抗軍的消息和#b雷夫斯#k的近況。" />
+  <string name="category" value="0|1" />
+</imgdir>
+  <imgdir name="-27233">
+  <string name="name" value="[奧迪溫] 來自騎士團的訪客" />
+  <int name="area" value="286" />
+  <string name="0" value="直接去找雷夫斯，問問公司的事情。" />
+  <string name="2" value="直接找了雷夫斯，得到了關於公司的情報。" />
+  <string name="1" value="直接找了雷夫斯，得到了關於公司的情報。" />
+  <string name="category" value="0|1" />
+</imgdir>
+  <imgdir name="-27232">
+  <int name="area" value="286" />
+  <string name="name" value="[奧迪溫] 再次，登上摩天塔" />
+  <string name="0" value="在前往格蘭蒂斯的路上，雷夫斯說他會提供幫助，和雷夫斯談談吧。" />
+  <string name="1" value="在雷夫斯的幫助下登上了#b卡羅泰#塔，發現了通往#b奧迪溫#k的路。" />
+  <string name="2" value="在雷夫斯的幫助下登上了#b卡羅泰#塔，發現了通往#b奧迪溫#k的路。" />
+  <string name="category" value="0|1" />
+</imgdir>
+  <imgdir name="-27231">
+  <string name="name" value="[奧迪溫] 比摩天塔還高的地方" />
+  <int name="area" value="286" />
+  <string name="0" value="雷夫斯好像有話對我說。" />
+  <string name="2" value="與雷夫斯分開，前往#b奧迪溫#k。" />
+  <string name="1" value="從雷夫斯那裡聽到了關於實驗室#b奧迪溫#k的情報。" />
+  <string name="category" value="0|1" />
+</imgdir>
+  <imgdir name="-27230">
+  <int name="area" value="286" />
+  <string name="name" value="[奧迪溫] 被佔領的村莊" />
+  <string name="0" value="在#b通往城門的路#k上遇到#b艾爾特#k。和艾爾特對話吧。" />
+  <string name="1" value="從艾爾特那裡得知#b奧迪溫#k的村莊受到了#r安格洛公司#k的入侵。" />
+  <string name="2" value="從艾爾特那裡得知#b奧迪溫#k的村莊受到了#r安格洛公司#k的入侵。" />
+  <string name="category" value="0|1" />
+</imgdir>
+  <imgdir name="-27229">
+  <int name="area" value="286" />
+  <string name="name" value="[奧迪溫] 艾爾特的指引 1" />
+  <string name="0" value="向#b艾爾特#k傳達我的情況，並請求幫助吧。" />
+  <string name="1" value="艾爾特答應帶我去村莊。擊殺100隻在#b#m410007003 ##k的#o8645291#吧。" />
+  <string name="2" value="擊殺100隻#o8645291#後，拜託艾爾特指引前往村子的路。" />
+  <string name="demandSummary" value="#questorder1##o8645291# #a383071#&#13;&#10;" />
+  <string name="category" value="0|1" />
+</imgdir>
+  <imgdir name="-27228">
+  <int name="area" value="286" />
+  <string name="name" value="[奧迪溫] 艾爾特的指引 2" />
+  <string name="0" value="艾爾特好像有事情要拜託我。" />
+  <string name="1" value="消滅在#b#m410007002 ##k中的#o8645292#&#13;&#10;100隻後，詢問艾爾特前往村莊的路吧。" />
+  <string name="2" value="為了打開通往村莊的路，消滅100隻#o8645292#。" />
+  <string name="demandSummary" value="#questorder1##o8645292# #a383081#&#13;&#10;" />
+  <string name="category" value="0|1" />
+</imgdir>
+  <imgdir name="-27227">
+  <int name="area" value="286" />
+  <string name="name" value="[奧迪溫] 出現的公司" />
+  <string name="0" value="碰到了安格洛公司的#r謝娜#k。謝娜好像有話要對我說．．．" />
+  <string name="1" value="謝娜說因為#r爸爸#k交代的事情很忙，所以會睜一隻眼閉一隻眼。別放鬆警惕，進村莊看看吧。" />
+  <string name="2" value="謝娜說因為#r爸爸#k交代的事情很忙，所以會睜一隻眼閉一隻眼。別放鬆警惕，進村莊看看吧。" />
+  <string name="category" value="0|1" />
+</imgdir>
+  <imgdir name="-27226">
+  <string name="name" value="[奧迪溫] 為了守護村莊" />
+  <int name="area" value="286" />
+  <string name="0" value="留在村裡的#b薩薩#k認出了和我一起來的艾爾特。跟薩薩說話吧。" />
+  <string name="2" value="艾爾特提議去位於村子附近的#b實驗室#k看看。" />
+  <string name="1" value="艾爾特告訴薩薩和村民們這裡非常危險。" />
+  <string name="category" value="0|1" />
+</imgdir>
+  <imgdir name="-27225">
+  <string name="name" value="[奧迪溫] 巷道的侵略者 1" />
+  <int name="area" value="286" />
+  <string name="0" value="為了前往#b實驗室#k，需要艾爾特的引導。拜託一下艾爾特吧。" />
+  <string name="2" value="在去實驗室的路上，滿滿都是公司製造的機器人。" />
+  <string name="1" value="跟著艾爾特移動到#b#m410007006##k。" />
+  <string name="category" value="0|1" />
+</imgdir>
+  <imgdir name="-27224">
+  <int name="area" value="286" />
+  <string name="name" value="[奧迪溫] 巷道的侵略者 2" />
+  <string name="0" value="奧茲好像發現了什麼。 在#b#m410007006##k和奧茲對話吧。" />
+  <string name="1" value="如果不消滅公司放出的機器人，似乎無法前進。 各消滅50隻#o8645293#, #o8645294#, #o8645295#，分散敵人的視線。" />
+  <string name="2" value="為了分散敵人的視線，消滅了#o8645293#, #o8645294#, #o8645295#。" />
+  <string name="demandSummary" value="#questorder1##o8645293# #a383121#&#13;&#10;#questorder1##o8645294# #a383122#&#13;&#10;#questorder1##o8645295# #a383123#&#13;&#10;" />
+  <string name="category" value="0|1" />
+</imgdir>
+  <imgdir name="-27223">
+  <int name="area" value="286" />
+  <string name="name" value="[奧迪溫] 羅赫安格洛" />
+  <string name="0" value="即將抵達#b實驗室#k之際，見到了羅赫。" />
+  <string name="1" value="即將抵達#b實驗室#k之際，見到了羅赫。" />
+  <string name="2" value="即將抵達#b實驗室#k之際，見到了羅赫。為了阻止羅赫，擋在門前，後面的艾爾特打開了實驗室的門。" />
+  <string name="category" value="0|1" />
+</imgdir>
+  <imgdir name="-27222">
+  <int name="area" value="286" />
+  <string name="name" value="[奧迪溫] 登場的幫手" />
+  <string name="0" value="守護著#b#m410007010##k的#b納索爾#k似乎在警戒我們。 和納索爾對話，傳達村莊的情況，解開誤會。" />
+  <string name="1" value="在幫手#b太乙仙人#k的協助下，誤會解開了。" />
+  <string name="2" value="在幫手#b太乙仙人#k的協助下，誤會解開了。" />
+  <string name="category" value="0|1" />
+</imgdir>
+  <imgdir name="-27221">
+  <string name="name" value="[奧迪溫] 被污染的研究者" />
+  <int name="area" value="286" />
+  <string name="demandSummary" value="#questorder1##o8645296# #a383151#&#13;&#10;#questorder1##o8645297# #a383152#&#13;&#10;#questorder1#閱讀全部研究者的日誌 (#R38315ExpaperRef38315#)&#13;&#10;" />
+  <string name="0" value="#b阿洛#k好像有不錯的建議。" />
+  <string name="1" value="#b阿洛#k說會在實驗室裡告訴我令人好奇的資訊。&#13;&#10;消滅#o8645296#, #o8645297#各100隻，找來它們身上的#i2635106:#   #t2635106:#3個過來。" />
+  <string name="2" value="在#i2635106:#   #t2635106:#找到了想要的資訊。" />
+  <string name="category" value="0|1" />
+</imgdir>
+  <imgdir name="-27220">
+  <int name="area" value="286" />
+  <string name="name" value="[奧迪溫] 一人不剩" />
+  <string name="0" value="最後離開村莊的#b為尼#k好像有話要對我說。" />
+  <string name="1" value="從為尼那裡聽到了關於村子令人震驚的真相。" />
+  <string name="2" value="從為尼那裡得知村莊真相的瞬間，正在尋找時機的#r咖凌#k闖入了實驗室。" />
+  <string name="category" value="0|1" />
+</imgdir>
+  <imgdir name="-27219">
+  <int name="area" value="286" />
+  <string name="name" value="[奧迪溫] 敞開的門" />
+  <string name="0" value="#b納索爾#k好像有事想和我討論。" />
+  <string name="1" value="跟著#r咖凌#k去實驗室內部，隱藏的#b動力室#k吧。" />
+  <string name="2" value="跟著#r咖凌#k去實驗室內部，隱藏的#b動力室#k吧。" />
+  <string name="category" value="0|1" />
+</imgdir>
+  <imgdir name="-27218">
+  <int name="area" value="286" />
+  <string name="name" value="[奧迪溫] 心如止水的動力室" />
+  <string name="0" value="在#b動力室#k等著我的是．．．" />
+  <string name="1" value="聽了混沌的話後，我得到神之槍的原型。&#13;&#10;但我回過神後，發現自己到了一個陌生的地方。&#13;&#10;跟著那個火花走…就可以離開這裡嗎？&#09;&#13;&#10;&#13;&#10;(如果想再次前往命運的戰場，就回到集結心力的動力室吧。)" />
+  <string name="2" value="神祕火花的真實身分是一位無名之人的靈魂。&#13;&#10;我在心相世界裡遇到了過去的強敵，他很顯然是敵對者。&#13;&#10;他不斷測試我的力量和意志，其他敵對者也持續考驗我。&#13;&#10;&#13;&#10;但我的目標從未動搖。我通過所有考驗後，他認可了我，允許我回到奧迪溫。&#13;&#10;&#13;&#10;雖然我聽不清楚他的聲音…但我他應該是有話想跟我說吧？" />
+  <string name="category" value="0|1" />
+</imgdir>
+  <imgdir name="-27217">
+  <int name="area" value="286" />
+  <string name="name" value="[奧迪溫] 閉上眼的混沌" />
+  <string name="0" value="聽聽#b太乙仙人#k的說明吧。" />
+  <string name="1" value="在太乙仙人的陪同下，抵達了格蘭蒂斯的仙界#b桃源境#k。" />
+  <string name="2" value="在太乙仙人的陪同下，抵達了格蘭蒂斯的仙界#b桃源境#k。" />
+  <string name="category" value="0|1" />
+</imgdir>
+  <imgdir name="-27216">
+  <string name="name" value="閉上混沌之眼" />
+  <int name="area" value="51" />
+  <int name="autoStart" value="1" />
+  <int name="autoAccept" value="1" />
+  <string name="0" value="已獲得#b&lt;#t1143284#&gt;#k稱號" />
+  <string name="1" value="#b&lt;#t1143284#&gt;#k 獲得了稱號。" />
+  <string name="2" value="#b&lt;#t1143284#&gt;#k 獲得了稱號。" />
+  <int name="medalCategory" value="2" />
+  <int name="viewMedalItem" value="1143284" />
+  <int name="autoPreComplete" value="1" />
+  <string name="category" value="99|1" />
+</imgdir>
+  <imgdir name="-27215">
+  <string name="name" value="[奧迪溫] 粒子控制" />
+  <int name="area" value="60" />
+</imgdir>
+  <imgdir name="-27214">
+  <int name="area" value="244" />
+  <string name="name" value="[覺醒的實驗室奧迪溫] 沒回來的爸爸 1" />
+  <string name="0" value="村裡的年輕巡邏員，#b密亞#k好像有話要對我說。" />
+  <string name="1" value="接受了#b密亞#k的委託。找到密亞的爸爸，向他問好．．．密亞的爸爸是在#b覺醒的實驗室#k的#b哈拉姆#k。 和哈拉姆對話吧。" />
+  <string name="2" value="受村裡的巡邏員#b密亞#k所託，見到了密亞的爸爸#b哈拉姆#k。" />
+</imgdir>
+  <imgdir name="-27213">
+  <int name="area" value="244" />
+  <string name="name" value="[覺醒的實驗室奧迪溫] 沒回來的爸爸 2" />
+  <string name="0" value="向#b哈拉姆#k傳達#b密亞#k的消息吧。" />
+  <string name="1" value="#b哈拉姆#k似乎對於把#b密亞#k留在村子裡感到內疚。首先，按照哈拉姆的要求，消滅#r#o8645293##k，#r#o8645294##k，#r#o8645295##k後，收集30個#i4036894:#   #t4036894:#。" />
+  <string name="2" value="受#b哈拉姆#k的委託，從安格洛機器人那裡收集了能量。" />
+  <string name="demandSummary" value="#questorder1##i4036894:#    #t4036894:# #c4036894# / 30&#13;&#10;" />
+</imgdir>
+  <imgdir name="-27212">
+  <int name="area" value="244" />
+  <string name="name" value="[覺醒的實驗室奧迪溫] 沒回來的爸爸 3" />
+  <string name="0" value="臨走前，#b哈拉姆#k好像有話要對我說。" />
+  <string name="1" value="#b哈拉姆#k拜託我轉交電池給#b密亞#k。去找密亞，給他電池吧。&#13;&#10;&#13;&#10;#b(道具遺失時，須放棄任務重新開始。)#k" />
+  <string name="2" value="向#b密亞#k轉達了爸爸的問候。密亞好像很高興。" />
+  <string name="demandSummary" value="#questorder1##i4036895:#    #t4036895:# #c4036895# / 1&#13;&#10;" />
+</imgdir>
+  <imgdir name="-27211">
+  <string name="name" value="[覺醒的實驗室奧迪溫] 卡亞和世莉 1" />
+  <int name="area" value="244" />
+  <string name="0" value="村裡的巡邏員#b卡亞#k看起來很不安。搭個話看看吧。" />
+  <string name="1" value="因副作用身體無法動彈的#b卡亞#k。打算送藥給失去記憶的#b世莉#k。和#b世莉#k對話吧。\r\n#b(沒有能量電力道具時，請放棄任務重新進行。)&#13;&#10;" />
+  <string name="2" value="受村裏的巡邏員#b卡亞#k所託，與#b世莉#k見面。" />
+  <string name="demandSummary" value="#questorder1##i4036896:# #t4036896:# #c4036896# / 1&#13;&#10;" />
+</imgdir>
+  <imgdir name="-27210">
+  <string name="name" value="[覺醒的實驗室奧迪溫] 卡亞和世莉 2" />
+  <int name="area" value="244" />
+  <string name="0" value="向#b世莉#k問好。" />
+  <string name="1" value="向#b世莉#k問好。" />
+  <string name="2" value="恢復記憶的#b世莉#k痛苦地倒下了．．．我們等到世莉起床吧。" />
+</imgdir>
+  <imgdir name="-27209">
+  <string name="name" value="[覺醒的實驗室奧迪溫] 卡亞和世莉 3" />
+  <int name="area" value="244" />
+  <string name="0" value="#b世莉#k起床了。和#b世莉#k說話吧。" />
+  <string name="1" value="#b世莉#k起床了。和#b世莉#k說話吧。" />
+  <string name="2" value="正如卡亞所說，重新甦醒的#b世莉#k已經失去了所有記憶。既然已經告訴卡亞去的路，只希望她沒事。" />
+</imgdir>
+  <imgdir name="-27208">
+  <string name="name" value="[覺醒的實驗室奧迪溫] 系統修復 1" />
+  <int name="area" value="244" />
+  <string name="demandSummary" value="#questorder1##o8645296# #a383281#&#13;&#10;#questorder1##o8645297# #a383282#&#13;&#10;" />
+  <string name="0" value="村裡的巡邏員#b納索爾#k似乎需要幫助。去找找納索爾吧。" />
+  <string name="1" value="照納索爾說的，調查一下實驗室的警衛兵。" />
+  <string name="2" value="調查了奧迪溫的警衛兵。但是看起來沒什麼異常．．．" />
+</imgdir>
+  <imgdir name="-27207">
+  <string name="name" value="[覺醒的實驗室奧迪溫] 系統修復 2" />
+  <int name="area" value="244" />
+  <string name="0" value="納索爾好像還需要幫助。去找找#b納索爾#k吧。" />
+  <string name="1" value="入侵者竊取實驗室技術的過程中，似乎對#b實驗體#k產生了影響。為了恢復系統，處理一下實驗體吧。" />
+  <string name="2" value="為了恢復系統，處理了實驗體。但是．．．發現了#b研究日誌#k？" />
+  <string name="demandSummary" value="#questorder1##o8645298# #a383291#&#13;&#10;#questorder1##o8645299# #a383292#&#13;&#10;" />
+</imgdir>
+  <imgdir name="-27206">
+  <string name="name" value="[覺醒的實驗室奧迪溫] 系統修復 3" />
+  <int name="area" value="244" />
+  <string name="0" value="似乎是為了恢復系統而重新啟動的過程中發現了隱藏的#b研究日誌#k。" />
+  <string name="1" value="決定閱讀#b研究日誌#k。" />
+  <string name="2" value="讀了不知名研究者的研究日誌。這是關於在奧迪溫進行的實驗的記錄。" />
+</imgdir>
+  <imgdir name="-27186">
+  <string name="name" value="[每日任務] 奧迪溫地區勘查" />
+  <int name="area" value="244" />
+  <string name="0" value="可以接取#r奧迪溫#k的#b薩薩#k每天下達的任務。" />
+  <string name="1" value="可以接取#r奧迪溫#k的#b薩薩#k每天下達的任務。" />
+  <string name="2" value="可以接取#r奧迪溫#k的#b薩薩#k每天下達的任務。" />
+  <string name="category" value="1|0" />
+</imgdir>
+  <imgdir name="-27145">
+  <string name="name" value="[桃源境] 桃花盛開的樂園" />
+  <int name="area" value="287" />
+  <string name="0" value="#b太乙仙人#k好像在找我。&#13;&#10;去找#b太乙仙人#k談談吧。&#13;&#10;&#13;&#10;" />
+  <string name="2" value="收到#b太乙善人#k說明後，到達的地方是畫中的世界#b桃源境#k。" />
+  <string name="1" value="與#b太乙善人#k進行了談話。" />
+  <int name="autoStart" value="1" />
+  <string name="category" value="0|1" />
+</imgdir>
+  <imgdir name="-27144">
+  <int name="area" value="287" />
+  <string name="name" value="[桃源境] 守護樂園之人" />
+  <string name="0" value="遇到了在桃源境，守護著#b長老們樓閣#k的四方神#b撞上了#b珈溫#k。" />
+  <string name="1" value="遇到了在桃源境，守護著#b長老們樓閣#k的四方神#b撞上了#b珈溫#k。" />
+  <string name="2" value="遇到了在桃源境，守護著#b長老們樓閣#k的四方神#b撞上了#b珈溫#k。" />
+  <string name="category" value="0|1" />
+</imgdir>
+  <imgdir name="-27143">
+  <int name="area" value="287" />
+  <string name="name" value="[桃源境] 背道而馳的命運" />
+  <string name="0" value="上級長老之一#b子剛#k似乎想和我對話。&#13;&#10;和#b子剛#k說話一下吧。&#13;&#10;" />
+  <string name="1" value="和#b子剛#k進行了對話。" />
+  <string name="2" value="和#b子剛#k進行了對話。&#13;&#10;雖然試著請求協助，但子剛好頑固…….&#13;&#10;" />
+  <string name="category" value="0|1" />
+</imgdir>
+  <imgdir name="-27142">
+  <string name="name" value="[桃源境] 出現的威脅" />
+  <int name="area" value="287" />
+  <string name="0" value="和在#b#m410007020##k的#b珈溫#k對話吧。" />
+  <string name="2" value="在與#b珈溫#k移動的過程中，遭到襲擊。&#13;&#10;襲擊好像是從內部開始的，但珈溫好像不太相信。" />
+  <string name="1" value="和在#b#m410007020##k的#b珈溫#k進行了對話。" />
+  <string name="category" value="0|1" />
+</imgdir>
+  <imgdir name="-27141">
+  <string name="name" value="[桃源境] 崩毀的桃源境 1" />
+  <int name="area" value="287" />
+  <string name="0" value="#b#m410007021##k的#b畫軸#k好像出現了異常。&#13;&#10;觀察一下#b畫軸#k吧。&#13;&#10;" />
+  <string name="2" value="在#b#m410007022##k和#b奧茲#k進行了對話。" />
+  <string name="1" value="觀察了#b#m410007021##k的#b畫軸#k。" />
+  <string name="category" value="0|1" />
+</imgdir>
+  <imgdir name="-27140">
+  <int name="area" value="287" />
+  <string name="name" value="[桃源境] 崩毀的桃源境 2" />
+  <string name="0" value="#b#m410007022##k的#b畫軸#k好像出現了異常。&#13;&#10;觀察一下#b畫軸#k吧。&#13;&#10;" />
+  <string name="1" value="觀察了#b#m410007022##k的#b畫軸#k。&#13;&#10;&#13;&#10;#r(未能擊敗檮杌而離開地圖時，請放棄任務重新進行。)#k" />
+  <string name="2" value="在#b#m410007022##k出現四凶之一的#r檮杌#k。" />
+  <string name="demandSummary" value="#questorder1##o8880850# #a383961#&#13;&#10;" />
+  <string name="category" value="0|1" />
+</imgdir>
+  <imgdir name="-27139">
+  <int name="area" value="287" />
+  <string name="name" value="[桃源境] 崩毀的桃源境 3" />
+  <string name="0" value="秀莉在#b#m410007022##k睜開了眼睛。&#13;&#10;來聽聽#b秀莉#k的故事吧。&#13;&#10;" />
+  <string name="1" value="#b太乙仙人#k在#b#m410007023##k等待著你。&#13;&#10;移動到#b#m410007023##k，聽聽#b太乙仙人#k的事吧。&#13;&#10;&#13;&#10;#r(未能擊敗混沌而離開地圖時，請放棄任務重新進行，或移動到#b#m410007022##k #r的右側傳送點開始消滅。)#k&#13;&#10;" />
+  <string name="2" value="#b#m410007023##k出現四凶之一#r混沌#k。&#13;&#10;與#b奧迪溫#k看到時完全不同的模樣.......&#13;&#10;" />
+  <string name="demandSummary" value="#questorder1##o8880851# #a383971#&#13;&#10;" />
+  <string name="category" value="0|1" />
+</imgdir>
+  <imgdir name="-27138">
+  <int name="area" value="287" />
+  <string name="name" value="[桃源境] 最後剩下的季節" />
+  <string name="0" value="現在桃源境剩下的結界只有冬季了。&#13;&#10;前往#b#m410007024##k，守護結界吧。" />
+  <string name="1" value="#r咖凌#k出現於#b#m410007024##k了。&#13;&#10;&#13;&#10;#r(未能擊敗咖凌而離開地圖時，請放棄任務重新進行，或移動到#b#m410007023##k #r的右側傳送點開始消滅。)#k" />
+  <string name="2" value="在#b#m410007024##k阻止了#r咖凌#k。" />
+  <string name="demandSummary" value="#questorder1##o8880852# #a383981#&#13;&#10;" />
+  <string name="category" value="0|1" />
+</imgdir>
+  <imgdir name="-27137">
+  <int name="area" value="287" />
+  <string name="name" value="[桃源境] 第一把神之槍" />
+  <string name="0" value="與在#b#m410007025##k的長老，#b子剛#k聊聊吧。" />
+  <string name="1" value="長老#b子剛#k告訴了我有關#b神之槍#k的事情。" />
+  <string name="2" value="長老#b子剛#k告訴了我有關#b神之槍#k的事情。" />
+  <string name="category" value="0|1" />
+</imgdir>
+  <imgdir name="-27136">
+  <string name="name" value="[桃源境] 等待鈴鐺響徹" />
+  <int name="area" value="287" />
+  <string name="0" value="#b長老#k，未悟在#b#m410007020##k抓住了我。&#13;&#10;和#b未悟#k談談吧。&#13;&#10;" />
+  <string name="2" value="長老#b未悟#k說明了在奧迪溫生成的鈴鐺。" />
+  <string name="1" value="長老#b未悟#k說明了在奧迪溫生成的鈴鐺。" />
+  <string name="category" value="0|1" />
+</imgdir>
+  <imgdir name="-27135">
+  <int name="area" value="287" />
+  <string name="name" value="[桃源境] 離別與相遇" />
+  <string name="0" value="在#b#m410007020##k與長老#b未悟#k聊聊沒說完的話吧。" />
+  <string name="1" value="在#b#m410007020##k與長老#b未悟#k聊聊沒說完的話吧。" />
+  <string name="2" value="離開了留在#b桃源境#k的太乙仙人，開始了新的旅程。" />
+  <string name="category" value="0|1" />
+</imgdir>
+  <imgdir name="-27132">
+  <int name="area" value="287" />
+  <string name="name" value="[桃源境] 到達樂園之人" />
+  <string name="0" value="#b太乙仙人#k好像還有話要對我說。" />
+  <string name="1" value="與#b太乙仙人#k進行了談話。" />
+  <string name="2" value="在離開桃源境之前，與#b太乙仙人#k進行了談話。" />
+  <int name="autoStart" value="1" />
+  <string name="category" value="0|1" />
+</imgdir>
+  <imgdir name="-27131">
+  <string name="name" value="到達樂園之人" />
+  <int name="area" value="51" />
+  <int name="autoStart" value="1" />
+  <int name="autoAccept" value="1" />
+  <string name="0" value="獲得了#b&lt;#t1143305#&gt;#k 稱號。" />
+  <string name="1" value="獲得了#b&lt;#t1143305#&gt;#k 稱號。" />
+  <string name="2" value="獲得了#b&lt;#t1143305#&gt;#k 稱號。" />
+  <int name="medalCategory" value="2" />
+  <int name="viewMedalItem" value="1143305" />
+  <int name="autoPreComplete" value="1" />
+  <string name="category" value="99|1" />
+</imgdir>
+  <imgdir name="-27130">
+  <string name="name" value="[罪人的樂園 桃源境] 陰影籠罩的樂園" />
+  <int name="area" value="249" />
+  <string name="0" value="在#b#m410007020##k的太乙仙人似乎需要我的幫忙。和太乙仙人談談吧。" />
+  <string name="2" value="在#b#m410007020##k與太乙仙人見面後。好像出了什麼問題似的，太乙仙人正在和桃源境的研究者們對話。" />
+  <string name="1" value="在#b#m410007020##k與太乙仙人見面。" />
+</imgdir>
+  <imgdir name="-27129">
+  <int name="area" value="249" />
+  <string name="name" value="[罪人的樂園 桃源境] 沿著污染的痕跡" />
+  <string name="0" value="太乙仙人忙於與研究者的對話，似乎沒有察覺到我和珈溫的到來。去#b#m410007020##k再次和太乙仙人對話吧。" />
+  <string name="1" value="在#b#m410007020##k中與太乙仙人進行了對話。" />
+  <string name="2" value="從太乙仙人那裡聽說了關於桃源境發生的問題。為了代替處理事情而繁忙的長者們，決定幫忙巡查桃源境。" />
+</imgdir>
+  <imgdir name="-27128">
+  <int name="area" value="249" />
+  <string name="name" value="[罪人的樂園 桃源境] 鈕釦與文房四寶(1)" />
+  <string name="0" value="與珈溫一起前往#b#m410007035##k，了解一下桃源境發生的問題。" />
+  <string name="1" value="在#b#m410007035##k遇到了被迷惑的研究者們。珈溫為了尋找線索，請我消滅100隻#r#o8645372##k，並收集他們掉落的#i4037167:#    #t4037167:#。" />
+  <string name="2" value="看到被迷惑的研究者們所掉落的#t4037167:#，珈溫好像發現了什麼。" />
+  <string name="demandSummary" value="#questorder1##i4037167:#    #t4037167:# #c4037167# / 5&#13;&#10;#questorder1##o8645372# #a384081#&#13;&#10;" />
+</imgdir>
+  <imgdir name="-27127">
+  <int name="area" value="249" />
+  <string name="name" value="[罪人的樂園 桃源境] 仙人的挽留" />
+  <string name="0" value="從咖凌的記憶中擺脫出來的時候。太乙仙人出現了。移動到#b#m410007020##k，與太乙仙人對話。" />
+  <string name="1" value="與太乙仙人進行了交談。" />
+  <string name="2" value="太乙仙人雖然擔心我的安全，但為了尋找剩下的季節文房四寶，了解咖凌記憶中需要的線索，與珈溫意氣相投。" />
+</imgdir>
+  <imgdir name="-27126">
+  <int name="area" value="249" />
+  <string name="name" value="[罪人的樂園 桃源境] 鈕釦與文房四寶(2)" />
+  <string name="0" value="珈溫為了觀察下一個季節，秋天，所以移動了。去#b#m410007033##k和珈溫對話吧。" />
+  <string name="1" value="目睹了位於#b#m410007033##k的研究者們和怪物們。 消滅#r#o8645370##k、#r#o8645369#k各100隻，為了觀察秋天的文房四寶，追趕前方前往#b#m410007034##k的珈溫吧。" />
+  <string name="2" value="消滅受秋天文房四寶影響的#r#o8645370##k、#r#o8645369#k，並找到前方前往#b#m410007033##k的珈溫。秋天的文房四寶上也鑲著咖凌的鈕釦。" />
+  <string name="demandSummary" value="#questorder1##o8645370# #a384101#&#13;&#10;#questorder1##o8645369# #a384102#&#13;&#10;" />
+</imgdir>
+  <imgdir name="-27125">
+  <int name="area" value="249" />
+  <string name="name" value="[罪人的樂園 桃源境] 鈕釦與文房四寶(3)" />
+  <string name="0" value="從咖凌的記憶中離開了。把故事告訴在#b#m410007033##k的珈溫後，朝向下個季節的文房四寶出發。" />
+  <string name="1" value="夏天一到，墨組成的怪物和被迷惑的研究者們一起涌出。&#13;&#10;雖然力量變弱了，但還是請幫忙消滅更加堅韌的#r#o8645368##k150名，#r#o8645367##k150隻後，去找#b#m410007031##k吧。" />
+  <string name="2" value="發現了放在#b#m410007031##k的文房四寶。通過文房四寶窺探了咖凌的下一個記憶。" />
+  <string name="demandSummary" value="#questorder1##o8645368# #a384111#&#13;&#10;#questorder1##o8645367# #a384112#&#13;&#10;" />
+</imgdir>
+  <imgdir name="-27124">
+  <int name="area" value="249" />
+  <string name="name" value="[罪人的樂園 桃源境] 追逐最後的鈕釦" />
+  <string name="0" value="通過咖凌的記憶知道了#b鈕釦#k的真面目。和位於#b#m410007031##k的珈溫對話吧。" />
+  <string name="1" value="發現了春天的文房四寶，#b#p3006335##k。" />
+  <string name="2" value="發現了春天的文房四寶，#b#p3006335#k。但是最後的鈕釦已經消失不見了。" />
+</imgdir>
+  <imgdir name="-27123">
+  <string name="name" value="[罪人的樂園 桃源境] 亥雅" />
+  <int name="area" value="249" />
+  <string name="demandSummary" value="與#questorder1##r#p3006187##k對話&#13;&#10;與#questorder2##r#p3006329##k對話&#13;&#10;與#questorder3##r#p3006188##k對話&#13;&#10;與#questorder4##r#p3006179##k對話&#13;&#10;" />
+  <string name="0" value="移動到#b#m410007020##k，與太乙仙人對話吧。" />
+  <string name="1" value="為了追查最後一顆鈕釦的下落，約好和桃源境的大家見面。&#13;&#10;和位於#b#m410007025##k的#b#p3006187 ##k、#b#p3006329##k、 #b#p3006188##k、#b#p3006179##k對話並獲得線索吧。&#13;&#10;" />
+  <string name="2" value="懷疑發現拿走鈕釦的犯人是誰的#b午索#k。留下了一個請求。" />
+</imgdir>
+  <imgdir name="-27122">
+  <int name="area" value="249" />
+  <string name="name" value="[罪人的樂園 桃源境] 為了朋友的風燈" />
+  <string name="0" value="在#b#m410007024##k，珈溫好像有話要說。" />
+  <string name="1" value="珈溫好像想做個風燈來安慰亥雅。製作風燈所需的材料有三種。&#13;&#10;#i4037168:#    #t4037168:#、&#13;&#10;#i4037169:#    #t4037169:#、&#13;&#10;#i4037170:#    #t4037170:#。&#13;&#10;據珈溫所說，從#b#m410007020##k的#b#p3006337##k中可以獲得需要的材料……. 三種材料全部獲得後，回去找在#b#m410007024##k等待的珈溫。" />
+  <string name="2" value="拿給珈溫需要的材料了。我成為了告知亥雅完成的風燈所在地的嚮導。通過對話，與亥雅更加親近了。" />
+  <string name="demandSummary" value="#questorder1##i4037168:#    #t4037168:# #c4037168# / 1&#13;&#10;#questorder1##i4037169:#    #t4037169:# #c4037169# / 1&#13;&#10;#questorder1##i4037170:#    #t4037170:# #c4037170# / 1&#13;&#10;" />
+</imgdir>
+  <imgdir name="-27121">
+  <int name="area" value="249" />
+  <string name="name" value="[罪人的樂園 桃源境] 從陰影中透照射光芒" />
+  <string name="0" value="在#b#m410007024##k，子剛好像有話要對我說。" />
+  <string name="1" value="與子剛進行了對話。" />
+  <string name="2" value="子剛和亥雅，還有太乙仙人對守護桃源境的事情表示感謝。現在是和珈溫一起踏上新的旅程的時候了。" />
+</imgdir>
+  <imgdir name="-27119">
+  <string name="name" value="找回四季之人" />
+  <int name="area" value="51" />
+  <int name="medalCategory" value="2" />
+  <int name="viewMedalItem" value="1143368" />
+  <string name="0" value="找回四季之人" />
+  <string name="1" value="找回四季之人" />
+  <string name="2" value="找回四季之人" />
+  <int name="autoStart" value="1" />
+  <int name="autoAccept" value="1" />
+  <int name="autoPreComplete" value="1" />
+  <string name="category" value="99|1" />
+</imgdir>
+  <imgdir name="-27118">
+  <string name="name" value="[罪人的樂園 桃源境] 找回四季之人" />
+  <int name="area" value="249" />
+  <string name="0" value="#b(擊敗#r困難難度以上的咖凌#b吧。)" />
+  <string name="1" value="#b(擊敗#r困難難度以上的咖凌#b吧。)" />
+  <string name="2" value="獲得了&lt;找回四季之人&gt;稱號。" />
+  <string name="demandSummary" value="#questorder1##o9101251# #a384181#&#13;&#10;" />
+</imgdir>
+  <imgdir name="-27104">
+  <string name="name" value="[每日任務] 奧迪溫地區勘查" />
+  <int name="area" value="244" />
+  <string name="0" value="可以接取並執行#r奧迪溫#k的#b薩薩#k每天下達的委託。" />
+  <string name="1" value="可以接取並執行#r奧迪溫#k的#b薩薩#k每天下達的委託。" />
+  <string name="2" value="可以接取並執行#r奧迪溫#k的#b薩薩#k每天下達的委託。" />
+  <string name="rewardSummary" value="#i2636320:# #t2636320:# 10個" />
+  <string name="demandSummary" value="#questorder1##o9101234# #a384321#&#13;&#10;" />
+  <int name="autoStart" value="1" />
+  <int name="dailyAlarm" value="1" />
+  <string name="category" value="1|0" />
+</imgdir>
+  <imgdir name="-27103">
+  <string name="name" value="[每日任務] 桃源境汙染淨化" />
+  <int name="area" value="249" />
+  <string name="0" value="可以接取並執行#r桃源境#k的#b太乙仙人#k每天下達的委託。" />
+  <string name="1" value="可以接取並執行#r桃源境#k的#b太乙仙人#k每天下達的委託。" />
+  <string name="2" value="可以接取並執行#r桃源境#k的#b太乙仙人#k每天下達的委託。" />
+  <string name="demandSummary" value="#questorder1##o9101235# #a384331#&#13;&#10;" />
+  <string name="rewardSummary" value="#i2636321:# #t2636321:# 10個" />
+  <int name="autoStart" value="1" />
+  <int name="dailyAlarm" value="1" />
+  <string name="category" value="1|0" />
+</imgdir>
 </imgdir>

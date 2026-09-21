@@ -327,6 +327,13 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent); box-sha
   gap: 8px;
 }
 .node-detail-footer-spacer { flex: 1 1 24px; }
+.node-detail-inline {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+}
+.node-detail-inline[hidden] { display: none !important; }
 .node-detail-footer .node-action-button,
 .node-detail-footer .node-copy-button { height: 36px; padding: 0 12px; font-size: 12px; }
 .compatibility { height: 100%; overflow: auto; scrollbar-color: #4a514b transparent; }

@@ -250,8 +250,8 @@ function clearWorkspace() {
   state.mobActionPlanSequence += 1;
   for (const btn of [_mobEl("migrateBtn")].filter(Boolean)) btn.disabled = true;
   $("previewMeta").textContent = "未加载";
-  $("inspector").className = "inspector empty-state compact";
-  $("inspector").innerHTML = '<span class="empty-mark small" aria-hidden="true">⌖</span><strong>选择左侧节点</strong><span>这里会显示属性、差异与可编辑值。</span>';
+  $("inspectorInline").className = "inspector empty-state compact";
+  $("inspectorInline").innerHTML = '<span class="empty-mark small" aria-hidden="true">⌖</span><strong>选择左侧节点</strong><span>这里会显示属性、差异与可编辑值。</span>';
   $("compatibility").innerHTML = '<div class="empty-state compact"><strong>等待对比结果</strong><span>加载后会分析 B 独有节点和现代资源兼容风险。</span></div>';
   setInspectorMode("compatibility");
   $("selectedPath").textContent = "未选择节点";
@@ -264,7 +264,7 @@ function clearWorkspace() {
   $("addChildBtn").disabled = true;
   $("deleteBtn").disabled = true;
   $("exportBtn").disabled = true;
-  $("editActions").hidden = true;
+  $("editActionsInline").hidden = true;
   $("operationResult").hidden = true;
   closeNodeDetailDialog();
 }
@@ -1436,7 +1436,7 @@ function updateNodeActions() {
 
 function setInspectorMode(mode) {
   if (mode === "node") {
-    openNodeDetailDialog();
+    openNodeDetailInline();
     return;
   }
   const compatibilityMode = mode === "compatibility";
@@ -1445,6 +1445,7 @@ function setInspectorMode(mode) {
   $("compatibility").hidden = !compatibilityMode;
   $("crashDiagnostic").hidden = !diagnosticMode;
   if ($("serverControlHelp")) $("serverControlHelp").hidden = !serverControlMode;
+  if ($("nodeDetailInline")) $("nodeDetailInline").hidden = true;
   $("compatibilityTab").classList.toggle("active", compatibilityMode);
   $("diagnosticTab").classList.toggle("active", diagnosticMode);
   $("nodeDetailTab").classList.toggle("active", false);
@@ -1462,26 +1463,35 @@ function setInspectorMode(mode) {
 }
 
 function closeNodeDetailDialog() {
-  $("nodeDetailDialog")?.setAttribute("hidden", "");
+  $("nodeDetailInline")?.setAttribute("hidden", "");
   $("nodeDetailTab")?.classList.remove("active");
   $("nodeDetailTab")?.setAttribute("aria-selected", "false");
 }
 
-function openNodeDetailDialog() {
-  const dialog = $("nodeDetailDialog");
-  if (!dialog) return;
-  $("nodeDetailPath").textContent = state.selectedPath || "/";
-  $("nodeDetailPath").title = state.selectedPath || "/";
+function openNodeDetailInline() {
+  const inline = $("nodeDetailInline");
+  if (!inline) return;
+  // 切换侧边栏标签到"节点详情"
   $("nodeDetailTab").classList.add("active");
   $("nodeDetailTab").setAttribute("aria-selected", "true");
+  $("compatibility").hidden = true;
+  $("crashDiagnostic").hidden = true;
+  if ($("serverControlHelp")) $("serverControlHelp").hidden = true;
+  $("compatibilityTab").classList.remove("active");
+  $("diagnosticTab").classList.remove("active");
+  $("serverControlTab")?.classList.remove("active");
+  $("compatibilityTab").setAttribute("aria-selected", "false");
+  $("diagnosticTab").setAttribute("aria-selected", "false");
+  $("serverControlTab")?.setAttribute("aria-selected", "false");
+  // 渲染节点详情到内联容器
+  inline.hidden = false;
   if (state.selectedPath !== null && state.rowByPath.has(state.selectedPath)) {
     renderInspector(state.rowByPath.get(state.selectedPath));
   } else {
-    $("inspector").className = "inspector empty-state compact";
-    $("inspector").innerHTML = '<span class="empty-mark small" aria-hidden="true">⌖</span><strong>选择左侧节点</strong><span>对比树里点选节点后，会在这里显示属性、差异和可编辑值。</span>';
-    $("editActions").hidden = true;
+    $("inspectorInline").className = "inspector empty-state compact";
+    $("inspectorInline").innerHTML = '<span class="empty-mark small" aria-hidden="true">⌖</span><strong>选择左侧节点</strong><span>对比树里点选节点后，会在这里显示属性、差异和可编辑值。</span>';
+    $("editActionsInline").hidden = true;
   }
-  dialog.hidden = false;
 }
 
 function diagnosticConfidence(value) {
@@ -1685,7 +1695,7 @@ function renderInspector(row) {
     const different = values[0] !== values[1] ? "different" : "";
     return `<tr><th>${label}</th><td class="${different}">${escapeHtml(values[0])}</td><td class="${different}">${escapeHtml(values[1])}</td></tr>`;
   }).join("");
-  const inspector = $("inspector");
+  const inspector = $("inspectorInline");
   const semantic = left || right || {};
   const leftCompatibility = left?.compatibility;
   const rightCompatibility = right?.compatibility;
@@ -1749,11 +1759,11 @@ function renderInspector(row) {
   inspector.innerHTML = `<div class="node-detail-col">${canvasPreview}${semanticMarkup}${resourceMarkup}${mobManifestMarkup}${serverControlMarkup(row)}</div><div class="node-detail-col"><div class="side-label">属性对比</div><table class="compare-table"><thead><tr><th>属性</th><th><span class="column-badge a">A</span>主文件</th><th><span class="column-badge b">B</span>对比</th></tr></thead><tbody>${table}</tbody></table>${childFramesMarkup}${editorMarkup(left)}</div>`;
   const leftXml = state.leftInfo?.format === "xml";
   const editable = Boolean(left?.editable && (leftXml || state.leftInfo?.format === "img"));
-  $("editActions").hidden = false;
+  $("editActionsInline").hidden = false;
   $("saveBtn").hidden = !editable;
   $("saveBtn").disabled = !editable;
   updateNodeActions();
-  // B 侧真实资源清单：把占位帧解析回真实文件，解决“只看到 1×1 占位”
+  // B 侧真实资源清单：把占位帧解析回真实文件，解决"只看到 1×1 占位"
   if (state.kind === "mob" && state.rightPath) {
     loadMobResourceManifest(state.rightPath);
   }
@@ -1762,7 +1772,7 @@ function renderInspector(row) {
     loadChildFrames(row.path, left?.childCount || row?.right?.childCount);
   }
   $("openServerControlBtn")?.addEventListener("click", () => setInspectorMode("serverControl"));
-  bindMobSkillOpenButtons($("inspector"));
+  bindMobSkillOpenButtons($("inspectorInline"));
 }
 
 function serverControlMarkup(row) {
@@ -2651,7 +2661,7 @@ $("reloadBtn")?.addEventListener("click", loadComparison);
 $("compatibilityTab")?.addEventListener("click", () => setInspectorMode("compatibility"));
 $("diagnosticTab")?.addEventListener("click", () => setInspectorMode("diagnostic"));
 $("nodeDetailTab")?.addEventListener("click", () => setInspectorMode("node"));
-$("openNodeDetailBtn")?.addEventListener("click", () => openNodeDetailDialog());
+$("openNodeDetailBtn")?.addEventListener("click", () => openNodeDetailInline());
 $("closeNodeDetailBtn")?.addEventListener("click", closeNodeDetailDialog);
 $("nodeDetailDialog")?.addEventListener("click", (event) => {
   if (event.target === $("nodeDetailDialog")) closeNodeDetailDialog();

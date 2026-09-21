@@ -254,34 +254,25 @@
             <span>复制 TMS 节点只恢复本体动作。光球个数、轨迹、延迟圈伤要在 Java Encounter 里写。打开本页查看模板和当前节点分类。</span>
           </div>
         </div>
+        <div id="nodeDetailInline" class="node-detail-inline" hidden>
+          <div id="inspectorInline" class="inspector empty-state compact">
+            <span class="empty-mark small" aria-hidden="true">⌖</span>
+            <strong>选择左侧节点</strong>
+            <span>对比树里点选节点后，会在这里显示属性、差异和可编辑值。</span>
+          </div>
+          <div id="editActionsInline" class="edit-actions node-detail-footer">
+            <button id="dialogCopyBtn" class="node-copy-button" type="button" disabled>复制选中的 TMS 节点到 A</button>
+            <button id="dialogAddChildBtn" class="node-action-button" type="button" disabled>＋ 添加子节点</button>
+            <button id="dialogDeleteBtn" class="node-action-button danger" type="button" disabled>删除节点</button>
+            <span class="node-detail-footer-spacer"></span>
+            <button id="saveBtn" class="primary-button" type="button">写入主文件</button>
+          </div>
+        </div>
       </div>
       <pre id="operationResult" class="operation-result" hidden></pre>
     </aside>
   </main>
 
-  <div id="nodeDetailDialog" class="node-detail-overlay" hidden>
-    <div class="node-detail-dialog" role="dialog" aria-modal="true" aria-labelledby="nodeDetailTitle">
-    <div class="dialog-head">
-      <div>
-        <h2 id="nodeDetailTitle">节点详情</h2>
-        <span id="nodeDetailPath" class="dialog-parent-path">未选择节点</span>
-      </div>
-      <button id="closeNodeDetailBtn" class="icon-button small" type="button" aria-label="关闭">×</button>
-    </div>
-    <div id="inspector" class="inspector empty-state compact">
-      <span class="empty-mark small" aria-hidden="true">⌖</span>
-      <strong>选择左侧节点</strong>
-      <span>对比树里点选节点后，会在这里显示属性、差异和可编辑值。</span>
-    </div>
-    <div id="editActions" class="edit-actions node-detail-footer">
-      <button id="dialogCopyBtn" class="node-copy-button" type="button" disabled>复制选中的 TMS 节点到 A</button>
-      <button id="dialogAddChildBtn" class="node-action-button" type="button" disabled>＋ 添加子节点</button>
-      <button id="dialogDeleteBtn" class="node-action-button danger" type="button" disabled>删除节点</button>
-      <span class="node-detail-footer-spacer"></span>
-      <button id="saveBtn" class="primary-button" type="button">写入主文件</button>
-    </div>
-    </div>
-  </div>
 
   <dialog id="addDialog">
     <form method="dialog" id="addForm">

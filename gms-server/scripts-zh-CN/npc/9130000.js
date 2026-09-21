@@ -1,9 +1,11 @@
 var QUEST_ID = -8055;
 var NPC_ID = 9130000;
-var TICKET = 4000697;
+var RANMARU_TICKET = 4000697;
+var PRINCESS_NO_TICKET = 4000699;
 var Quest = Java.type("org.gms.server.quest.Quest");
 
 var status = -1;
+var selectingReward = false;
 
 function mobList() {
     return (
@@ -12,7 +14,8 @@ function mobList() {
         "#b#o9421512##k\r\n" +
         "#b#o9421513##k\r\n" +
         "#b#o9421514##k\r\n\r\n" +
-        "完成后我会给你#b#t" + TICKET + "##k。"
+        "完成后可在#b#t" + RANMARU_TICKET + "##k和#b#t" +
+        PRINCESS_NO_TICKET + "##k中选择一张。"
     );
 }
 
@@ -31,9 +34,12 @@ function action(mode, type, selection) {
     var player = cm.getPlayer();
     if (status == 0) {
         if (quest.canComplete(player, NPC_ID)) {
-            quest.complete(player, NPC_ID);
-            cm.sendOk("干得漂亮。拿好#b#t" + TICKET + "##k，去秘密祭坛的光洞进入森兰丸地盘。");
-            cm.dispose();
+            selectingReward = true;
+            cm.sendSimple(
+                "干得漂亮。请选择一张挑战门票：\r\n" +
+                "#b#L0##i" + RANMARU_TICKET + "# #t" + RANMARU_TICKET + "##l\r\n" +
+                "#L1##i" + PRINCESS_NO_TICKET + "# #t" + PRINCESS_NO_TICKET + "##l"
+            );
             return;
         }
         if (cm.getQuestStatus(QUEST_ID) == 1) {
@@ -51,6 +57,24 @@ function action(mode, type, selection) {
             return;
         }
         cm.sendOk("120级以上才能接受枫叶丘陵的清剿委托。");
+        cm.dispose();
+        return;
+    }
+    if (selectingReward) {
+        var ticket = selection == 1 ? PRINCESS_NO_TICKET : RANMARU_TICKET;
+        if (!quest.canComplete(player, NPC_ID)) {
+            cm.sendOk("这个每日委托目前无法完成。");
+            cm.dispose();
+            return;
+        }
+        if (!cm.canHold(ticket, 1)) {
+            cm.sendOk("请先在其他栏背包中留出一个空位。");
+            cm.dispose();
+            return;
+        }
+        quest.complete(player, NPC_ID);
+        cm.gainItem(ticket, 1);
+        cm.sendOk("已领取#b#t" + ticket + "##k。");
         cm.dispose();
         return;
     }
