@@ -425,7 +425,7 @@ public class FMEconomyManager {
         int[] testRooms = {1, 4, 13, 18, 7};
         for (int room : testRooms) {
             String tier = getTierForRoom(room);
-            System.out.println("Room " + room + " selected tier: " + tier);
+            // BOTLOG-MUTE: System.out.println("Room " + room + " selected tier: " + tier);
         }
     }
 

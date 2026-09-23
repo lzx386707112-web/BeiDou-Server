@@ -25,300 +25,300 @@
   </imgdir>
   <imgdir name="walk1">
     <imgdir name="0">
-      <canvas name="shield" width="150" height="150">
-        <vector name="origin" x="74" y="69"/>
+      <canvas name="shield" width="94" height="34" format="1">
+        <vector name="origin" x="92" y="23"/>
         <imgdir name="map">
-          <vector name="navel" x="0" y="0"/>
+          <vector name="hand" x="0" y="0"/>
         </imgdir>
-        <string name="z" value="shieldBelowBody"/>
+        <string name="z" value="weaponOverArmBelowHead"/>
       </canvas>
     </imgdir>
     <imgdir name="1">
-      <canvas name="shield" width="150" height="150">
-        <vector name="origin" x="68" y="80"/>
+      <canvas name="shield" width="88" height="47" format="1">
+        <vector name="origin" x="75" y="37"/>
         <imgdir name="map">
-          <vector name="navel" x="0" y="0"/>
+          <vector name="hand" x="0" y="0"/>
         </imgdir>
-        <string name="z" value="shieldBelowBody"/>
+        <string name="z" value="weaponOverArmBelowHead"/>
       </canvas>
     </imgdir>
     <imgdir name="2">
-      <uol name="shield" value="../0/shield"/>
+      <canvas name="shield" width="94" height="42" format="1">
+        <vector name="origin" x="93" y="30"/>
+        <imgdir name="map">
+          <vector name="hand" x="0" y="0"/>
+        </imgdir>
+        <string name="z" value="weaponOverArmBelowHead"/>
+      </canvas>
     </imgdir>
     <imgdir name="3">
-      <canvas name="shield" width="150" height="150">
-        <vector name="origin" x="76" y="77"/>
+      <canvas name="shield" width="95" height="35" format="1">
+        <vector name="origin" x="101" y="18"/>
         <imgdir name="map">
-          <vector name="navel" x="0" y="0"/>
+          <vector name="hand" x="0" y="0"/>
         </imgdir>
-        <string name="z" value="shieldBelowBody"/>
+        <string name="z" value="weaponOverArmBelowHead"/>
       </canvas>
     </imgdir>
   </imgdir>
   <imgdir name="stand1">
     <imgdir name="0">
-      <canvas name="shield" width="150" height="150">
-        <vector name="origin" x="67" y="78"/>
+      <canvas name="shield" width="93" height="47" format="1">
+        <vector name="origin" x="86" y="32"/>
         <imgdir name="map">
-          <vector name="navel" x="0" y="0"/>
+          <vector name="hand" x="0" y="0"/>
         </imgdir>
-        <string name="z" value="shieldBelowBody"/>
+        <string name="z" value="weaponOverArmBelowHead"/>
       </canvas>
     </imgdir>
     <imgdir name="1">
-      <canvas name="shield" width="150" height="150">
-        <vector name="origin" x="69" y="79"/>
-        <imgdir name="map">
-          <vector name="navel" x="0" y="0"/>
-        </imgdir>
-        <string name="z" value="shieldBelowBody"/>
-      </canvas>
+      <uol name="shield" value="../0/shield"/>
     </imgdir>
     <imgdir name="2">
-      <canvas name="shield" width="150" height="150">
-        <vector name="origin" x="71" y="78"/>
-        <imgdir name="map">
-          <vector name="navel" x="0" y="0"/>
-        </imgdir>
-        <string name="z" value="shieldBelowBody"/>
-      </canvas>
+      <uol name="shield" value="../0/shield"/>
     </imgdir>
   </imgdir>
   <imgdir name="alert">
     <imgdir name="0">
-      <canvas name="shield" width="150" height="150">
-        <vector name="origin" x="74" y="72"/>
+      <canvas name="shield" width="89" height="61" format="1">
+        <vector name="origin" x="87" y="59"/>
         <imgdir name="map">
-          <vector name="navel" x="0" y="0"/>
+          <vector name="hand" x="0" y="0"/>
         </imgdir>
-        <string name="z" value="shieldBelowBody"/>
+        <string name="z" value="weaponOverArmBelowHead"/>
       </canvas>
     </imgdir>
     <imgdir name="1">
-      <canvas name="shield" width="150" height="150">
-        <vector name="origin" x="74" y="70"/>
+      <canvas name="shield" width="91" height="59" format="1">
+        <vector name="origin" x="84" y="54"/>
         <imgdir name="map">
-          <vector name="navel" x="0" y="0"/>
+          <vector name="hand" x="0" y="0"/>
         </imgdir>
-        <string name="z" value="shieldBelowBody"/>
+        <string name="z" value="weaponOverArmBelowHead"/>
       </canvas>
     </imgdir>
     <imgdir name="2">
-      <canvas name="shield" width="150" height="150">
-        <vector name="origin" x="74" y="68"/>
+      <canvas name="shield" width="91" height="60" format="1">
+        <vector name="origin" x="85" y="54"/>
         <imgdir name="map">
-          <vector name="navel" x="0" y="0"/>
+          <vector name="hand" x="0" y="0"/>
         </imgdir>
-        <string name="z" value="shieldBelowBody"/>
+        <string name="z" value="weaponOverArmBelowHead"/>
       </canvas>
     </imgdir>
   </imgdir>
   <imgdir name="swingO1">
     <imgdir name="0">
-      <canvas name="shield" width="150" height="150">
-        <vector name="origin" x="62" y="79"/>
+      <canvas name="shield" width="99" height="40" format="1">
+        <vector name="origin" x="38" y="26"/>
         <imgdir name="map">
-          <vector name="navel" x="0" y="0"/>
+          <vector name="hand" x="0" y="0"/>
         </imgdir>
-        <string name="z" value="shieldBelowBody"/>
+        <string name="z" value="weaponOverArmBelowHead"/>
       </canvas>
     </imgdir>
     <imgdir name="1">
-      <canvas name="shield" width="150" height="150">
-        <vector name="origin" x="53" y="73"/>
+      <canvas name="shield" width="97" height="52" format="1">
+        <vector name="origin" x="39" y="14"/>
         <imgdir name="map">
-          <vector name="navel" x="0" y="0"/>
+          <vector name="hand" x="0" y="0"/>
         </imgdir>
-        <string name="z" value="shieldBelowBody"/>
+        <string name="z" value="weaponOverArmBelowHead"/>
       </canvas>
     </imgdir>
     <imgdir name="2">
-      <canvas name="shield" width="150" height="150">
-        <vector name="origin" x="69" y="79"/>
+      <canvas name="shield" width="119" height="84" format="1">
+        <vector name="origin" x="74" y="65"/>
         <imgdir name="map">
-          <vector name="navel" x="0" y="0"/>
+          <vector name="hand" x="0" y="0"/>
         </imgdir>
-        <string name="z" value="shieldBelowBody"/>
+        <string name="z" value="weaponOverArmBelowHead"/>
       </canvas>
     </imgdir>
   </imgdir>
   <imgdir name="swingO2">
     <imgdir name="0">
-      <canvas name="shield" width="150" height="150">
-        <vector name="origin" x="73" y="69"/>
+      <canvas name="shield" width="103" height="52" format="1">
+        <vector name="origin" x="17" y="20"/>
         <imgdir name="map">
-          <vector name="navel" x="0" y="0"/>
+          <vector name="hand" x="0" y="0"/>
         </imgdir>
-        <string name="z" value="shieldBelowBody"/>
+        <string name="z" value="weaponOverArmBelowHead"/>
       </canvas>
     </imgdir>
     <imgdir name="1">
-      <canvas name="shield" width="150" height="150">
-        <vector name="origin" x="72" y="82"/>
+      <canvas name="shield" width="99" height="80" format="1">
+        <vector name="origin" x="11" y="56"/>
         <imgdir name="map">
-          <vector name="navel" x="0" y="0"/>
+          <vector name="hand" x="0" y="0"/>
         </imgdir>
-        <string name="z" value="shieldBelowBody"/>
+        <string name="z" value="weaponOverArmBelowHead"/>
       </canvas>
     </imgdir>
     <imgdir name="2">
-      <canvas name="shield" width="150" height="150">
-        <vector name="origin" x="78" y="82"/>
+      <canvas name="shield" width="129" height="81" format="1">
+        <vector name="origin" x="67" y="4"/>
         <imgdir name="map">
-          <vector name="navel" x="0" y="0"/>
+          <vector name="hand" x="0" y="0"/>
         </imgdir>
-        <string name="z" value="shieldBelowBody"/>
+        <string name="z" value="weaponOverArmBelowHead"/>
       </canvas>
     </imgdir>
   </imgdir>
   <imgdir name="swingO3">
     <imgdir name="0">
-      <canvas name="shield" width="150" height="150">
-        <vector name="origin" x="90" y="92"/>
+      <canvas name="shield" width="86" height="90" format="1">
+        <vector name="origin" x="56" y="61"/>
         <imgdir name="map">
-          <vector name="navel" x="0" y="0"/>
+          <vector name="hand" x="0" y="0"/>
         </imgdir>
-        <string name="z" value="shieldBelowBody"/>
+        <string name="z" value="weaponOverArmBelowHead"/>
       </canvas>
     </imgdir>
     <imgdir name="1">
-      <canvas name="shield" width="150" height="150">
-        <vector name="origin" x="64" y="86"/>
+      <canvas name="shield" width="97" height="90" format="1">
+        <vector name="origin" x="63" y="77"/>
         <imgdir name="map">
-          <vector name="navel" x="0" y="0"/>
+          <vector name="hand" x="0" y="0"/>
         </imgdir>
-        <string name="z" value="shieldBelowBody"/>
+        <string name="z" value="weaponOverArmBelowHead"/>
       </canvas>
     </imgdir>
     <imgdir name="2">
-      <canvas name="shield" width="150" height="150">
-        <vector name="origin" x="60" y="78"/>
+      <canvas name="shield" width="124" height="43" format="1">
+        <vector name="origin" x="23" y="31"/>
         <imgdir name="map">
-          <vector name="navel" x="0" y="0"/>
+          <vector name="hand" x="0" y="0"/>
         </imgdir>
-        <string name="z" value="shieldBelowBody"/>
+        <string name="z" value="weaponBelowBody"/>
       </canvas>
     </imgdir>
   </imgdir>
   <imgdir name="swingOF">
     <imgdir name="0">
-      <canvas name="shield" width="150" height="150">
-        <vector name="origin" x="103" y="67"/>
+      <canvas name="shield" width="130" height="84" format="1">
+        <vector name="origin" x="98" y="-3"/>
         <imgdir name="map">
-          <vector name="navel" x="0" y="0"/>
+          <vector name="hand" x="0" y="0"/>
         </imgdir>
-        <string name="z" value="shieldBelowBody"/>
+        <string name="z" value="weaponOverArmBelowHead"/>
       </canvas>
     </imgdir>
     <imgdir name="1">
-      <canvas name="shield" width="150" height="150">
-        <vector name="origin" x="43" y="76"/>
+      <canvas name="shield" width="98" height="96" format="1">
+        <vector name="origin" x="67" y="20"/>
         <imgdir name="map">
-          <vector name="navel" x="0" y="0"/>
+          <vector name="hand" x="0" y="0"/>
         </imgdir>
-        <string name="z" value="backShieldBelowBody"/>
+        <string name="z" value="weaponOverArmBelowHead"/>
       </canvas>
     </imgdir>
     <imgdir name="2">
-      <canvas name="shield" width="150" height="150">
-        <vector name="origin" x="64" y="87"/>
+      <canvas name="shield" width="92" height="85" format="1">
+        <vector name="origin" x="40" y="41"/>
         <imgdir name="map">
-          <vector name="navel" x="0" y="0"/>
+          <vector name="hand" x="0" y="0"/>
         </imgdir>
-        <string name="z" value="shieldBelowBody"/>
+        <string name="z" value="weaponOverArmBelowHead"/>
       </canvas>
     </imgdir>
     <imgdir name="3">
-      <canvas name="shield" width="150" height="150">
-        <vector name="origin" x="85" y="63"/>
+      <canvas name="shield" width="165" height="83" format="1">
+        <vector name="origin" x="118" y="24"/>
         <imgdir name="map">
-          <vector name="navel" x="0" y="0"/>
+          <vector name="hand" x="0" y="0"/>
         </imgdir>
-        <string name="z" value="shield"/>
+        <string name="z" value="weaponOverArmBelowHead"/>
       </canvas>
     </imgdir>
   </imgdir>
   <imgdir name="stabO1">
     <imgdir name="0">
-      <canvas name="shield" width="150" height="150">
-        <vector name="origin" x="88" y="89"/>
+      <canvas name="shield" width="94" height="47" format="1">
+        <vector name="origin" x="107" y="42"/>
         <imgdir name="map">
-          <vector name="navel" x="0" y="0"/>
+          <vector name="hand" x="0" y="0"/>
         </imgdir>
-        <string name="z" value="shieldBelowBody"/>
+        <string name="z" value="weaponOverArmBelowHead"/>
       </canvas>
     </imgdir>
     <imgdir name="1">
-      <canvas name="shield" width="150" height="150">
-        <vector name="origin" x="65" y="76"/>
+      <canvas name="shield" width="96" height="57" format="1">
+        <vector name="origin" x="109" y="44"/>
         <imgdir name="map">
-          <vector name="navel" x="0" y="0"/>
+          <vector name="hand" x="0" y="0"/>
         </imgdir>
-        <string name="z" value="shieldBelowBody"/>
+        <string name="z" value="weaponOverArmBelowHead"/>
       </canvas>
     </imgdir>
   </imgdir>
   <imgdir name="stabO2">
     <imgdir name="0">
-      <canvas name="shield" width="150" height="150">
-        <vector name="origin" x="85" y="95"/>
+      <canvas name="shield" width="94" height="48" format="1">
+        <vector name="origin" x="104" y="27"/>
         <imgdir name="map">
-          <vector name="navel" x="0" y="0"/>
+          <vector name="hand" x="0" y="0"/>
         </imgdir>
-        <string name="z" value="shieldOverHair"/>
+        <string name="z" value="weaponOverArmBelowHead"/>
       </canvas>
     </imgdir>
     <imgdir name="1">
-      <canvas name="shield" width="150" height="150">
-        <vector name="origin" x="60" y="73"/>
+      <canvas name="shield" width="96" height="57" format="1">
+        <vector name="origin" x="105" y="29"/>
         <imgdir name="map">
-          <vector name="navel" x="0" y="0"/>
+          <vector name="hand" x="0" y="0"/>
         </imgdir>
-        <string name="z" value="shieldBelowBody"/>
+        <string name="z" value="weaponOverArmBelowHead"/>
       </canvas>
     </imgdir>
   </imgdir>
   <imgdir name="stabOF">
     <imgdir name="0">
-      <canvas name="shield" width="150" height="150">
-        <vector name="origin" x="86" y="74"/>
+      <canvas name="shield" width="95" height="47" format="1">
+        <vector name="origin" x="60" y="34"/>
         <imgdir name="map">
-          <vector name="navel" x="0" y="0"/>
+          <vector name="hand" x="0" y="0"/>
         </imgdir>
-        <string name="z" value="shield"/>
+        <string name="z" value="weaponOverArmBelowHead"/>
       </canvas>
     </imgdir>
     <imgdir name="1">
-      <canvas name="shield" width="150" height="150">
-        <vector name="origin" x="96" y="80"/>
+      <canvas name="shield" width="93" height="45" format="1">
+        <vector name="origin" x="80" y="38"/>
         <imgdir name="map">
-          <vector name="navel" x="0" y="0"/>
+          <vector name="hand" x="0" y="0"/>
         </imgdir>
-        <string name="z" value="shieldBelowBody"/>
+        <string name="z" value="weaponOverArmBelowHead"/>
       </canvas>
     </imgdir>
     <imgdir name="2">
-      <canvas name="shield" width="150" height="150">
-        <vector name="origin" x="83" y="84"/>
+      <canvas name="shield" width="99" height="57" format="1">
+        <vector name="origin" x="63" y="39"/>
         <imgdir name="map">
-          <vector name="navel" x="0" y="0"/>
+          <vector name="hand" x="0" y="0"/>
         </imgdir>
-        <string name="z" value="shieldBelowBody"/>
+        <string name="z" value="weaponOverArmBelowHead"/>
       </canvas>
     </imgdir>
   </imgdir>
   <imgdir name="proneStab">
     <imgdir name="0">
-      <canvas name="shield" width="150" height="150">
-        <vector name="origin" x="107" y="73"/>
+      <canvas name="shield" width="93" height="47" format="1">
+        <vector name="origin" x="99" y="33"/>
         <imgdir name="map">
-          <vector name="navel" x="0" y="0"/>
+          <vector name="hand" x="0" y="0"/>
         </imgdir>
-        <string name="z" value="shieldOverHair"/>
+        <string name="z" value="weaponOverArmBelowHead"/>
       </canvas>
     </imgdir>
     <imgdir name="1">
-      <uol name="shield" value="../0/shield"/>
+      <canvas name="shield" width="100" height="57" format="1">
+        <vector name="origin" x="88" y="35"/>
+        <imgdir name="map">
+          <vector name="hand" x="0" y="0"/>
+        </imgdir>
+        <string name="z" value="weaponOverArmBelowHead"/>
+      </canvas>
     </imgdir>
   </imgdir>
   <imgdir name="prone">
@@ -339,26 +339,32 @@
   </imgdir>
   <imgdir name="fly">
     <imgdir name="0">
-      <canvas name="shield" width="150" height="150">
-        <vector name="origin" x="74" y="77"/>
+      <canvas name="shield" width="101" height="73" format="1">
+        <vector name="origin" x="39" y="51"/>
         <imgdir name="map">
-          <vector name="navel" x="0" y="0"/>
+          <vector name="hand" x="0" y="0"/>
         </imgdir>
-        <string name="z" value="shieldBelowBody"/>
+        <string name="z" value="weaponOverArmBelowHead"/>
       </canvas>
     </imgdir>
     <imgdir name="1">
-      <uol name="shield" value="../0/shield"/>
+      <canvas name="shield" width="116" height="72" format="1">
+        <vector name="origin" x="39" y="50"/>
+        <imgdir name="map">
+          <vector name="hand" x="0" y="0"/>
+        </imgdir>
+        <string name="z" value="weaponOverArmBelowHead"/>
+      </canvas>
     </imgdir>
   </imgdir>
   <imgdir name="jump">
     <imgdir name="0">
-      <canvas name="shield" width="150" height="150">
-        <vector name="origin" x="74" y="76"/>
+      <canvas name="shield" width="98" height="73" format="1">
+        <vector name="origin" x="38" y="53"/>
         <imgdir name="map">
-          <vector name="navel" x="0" y="0"/>
+          <vector name="hand" x="0" y="0"/>
         </imgdir>
-        <string name="z" value="shieldBelowBody"/>
+        <string name="z" value="weaponOverArmBelowHead"/>
       </canvas>
     </imgdir>
   </imgdir>

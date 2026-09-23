@@ -89,6 +89,17 @@ function post(url, body) {
   });
 }
 
+async function postQuiet(url, body) {
+  const response = await fetch(apiUrl(url), {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify(body),
+  });
+  const payload = await response.json();
+  if (!response.ok || !payload.ok) throw new Error(payload.reason || `HTTP ${response.status}`);
+  return payload;
+}
+
 function get(url) {
   return api(url, {method: "GET"});
 }
@@ -250,8 +261,8 @@ function clearWorkspace() {
   state.mobActionPlanSequence += 1;
   for (const btn of [_mobEl("migrateBtn")].filter(Boolean)) btn.disabled = true;
   $("previewMeta").textContent = "未加载";
-  $("inspectorInline").className = "inspector empty-state compact";
-  $("inspectorInline").innerHTML = '<span class="empty-mark small" aria-hidden="true">⌖</span><strong>选择左侧节点</strong><span>这里会显示属性、差异与可编辑值。</span>';
+  $("inspector").className = "inspector empty-state compact";
+  $("inspector").innerHTML = '<span class="empty-mark small" aria-hidden="true">⌖</span><strong>选择左侧节点</strong><span>这里会显示属性、差异与可编辑值。</span>';
   $("compatibility").innerHTML = '<div class="empty-state compact"><strong>等待对比结果</strong><span>加载后会分析 B 独有节点和现代资源兼容风险。</span></div>';
   setInspectorMode("compatibility");
   $("selectedPath").textContent = "未选择节点";
@@ -264,7 +275,7 @@ function clearWorkspace() {
   $("addChildBtn").disabled = true;
   $("deleteBtn").disabled = true;
   $("exportBtn").disabled = true;
-  $("editActionsInline").hidden = true;
+  $("editActions").hidden = true;
   $("operationResult").hidden = true;
   closeNodeDetailDialog();
 }
@@ -491,7 +502,7 @@ async function previewVideo(nodePath) {
   }
 }
 
-async function loadComparison() {
+async function loadComparison({backgroundPreview = false} = {}) {
   const leftPath = $("leftPath").value.trim();
   const rightPath = $("rightPath").value.trim();
   if (!leftPath || !rightPath) return;
@@ -523,7 +534,11 @@ async function loadComparison() {
     $("nodeActions").hidden = false;
     updateNodeActions();
     setInspectorMode("compatibility");
-    await loadPreview(loadSequence);
+    if (backgroundPreview) {
+      void loadPreview(loadSequence, true);
+    } else {
+      await loadPreview(loadSequence);
+    }
   } catch (error) {
     if (loadSequence !== state.loadSequence) return;
     showResult(error.message, true);
@@ -531,7 +546,7 @@ async function loadComparison() {
   }
 }
 
-async function refreshComparisonAfterCopy(path) {
+async function refreshComparisonAfterCopy(path, {backgroundPreview = false} = {}) {
   const loadSequence = ++state.loadSequence;
   const data = await post("/api/compare", {
     kind: state.kind,
@@ -559,7 +574,11 @@ async function refreshComparisonAfterCopy(path) {
   renderTree();
   $("nodeActions").hidden = false;
   if (state.rowByPath.has(path)) selectNode(path); else updateNodeActions();
-  await loadPreview(loadSequence);
+  if (backgroundPreview) {
+    void loadPreview(loadSequence, true);
+  } else {
+    await loadPreview(loadSequence);
+  }
 }
 
 async function refreshTreeAfterDelete(parentPath) {
@@ -597,12 +616,13 @@ async function refreshTreeAfterDelete(parentPath) {
   tree.scrollTop = scrollTop;
 }
 
-async function loadPreview(loadSequence = state.loadSequence) {
+async function loadPreview(loadSequence = state.loadSequence, quiet = false) {
+  const previewPost = quiet ? postQuiet : post;
   try {
     if (state.kind === "map") {
       const [leftResult, rightResult] = await Promise.allSettled([
-        post("/api/preview", {kind: "map", sourcePath: state.leftPath}),
-        post("/api/preview", {kind: "map", sourcePath: state.rightPath}),
+        previewPost("/api/preview", {kind: "map", sourcePath: state.leftPath}),
+        previewPost("/api/preview", {kind: "map", sourcePath: state.rightPath}),
       ]);
       if (loadSequence !== state.loadSequence) return;
       const leftData = leftResult.status === "fulfilled" ? leftResult.value : null;
@@ -619,8 +639,8 @@ async function loadPreview(loadSequence = state.loadSequence) {
       );
     } else {
       const [leftResult, rightResult] = await Promise.allSettled([
-        post("/api/preview", {kind: "mob", sourcePath: state.leftPath}),
-        post("/api/preview", {kind: "mob", sourcePath: state.rightPath}),
+        previewPost("/api/preview", {kind: "mob", sourcePath: state.leftPath}),
+        previewPost("/api/preview", {kind: "mob", sourcePath: state.rightPath}),
       ]);
       if (loadSequence !== state.loadSequence) return;
       const leftData = leftResult.status === "fulfilled" ? leftResult.value : null;
@@ -1238,7 +1258,7 @@ async function copyMobFrame(fromSide) {
   if (!fromAction || fromIdx < 0 || fromIdx >= fromAction.frames.length) return;
   const fromFrame = fromAction.frames[fromIdx];
   try {
-    const data = await planThenCopyMobFrame({
+    const data = await writeMobFrame({
       sourcePath: fromSide === "right" ? state.rightPath : state.leftPath,
       targetPath: toPath,
       sourceFramePath: fromFrame.path,
@@ -1248,7 +1268,7 @@ async function copyMobFrame(fromSide) {
     if (!data) return;
     if (!data.ok) throw new Error(data.error || "复制失败");
     showResult(`帧复制完成\n${data.sourceSummary}\n客户端：${data.clientOperation} · 服务端：${data.serverOperation}\n未受影响的记录：${data.rawScope?.protectedRecords ?? "?"} 条`);
-    await loadComparison();
+    await loadComparison({backgroundPreview: true});
   } catch (error) {
     showResult(`复制失败: ${error.message}`, true);
   }
@@ -1332,7 +1352,7 @@ function selectNode(path) {
   if (!row) return;
   $("selectedPath").textContent = path || "/";
   $("selectedPath").title = path || "/";
-  setInspectorMode("node");
+  updateNodeActions();
   revealSelectedMapContent();
   // 怪物模式下，点击动作节点（stand/attack1 等）自动切换动画到该动作
   if (state.kind === "mob" && path) {
@@ -1436,7 +1456,7 @@ function updateNodeActions() {
 
 function setInspectorMode(mode) {
   if (mode === "node") {
-    openNodeDetailInline();
+    openNodeDetailDialog();
     return;
   }
   const compatibilityMode = mode === "compatibility";
@@ -1445,7 +1465,6 @@ function setInspectorMode(mode) {
   $("compatibility").hidden = !compatibilityMode;
   $("crashDiagnostic").hidden = !diagnosticMode;
   if ($("serverControlHelp")) $("serverControlHelp").hidden = !serverControlMode;
-  if ($("nodeDetailInline")) $("nodeDetailInline").hidden = true;
   $("compatibilityTab").classList.toggle("active", compatibilityMode);
   $("diagnosticTab").classList.toggle("active", diagnosticMode);
   $("nodeDetailTab").classList.toggle("active", false);
@@ -1463,35 +1482,26 @@ function setInspectorMode(mode) {
 }
 
 function closeNodeDetailDialog() {
-  $("nodeDetailInline")?.setAttribute("hidden", "");
+  $("nodeDetailDialog")?.setAttribute("hidden", "");
   $("nodeDetailTab")?.classList.remove("active");
   $("nodeDetailTab")?.setAttribute("aria-selected", "false");
 }
 
-function openNodeDetailInline() {
-  const inline = $("nodeDetailInline");
-  if (!inline) return;
-  // 切换侧边栏标签到"节点详情"
+function openNodeDetailDialog() {
+  const dialog = $("nodeDetailDialog");
+  if (!dialog) return;
+  $("nodeDetailPath").textContent = state.selectedPath || "/";
+  $("nodeDetailPath").title = state.selectedPath || "/";
   $("nodeDetailTab").classList.add("active");
   $("nodeDetailTab").setAttribute("aria-selected", "true");
-  $("compatibility").hidden = true;
-  $("crashDiagnostic").hidden = true;
-  if ($("serverControlHelp")) $("serverControlHelp").hidden = true;
-  $("compatibilityTab").classList.remove("active");
-  $("diagnosticTab").classList.remove("active");
-  $("serverControlTab")?.classList.remove("active");
-  $("compatibilityTab").setAttribute("aria-selected", "false");
-  $("diagnosticTab").setAttribute("aria-selected", "false");
-  $("serverControlTab")?.setAttribute("aria-selected", "false");
-  // 渲染节点详情到内联容器
-  inline.hidden = false;
   if (state.selectedPath !== null && state.rowByPath.has(state.selectedPath)) {
     renderInspector(state.rowByPath.get(state.selectedPath));
   } else {
-    $("inspectorInline").className = "inspector empty-state compact";
-    $("inspectorInline").innerHTML = '<span class="empty-mark small" aria-hidden="true">⌖</span><strong>选择左侧节点</strong><span>对比树里点选节点后，会在这里显示属性、差异和可编辑值。</span>';
-    $("editActionsInline").hidden = true;
+    $("inspector").className = "inspector empty-state compact";
+    $("inspector").innerHTML = '<span class="empty-mark small" aria-hidden="true">⌖</span><strong>选择左侧节点</strong><span>对比树里点选节点后，会在这里显示属性、差异和可编辑值。</span>';
+    $("editActions").hidden = true;
   }
+  dialog.hidden = false;
 }
 
 function diagnosticConfidence(value) {
@@ -1695,7 +1705,7 @@ function renderInspector(row) {
     const different = values[0] !== values[1] ? "different" : "";
     return `<tr><th>${label}</th><td class="${different}">${escapeHtml(values[0])}</td><td class="${different}">${escapeHtml(values[1])}</td></tr>`;
   }).join("");
-  const inspector = $("inspectorInline");
+  const inspector = $("inspector");
   const semantic = left || right || {};
   const leftCompatibility = left?.compatibility;
   const rightCompatibility = right?.compatibility;
@@ -1759,7 +1769,7 @@ function renderInspector(row) {
   inspector.innerHTML = `<div class="node-detail-col">${canvasPreview}${semanticMarkup}${resourceMarkup}${mobManifestMarkup}${serverControlMarkup(row)}</div><div class="node-detail-col"><div class="side-label">属性对比</div><table class="compare-table"><thead><tr><th>属性</th><th><span class="column-badge a">A</span>主文件</th><th><span class="column-badge b">B</span>对比</th></tr></thead><tbody>${table}</tbody></table>${childFramesMarkup}${editorMarkup(left)}</div>`;
   const leftXml = state.leftInfo?.format === "xml";
   const editable = Boolean(left?.editable && (leftXml || state.leftInfo?.format === "img"));
-  $("editActionsInline").hidden = false;
+  $("editActions").hidden = false;
   $("saveBtn").hidden = !editable;
   $("saveBtn").disabled = !editable;
   updateNodeActions();
@@ -1772,7 +1782,7 @@ function renderInspector(row) {
     loadChildFrames(row.path, left?.childCount || row?.right?.childCount);
   }
   $("openServerControlBtn")?.addEventListener("click", () => setInspectorMode("serverControl"));
-  bindMobSkillOpenButtons($("inspectorInline"));
+  bindMobSkillOpenButtons($("inspector"));
 }
 
 function serverControlMarkup(row) {
@@ -2133,28 +2143,10 @@ function renderChildFrames(leftData, rightData, parentPath) {
   }));
 }
 
-async function planThenCopyMobFrame(options) {
+async function writeMobFrame(options) {
   const {
     sourcePath, targetPath, sourceFramePath, actionName, frameIndex,
   } = options;
-  const plan = await post("/api/copy-mob-frame", {
-    sourcePath, targetPath, sourceFramePath, actionName, frameIndex, dryRun: true,
-  });
-  const hazard = plan.rawScope?.referencedStringRefs || 0;
-  const lines = [
-    `复制 ${actionName}/${frameIndex}`,
-    `真实来源：${plan.sourceSummary}`,
-    `客户端：${plan.clientOperation === "add" ? "新增该帧记录" : "替换该帧记录（其余记录逐字节不变）"}`,
-    `服务端 XML：${plan.serverOperation}`,
-  ];
-  if (plan.plannedFiles?.length) {
-    lines.push(`将要写入：${plan.plannedFiles.join("、")}`);
-  }
-  if (hazard) {
-    lines.push(`⚠️ 该帧所在的字节区间被 ${hazard} 处共享属性名引用，变长改写会被旧版 IMG 格式拒绝。`);
-  }
-  lines.push("", "确认写入？");
-  if (!confirm(lines.join("\n"))) return null;
   return post("/api/copy-mob-frame", {
     sourcePath, targetPath, sourceFramePath, actionName, frameIndex,
   });
@@ -2168,24 +2160,19 @@ async function copyFrameBetweenSides(fromSide, parentPath, frameName, button) {
   button.disabled = true;
   button.textContent = "…";
   try {
-    const data = await planThenCopyMobFrame({
+    const data = await writeMobFrame({
       sourcePath: fromPath,
       targetPath: toPath,
       sourceFramePath: `${parentPath}/${frameName}`,
       actionName: parentPath,
       frameIndex: parseInt(frameName, 10),
     });
-    if (!data) {
-      button.textContent = `${fromLabel}→${toLabel}`;
-      button.disabled = false;
-      return;
-    }
     if (!data.ok) throw new Error(data.error || "复制失败");
     button.textContent = "✓ 完成";
     button.disabled = false;
     setStatus(`${fromLabel}→${toLabel} 已完成：${data.sourceSummary}`);
     // Reload comparison to reflect changes
-    await loadComparison();
+    await loadComparison({backgroundPreview: true});
   } catch (error) {
     alert(`复制失败: ${error.message}`);
     button.textContent = `${fromLabel}→${toLabel}`;
@@ -2313,13 +2300,12 @@ async function saveEdit() {
   const row = state.rowByPath.get(state.selectedPath);
   if (!row?.left) return;
   const editedPath = state.selectedPath;
-  if (!confirm(`写入主文件节点 ${state.selectedPath}？`)) return;
   try {
     const syncServer = $("syncServer").checked;
     const data = await post("/api/edit", {sourcePath: state.leftPath, path: state.selectedPath, value: currentEditValue(row.left), dryRun: false, backup: true, syncServer});
     const targetText = syncServer ? "客户端与服务端" : "客户端";
     const resultText = `${targetText}写入完成，已重新加载左侧节点\n${JSON.stringify(data, null, 2)}`;
-    await loadComparison();
+    await loadComparison({backgroundPreview: true});
     revealNode(editedPath);
     showResult(resultText);
   } catch (error) {
@@ -2345,11 +2331,10 @@ async function deleteNode() {
 }
 
 async function createMainFile() {
-  if (!confirm(`创建空白主文件 ${state.leftPath}，并建立对应服务端 XML？`)) return;
   try {
     const data = await post("/api/create-main", {sourcePath: state.leftPath});
     const resultText = `空白主文件创建完成，可从 TMS 逐个复制兼容节点。\n${JSON.stringify(data, null, 2)}`;
-    await loadComparison();
+    await loadComparison({backgroundPreview: true});
     showResult(resultText);
   } catch (error) {
     showResult(error.message, true);
@@ -2395,7 +2380,7 @@ async function copyTmsNode() {
       : "";
     const resultText = `${operation}${skipped}${canvasNote}${densifyNote}${uolNote}${migratedResources}${unresolvedResources}${recordedFiles}\n${JSON.stringify(data, null, 2)}`;
     showResult(resultText);
-    await refreshComparisonAfterCopy(path);
+    await refreshComparisonAfterCopy(path, {backgroundPreview: true});
   } catch (error) {
     showResult(error.message, true);
   } finally {
@@ -2406,14 +2391,7 @@ async function copyTmsNode() {
 async function migrateMobAction() {
   const actionName = state.mobActionName;
   const source = activeMobComparisonSource();
-  const leftAction = state.preview?.actions.find((action) => action.name === actionName);
   if (!actionName || !source) return;
-  const verb = leftAction ? "替换" : "新增";
-  if (!confirm(
-    `${verb} A 中的动作 ${actionName}？\n\n`
-    + `来源：${source.label}\n`
-    + "客户端只修改这个顶层动作记录，并同步服务端同名 XML 块。",
-  )) return;
 
   const button = _mobEl("migrateBtn");
   button.disabled = true;
@@ -2426,7 +2404,7 @@ async function migrateMobAction() {
       action: actionName,
     });
     for (const file of data.modifiedFiles || []) state.exportFiles.add(file);
-    await loadComparison();
+    await loadComparison({backgroundPreview: true});
     if (Array.from($("actionSelect").options).some((option) => option.value === actionName)) {
       state.mobActionName = actionName;
       state.mobElapsed = 0;
@@ -2580,7 +2558,6 @@ function openExportDirectoryBrowser() {
 async function exportFiles() {
   const destination = $("exportDestination").value.trim() || defaultExportRoot;
   const includeServer = $("exportIncludeServer").checked && !$("exportIncludeServer").disabled;
-  if (!confirm(`复制当前修改文件到 ${destination}？`)) return;
   try {
     const data = await post("/api/export", {
       sourcePath: state.leftPath,
@@ -2618,7 +2595,6 @@ function openAddDialog(parentPath) {
 async function addNode() {
   const name = $("newNodeName").value.trim();
   const addedPath = `${state.addParentPath}/${name}`.replace(/^\//, "");
-  if (!confirm(`写入节点 ${addedPath}？`)) return;
   try {
     const syncServer = $("syncServer").checked;
     const data = await post("/api/add", {
@@ -2634,7 +2610,7 @@ async function addNode() {
     $("addDialog").close();
     const targetText = syncServer ? "客户端与服务端" : "客户端";
     const resultText = `${targetText}添加完成，左侧节点已重新加载并定位到 ${addedPath}。\n${JSON.stringify(data, null, 2)}`;
-    await loadComparison();
+    await loadComparison({backgroundPreview: true});
     revealNode(addedPath);
     showResult(resultText);
   } catch (error) {
@@ -2661,7 +2637,7 @@ $("reloadBtn")?.addEventListener("click", loadComparison);
 $("compatibilityTab")?.addEventListener("click", () => setInspectorMode("compatibility"));
 $("diagnosticTab")?.addEventListener("click", () => setInspectorMode("diagnostic"));
 $("nodeDetailTab")?.addEventListener("click", () => setInspectorMode("node"));
-$("openNodeDetailBtn")?.addEventListener("click", () => openNodeDetailInline());
+$("openNodeDetailBtn")?.addEventListener("click", () => openNodeDetailDialog());
 $("closeNodeDetailBtn")?.addEventListener("click", closeNodeDetailDialog);
 $("nodeDetailDialog")?.addEventListener("click", (event) => {
   if (event.target === $("nodeDetailDialog")) closeNodeDetailDialog();
@@ -3142,7 +3118,6 @@ function renderMcvEditor(info) {
   $("mcvReplaceFile")?.addEventListener("change", async (event) => {
     const file = event.target.files[0];
     if (!file) return;
-    if (!confirm(`确认用 ${file.name} 替换 ${info.name}？原文件将备份为 .mcv.bak`)) return;
     const formData = new FormData();
     formData.append("name", info.name);
     formData.append("file", file);
@@ -3166,10 +3141,6 @@ function renderMcvEditor(info) {
   document.addEventListener("keydown", keyHandler);
   $("mcvEditDialog")?.addEventListener("close", () => {
     document.removeEventListener("keydown", keyHandler);
-    if (dirty && !confirm("有未保存的延迟修改，确认关闭？")) {
-      $("mcvEditDialog").showModal();
-      return;
-    }
   });
   // Load first frame
   showFrame(0);

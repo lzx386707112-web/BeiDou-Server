@@ -23,7 +23,7 @@ public class ItemQuantityConfig {
             YamlReader reader = new YamlReader(source);
             return reader.read(ItemQuantityConfig.class);
         } catch (IOException e) {
-            System.err.println("[ItemQuantityConfig] " + e.getMessage());
+            // BOTLOG-MUTE: System.err.println("[ItemQuantityConfig] " + e.getMessage());
             return null;
         }
     }

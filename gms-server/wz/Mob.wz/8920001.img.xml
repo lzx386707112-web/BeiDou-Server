@@ -2,7 +2,7 @@
 <imgdir name="8920001.img">
   <imgdir name="info">
     <int name="firstAttack" value="1" />
-    <int name="level" value="240" />
+    <int name="level" value="190" />
     <int name="maxMP" value="15000000" />
     <int name="speed" value="-30" />
     <int name="PADamage" value="7500" />
@@ -24,22 +24,25 @@
     <int name="hpTagBgcolor" value="5" />
     <imgdir name="skill">
       <imgdir name="0">
-        <int name="skill" value="186" />
-        <int name="level" value="1" />
-        <int name="action" value="1" />
+        <int name="skill" value="186"/>
+        <int name="action" value="1"/>
+        <int name="level" value="1"/>
+        <int name="skillAfter" value="960"/>
       </imgdir>
       <imgdir name="1">
-        <int name="skill" value="200" />
-        <int name="level" value="51" />
-        <int name="action" value="2" />
+        <int name="skill" value="201"/>
+        <int name="action" value="2"/>
+        <int name="level" value="51"/>
+        <int name="afterDead" value="1"/>
       </imgdir>
       <imgdir name="2">
-        <int name="skill" value="200" />
-        <int name="level" value="53" />
-        <int name="action" value="3" />
+        <int name="skill" value="201"/>
+        <int name="action" value="3"/>
+        <int name="level" value="53"/>
+        <int name="afterDead" value="1"/>
       </imgdir>
     </imgdir>
-  <string name="maxHP" value="140000000000" /></imgdir>
+  <string name="maxHP" value="500000000" /></imgdir>
   <imgdir name="stand">
     <canvas name="0" width="297" height="496" format="1">
       <vector name="origin" x="129" y="476" />

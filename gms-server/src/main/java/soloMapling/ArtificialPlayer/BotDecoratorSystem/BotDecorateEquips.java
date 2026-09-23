@@ -56,9 +56,9 @@ public class BotDecorateEquips {
         } else if (pantsId != null) {
             BotCustomization.EquipBot(fakechar, pantsId);
         } else {
-            System.out.println("[equipTopBottom] No top/bottom/overall found for "
-                    + fakechar.getName() + " (job=" + fakechar.getJob().name()
-                    + " lv=" + fakechar.getLevel() + ")");
+            // BOTLOG-MUTE: System.out.println("[equipTopBottom] No top/bottom/overall found for "
+                    // BOTLOG-MUTE: + fakechar.getName() + " (job=" + fakechar.getJob().name()
+                    // BOTLOG-MUTE: + " lv=" + fakechar.getLevel() + ")");
         }
     }
 

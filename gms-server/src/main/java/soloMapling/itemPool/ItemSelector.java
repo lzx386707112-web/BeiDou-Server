@@ -72,7 +72,7 @@ public class ItemSelector {
         }
 
         if (itemNodes == null) {
-            System.out.println("No items found for item type: " + itemType);
+            // BOTLOG-MUTE: System.out.println("No items found for item type: " + itemType);
             return null;
         }
 
@@ -86,7 +86,7 @@ public class ItemSelector {
                 try {
                     entryVersion = toInteger(entry.getKey());
                 } catch (NumberFormatException e) {
-                    System.out.println("Invalid version key: " + entry.getKey());
+                    // BOTLOG-MUTE: System.out.println("Invalid version key: " + entry.getKey());
                     continue;
                 }
 
@@ -120,7 +120,7 @@ public class ItemSelector {
             try {
                 version = toInteger(key);
             } catch (NumberFormatException e) {
-                System.out.println("Invalid version key: " + key);
+                // BOTLOG-MUTE: System.out.println("Invalid version key: " + key);
                 continue;
             }
 
@@ -183,7 +183,7 @@ public class ItemSelector {
             return itemSelector.getRandomItem(itemType, tier, MapleVersionManager.getItemPoolVersion());
         } catch (Exception e) {
             if (MISSING.putIfAbsent("parse:" + itemPool, Boolean.TRUE) == null) {
-                System.err.println("[ItemSelector] Failed to pick from " + itemPool + ": " + e.getMessage());
+                // BOTLOG-MUTE: System.err.println("[ItemSelector] Failed to pick from " + itemPool + ": " + e.getMessage());
             }
             return null;
         }
@@ -203,7 +203,7 @@ public class ItemSelector {
             return loaded;
         } catch (Exception e) {
             if (MISSING.putIfAbsent(itemPool, Boolean.TRUE) == null) {
-                System.err.println("[ItemSelector] Missing item pool " + itemPool + ": " + e.getMessage());
+                // BOTLOG-MUTE: System.err.println("[ItemSelector] Missing item pool " + itemPool + ": " + e.getMessage());
             }
             return null;
         }

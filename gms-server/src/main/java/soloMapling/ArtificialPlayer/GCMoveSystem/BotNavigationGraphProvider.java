@@ -617,7 +617,7 @@ final class BotNavigationGraphProvider {
                 try {
                     warmGraphAsync(mapFactory.getMap(mapId), movementProfile);
                 } catch (RuntimeException e) {
-                    log.warn("Route prewarm failed for map {}", Integer.valueOf(mapId), e);
+                    // BOTLOG-MUTE: log.warn("Route prewarm failed for map {}", Integer.valueOf(mapId), e);
                 }
             }
         });
@@ -662,7 +662,7 @@ final class BotNavigationGraphProvider {
                     PENDING_GRAPHS.remove(key, future);
                 } catch (Throwable t) {
                     future.completeExceptionally(t);
-                    log.warn("Failed to warm bot nav graph for map {} speed={} jump={}", new Object[]{Integer.valueOf(key.mapId()), Integer.valueOf(key.totalSpeedStat()), Integer.valueOf(key.totalJumpStat()), t});
+                    // BOTLOG-MUTE: log.warn("Failed to warm bot nav graph for map {} speed={} jump={}", new Object[]{Integer.valueOf(key.mapId()), Integer.valueOf(key.totalSpeedStat()), Integer.valueOf(key.totalJumpStat()), t});
                     PENDING_GRAPHS.remove(key, future);
                 }
             } catch (Throwable th) {
@@ -726,7 +726,7 @@ final class BotNavigationGraphProvider {
                 throw th;
             }
         } catch (IOException | ClassNotFoundException e) {
-            log.debug("Failed to load bot nav graph cache for map {} speed={} jump={}", new Object[]{Integer.valueOf(key.mapId()), Integer.valueOf(key.totalSpeedStat()), Integer.valueOf(key.totalJumpStat()), e});
+            // BOTLOG-MUTE: log.debug("Failed to load bot nav graph cache for map {} speed={} jump={}", new Object[]{Integer.valueOf(key.mapId()), Integer.valueOf(key.totalSpeedStat()), Integer.valueOf(key.totalJumpStat()), e});
             return null;
         }
     }
@@ -741,7 +741,7 @@ final class BotNavigationGraphProvider {
             } finally {
             }
         } catch (IOException e) {
-            log.debug("Failed to save bot nav graph cache for map {}", Integer.valueOf(graph.mapId), e);
+            // BOTLOG-MUTE: log.debug("Failed to save bot nav graph cache for map {}", Integer.valueOf(graph.mapId), e);
         }
     }
 

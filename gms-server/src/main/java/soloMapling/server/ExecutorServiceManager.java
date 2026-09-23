@@ -53,7 +53,7 @@ public class ExecutorServiceManager {
             if (!executor.awaitTermination(60, TimeUnit.SECONDS)) {
                 executor.shutdownNow();
                 if (!executor.awaitTermination(60, TimeUnit.SECONDS)) {
-                    System.err.println("Executor did not terminate");
+                    // BOTLOG-MUTE: System.err.println("Executor did not terminate");
                 }
             }
         } catch (InterruptedException ie) {

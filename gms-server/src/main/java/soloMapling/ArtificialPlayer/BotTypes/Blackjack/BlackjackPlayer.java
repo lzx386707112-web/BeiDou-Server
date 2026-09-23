@@ -176,7 +176,7 @@ public class BlackjackPlayer {
         skippedHands++;
         dprint("skipHand count=" + skippedHands);
         if (skippedHands > 3) {
-            System.out.println("[Blackjack] " + getName() + " has skipped 3 hands. Removing from game.");
+            // BOTLOG-MUTE: System.out.println("[Blackjack] " + getName() + " has skipped 3 hands. Removing from game.");
             return true;
         }
         return false;

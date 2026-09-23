@@ -112,8 +112,8 @@ public class EnvironmentManager {
 
     public static void marketEnvironmentStartup() {
         if (!startupStarted.compareAndSet(false, true)) {
-            System.out.println("[EnvironmentManager] Environment startup already "
-                    + (startupComplete ? "complete" : "running") + "; skipping duplicate request.");
+            // BOTLOG-MUTE: System.out.println("[EnvironmentManager] Environment startup already "
+                    // BOTLOG-MUTE: + (startupComplete ? "complete" : "running") + "; skipping duplicate request.");
             return;
         }
 
@@ -153,14 +153,14 @@ public class EnvironmentManager {
             startupComplete = true;
 
             double totalSeconds = (System.currentTimeMillis() - startupStart) / 1000.0;
-            System.out.println(String.format(
-                    "[EnvironmentManager] === All bots initialized: %d bots in %.1fs ===",
-                    BotGeneration.getBotsCreatedCount(), totalSeconds));
+            // BOTLOG-MUTE: System.out.println(String.format(
+                    // BOTLOG-MUTE: "[EnvironmentManager] === All bots initialized: %d bots in %.1fs ===",
+                    // BOTLOG-MUTE: BotGeneration.getBotsCreatedCount(), totalSeconds));
         } catch (RuntimeException e) {
             startupStarted.set(false);
             startupComplete = false;
             soloMapling.ArtificialPlayer.BotAutoSpawner.allowMarketStartupRetry();
-            System.err.println("[EnvironmentManager] Environment startup failed; retry is allowed.");
+            // BOTLOG-MUTE: System.err.println("[EnvironmentManager] Environment startup failed; retry is allowed.");
             throw e;
         }
     }
@@ -172,8 +172,8 @@ public class EnvironmentManager {
      * to a later wave's count.
      */
     private static void runWave(int number, String name, List<Runnable> tasks) {
-        System.out.println(String.format(
-                "[EnvironmentManager] === Wave %d (%s) starting ===", number, name));
+        // BOTLOG-MUTE: System.out.println(String.format(
+                // BOTLOG-MUTE: "[EnvironmentManager] === Wave %d (%s) starting ===", number, name));
         long start = System.currentTimeMillis();
         int botsBefore = BotGeneration.getBotsCreatedCount();
 
@@ -181,9 +181,9 @@ public class EnvironmentManager {
 
         double seconds = (System.currentTimeMillis() - start) / 1000.0;
         int botsSpawned = BotGeneration.getBotsCreatedCount() - botsBefore;
-        System.out.println(String.format(
-                "[EnvironmentManager] === Wave %d (%s) complete - %d bots spawned in %.1fs ===",
-                number, name, botsSpawned, seconds));
+        // BOTLOG-MUTE: System.out.println(String.format(
+                // BOTLOG-MUTE: "[EnvironmentManager] === Wave %d (%s) complete - %d bots spawned in %.1fs ===",
+                // BOTLOG-MUTE: number, name, botsSpawned, seconds));
     }
 
     private static void spawnScaledFMEntranceBots() {
@@ -259,7 +259,7 @@ public class EnvironmentManager {
     public static void spawnTownWanderers() {
         List<TownPresenceConfig.TownEntry> towns = TownPresenceConfig.towns();
         if (towns.isEmpty()) {
-            System.out.println("[EnvironmentManager] Town wanderers skipped: TownPresence.yaml loaded 0 towns.");
+            // BOTLOG-MUTE: System.out.println("[EnvironmentManager] Town wanderers skipped: TownPresence.yaml loaded 0 towns.");
             return;
         }
         for (TownPresenceConfig.TownEntry town : towns) {
@@ -270,7 +270,7 @@ public class EnvironmentManager {
             }
             MapleMap map = getMapleMapById(mapId);
             if (map == null || map.getPortal(0) == null) {
-                System.out.println("[EnvironmentManager] Town wanderers skipped map=" + mapId + " name=" + town.name());
+                // BOTLOG-MUTE: System.out.println("[EnvironmentManager] Town wanderers skipped map=" + mapId + " name=" + town.name());
                 continue;
             }
             Point anchor = map.getPortal(0).getPosition();
@@ -284,7 +284,7 @@ public class EnvironmentManager {
                 }
             }
             setAndStartBots(ids, BotTypeManager.BotType.TOWN_WANDERER_BOT);
-            System.out.println("[EnvironmentManager] Town wanderers map=" + mapId + " name=" + town.name() + " spawned=" + ids.size());
+            // BOTLOG-MUTE: System.out.println("[EnvironmentManager] Town wanderers map=" + mapId + " name=" + town.name() + " spawned=" + ids.size());
         }
     }
 

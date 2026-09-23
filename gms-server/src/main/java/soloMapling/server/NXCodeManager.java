@@ -36,7 +36,7 @@ public class NXCodeManager {
                 generatedId = nextId;
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            // BOTLOG-MUTE: e.printStackTrace();
         }
 
         return generatedId;
@@ -69,7 +69,7 @@ public class NXCodeManager {
                 generatedId = nextId;
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            // BOTLOG-MUTE: e.printStackTrace();
         }
 
         return generatedId;

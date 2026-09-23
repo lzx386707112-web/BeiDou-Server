@@ -55,6 +55,10 @@ export function moveToHenesysByCondition(data: { id?: number; name?: string }) {
   return axios.put('/character/v1/moveToHenesys', data);
 }
 
+export function changeCharacterName(id: number, newName: string) {
+  return axios.put(`/character/v1/${id}/changeName`, { newName });
+}
+
 export function getEquInitialInfo(id: number) {
   return axios.post(`/common/v1/getEquipmentInfoByItemId`, { id });
 }

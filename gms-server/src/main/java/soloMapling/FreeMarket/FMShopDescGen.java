@@ -323,9 +323,9 @@ public class FMShopDescGen {
         names.removeIf(line -> line.isEmpty() || line.length() > 12 || MarketShopTitles.hasLatin(line));
         if (names.isEmpty()) {
             names.addAll(FALLBACK_IGNS);
-            MarketBotLog.warn("IGN name file missing or empty; using {} fallback names", names.size());
+            // BOTLOG-MUTE: MarketBotLog.warn("IGN name file missing or empty; using {} fallback names", names.size());
         } else {
-            MarketBotLog.info("Loaded {} shop/bot IGNs", names.size());
+            // BOTLOG-MUTE: MarketBotLog.info("Loaded {} shop/bot IGNs", names.size());
         }
         Collections.shuffle(names);
         return names;
@@ -359,7 +359,7 @@ public class FMShopDescGen {
                 }
             }
         } catch (IOException e) {
-            MarketBotLog.error("Failed to read " + classpath, e);
+            // BOTLOG-MUTE: MarketBotLog.error("Failed to read " + classpath, e);
         }
         return lines;
     }

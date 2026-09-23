@@ -194,7 +194,7 @@ public class InPacketReader {
             appendRawDataToCsv(mp2);
 
         } catch (IOException e) {
-            System.out.println("Unable to write MovementPacket to binary or csv");
+            // BOTLOG-MUTE: System.out.println("Unable to write MovementPacket to binary or csv");
         }
     }
 
@@ -267,7 +267,7 @@ public class InPacketReader {
                 writeLine(writer, buildCsvLine(record));
             }
         } catch (IOException e) {
-            System.out.println("Error while writing to CSV file: " + e.getMessage());
+            // BOTLOG-MUTE: System.out.println("Error while writing to CSV file: " + e.getMessage());
         }
     }
 
@@ -298,11 +298,11 @@ public class InPacketReader {
             if (directoryPath != null && !Files.exists(directoryPath)) {
                 // Create the directory if it doesn't exist
                 Files.createDirectories(directoryPath);
-                System.out.println("Directory created: " + directoryPath);
+                // BOTLOG-MUTE: System.out.println("Directory created: " + directoryPath);
             }
         } catch (IOException e) {
-            e.printStackTrace();
-            System.err.println("Failed to create directory for: " + fullFileName);
+            // BOTLOG-MUTE: e.printStackTrace();
+            // BOTLOG-MUTE: System.err.println("Failed to create directory for: " + fullFileName);
         }
     }
 
@@ -357,15 +357,15 @@ public class InPacketReader {
 
     public static void test() {
         MovementRecordingRaw mcr = getMovementRecordingRaw(910000001, "bintest1");
-        System.out.println(mcr.getMapId());
-        System.out.println(mcr.getRecordingName());
+        // BOTLOG-MUTE: System.out.println(mcr.getMapId());
+        // BOTLOG-MUTE: System.out.println(mcr.getRecordingName());
         List<MovementPacketRaw> mpr = mcr.getMovementPacketList();
         for (MovementPacketRaw mpr_ : mpr) {
-            System.out.println(mpr_.getTimestamp());
-            System.out.println(mpr_.getNumCommands());
+            // BOTLOG-MUTE: System.out.println(mpr_.getTimestamp());
+            // BOTLOG-MUTE: System.out.println(mpr_.getNumCommands());
             List<SingleMoveCommand> mpr__ = mpr_.getRecordList();
             for (SingleMoveCommand mprec : mpr__) {
-                System.out.println(Arrays.toString(mprec.getFieldValues()));
+                // BOTLOG-MUTE: System.out.println(Arrays.toString(mprec.getFieldValues()));
             }
         }
     }

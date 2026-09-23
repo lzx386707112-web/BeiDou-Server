@@ -121,6 +121,14 @@
               </a-button>
               <a-button
                 type="text"
+                status="success"
+                size="mini"
+                @click="changeNameClick(record)"
+              >
+                {{ $t('account.player.button.changeName') }}
+              </a-button>
+              <a-button
+                type="text"
                 status="warning"
                 size="mini"
                 @click="moveToHenesysClick(record)"
@@ -310,6 +318,37 @@
         </a-form-item>
       </a-form>
     </a-modal>
+
+    <!-- 修改昵称弹窗 -->
+    <a-modal
+      v-model:visible="changeNameVisible"
+      :title="$t('account.player.changeName.title')"
+      :ok-loading="loading"
+      :mask-closable="false"
+      :esc-to-close="false"
+      :ok-text="$t('button.confirm')"
+      :on-before-ok="submitChangeName"
+    >
+      <a-form :model="changeNameForm">
+        <a-form-item :label="$t('account.player.changeName.currentName')">
+          <a-tag color="blue">{{ changeNameForm.currentName }}</a-tag>
+        </a-form-item>
+        <a-form-item
+          :label="$t('account.player.changeName.newName')"
+          :rules="[
+            { required: true, message: $t('account.player.changeName.required') },
+            { minLength: 2, maxLength: 12, message: $t('account.player.changeName.length') }
+          ]"
+          :validate-trigger="['change', 'input']"
+        >
+          <a-input
+            v-model="changeNameForm.newName"
+            :placeholder="$t('account.player.changeName.placeholder')"
+            allow-clear
+          />
+        </a-form-item>
+      </a-form>
+    </a-modal>
   </div>
 </template>
 
@@ -326,6 +365,7 @@
     givePlayerSrc,
     moveToHenesys,
     moveToHenesysByCondition,
+    changeCharacterName,
   } from '@/api/player';
 
   const { t } = useI18n();
@@ -374,6 +414,14 @@
 
   const typeFieldNames = { value: 'value', label: 'label' };
   const typeOptions = ref([{ value: 0, label: t('account.player.nxCredit') }]);
+
+  // 修改昵称相关
+  const changeNameVisible = ref(false);
+  const changeNameForm = ref({
+    characterId: 0,
+    currentName: '',
+    newName: '',
+  });
 
   const loadData = async () => {
     setLoading(true);
@@ -530,6 +578,40 @@
         }
       },
     });
+  };
+
+  const changeNameClick = (data: any) => {
+    changeNameForm.value = {
+      characterId: data.id,
+      currentName: data.name,
+      newName: '',
+    };
+    changeNameVisible.value = true;
+  };
+
+  const submitChangeName = async () => {
+    if (!changeNameForm.value.newName || changeNameForm.value.newName.trim().length < 2) {
+      Message.warning(t('account.player.changeName.length'));
+      return false;
+    }
+    setLoading(true);
+    try {
+      await changeCharacterName(
+        changeNameForm.value.characterId,
+        changeNameForm.value.newName.trim()
+      );
+      Message.success(t('message.success'));
+      changeNameVisible.value = false;
+      await loadData();
+      return true;
+    } catch (error: any) {
+      if (error?.response?.data?.message) {
+        Message.error(error.response.data.message);
+      }
+      return false;
+    } finally {
+      setLoading(false);
+    }
   };
 
   const submitClick = async () => {

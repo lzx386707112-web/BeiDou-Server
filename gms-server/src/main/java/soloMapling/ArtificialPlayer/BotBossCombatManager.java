@@ -93,10 +93,10 @@ public final class BotBossCombatManager {
             attackTick(owner, map, boss);
         } catch (Exception e) {
             if (map != null) {
-                log.warn("假人Boss战攻击循环异常，保留任务继续执行: mapId={}, bossId={}",
-                        map.getId(), boss != null ? boss.getId() : 0, e);
+                // BOTLOG-MUTE: log.warn("假人Boss战攻击循环异常，保留任务继续执行: mapId={}, bossId={}",
+                        // BOTLOG-MUTE: map.getId(), boss != null ? boss.getId() : 0, e);
             } else {
-                log.warn("假人Boss战攻击循环异常，保留任务继续执行", e);
+                // BOTLOG-MUTE: log.warn("假人Boss战攻击循环异常，保留任务继续执行", e);
             }
         }
     }

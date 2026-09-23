@@ -27,7 +27,7 @@ public class BotEquipChecker {
         task = ExecutorServiceManager.getScheduledExecutorService().scheduleAtFixedRate(
                 BotEquipChecker::check, INTERVAL_MS, INTERVAL_MS, TimeUnit.MILLISECONDS
         );
-        System.out.println("[BotEquipChecker] Started — interval=" + (INTERVAL_MS / 60000) + "min");
+        // BOTLOG-MUTE: System.out.println("[BotEquipChecker] Started — interval=" + (INTERVAL_MS / 60000) + "min");
     }
 
     private static void check() {
@@ -49,8 +49,8 @@ public class BotEquipChecker {
             }
 
             long elapsed = System.currentTimeMillis() - startMs;
-            System.out.println("[BotEquipChecker] Scan complete: " + naked.size() + "/" + totalBots
-                    + " naked (" + elapsed + "ms)");
+            // BOTLOG-MUTE: System.out.println("[BotEquipChecker] Scan complete: " + naked.size() + "/" + totalBots
+                    // BOTLOG-MUTE: + " naked (" + elapsed + "ms)");
 
             if (!naked.isEmpty()) {
                 log("[BotEquipChecker] Found " + naked.size() + " naked bots out of " + totalBots + ", fixing...");
@@ -66,17 +66,17 @@ public class BotEquipChecker {
 //                                    + ") [" + fixedCount[0] + "/" + naked.size() + "]");
                         } catch (Exception e) {
                             failedCount[0]++;
-                            System.out.println("[BotEquipChecker] FAILED " + chr.getName()
-                                    + " (job=" + chr.getJob().name() + " lv=" + chr.getLevel()
-                                    + "): " + e.getMessage());
+                            // BOTLOG-MUTE: System.out.println("[BotEquipChecker] FAILED " + chr.getName()
+                                    // BOTLOG-MUTE: + " (job=" + chr.getJob().name() + " lv=" + chr.getLevel()
+                                    // BOTLOG-MUTE: + "): " + e.getMessage());
                         }
                     });
                 }
             } else {
-                System.out.println("[BotEquipChecker] All " + totalBots + " bots are dressed.");
+                // BOTLOG-MUTE: System.out.println("[BotEquipChecker] All " + totalBots + " bots are dressed.");
             }
         } catch (Exception e) {
-            System.out.println("[BotEquipChecker] Error during check: " + e.getMessage());
+            // BOTLOG-MUTE: System.out.println("[BotEquipChecker] Error during check: " + e.getMessage());
             log("[BotEquipChecker] Error: " + e.getMessage());
         }
     }

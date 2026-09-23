@@ -516,7 +516,7 @@ public class PathFinder {
                     }
                 }
             } catch (Exception e) {
-                System.err.println("snapToGround: error reading area " + area + ": " + e);
+                // BOTLOG-MUTE: System.err.println("snapToGround: error reading area " + area + ": " + e);
             }
         }
         return best;

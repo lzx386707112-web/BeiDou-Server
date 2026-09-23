@@ -35,7 +35,7 @@ public class NpcSpawner {
     public static void spawnNpc(int npcId, int mapId, int x, int y) {
         MapleMap map = getMapleMapById(mapId);
         if (map == null) {
-            log.warn("[NpcSpawner] Map {} not found, cannot spawn NPC {}", mapId, npcId);
+            // BOTLOG-MUTE: log.warn("[NpcSpawner] Map {} not found, cannot spawn NPC {}", mapId, npcId);
             return;
         }
         spawnNpc(npcId, map, new Point(x, y));
@@ -47,7 +47,7 @@ public class NpcSpawner {
     public static void spawnNpc(int npcId, MapleMap map, Point pos) {
         NPC npc = LifeFactory.getNPC(npcId);
         if (npc == null) {
-            log.warn("[NpcSpawner] Failed to load NPC: {}", npcId);
+            // BOTLOG-MUTE: log.warn("[NpcSpawner] Failed to load NPC: {}", npcId);
             return;
         }
         npc.setPosition(pos);
@@ -56,13 +56,13 @@ public class NpcSpawner {
         npc.setRx1(pos.x + 50);
         Foothold foothold = map.getFootholds().findBelow(pos);
         if (foothold == null) {
-            log.warn("[NpcSpawner] No foothold below ({}, {}) on map {}, cannot spawn NPC {}", pos.x, pos.y, map.getId(), npcId);
+            // BOTLOG-MUTE: log.warn("[NpcSpawner] No foothold below ({}, {}) on map {}, cannot spawn NPC {}", pos.x, pos.y, map.getId(), npcId);
             return;
         }
         npc.setFh(foothold.getId());
         map.addMapObject(npc);
         map.broadcastMessage(PacketCreator.spawnNPC(npc));
         map.broadcastMessage(PacketCreator.spawnNPCRequestController(npc, true));
-        log.info("[NpcSpawner] Spawned NPC {} on map {} at ({}, {})", npcId, map.getId(), pos.x, pos.y);
+        // BOTLOG-MUTE: log.info("[NpcSpawner] Spawned NPC {} on map {} at ({}, {})", npcId, map.getId(), pos.x, pos.y);
     }
 }

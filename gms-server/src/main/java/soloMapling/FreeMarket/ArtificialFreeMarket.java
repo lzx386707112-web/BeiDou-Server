@@ -113,7 +113,7 @@ public class ArtificialFreeMarket {
     }
 
     public static void populateFreeMarketEntrance() {
-        MarketBotLog.info("skip hired merchants at FM entrance; shops only in rooms 910000001-012");
+        // BOTLOG-MUTE: MarketBotLog.info("skip hired merchants at FM entrance; shops only in rooms 910000001-012");
     }
 
     public static void populateHenesysLayoutRooms(int fromMapId, int toMapId) {
@@ -122,10 +122,10 @@ public class ArtificialFreeMarket {
 
     public static void populateMarketRooms(int fromMapId, int toMapId) {
         if (!SoloMaplingConfig.fmRegionFillEnabled()) {
-            MarketBotLog.warn("populateMarketRooms skipped; fmRegionFill disabled");
+            // BOTLOG-MUTE: MarketBotLog.warn("populateMarketRooms skipped; fmRegionFill disabled");
             return;
         }
-        MarketBotLog.info("populateMarketRooms {}-{}", fromMapId, toMapId);
+        // BOTLOG-MUTE: MarketBotLog.info("populateMarketRooms {}-{}", fromMapId, toMapId);
         for (int mapId = fromMapId; mapId <= toMapId; mapId++) {
             String region = getRegionByMapId(mapId);
             List<Point> spots;
@@ -151,8 +151,8 @@ public class ArtificialFreeMarket {
                 spawned++;
             }
         }
-        System.out.println("[ArtificialFreeMarket] hired merchants on " + mapId + ": " + spawned + "/" + Math.min(cap, spots.size()));
-        MarketBotLog.info("hired merchants map={} spawned={}/{}", mapId, spawned, Math.min(cap, spots.size()));
+        // BOTLOG-MUTE: System.out.println("[ArtificialFreeMarket] hired merchants on " + mapId + ": " + spawned + "/" + Math.min(cap, spots.size()));
+        // BOTLOG-MUTE: MarketBotLog.info("hired merchants map={} spawned={}/{}", mapId, spawned, Math.min(cap, spots.size()));
     }
 
     private static void spawnVisibleShopkeepers(int mapId, List<Point> sourceSpots, int count) {
@@ -166,7 +166,7 @@ public class ArtificialFreeMarket {
             createBotShopAtLocation(position, mapId);
             spawned++;
         }
-        MarketBotLog.info("shopkeepers queued map={} count={}", mapId, spawned);
+        // BOTLOG-MUTE: MarketBotLog.info("shopkeepers queued map={} count={}", mapId, spawned);
     }
 
     public static void populateFreeMarketRoom(int mapId) {
@@ -264,13 +264,13 @@ public class ArtificialFreeMarket {
             ensureShopHasItems(newchar.getHiredMerchant());
             HiredMerchant spawned = newchar.getHiredMerchant();
             addMerchantToChannel(newchar, channel);
-            MarketBotLog.info("shop ok map={} ch={} owner={} item={} pos={},{} oid={}",
-                    mapId, channel.getId(), ownerName, shopItemId, grounded.x, grounded.y,
-                    spawned == null ? -1 : spawned.getObjectId());
+            // BOTLOG-MUTE: MarketBotLog.info("shop ok map={} ch={} owner={} item={} pos={},{} oid={}",
+                    // BOTLOG-MUTE: mapId, channel.getId(), ownerName, shopItemId, grounded.x, grounded.y,
+                    // BOTLOG-MUTE: spawned == null ? -1 : spawned.getObjectId());
             return true;
         } catch (Exception e) {
             releaseMarketShopSlot(channel.getId(), mapId);
-            MarketBotLog.error("hired merchant spawn failed map=" + mapId + " ch=" + channel.getId(), e);
+            // BOTLOG-MUTE: MarketBotLog.error("hired merchant spawn failed map=" + mapId + " ch=" + channel.getId(), e);
             return false;
         }
     }
@@ -588,7 +588,7 @@ public class ArtificialFreeMarket {
 
     public static void createBotShopAtLocation(Point position, int mapId) {
         if (mapId == 910000000) {
-            MarketBotLog.info("skip bot shop at FM entrance");
+            // BOTLOG-MUTE: MarketBotLog.info("skip bot shop at FM entrance");
             return;
         }
         if (!SoloMaplingConfig.fmRegionFillEnabled()) {
@@ -603,7 +603,7 @@ public class ArtificialFreeMarket {
             debugprint("Making shop at: " + mapId + ", " + position);
             Character fakechar2 = createBotPollReadiness(position, mapId, true);
             if (fakechar2 == null) {
-                System.err.println("Bot not ready after 3 seconds, skipping store");
+                // BOTLOG-MUTE: System.err.println("Bot not ready after 3 seconds, skipping store");
                 releaseMarketShopSlot(channelId, mapId);
                 return;
             }

@@ -271,7 +271,7 @@ public class DiceBot extends BotSM {
             }
             handleBetCommand(message);
         } catch (Exception e) {
-            e.printStackTrace();
+            // BOTLOG-MUTE: e.printStackTrace();
         }
     }
 

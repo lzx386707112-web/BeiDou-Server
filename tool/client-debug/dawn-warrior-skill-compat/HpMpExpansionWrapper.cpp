@@ -18,6 +18,7 @@ constexpr uintptr_t kFuseLongAddress = 0x00416563;
 constexpr char kCoreDllName[] = "BeiDouSkillCompatCore.dll";
 constexpr char kSetItemDllName[] = "BeiDouSetItemCompat.dll";
 constexpr char kWeatherDllName[] = "BeiDouWeatherCompat.dll";
+constexpr char kVellumVideoDllName[] = "BeiDouVellumVideoCompat.dll";
 
 using HpMpFuseFn = int(__cdecl*)(const int*, int);
 
@@ -427,6 +428,11 @@ DWORD WINAPI InstallHooks(LPVOID) {
         return 1;
     }
     LogLine("HPMP WRAPPER: verified compatibility core loaded");
+    if (!LoadSiblingDll(kVellumVideoDllName)) {
+        LogLine("HPMP ERROR: BeiDouVellumVideoCompat.dll failed to load");
+    } else {
+        LogLine("HPMP WRAPPER: Vellum video compatibility loaded");
+    }
     if (!LoadSiblingDll(kSetItemDllName)) {
         LogLine("HPMP ERROR: BeiDouSetItemCompat.dll failed to load");
     } else {

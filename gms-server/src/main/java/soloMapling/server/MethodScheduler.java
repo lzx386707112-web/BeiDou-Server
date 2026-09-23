@@ -32,9 +32,9 @@ public class MethodScheduler {
             try {
                 method.run();
             } catch (Exception e) {
-                System.out.println("runAfterDelay catch exception: " + method.toString());
+                // BOTLOG-MUTE: System.out.println("runAfterDelay catch exception: " + method.toString());
                 // Log the exception
-                e.printStackTrace();
+                // BOTLOG-MUTE: e.printStackTrace();
             }
         }, delayMilliseconds, TimeUnit.MILLISECONDS);
     }

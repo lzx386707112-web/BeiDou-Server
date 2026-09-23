@@ -63,8 +63,8 @@ public class BotGeneration {
     public static void enableEnvironmentBotLimit() {
         environmentBotLimitStartCount.compareAndSet(0, getBotsCreatedCount());
         environmentBotLimitActive.set(true);
-        System.out.println("[BotGeneration] Environment bot limit active. max="
-                + SoloMaplingConfig.environmentBotMax());
+        // BOTLOG-MUTE: System.out.println("[BotGeneration] Environment bot limit active. max="
+                // BOTLOG-MUTE: + SoloMaplingConfig.environmentBotMax());
     }
 
     public static boolean environmentBotLimitReached() {
@@ -75,7 +75,7 @@ public class BotGeneration {
     public static void disableEnvironmentBotLimit() {
         environmentBotLimitActive.set(false);
         environmentBotLimitStartCount.set(0);
-        System.out.println("[BotGeneration] Environment bot limit released.");
+        // BOTLOG-MUTE: System.out.println("[BotGeneration] Environment bot limit released.");
     }
 
     private static int getEnvironmentLimitedBotCount() {
@@ -301,7 +301,7 @@ public class BotGeneration {
             }
         }
 
-        System.err.println("Bot " + botId + " not ready after 3 seconds, skipping store");
+        // BOTLOG-MUTE: System.err.println("Bot " + botId + " not ready after 3 seconds, skipping store");
         return null;
     }
 

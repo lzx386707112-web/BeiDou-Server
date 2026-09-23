@@ -38,7 +38,7 @@ public class GachaFillerSystem {
         try {
             loadGachaData();
         } catch (Exception e) {
-            System.err.println("Failed to load gacha data: " + e.getMessage());
+            // BOTLOG-MUTE: System.err.println("Failed to load gacha data: " + e.getMessage());
         }
     }
 
@@ -105,19 +105,19 @@ public class GachaFillerSystem {
 
     public static int getRandomItem(String type, String tier) {
         if (gachaData == null || !gachaData.containsKey(type)) {
-            System.err.println("Type not found: " + type);
+            // BOTLOG-MUTE: System.err.println("Type not found: " + type);
             return 0;
         }
 
         Map<String, List<Integer>> typeData = gachaData.get(type);
         if (!typeData.containsKey(tier)) {
-            System.err.println("Tier not found: " + tier + " for type: " + type);
+            // BOTLOG-MUTE: System.err.println("Tier not found: " + tier + " for type: " + type);
             return 0;
         }
 
         List<Integer> itemList = typeData.get(tier);
         if (itemList == null || itemList.isEmpty()) {
-            System.err.println("No items found for type: " + type + ", tier: " + tier);
+            // BOTLOG-MUTE: System.err.println("No items found for type: " + type + ", tier: " + tier);
             return 0;
         }
 
@@ -179,7 +179,7 @@ public class GachaFillerSystem {
                                     try {
                                         items.add(Integer.parseInt((String) item));
                                     } catch (NumberFormatException e) {
-                                        System.err.println("Failed to parse item: " + item);
+                                        // BOTLOG-MUTE: System.err.println("Failed to parse item: " + item);
                                     }
                                 }
                             }
@@ -193,7 +193,7 @@ public class GachaFillerSystem {
                                     try {
                                         items.add(Integer.parseInt(itemStr));
                                     } catch (NumberFormatException e) {
-                                        System.err.println("Failed to parse item: " + itemStr);
+                                        // BOTLOG-MUTE: System.err.println("Failed to parse item: " + itemStr);
                                     }
                                 }
                             }
@@ -217,27 +217,27 @@ public class GachaFillerSystem {
 
     // Utility method to print the configuration
     public static void printConfiguration() {
-        System.out.println("=== Gacha Filler Configuration ===");
-        System.out.println("Default List Size: " + DEFAULT_LIST_SIZE);
-        System.out.println("Item Replace Chance: " + (DEFAULT_ITEM_REPLACE_CHANCE * 100) + "%");
-        System.out.println("\nType Probabilities:");
+        // BOTLOG-MUTE: System.out.println("=== Gacha Filler Configuration ===");
+        // BOTLOG-MUTE: System.out.println("Default List Size: " + DEFAULT_LIST_SIZE);
+        // BOTLOG-MUTE: System.out.println("Item Replace Chance: " + (DEFAULT_ITEM_REPLACE_CHANCE * 100) + "%");
+        // BOTLOG-MUTE: System.out.println("\nType Probabilities:");
         for (Entry<String, Double> entry : TYPE_PROBABILITIES.entrySet()) {
-            System.out.println("  " + entry.getKey() + ": " + (entry.getValue() * 100) + "%");
+            // BOTLOG-MUTE: System.out.println("  " + entry.getKey() + ": " + (entry.getValue() * 100) + "%");
         }
-        System.out.println("\nTier Probabilities:");
+        // BOTLOG-MUTE: System.out.println("\nTier Probabilities:");
         for (Entry<String, Double> entry : TIER_PROBABILITIES.entrySet()) {
-            System.out.println("  " + entry.getKey() + ": " + (entry.getValue() * 100) + "%");
+            // BOTLOG-MUTE: System.out.println("  " + entry.getKey() + ": " + (entry.getValue() * 100) + "%");
         }
     }
 
     // Utility method to print loaded gacha data (for debugging)
     public static void printLoadedData() {
-        System.out.println("\n=== Loaded Gacha Data ===");
+        // BOTLOG-MUTE: System.out.println("\n=== Loaded Gacha Data ===");
         if (gachaData != null) {
             for (Entry<String, Map<String, List<Integer>>> typeEntry : gachaData.entrySet()) {
-                System.out.println(typeEntry.getKey() + ":");
+                // BOTLOG-MUTE: System.out.println(typeEntry.getKey() + ":");
                 for (Entry<String, List<Integer>> tierEntry : typeEntry.getValue().entrySet()) {
-                    System.out.println("  " + tierEntry.getKey() + ": " + tierEntry.getValue());
+                    // BOTLOG-MUTE: System.out.println("  " + tierEntry.getKey() + ": " + tierEntry.getValue());
                 }
             }
         }
@@ -253,14 +253,14 @@ public class GachaFillerSystem {
 
         // Create a gacha filler list with default settings
         List<Integer> gachaList = createGachaFillerList();
-        System.out.println("\nGenerated Gacha List: " + gachaList);
+        // BOTLOG-MUTE: System.out.println("\nGenerated Gacha List: " + gachaList);
 
         // Create a custom sized list with 60% item chance
         List<Integer> customList = createGachaFillerList(20, 0.6);
-        System.out.println("\nCustom Gacha List (size=20, 60% item chance): " + customList);
+        // BOTLOG-MUTE: System.out.println("\nCustom Gacha List (size=20, 60% item chance): " + customList);
 
         // Test specific item retrieval
-        System.out.println("\nRandom S-tier useable: " + getRandomItem("useables", "s_tier"));
-        System.out.println("Random B-tier ore: " + getRandomItem("ores", "b_tier"));
+        // BOTLOG-MUTE: System.out.println("\nRandom S-tier useable: " + getRandomItem("useables", "s_tier"));
+        // BOTLOG-MUTE: System.out.println("Random B-tier ore: " + getRandomItem("ores", "b_tier"));
     }
 }

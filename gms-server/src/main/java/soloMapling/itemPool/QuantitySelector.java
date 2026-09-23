@@ -67,7 +67,7 @@ public class QuantitySelector {
 //        System.out.println("Selected quantity for " + type + " (" + tier + "): " + quantity);
 
         for (int i = 0; i < 100; i++) {
-            System.out.println(distributedTierSelector("B"));
+            // BOTLOG-MUTE: System.out.println(distributedTierSelector("B"));
         }
     }
 

@@ -19,7 +19,7 @@ public class ItemDatabase {
             try {
                 loadItemDatabase();
             } catch (Exception e) {
-                e.printStackTrace();
+                // BOTLOG-MUTE: e.printStackTrace();
             }
         }
         return instance;
@@ -178,15 +178,15 @@ class Example {
     public static void test3() throws Exception {
         int curr = 1332020;
         ItemDatabase db = ItemDatabase.getInstance();
-        System.out.println((db.getItemData(curr).getItem()));
-        System.out.println((db.getItemData(curr).getVariantId()));
-        System.out.println((db.getItemTier(curr)));
-        System.out.println((db.getItemPrice(curr)));
-        System.out.println((db.getItemData(curr)));
+        // BOTLOG-MUTE: System.out.println((db.getItemData(curr).getItem()));
+        // BOTLOG-MUTE: System.out.println((db.getItemData(curr).getVariantId()));
+        // BOTLOG-MUTE: System.out.println((db.getItemTier(curr)));
+        // BOTLOG-MUTE: System.out.println((db.getItemPrice(curr)));
+        // BOTLOG-MUTE: System.out.println((db.getItemData(curr)));
 
-        System.out.println(db.getScrollStatBonus(2040805));
-        System.out.println(db.checkIfItemExistsInCurrentVersion(1092049));
-        System.out.println(db.checkIfItemExistsInCurrentVersion(2040407));
+        // BOTLOG-MUTE: System.out.println(db.getScrollStatBonus(2040805));
+        // BOTLOG-MUTE: System.out.println(db.checkIfItemExistsInCurrentVersion(1092049));
+        // BOTLOG-MUTE: System.out.println(db.checkIfItemExistsInCurrentVersion(2040407));
     }
 
 //    public static void test() {

@@ -124,7 +124,7 @@ public class MessageQueue {
             return queue.remove(message);
         } else {
             requeueMessage(queueType, queue.poll());
-            System.out.println(" skipped irrelevant message: " + message.getContent());
+            // BOTLOG-MUTE: System.out.println(" skipped irrelevant message: " + message.getContent());
             return false;
         }
     }

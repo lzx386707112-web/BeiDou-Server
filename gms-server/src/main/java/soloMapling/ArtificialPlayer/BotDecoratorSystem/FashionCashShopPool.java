@@ -47,7 +47,7 @@ final class FashionCashShopPool {
             count += entry.getValue().size();
         }
         if (count > 0) {
-            System.out.println("[FashionCashShopPool] Loaded " + count + " items from 时尚点装.js");
+            // BOTLOG-MUTE: System.out.println("[FashionCashShopPool] Loaded " + count + " items from 时尚点装.js");
         }
         return count;
     }
@@ -90,7 +90,7 @@ final class FashionCashShopPool {
                 return Files.readString(path, StandardCharsets.UTF_8);
             }
         } catch (Exception e) {
-            System.err.println("[FashionCashShopPool] Failed to read external script: " + e.getMessage());
+            // BOTLOG-MUTE: System.err.println("[FashionCashShopPool] Failed to read external script: " + e.getMessage());
         }
 
         try (InputStream input = FashionCashShopPool.class.getClassLoader().getResourceAsStream(SCRIPT_RESOURCE)) {
@@ -98,7 +98,7 @@ final class FashionCashShopPool {
                 return new String(input.readAllBytes(), StandardCharsets.UTF_8);
             }
         } catch (Exception e) {
-            System.err.println("[FashionCashShopPool] Failed to read classpath script: " + e.getMessage());
+            // BOTLOG-MUTE: System.err.println("[FashionCashShopPool] Failed to read classpath script: " + e.getMessage());
         }
         return null;
     }

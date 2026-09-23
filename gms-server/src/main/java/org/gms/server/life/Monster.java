@@ -1549,6 +1549,14 @@ public class Monster extends AbstractLoadedLife {
      * 槽位顺序依赖 LinkedHashSet，HashSet 会让 skill3/4 落到错误 ID。
      */
     public MobSkillId resolveCastSkill(int skillId, int skillLevel, int skillActionIndex) {
+        if (getId() == 8930000 && skillActionIndex >= 0) {
+            int index = 0;
+            for (MobSkillId skill : stats.getSkills()) {
+                if (index++ == skillActionIndex) {
+                    return skill;
+                }
+            }
+        }
         if (hasSkill(skillId, skillLevel)) {
             return new MobSkillId(MobSkillType.from(skillId).orElseThrow(), skillLevel);
         }

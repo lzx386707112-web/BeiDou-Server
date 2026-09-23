@@ -31,7 +31,7 @@ public class DebugUtilities {
                 sb.append(", ");
             }
         }
-        System.out.println(sb);
+        // BOTLOG-MUTE: System.out.println(sb);
     }
 
     /*

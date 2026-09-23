@@ -655,7 +655,7 @@ public class BlackjackDealerBot extends BotSM {
                 player.clearCardsOnMap();
             }
         } catch (Exception e) {
-            System.out.println("[Blackjack] Failed to loot cards for " + player.getName());
+            // BOTLOG-MUTE: System.out.println("[Blackjack] Failed to loot cards for " + player.getName());
         }
     }
 
@@ -791,7 +791,7 @@ public class BlackjackDealerBot extends BotSM {
                 player.setStatus(BlackjackPlayer.PlayerStatus.ACTIVE); // ACTIVE = HIT
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            // BOTLOG-MUTE: e.printStackTrace();
         }
     }
 
@@ -828,7 +828,7 @@ public class BlackjackDealerBot extends BotSM {
                 }
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            // BOTLOG-MUTE: e.printStackTrace();
         }
     }
 

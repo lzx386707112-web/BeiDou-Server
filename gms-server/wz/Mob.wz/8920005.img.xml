@@ -20,7 +20,15 @@
     <int name="mobType" value="1"/>
     <int name="PDDamage" value="0"/>
     <int name="MDDamage" value="0"/>
-    <int name="boss" value="0"/>
+    <int name="boss" value="1"/>
+    <imgdir name="skill">
+      <imgdir name="0">
+        <int name="skill" value="188"/>
+        <int name="action" value="1"/>
+        <int name="level" value="1"/>
+        <int name="skillAfter" value="720"/>
+      </imgdir>
+    </imgdir>
   </imgdir>
   <imgdir name="stand">
     <canvas name="0" width="118" height="135" format="1">

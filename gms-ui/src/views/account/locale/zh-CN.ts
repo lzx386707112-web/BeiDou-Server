@@ -145,4 +145,12 @@ export default {
   'account.player.form.rate.type': '倍率只能是正整数',
 
   'account.player.give': '发放',
+
+  'account.player.button.changeName': '修改昵称',
+  'account.player.changeName.title': '修改角色昵称',
+  'account.player.changeName.currentName': '当前昵称',
+  'account.player.changeName.newName': '新昵称',
+  'account.player.changeName.placeholder': '请输入新昵称',
+  'account.player.changeName.required': '新昵称不能为空',
+  'account.player.changeName.length': '昵称长度需在2-12个字符之间',
 };

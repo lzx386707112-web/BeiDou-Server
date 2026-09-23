@@ -79,11 +79,11 @@ public class BotDialogueHandler {
     public void listOptions(Character player, BotSM botSM) {
         // Check if the instance is of type DiceBot
         if (botSM instanceof DiceBot) {
-            System.out.println("Dice bot instance");
+            // BOTLOG-MUTE: System.out.println("Dice bot instance");
             DiceBot diceBot = (DiceBot) botSM; // Downcast to DiceBot
             diceBot.displayCommands(player);   // Now you can call DiceBot methods
         } else {
-            System.out.println("Not a DiceBot instance");
+            // BOTLOG-MUTE: System.out.println("Not a DiceBot instance");
             botSM.displayCommands(player);
         }
 
@@ -103,7 +103,7 @@ public class BotDialogueHandler {
                 dialogueConstructorNode = (Map<String, Object>) BotTypeNode.get(dialogueNode);
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            // BOTLOG-MUTE: e.printStackTrace();
         }
         return dialogueConstructorNode;
     }
@@ -195,7 +195,7 @@ public class BotDialogueHandler {
             try {
                 return Integer.parseInt((String) obj);  // Convert String to int
             } catch (NumberFormatException e) {
-                System.err.println("Error converting String to int: " + obj);
+                // BOTLOG-MUTE: System.err.println("Error converting String to int: " + obj);
             }
         }
         return 0;  // Default value if unable to convert

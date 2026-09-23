@@ -277,7 +277,7 @@ public class MovementCommands {
                 BotMove(stopPacket, fakechar);
                 Thread.sleep(100);
             } catch (InterruptedException e) {
-                e.printStackTrace();
+                // BOTLOG-MUTE: e.printStackTrace();
             }
         }
     }
@@ -425,20 +425,20 @@ public class MovementCommands {
     // pass a known reactor coordinate, watch console for the snapped point + yDelta,
     // and confirm the bot ends up directly under the target.
     public static void testAerialPathFinder(Character fakechar, Point aerialPt) {
-        System.out.println("[testAerialPathFinder] mapId=" + fakechar.getMapId());
-        System.out.println("  bot start pos: " + fakechar.getPosition());
-        System.out.println("  aerial target: " + aerialPt);
+        // BOTLOG-MUTE: System.out.println("[testAerialPathFinder] mapId=" + fakechar.getMapId());
+        // BOTLOG-MUTE: System.out.println("  bot start pos: " + fakechar.getPosition());
+        // BOTLOG-MUTE: System.out.println("  aerial target: " + aerialPt);
 
         PathFinder.AerialPathResult result = pathFinderBetaAerial(fakechar, aerialPt);
         if (result == null) {
-            System.out.println("[testAerialPathFinder] FAILED: no ground point within Y tolerance");
+            // BOTLOG-MUTE: System.out.println("[testAerialPathFinder] FAILED: no ground point within Y tolerance");
             return;
         }
 
-        System.out.println("[testAerialPathFinder] arrived");
-        System.out.println("  snapped to:    " + result.getSnappedPoint());
-        System.out.println("  yDelta:        " + result.getYDelta() + " (negative = reactor sits above bot)");
-        System.out.println("  bot final pos: " + fakechar.getPosition());
+        // BOTLOG-MUTE: System.out.println("[testAerialPathFinder] arrived");
+        // BOTLOG-MUTE: System.out.println("  snapped to:    " + result.getSnappedPoint());
+        // BOTLOG-MUTE: System.out.println("  yDelta:        " + result.getYDelta() + " (negative = reactor sits above bot)");
+        // BOTLOG-MUTE: System.out.println("  bot final pos: " + fakechar.getPosition());
     }
 
     public static void botJump(Character fakechar) {
@@ -573,7 +573,7 @@ public class MovementCommands {
             return;
         }
         if (!tryAcquireMovementLock(fakechar)) {
-            MarketBotLog.warn("walkAlongX lock busy name={} map={}", fakechar.getName(), fakechar.getMapId());
+            // BOTLOG-MUTE: MarketBotLog.warn("walkAlongX lock busy name={} map={}", fakechar.getName(), fakechar.getMapId());
             return;
         }
         try {

@@ -215,7 +215,7 @@ public class ItemInformationProviderUtilities {
      *
      */
     public static Integer getRandomEquipFaster(EquipType eqType, int maxLevel, Job jobStyle, int gender) {
-        System.out.println("Checking for: " + eqType + ", " + jobStyle);
+        // BOTLOG-MUTE: System.out.println("Checking for: " + eqType + ", " + jobStyle);
         List<Integer> itemList = getAllItemIdsByEquipType(eqType);
         Collections.shuffle(itemList);
         for (Integer itemId : itemList) {

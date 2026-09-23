@@ -167,8 +167,8 @@ public final class MarketBotDirector {
                     moving++;
                 }
             }
-            MarketBotLog.info("market status bots={} moving={} sitting={} idle={}",
-                    snapshot.size(), moving, sitting, Math.max(0, snapshot.size() - moving - sitting));
+            // BOTLOG-MUTE: MarketBotLog.info("market status bots={} moving={} sitting={} idle={}",
+                    // BOTLOG-MUTE: snapshot.size(), moving, sitting, Math.max(0, snapshot.size() - moving - sitting));
         }
         Map<Integer, Boolean> playersByMap = new HashMap<>();
         for (BotSM bot : snapshot) {
@@ -201,7 +201,7 @@ public final class MarketBotDirector {
             try {
                 bot.updateState();
             } catch (Exception e) {
-                MarketBotLog.error("Market bot tick failed name=" + (chr.getName()) + " map=" + chr.getMapId(), e);
+                // BOTLOG-MUTE: MarketBotLog.error("Market bot tick failed name=" + (chr.getName()) + " map=" + chr.getMapId(), e);
             }
             long pause = playersHere
                     ? 800L + ThreadLocalRandom.current().nextInt(1200)

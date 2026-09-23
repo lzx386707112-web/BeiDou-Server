@@ -107,7 +107,7 @@ public class ConversationManager {
                 tick();
             } catch (Exception e) {
                 log("[ConversationManager] Error during tick: " + e.getMessage());
-                e.printStackTrace();
+                // BOTLOG-MUTE: e.printStackTrace();
             }
             scheduleNextTick();
         }, delay, TimeUnit.MILLISECONDS);
@@ -265,7 +265,7 @@ public class ConversationManager {
                 playConversation(participants, script);
             } catch (Exception e) {
                 log("[ConversationManager] Conversation playback error: " + e.getMessage());
-                e.printStackTrace();
+                // BOTLOG-MUTE: e.printStackTrace();
             } finally {
                 for (Character chr : participants) {
                     botsInConversation.remove(chr.getId());
@@ -375,7 +375,7 @@ public class ConversationManager {
             log("[ConversationManager] Loaded " + allScripts.size() + " conversation scripts.");
         } catch (Exception e) {
             log("[ConversationManager] Failed to load conversation scripts: " + e.getMessage());
-            e.printStackTrace();
+            // BOTLOG-MUTE: e.printStackTrace();
         }
     }
 

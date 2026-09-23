@@ -105,12 +105,12 @@ public class ScrollPatternGenerator {
         int slots = 7;
 
         for (int x = 0; x < 10; x++) {
-            System.out.println("Round: " + x);
+            // BOTLOG-MUTE: System.out.println("Round: " + x);
             int[] pattern1 = getScrollPatternVersion1(slots);
-            System.out.printf("Pattern Version 1 for %d slots: 10%% passes = %d, 60%% passes = %d%n", slots, pattern1[0], pattern1[1]);
+            // BOTLOG-MUTE: System.out.printf("Pattern Version 1 for %d slots: 10%% passes = %d, 60%% passes = %d%n", slots, pattern1[0], pattern1[1]);
 
             int[] pattern2 = getScrollPatternVersion40(slots);
-            System.out.printf("Pattern Version 2 for %d slots: 10%% passes = %d, 60%% passes = %d%n", slots, pattern2[0], pattern2[1]);
+            // BOTLOG-MUTE: System.out.printf("Pattern Version 2 for %d slots: 10%% passes = %d, 60%% passes = %d%n", slots, pattern2[0], pattern2[1]);
         }
     }
 }

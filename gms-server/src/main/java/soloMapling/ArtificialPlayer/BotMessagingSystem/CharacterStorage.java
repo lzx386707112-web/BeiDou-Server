@@ -45,7 +45,7 @@ public class CharacterStorage {
         for (Map.Entry<Integer, BotSM> entry : activeBotMap.entrySet()) {
             int id = entry.getKey();
             BotSM bot = entry.getValue();
-            System.out.println("ID: " + id + ", Bot: " + bot + ", IGN: " + bot.getChr().getName());
+            // BOTLOG-MUTE: System.out.println("ID: " + id + ", Bot: " + bot + ", IGN: " + bot.getChr().getName());
         }
     }
 

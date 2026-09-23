@@ -58,7 +58,7 @@ public class Dispatcher implements Runnable {
                 handleMessageWithNoBotName(message);
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            // BOTLOG-MUTE: e.printStackTrace();
         }
     }
 

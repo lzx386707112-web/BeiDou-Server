@@ -35,6 +35,7 @@ import org.gms.server.life.DamienBossCompat;
 import org.gms.server.life.KaringBossCompat;
 import org.gms.server.life.Monster;
 import org.gms.server.life.MonsterInformationProvider;
+import org.gms.server.life.RootAbyssBossCompat;
 import org.gms.server.maps.MapObject;
 import org.gms.server.maps.MapObjectType;
 import org.gms.server.maps.MapleMap;
@@ -76,6 +77,7 @@ public final class MoveLifeHandler extends AbstractMovementPacketHandler {
         boolean traceKaringBoss = KARING_BOSS_IDS.contains(monster.getId());
         boolean traceArcanaMob = monster.getId() == 8644001
                 && (map.getId() == 450005120 || map.getId() == 450005131);
+        boolean traceVellum = monster.getId() == 8930000;
         List<Character> banishPlayers = null;
 
         byte pNibbles = p.readByte();
@@ -107,6 +109,8 @@ public final class MoveLifeHandler extends AbstractMovementPacketHandler {
 
         int useSkillId = 0;
         int useSkillLevel = 0;
+        int clientUseSkillId = 0;
+        int clientUseSkillLevel = 0;
         int requestedCastPos = isAttack ? (rawActivity - 24) / 2 : -1;
         int attackStatus = 0;
         boolean skillAccepted = false;
@@ -118,12 +122,19 @@ public final class MoveLifeHandler extends AbstractMovementPacketHandler {
             if (resolved != null) {
                 useSkillId = resolved.type().getId();
                 useSkillLevel = resolved.level();
+                MobSkillId projected = RootAbyssBossCompat.projectSkillForClient(monster.getId(), resolved);
+                clientUseSkillId = projected.type().getId();
+                clientUseSkillLevel = projected.level();
                 MobSkill toUse = MobSkillFactory.getMobSkillOrThrow(resolved.type(), resolved.level());
 
                 if (monster.canUseSkill(toUse, true)) {
                     skillAccepted = true;
+                    if (traceVellum) {
+                        RootAbyssBossCompat.playVellumScreen(monster, skillActionIndex);
+                    }
                     boolean handled = KaringBossCompat.handleProjectedSkillCast(
-                            monster, useSkillId, useSkillLevel);
+                            monster, useSkillId, useSkillLevel)
+                            || RootAbyssBossCompat.isVellumVisualSkill(monster.getId(), resolved);
                     if (!handled) {
                         // 戴米安 skill2：IMG 只播飞天；射手 8880112 金火，弹道走 attack1/info/ball。
                         if (DamienBossCompat.isDamien(monster.getId()) && skillActionIndex == 1) {
@@ -148,6 +159,8 @@ public final class MoveLifeHandler extends AbstractMovementPacketHandler {
                 pOption = 0;
                 useSkillId = 0;
                 useSkillLevel = 0;
+                clientUseSkillId = 0;
+                clientUseSkillLevel = 0;
             }
         } else {
             if (isAttack && monster.getId() == DamienBossCompat.PHASE_TWO && requestedCastPos == 2) {
@@ -172,6 +185,13 @@ public final class MoveLifeHandler extends AbstractMovementPacketHandler {
                     map.getId(), monster.getId(), objectid, moveid, packetActivity, rawActivity,
                     isAttack, isSkill, requestedCastPos, attackStatus, skillId, skillLv, pOption);
         }
+        if (traceVellum && (isAttack || isSkill)) {
+            log.info("[VellumMoveTrace] map={} oid={} moveId={} packetActivity={} activity={} attackPos={} attackStatus={} skillAction={} request={}:{} resolved={}:{} projected={}:{} accepted={}",
+                    map.getId(), objectid, moveid, packetActivity, rawActivity, requestedCastPos,
+                    attackStatus, isSkill ? (rawActivity - 42) / 2 : -1,
+                    skillId, skillLv, useSkillId, useSkillLevel,
+                    clientUseSkillId, clientUseSkillLevel, skillAccepted);
+        }
 
         boolean nextMovementCouldBeSkill = !(isSkill || (pNibbles != 0));
         MobSkill nextUse = null;
@@ -185,12 +205,19 @@ public final class MoveLifeHandler extends AbstractMovementPacketHandler {
                 if (monster.canUseSkill(candidate, false)
                         && candidate.getHP() >= hpPercent
                         && mobMp >= candidate.getMpCon()) {
-                    nextSkillId = skillToUse.type().getId();
-                    nextSkillLevel = skillToUse.level();
+                    MobSkillId projected = RootAbyssBossCompat.projectSkillForClient(
+                            monster.getId(), skillToUse);
+                    nextSkillId = projected.type().getId();
+                    nextSkillLevel = projected.level();
                     nextUse = candidate;
                     break;
                 }
             }
+        }
+        if (traceVellum && nextUse != null) {
+            log.info("[VellumMoveTrace] selected map={} oid={} next={}:{} projected={}:{} mp={}",
+                    map.getId(), objectid, nextUse.getType().getId(), nextUse.getId().level(),
+                    nextSkillId, nextSkillLevel, mobMp);
         }
 
         p.readByte();
@@ -236,7 +263,8 @@ public final class MoveLifeHandler extends AbstractMovementPacketHandler {
                         useSkillLevel, nextMovementCouldBeSkill, mobMp);
             }
 
-            map.broadcastMessage(player, PacketCreator.moveMonster(objectid, nextMovementCouldBeSkill, rawActivity, useSkillId, useSkillLevel, pOption, startPos, p, movementDataLength), serverStartPos);
+            map.broadcastMessage(player, PacketCreator.moveMonster(objectid, nextMovementCouldBeSkill, rawActivity,
+                    clientUseSkillId, clientUseSkillLevel, pOption, startPos, p, movementDataLength), serverStartPos);
             if (traceArcanaMob) {
                 log.info("[Mob8644001Trace] broadcast map={} oid={} activity={} nextSkill={}:{}",
                         map.getId(), objectid, rawActivity, nextSkillId, nextSkillLevel);

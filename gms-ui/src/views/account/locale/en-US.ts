@@ -149,4 +149,12 @@ export default {
   'account.player.form.rate.type': 'The rate must be an integer.',
 
   'account.player.give': 'give',
+
+  'account.player.button.changeName': 'Change Name',
+  'account.player.changeName.title': 'Change Character Name',
+  'account.player.changeName.currentName': 'Current Name',
+  'account.player.changeName.newName': 'New Name',
+  'account.player.changeName.placeholder': 'Enter new name',
+  'account.player.changeName.required': 'New name cannot be empty',
+  'account.player.changeName.length': 'Name length must be between 2-12 characters',
 };

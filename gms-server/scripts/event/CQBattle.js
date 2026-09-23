@@ -31,22 +31,6 @@ if (GameConfig.getServerBoolean("use_enable_party_level_limit_lift")) {
 var bossId = 8920000;         // 血腥女王 BOSS
 var treasureMobId = 8920006;  // 宝箱怪物
 
-// === 变身配置 ===
-var phase1MobId = bossId;
-var phase2MobId = bossId;
-var phase3MobId = bossId;
-
-// HP 阈值（占当前 maxHP 的比例）
-var PHASE1_THRESHOLD = 0.80;  // 80% → 触发第一次变身
-var PHASE2_THRESHOLD = 0.65;  // 65% → 触发第二次变身
-var PHASE3_THRESHOLD = 0.45;  // 45% → 触发第三次变身
-var PHASE4_THRESHOLD = 0.10;  // 10% 原型
-
-// HP 轮询间隔（毫秒）
-var HP_CHECK_INTERVAL = 500;
-
-
-
 function init() {
     setEventRequirements();
 }
@@ -107,11 +91,6 @@ function setup(channel) {
     eim.setProperty("canJoin", 1);
     eim.setProperty("defeatedBoss", 0);
     eim.setProperty("treasureSpawned", 0);
-	
-	    // === 变身状态初始化 ===
-    eim.setProperty("bossPhase", "4");       // 当前仓库只包含 8920000，禁用缺失形态轮询
-    eim.setProperty("isTransforming", "0");   // 变身标记，防止 killMonster 触发通关
-
     var level = 1;
     var battleMap = eim.getInstanceMap(entryMap);
     battleMap.resetPQ(level);
@@ -127,112 +106,6 @@ function setup(channel) {
 
     return eim;
 }
-
-// ============================
-// === 变身核心逻辑 ===
-// ============================
-
-/**
- * HP 轮询函数 - 由 eim.schedule 定时调用
- * 检查当前BOSS血量，达到阈值时触发变身
- */
-function checkBossHp(eim) {
-    return;
-}
-
-/**
- * 根据阶段获取对应怪物ID
- */
-function getBossIdByPhase(phase) {
-    if (phase == 0) return bossId;       // 8920000
-    if (phase == 1) return phase1MobId;  // 8920000
-    if (phase == 2) return phase2MobId;  // 8920000
-	if (phase == 3) return phase3MobId;  // 8920000
-    if (phase == 4) return bossId;       // 8920000
-    return bossId;
-}
-
-/**
- * 执行BOSS变身
- * 1. 记录旧BOSS当前血量
- * 2. 在地图上生成新怪物（此时新怪物已注册到 EIM mobs 列表）
- * 3. 用 addHp 将新怪物HP减少到继承值（保持maxHP不变）
- * 4. 广播HP条更新
- * 5. 移除旧BOSS（killMonster 会触发 monsterKilled，但 isTransforming 标记会拦截）
- * 6. 更新阶段状态
- *
- * @param eim        事件实例
- * @param oldBoss    旧BOSS Monster对象
- * @param newMobId   新怪物ID
- * @param newPhase   新阶段编号 (1/2/3)
- */
-function transformBoss(eim, oldBoss, newMobId, newPhase) {
-    // 设置变身标记，防止 killMonster 触发 monsterKilled/allMonstersDead
-    eim.setProperty("isTransforming", "1");
-
-    // 记录旧BOSS当前血量
-    var inheritedHp = oldBoss.getHp();
-    if (inheritedHp < 1) inheritedHp = 1;  // 最低保留1点血
-
-    // 记录旧BOSS位置
-    var oldPos = oldBoss.getPosition();
-    var spawnPos = new java.awt.Point(oldPos.x, oldPos.y);
-
-    var map = eim.getMapInstance(entryMap);
-
-    // 1. 生成新怪物
-    var newMob = LifeFactory.getMonster(newMobId);
-    map.spawnMonsterOnGroundBelow(newMob, spawnPos);
-
-    // 2. 将新怪物HP减少到继承值
-    //    addHp(负值) = 减少HP，保持 maxHP 不变
-    //    这样HP条会显示正确的百分比（如70%），而不是满血
-    var newMaxHp = newMob.getMobMaxHp();
-    if (inheritedHp < newMaxHp) {
-        // 新怪物maxHP > 继承HP，需要减少
-        newMob.addHp(-(newMaxHp - inheritedHp));
-    } else if (inheritedHp > newMaxHp) {
-        // 继承HP > 新怪物maxHP（不同怪物maxHP不同时），截断到maxHP
-        // 不需要操作，当前HP已经是maxHP
-    }
-    // 如果 inheritedHp == newMaxHp，不需要操作
-
-    // 3. 广播HP条更新给所有玩家
-    //    spawnMonsterOnGroundBelow 内部已广播过一次满血HP条
-    //    这里用 broadcastMobHpBar 修正为实际HP
-    if (newMob.hasBossHPBar()) {
-        var players = eim.getPlayers();
-        for (var i = 0; i < players.size(); i++) {
-            newMob.broadcastMobHpBar(players.get(i));
-        }
-    }
-
-    // 4. 移除旧BOSS
-    //    killMonster(monster, null, false):
-    //    - killer=null → 走"无击杀者"路径，不掉落物品
-    //    - false → 不掉落
-    //    - 会调用 dispatchMonsterKilled → eim.monsterKilled → 脚本 monsterKilled
-    //    - 但 isTransforming=1 会拦截，直接 return
-    //    - 新怪物已在 mobs 列表中，所以 allMonstersDead 不会触发
-    map.killMonster(oldBoss, null, false);
-
-    // 5. 更新阶段状态
-    eim.setProperty("bossPhase", newPhase + "");
-    eim.setProperty("isTransforming", "0");
-
-    // 6. 广播变身提示
-    var messages = {
-        1: "[远征队] 血腥女王吸收了黑暗能量，变身为第二形态！",
-        2: "[远征队] 血腥女王进入了第二形态，小心！",
-        3: "[远征队] 血腥女王进入了第三形态，小心！",
-		4: "[远征队] 血腥女王恢复了原形，做最后的挣扎！"
-    };
-    eim.dropMessage(5, messages[newPhase] || "[远征队] 血腥女王变了！");
-}
-
-// ============================
-// === 原始逻辑（带变身拦截）===
-// ============================
 
 function playerEntry(eim, player) {
     eim.dropMessage(5, "[远征队] " + player.getName() + " 已进入副本地图。");
@@ -309,16 +182,20 @@ function clearPQ(eim) {
     eim.startEventTimer(300000); // 通关后5分钟强制清场，注意此时无法重连
 }
 
-function isPierre(mob) {
-    return mob.getId() == bossId;
+function isQueen(mob) {
+    return mob.getId() >= 8920000 && mob.getId() <= 8920002;
+}
+
+function hasAliveQueen(map) {
+    for (var id = 8920000; id <= 8920002; id++) {
+        var boss = map.getMonsterById(id);
+        if (boss != null && boss.isAlive()) return true;
+    }
+    return false;
 }
 
 function monsterKilled(mob, eim) {
-	// 变身期间的 killMonster 不处理
-    if (eim.getIntProperty("isTransforming") == 1) return;
-	
-    // BOSS击杀：触发通关 + 伤害排名
-    if (isPierre(mob) && eim.getIntProperty("defeatedBoss") == 0) {
+    if (isQueen(mob) && !hasAliveQueen(mob.getMap()) && eim.getIntProperty("defeatedBoss") == 0) {
         eim.setIntProperty("defeatedBoss", 1);
         eim.showClearEffect(mob.getMap().getId());
         clearPQ(eim);
@@ -337,9 +214,6 @@ function monsterKilled(mob, eim) {
  * - 宝箱被击杀后再次触发时，treasureSpawned=1 阻止重复召唤
  */
 function allMonstersDead(eim) {
-	// 变身期间不处理
-    if (eim.getIntProperty("isTransforming") == 1) return;
-	
     if (eim.getIntProperty("defeatedBoss") == 1 && eim.getIntProperty("treasureSpawned") == 0) {
         eim.setIntProperty("treasureSpawned", 1);
         var map = eim.getMapInstance(entryMap);

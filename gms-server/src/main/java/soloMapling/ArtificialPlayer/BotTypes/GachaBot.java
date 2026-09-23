@@ -188,7 +188,7 @@ public class GachaBot extends BotSM {
                 return;
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            // BOTLOG-MUTE: e.printStackTrace();
         }
     }
 
@@ -198,7 +198,7 @@ public class GachaBot extends BotSM {
 
         // Transition logic
         if (super.hasQueuedEvents()) {
-            System.out.println("Events queued. staying in STAND BY 3");
+            // BOTLOG-MUTE: System.out.println("Events queued. staying in STAND BY 3");
         } else {
             // Move to next appropriate state
             setGachaBotState(GachaBotState.STAND_BY_4);

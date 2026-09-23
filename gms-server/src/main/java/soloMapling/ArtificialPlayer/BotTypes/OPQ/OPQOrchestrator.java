@@ -334,7 +334,7 @@ public class OPQOrchestrator {
         try {
             tick();
         } catch (Exception e) {
-            e.printStackTrace();
+            // BOTLOG-MUTE: e.printStackTrace();
         }
     }
 
@@ -407,7 +407,7 @@ public class OPQOrchestrator {
             warpBotToLocation(fakechar, pt, leader.getMap());
         } catch (Exception e) {
             opqLog("Warp failed for " + fakechar.getName() + ": " + e.getMessage());
-            e.printStackTrace();
+            // BOTLOG-MUTE: e.printStackTrace();
         }
     }
 

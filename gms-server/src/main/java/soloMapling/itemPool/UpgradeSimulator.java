@@ -93,7 +93,7 @@ public class UpgradeSimulator {
     public static void printPrices(Map<Integer, Long> statPriceMap) {
         for (Map.Entry<Integer, Long> entry : statPriceMap.entrySet()) {
             long price_value = entry.getValue();
-            System.out.println("Stat Bonus: " + entry.getKey() + ", Price: " + formatWithCommas(price_value));
+            // BOTLOG-MUTE: System.out.println("Stat Bonus: " + entry.getKey() + ", Price: " + formatWithCommas(price_value));
         }
     }
 
@@ -252,13 +252,13 @@ public class UpgradeSimulator {
         UniqueStatBonusList costList = cleanUpMinCostData(minCostArray, slots, maxBonus);
         printPrices(costList.getStatBonusList());
         long item_price = getPriceForStatBonus(costList, scrolledStatBonus);
-        System.out.println(item_price);
+        // BOTLOG-MUTE: System.out.println(item_price);
     }
 
     public static void test2() {
         ItemDatabase db = ItemDatabase.getInstance();
         int x = db.getItemPrice(1472026);
-        System.out.println(x);
+        // BOTLOG-MUTE: System.out.println(x);
     }
 
     public static void main(String[] args) {

@@ -54,6 +54,7 @@ import static org.gms.dao.entity.table.FredstorageDOTableDef.FREDSTORAGE_D_O;
 import static org.gms.dao.entity.table.KeymapDOTableDef.KEYMAP_D_O;
 import static org.gms.dao.entity.table.MonsterbookDOTableDef.MONSTERBOOK_D_O;
 import static org.gms.dao.entity.table.PlayerdiseasesDOTableDef.PLAYERDISEASES_D_O;
+import static org.gms.dao.entity.table.RingsDOTableDef.RINGS_D_O;
 import static org.gms.dao.entity.table.SavedlocationsDOTableDef.SAVEDLOCATIONS_D_O;
 import static org.gms.dao.entity.table.ServerQueueDOTableDef.SERVER_QUEUE_D_O;
 import static org.gms.dao.entity.table.SkillmacrosDOTableDef.SKILLMACROS_D_O;
@@ -93,6 +94,7 @@ public class CharacterService {
     private final NameChangeService nameChangeService;
     private final WorldTransferService worldTransferService;
     private final LinkSystemService linkSystemService;
+    private final RingsMapper ringsMapper;
 
     public CharactersDO findById(int id) {
         return charactersMapper.selectOneById(id);
@@ -230,6 +232,42 @@ public class CharacterService {
         character.resetPlayerRates();
         character.setWorldRates();
         character.setCouponRates();
+    }
+
+    /**
+     * GM直接修改角色昵称（立即生效，不需要等下线）
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void changeCharacterName(int characterId, String newName) {
+        CharactersDO character = findById(characterId);
+        if (character == null) {
+            throw new BizException(I18nUtil.getExceptionMessage("UNKNOWN_CHARACTER"));
+        }
+
+        // 检查新昵称是否已存在
+        CharactersDO existing = findByName(newName);
+        if (existing != null && existing.getId() != characterId) {
+            throw new BizException(I18nUtil.getExceptionMessage("NAME_ALREADY_EXISTS"));
+        }
+
+        String oldName = character.getName();
+
+        // 更新数据库
+        charactersMapper.update(CharactersDO.builder().id(characterId).name(newName).build());
+
+        // 更新戒指上的伴侣名字
+        ringsMapper.updateByQuery(
+                RingsDO.builder().partnername(newName).build(),
+                QueryWrapper.create().where(RINGS_D_O.PARTNERNAME.eq(oldName))
+        );
+
+        // 如果角色在线，更新内存中的对象
+        Character onlineCharacter = getOnlineCharacterById(characterId);
+        if (onlineCharacter != null) {
+            onlineCharacter.setName(newName);
+        }
+
+        log.info(I18nUtil.getLogMessage("CharacterService.doNameChange.info1"), oldName, newName);
     }
 
     public void resetMerchant() {

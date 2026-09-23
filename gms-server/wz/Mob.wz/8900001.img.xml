@@ -2,7 +2,7 @@
 <imgdir name="8900001.img">
   <imgdir name="info">
     <int name="level" value="190"/>
-    <int name="maxHP" value="2000000000"/>
+    <int name="maxHP" value="400000000"/>
     <int name="maxMP" value="108000"/>
     <int name="PDRate" value="80"/>
     <int name="MDRate" value="80"/>
@@ -21,7 +21,17 @@
     <int name="mobType" value="1"/>
     <int name="PDDamage" value="0"/>
     <int name="MDDamage" value="0"/>
-    <int name="boss" value="0"/>
+    <int name="boss" value="1"/>
+    <imgdir name="skill">
+      <imgdir name="0">
+        <int name="skill" value="170"/>
+        <int name="action" value="1"/>
+        <int name="level" value="10"/>
+        <int name="skillForbid" value="2160"/>
+        <int name="afterAttack" value="1"/>
+        <int name="afterAttackCount" value="1"/>
+      </imgdir>
+    </imgdir>
   </imgdir>
   <imgdir name="stand">
     <canvas name="0" width="193" height="236" format="1">
@@ -726,6 +736,12 @@
     <canvas name="7" width="270" height="259" format="1">
       <vector name="origin" x="117" y="243"/>
       <int name="z" value="0"/>
+      <int name="delay" value="90"/>
+    </canvas>
+  </imgdir>
+  <imgdir name="skillAfter1">
+    <canvas name="0" width="1" height="1" format="1">
+      <vector name="origin" x="0" y="0"/>
       <int name="delay" value="90"/>
     </canvas>
   </imgdir>

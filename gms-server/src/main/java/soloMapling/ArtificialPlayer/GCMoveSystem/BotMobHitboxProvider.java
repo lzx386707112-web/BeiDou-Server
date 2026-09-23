@@ -65,7 +65,7 @@ final class BotMobHitboxProvider {
     private static Rectangle loadMobBounds(int mobId) {
         Path mobFile = WZFiles.MOB.getFile().resolve(String.format("%07d.img.xml", Integer.valueOf(mobId)));
         if (!Files.isRegularFile(mobFile, new LinkOption[0])) {
-            log.debug("Bot mob hitbox: no WZ file for mob {} - caching miss", Integer.valueOf(mobId));
+            // BOTLOG-MUTE: log.debug("Bot mob hitbox: no WZ file for mob {} - caching miss", Integer.valueOf(mobId));
             return UNRESOLVED_BOUNDS;
         }
         Document document = parseXmlDocument(mobFile);
@@ -74,7 +74,7 @@ final class BotMobHitboxProvider {
         }
         Rectangle bounds = loadFrameBounds(document.getDocumentElement());
         if (bounds == null) {
-            log.debug("Bot mob hitbox: no lt/rb bounds on any of {} for mob {} - caching miss", String.join(",", FRAME_GROUP_FALLBACK), Integer.valueOf(mobId));
+            // BOTLOG-MUTE: log.debug("Bot mob hitbox: no lt/rb bounds on any of {} for mob {} - caching miss", String.join(",", FRAME_GROUP_FALLBACK), Integer.valueOf(mobId));
             return UNRESOLVED_BOUNDS;
         }
         return bounds;
@@ -137,7 +137,7 @@ final class BotMobHitboxProvider {
             DocumentBuilder builder = factory.newDocumentBuilder();
             return builder.parse(path.toFile());
         } catch (IOException | ParserConfigurationException | SAXException e) {
-            log.warn("Failed to load bot mob hitbox data from {}", path, e);
+            // BOTLOG-MUTE: log.warn("Failed to load bot mob hitbox data from {}", path, e);
             return null;
         }
     }

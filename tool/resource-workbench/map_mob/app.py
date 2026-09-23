@@ -3041,11 +3041,10 @@ def _verified_img_from_bytes(path: Path, data: bytes) -> WzImage:
     return image
 
 
-def patch_img_add(
-    path: Path, parent_path: str, name: str, node_type: str, value: Any, *, dry_run: bool, backup: bool,
-    node: WzProperty | None = None,
-) -> dict[str, Any]:
-    original = path.read_bytes()
+def build_img_add(
+    path: Path, original: bytes, parent_path: str, name: str, node_type: str, value: Any,
+    *, node: WzProperty | None = None,
+) -> tuple[bytes, dict[str, Any]]:
     image = _verified_img_from_bytes(path, original)
     parent_parts = tuple(part for part in parent_path.split("/") if part)
     size_offsets, count_offset, count_end, names, spans, records_end = locate_img_records(image, original, parent_parts)
@@ -3070,10 +3069,20 @@ def patch_img_add(
         raise ValueError("新增记录顺序或内容验证失败")
     if any(raw_after.get(item) != raw for item, raw in raw_before.items()):
         raise ValueError("检测到未修改的兄弟记录发生变化")
+    return output, {"path": f"{parent_path}/{name}".strip("/"), "insertedBytes": len(record)}
+
+
+def patch_img_add(
+    path: Path, parent_path: str, name: str, node_type: str, value: Any, *, dry_run: bool, backup: bool,
+    node: WzProperty | None = None,
+) -> dict[str, Any]:
+    output, result = build_img_add(
+        path, path.read_bytes(), parent_path, name, node_type, value, node=node,
+    )
     if not dry_run:
         atomic_write(path, output, backup=backup)
         _load_image_cached.cache_clear()
-    return {"path": f"{parent_path}/{name}".strip("/"), "insertedBytes": len(record)}
+    return result
 
 
 def patch_img_delete(path: Path, node_path: str, *, dry_run: bool, backup: bool) -> dict[str, Any]:
@@ -3265,12 +3274,13 @@ def patch_with_server_sync(
     }
 
 
-def xml_add_node(path: Path, parent_path: str, name: str, node_type: str, value: Any, *, dry_run: bool, backup: bool) -> dict[str, Any]:
+def build_xml_add(
+    path: Path, data: bytes, parent_path: str, name: str, node_type: str, value: Any,
+) -> tuple[bytes, dict[str, Any]]:
     if not name or "/" in name or "\\" in name:
         raise ValueError("节点名不能为空且不能包含路径分隔符")
     if node_type not in {"imgdir", "int", "short", "long", "float", "double", "string", "vector", "uol", "null"}:
         raise ValueError("不支持的节点类型")
-    data = path.read_bytes()
     spans = index_xml(data)
     parent = spans.get(parent_path)
     if parent is None or parent.tag not in {"imgdir", "canvas"} or parent.self_closing:
@@ -3303,9 +3313,14 @@ def xml_add_node(path: Path, parent_path: str, name: str, node_type: str, value:
         insertion = indent + snippet.encode("utf-8") + b"\n"
     output = data[:close_line_start] + insertion + data[close_line_start:]
     ET.fromstring(output)
+    return output, {"path": target_path, "insertedBytes": len(insertion)}
+
+
+def xml_add_node(path: Path, parent_path: str, name: str, node_type: str, value: Any, *, dry_run: bool, backup: bool) -> dict[str, Any]:
+    output, result = build_xml_add(path, path.read_bytes(), parent_path, name, node_type, value)
     if not dry_run:
         atomic_write(path, output, backup=backup)
-    return {"path": target_path, "insertedBytes": len(insertion)}
+    return result
 
 
 def xml_delete_node(path: Path, node_path: str, *, dry_run: bool, backup: bool) -> dict[str, Any]:
@@ -3337,27 +3352,24 @@ def add_with_server_sync(
         target = relative_path(server_path) if server_path is not None else client_path.name
         raise ValueError(f"找不到对应的服务端 XML: {target}")
 
-    client_preview = patch_img_add(
-        client_path, parent_path, name, node_type, value, dry_run=True, backup=False,
+    client_original = client_path.read_bytes()
+    server_original = server_path.read_bytes()
+    client_output, client_result = build_img_add(
+        client_path, client_original, parent_path, name, node_type, value,
     )
-    server_preview = xml_add_node(
-        server_path, parent_path, name, node_type, value, dry_run=True, backup=False,
+    server_output, server_result = build_xml_add(
+        server_path, server_original, parent_path, name, node_type, value,
     )
     if dry_run:
         return {
             "clientPath": relative_path(client_path), "serverPath": relative_path(server_path),
-            "client": client_preview, "server": server_preview,
+            "client": client_result, "server": server_result,
         }
 
-    client_original = client_path.read_bytes()
-    server_original = server_path.read_bytes()
     try:
-        client_result = patch_img_add(
-            client_path, parent_path, name, node_type, value, dry_run=False, backup=backup,
-        )
-        server_result = xml_add_node(
-            server_path, parent_path, name, node_type, value, dry_run=False, backup=backup,
-        )
+        atomic_write(client_path, client_output, backup=backup)
+        atomic_write(server_path, server_output, backup=backup)
+        _load_image_cached.cache_clear()
     except Exception:
         atomic_write(client_path, client_original, backup=False)
         atomic_write(server_path, server_original, backup=False)
@@ -3566,7 +3578,7 @@ def xml_add_cloned_node(
     else:
         close_start = data.rfind(b"</", parent.open_end, parent.end)
         close_line_start = data.rfind(b"\n", parent.open_end, close_start) + 1
-        if close_line_start <= parent.open_end:
+        if close_line_start <= parent.open_end or data[close_line_start:close_start].strip():
             insertion = b"\n" + snippet + parent_indent
             output = data[:close_start] + insertion + data[close_start:]
             inserted_bytes = len(insertion)
@@ -3587,10 +3599,12 @@ def xml_replace_cloned_node(
     if target is None:
         raise ValueError(f"服务端节点不存在: {node_path}")
     line_start = data.rfind(b"\n", 0, target.start) + 1
-    indent_match = re.match(rb"[ \t]*", data[line_start:target.start])
+    prefix = data[line_start:target.start]
+    replace_start = line_start if not prefix.strip() else target.start
+    indent_match = re.match(rb"[ \t]*", prefix) if replace_start == line_start else None
     indent = indent_match.group(0) if indent_match else b""
     replacement = xml_snippet_for_node(node, indent).rstrip(b"\n")
-    output = data[:line_start] + replacement + data[target.end:]
+    output = data[:replace_start] + replacement + data[target.end:]
     ET.fromstring(output)
     if not dry_run and output != data:
         atomic_write(path, output, backup=backup)
@@ -3840,7 +3854,7 @@ def migrate_missing_entity_resources(
 
 
 _LEGACY_MOB_ACTION = re.compile(
-    r"^(?:stand|move|fly|jump|hit|die|attack|skill|regen|chase|rope|ladder|speak)\d*$",
+    r"^(?:stand|move|fly|jump|hit|die|attack|skill|skillAfter|regen|chase|rope|ladder|speak)\d*$",
     re.I,
 )
 
@@ -4716,21 +4730,14 @@ def canvas_metadata_companion_paths(source_path: Path, *, allow_extract: bool = 
         seen.add(key)
         ordered.append(path)
 
-    pack = None
-    try:
-        pack = ms_mob_index().get(item_id)
-    except Exception:
-        pack = None
-    if pack is not None:
-        extracted = _existing_ms_extract(item_id, pack)
-        if extracted is None and allow_extract:
-            try:
-                found = extract_ms_mob(item_id)
-                extracted = found[0] if found else None
-            except Exception:
-                extracted = None
-        add(extracted)
-    add(find_extracted_ms_mob(item_id))
+    extracted = find_extracted_ms_mob(item_id)
+    if extracted is None and allow_extract:
+        try:
+            found = extract_ms_mob(item_id)
+            extracted = found[0] if found else None
+        except Exception:
+            pass
+    add(extracted)
     add(_TMS_DATA / "Mob" / f"{item_id}.img")
     add(_ROOT / "clien" / "Data" / "Mob" / f"{item_id}.img.json")
     return ordered
@@ -4882,15 +4889,45 @@ def attach_companion_uols(
     skipped: list[str],
     source_image: WzImage | None = None,
     materializer: arc.CanvasMaterializer | None = None,
+    companion_nodes: dict[str, dict[str, Any]] | None = None,
 ) -> int:
     """Copy logical UOLs, scalars, and store-missing frames from the TMS companion."""
     if not isinstance(clone, WzSubProperty) or not is_mob_canvas_store(source_path):
         return 0
-    extra = merge_canvas_metadata_tables(source_path, allow_extract=True)
+    extra = (
+        companion_nodes if companion_nodes is not None
+        else merge_canvas_metadata_tables(source_path, allow_extract=True)
+    )
     if not extra:
         return 0
     prefix = copied_root.strip("/")
     kept = 0
+    companion_images: list[tuple[Path, WzImage]] | None = None
+
+    def self_contained_companion_canvas(path: str) -> tuple[WzImage, WzCanvasProperty, Path] | None:
+        nonlocal companion_images
+        if companion_images is None:
+            companion_images = []
+            for companion_path in canvas_metadata_companion_paths(source_path, allow_extract=True):
+                if companion_path.suffix.lower() != ".img":
+                    continue
+                try:
+                    companion_images.append((companion_path, load_image(companion_path)))
+                except (OSError, ValueError):
+                    continue
+        for companion_path, companion_image in companion_images:
+            candidate = companion_image.root.get(path)
+            if isinstance(candidate, WzCanvasProperty) and candidate.has_pixels() \
+                    and _node_link(candidate) == ("", ""):
+                try:
+                    bitmap = arc.decode_source_canvas(candidate).convert("RGBA")
+                    visible = bool(bitmap.getchannel("A").getbbox())
+                    bitmap.close()
+                except (OSError, RuntimeError, ValueError):
+                    visible = False
+                if visible:
+                    return companion_image, candidate, companion_path
+        return None
 
     def ensure_parent(relative: str) -> tuple[WzSubProperty, str] | None:
         parent: WzProperty = clone
@@ -4982,7 +5019,17 @@ def attach_companion_uols(
             if folder is None:
                 uol_value = _outlink_frame_uol(path, extra)
                 if not uol_value:
-                    skipped.append(path)
+                    found = self_contained_companion_canvas(path)
+                    if found is None or materializer is None:
+                        skipped.append(path)
+                        continue
+                    linked_image, linked_canvas, linked_path = found
+                    added = arc.clone_property(
+                        linked_canvas, parent, linked_image, linked_path, materializer, leaf,
+                    )
+                    if isinstance(added, WzCanvasProperty):
+                        attach_legacy_canvas_metadata(added, linked_canvas, path, extra)
+                    parent.add(added)
                     continue
                 abs_target = resolve_uol_absolute(path, uol_value)
                 if not _uol_target_in_clone(clone, prefix, abs_target):
@@ -5054,7 +5101,10 @@ def clone_compatible_mob_node(
     skipped: list[str] = []
     stats = {"skipped": skipped, "uolsKept": 0, "densified": 0, "canvasMeta": 0}
     copied_root = copied_root.strip("/") or property_path(source)
-    companion_nodes = merge_canvas_metadata_tables(source_path, allow_extract=True)
+    companion_nodes = (
+        merge_canvas_metadata_tables(source_path, allow_extract=True)
+        if isinstance(source, (WzSubProperty, WzCanvasProperty, WzUolProperty)) else {}
+    )
 
     def materialize_canvas(node: WzProperty, parent: WzProperty | None, lookup_path: str) -> WzProperty | None:
         if _keep_area_warning_stub(node, lookup_path):
@@ -5138,6 +5188,7 @@ def clone_compatible_mob_node(
         raise ValueError(f"节点 {copied_root or source.name} 没有可投影到旧端的内容")
     stats["uolsKept"] += attach_companion_uols(
         clone, source_path, copied_root, client_image, skipped, source_image, materializer,
+        companion_nodes=companion_nodes,
     )
     info = clone if clone.name == "info" else clone.child("info") if isinstance(clone, WzSubProperty) else None
     if isinstance(info, WzSubProperty) and not _under_action_info(info):
@@ -5796,8 +5847,15 @@ def copy_tms_node_with_server_sync(
                 f'<imgdir name="{html.escape(client_path.name, quote=True)}">\n</imgdir>\n'.encode("utf-8")
             ))
 
+            staged_image = existing_image or _verified_img_from_bytes(
+                staged_client, staged_client.read_bytes(),
+            )
+            ancestor_parts = tuple(part for part in parent_path.split("/") if part)
+            server_spans = index_xml(staged_server.read_bytes())
+            client_missing_from: int | None = None
+            server_missing_from: int | None = None
             current_parent = ""
-            for name in (part for part in parent_path.split("/") if part):
+            for index, name in enumerate(ancestor_parts):
                 ancestor_path = f"{current_parent}/{name}".strip("/")
                 source_ancestor = source_image.root.get(ancestor_path)
                 if not isinstance(source_ancestor, WzSubProperty) and is_mob_copy:
@@ -5805,29 +5863,79 @@ def copy_tms_node_with_server_sync(
                 if not isinstance(source_ancestor, WzSubProperty):
                     raise ValueError(f"TMS 父节点不是目录: {ancestor_path}")
 
-                staged_image = _verified_img_from_bytes(staged_client, staged_client.read_bytes())
                 client_ancestor = staged_image.root.get(ancestor_path)
-                if client_ancestor is None:
-                    patch_img_add(
-                        staged_client, current_parent, name, "imgdir", None,
-                        dry_run=False, backup=False,
-                    )
-                    created_ancestors.append(ancestor_path)
-                elif not isinstance(client_ancestor, WzSubProperty):
+                if client_ancestor is None and client_missing_from is None:
+                    client_missing_from = index
+                elif client_ancestor is not None and not isinstance(client_ancestor, WzSubProperty):
                     raise ValueError(f"客户端父节点不是目录: {ancestor_path}")
-
-                server_span = index_xml(staged_server.read_bytes()).get(ancestor_path)
-                if server_span is None:
-                    xml_add_cloned_node(
-                        staged_server, current_parent, WzSubProperty(name), dry_run=False,
-                    )
-                elif server_span.tag != "imgdir":
+                server_span = server_spans.get(ancestor_path)
+                if server_span is None and server_missing_from is None:
+                    server_missing_from = index
+                elif server_span is not None and server_span.tag != "imgdir":
                     raise ValueError(f"服务端父节点不是 imgdir: {ancestor_path}")
                 current_parent = ancestor_path
 
-            staged_image = _verified_img_from_bytes(staged_client, staged_client.read_bytes())
+            batch_missing_branch = bool(
+                is_mob_copy
+                and node_path
+                and node_path != "info"
+                and client_missing_from is not None
+                and client_missing_from == server_missing_from
+                and server_spans.get(node_path) is None
+            )
+            if batch_missing_branch:
+                missing_names = ancestor_parts[client_missing_from:]
+                insertion_parent = "/".join(ancestor_parts[:client_missing_from])
+                branch = clone
+                for name in reversed(missing_names):
+                    wrapper = WzSubProperty(name)
+                    wrapper.add(branch)
+                    branch = wrapper
+                client_result = patch_img_add(
+                    staged_client, insertion_parent, branch.name, "imgdir", None,
+                    dry_run=False, backup=False, node=branch,
+                )
+                client_result["path"] = node_path
+                client_result["insertedRoot"] = f"{insertion_parent}/{branch.name}".strip("/")
+                server_result = xml_add_cloned_node(
+                    staged_server, insertion_parent, branch, dry_run=False, backup=False,
+                )
+                server_result["path"] = node_path
+                server_result["insertedRoot"] = f"{insertion_parent}/{branch.name}".strip("/")
+                created_ancestors.extend(
+                    "/".join(ancestor_parts[:index + 1])
+                    for index in range(client_missing_from, len(ancestor_parts))
+                )
+            else:
+                current_parent = ""
+                for name in ancestor_parts:
+                    ancestor_path = f"{current_parent}/{name}".strip("/")
+                    client_ancestor = staged_image.root.get(ancestor_path)
+                    if client_ancestor is None:
+                        patch_img_add(
+                            staged_client, current_parent, name, "imgdir", None,
+                            dry_run=False, backup=False,
+                        )
+                        staged_image = _verified_img_from_bytes(
+                            staged_client, staged_client.read_bytes(),
+                        )
+                        created_ancestors.append(ancestor_path)
+                    elif not isinstance(client_ancestor, WzSubProperty):
+                        raise ValueError(f"客户端父节点不是目录: {ancestor_path}")
+
+                    server_span = index_xml(staged_server.read_bytes()).get(ancestor_path)
+                    if server_span is None:
+                        xml_add_cloned_node(
+                            staged_server, current_parent, WzSubProperty(name), dry_run=False,
+                        )
+                    elif server_span.tag != "imgdir":
+                        raise ValueError(f"服务端父节点不是 imgdir: {ancestor_path}")
+                    current_parent = ancestor_path
+
             existing_target = staged_image.root.get(node_path)
-            if not node_path:
+            if batch_missing_branch:
+                pass
+            elif not node_path:
                 if staged_image.root.children():
                     raise ValueError("客户端根节点已有子节点，不能整根复制")
                 server_spans = index_xml(staged_server.read_bytes())
@@ -5872,9 +5980,16 @@ def copy_tms_node_with_server_sync(
                         staged_client, parent_path, clone.name, "imgdir", None,
                         dry_run=False, backup=False, node=clone,
                     )
-                    server_result = xml_add_cloned_node(
-                        staged_server, parent_path, clone, dry_run=False,
-                    )
+                    if node_path in index_xml(staged_server.read_bytes()):
+                        server_result = xml_replace_cloned_node(
+                            staged_server, node_path, clone, dry_run=False, backup=False,
+                        )
+                        server_result["operation"] = "replace"
+                    else:
+                        server_result = xml_add_cloned_node(
+                            staged_server, parent_path, clone, dry_run=False,
+                        )
+                        server_result["operation"] = "add"
             elif (
                 isinstance(existing_target, WzSubProperty)
                 and isinstance(clone, WzSubProperty)
@@ -5924,8 +6039,8 @@ def copy_tms_node_with_server_sync(
                 raise ValueError(f"客户端同名节点已存在且不是空目录: {node_path}")
             client_data = staged_client.read_bytes()
             server_data = staged_server.read_bytes()
-            checked_image = _verified_img_from_bytes(client_path, client_data)
             if is_mob_copy and node_path in {"", "info"}:
+                checked_image = _verified_img_from_bytes(client_path, client_data)
                 validate_copied_mob_info(checked_image)
             ET.fromstring(server_data)
 

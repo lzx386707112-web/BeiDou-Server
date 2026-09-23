@@ -255,7 +255,7 @@ public class TutorialBot extends BotSM {
             }
             handleMessage(message);
         } catch (Exception e) {
-            e.printStackTrace();
+            // BOTLOG-MUTE: e.printStackTrace();
         }
     }
 

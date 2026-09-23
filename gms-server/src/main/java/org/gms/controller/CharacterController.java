@@ -14,6 +14,8 @@ import org.gms.model.dto.SubmitBody;
 import org.gms.service.CharacterService;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 @RestController
 @AllArgsConstructor
 @RequestMapping("/character")
@@ -65,6 +67,16 @@ public class CharacterController {
     @PutMapping("/" + ApiConstant.LATEST + "/{id}/moveToHenesys")
     public ResultBody<Object> moveToHenesys(@PathVariable int id) {
         characterService.moveToHenesys(id);
+        return ResultBody.success();
+    }
+
+    @Tag(name = "/character/" + ApiConstant.LATEST)
+    @Operation(summary = "GM修改角色昵称")
+    @PutMapping("/" + ApiConstant.LATEST + "/{id}/changeName")
+    public ResultBody<Object> changeName(@PathVariable int id,
+                                         @RequestBody Map<String, String> body) {
+        String newName = body.get("newName");
+        characterService.changeCharacterName(id, newName);
         return ResultBody.success();
     }
 }

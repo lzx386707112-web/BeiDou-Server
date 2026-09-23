@@ -155,19 +155,19 @@ public class EquipMetadataCache {
     public static synchronized void initialize() {
         if (initialized) return;
 
-        System.out.println("[EquipMetadataCache] Initializing - scanning WZ equip data...");
+        // BOTLOG-MUTE: System.out.println("[EquipMetadataCache] Initializing - scanning WZ equip data...");
         long start = System.currentTimeMillis();
 
         List<EquipEntry> all;
         try {
             all = scanCharacterWzDirectories();
         } catch (Exception e) {
-            System.err.println("[EquipMetadataCache] Directory scan failed: " + e);
+            // BOTLOG-MUTE: System.err.println("[EquipMetadataCache] Directory scan failed: " + e);
             all = new ArrayList<>();
         }
         if (all.isEmpty()) {
-            System.err.println("[EquipMetadataCache] Directory scan found nothing - "
-                    + "falling back to id-range probing via ItemInformationProvider");
+            // BOTLOG-MUTE: System.err.println("[EquipMetadataCache] Directory scan found nothing - "
+                    // BOTLOG-MUTE: + "falling back to id-range probing via ItemInformationProvider");
             all = scanViaItemInformationProvider();
         }
 
@@ -199,8 +199,8 @@ public class EquipMetadataCache {
 
         long elapsed = System.currentTimeMillis() - start;
         long cashTotal = all.stream().filter(e -> e.cash).count();
-        System.out.println("[EquipMetadataCache] Initialized in " + elapsed + "ms — "
-                + all.size() + " equips cached (" + cashTotal + " cash/NX)");
+        // BOTLOG-MUTE: System.out.println("[EquipMetadataCache] Initialized in " + elapsed + "ms — "
+                // BOTLOG-MUTE: + all.size() + " equips cached (" + cashTotal + " cash/NX)");
     }
 
     // ── Fast path: enumerate Character.wz directories directly ──────────
@@ -271,11 +271,11 @@ public class EquipMetadataCache {
                             DataTool.getIntConvert("quest", info, 0) == 1,
                             DataTool.getInt("price", info, 0)));
                 } catch (Exception e) {
-                    System.err.println("[EquipMetadataCache] Failed to parse " + fileName + ": " + e.getMessage());
+                    // BOTLOG-MUTE: System.err.println("[EquipMetadataCache] Failed to parse " + fileName + ": " + e.getMessage());
                 }
             }
         } catch (Exception e) {
-            System.err.println("[EquipMetadataCache] Failed to scan " + dir + ": " + e.getMessage());
+            // BOTLOG-MUTE: System.err.println("[EquipMetadataCache] Failed to scan " + dir + ": " + e.getMessage());
         }
         return entries;
     }
@@ -302,7 +302,7 @@ public class EquipMetadataCache {
                 }
             }
         } catch (Exception e) {
-            System.err.println("[EquipMetadataCache] Failed to load names from String.wz: " + e.getMessage());
+            // BOTLOG-MUTE: System.err.println("[EquipMetadataCache] Failed to load names from String.wz: " + e.getMessage());
         }
         return names;
     }

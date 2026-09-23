@@ -270,7 +270,7 @@ public class EquipListGenerator {
     public static void main(String[] args) {
         List<String> thief_equips = List.of("Weapon", "Hat", "Top", "Pants", "Shield");
         List<Integer> selectionPattern = generatePattern("C");
-        System.out.println(selectEquipCategoriesByPattern(thief_equips, selectionPattern));
+        // BOTLOG-MUTE: System.out.println(selectEquipCategoriesByPattern(thief_equips, selectionPattern));
     }
 
 }

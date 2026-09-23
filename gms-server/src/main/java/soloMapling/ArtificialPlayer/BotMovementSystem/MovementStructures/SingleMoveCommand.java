@@ -115,7 +115,7 @@ public class SingleMoveCommand {
                 values[i] = fields[i].get(this);
             }
         } catch (IllegalAccessException e) {
-            e.printStackTrace();
+            // BOTLOG-MUTE: e.printStackTrace();
         }
         return values;
     }

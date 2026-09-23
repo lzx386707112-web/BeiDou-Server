@@ -287,7 +287,11 @@ public class MobSkill {
                 // Visual-only Akayrum compatibility skills; damage/rules are handled separately.
             }
             case WILL_WEB_BURST -> {
-                if (monster.getId() == 8920102) {
+                if (monster.getId() == 8920002) {
+                    // Bloody Queen's skill1 owns the old-client visual. TMS
+                    // 183/1 is a timed field hazard, not Will's web overlay.
+                    return;
+                } else if (monster.getId() == 8920102) {
                     summonMonsters(monster);
                 } else {
                     castBossCompatEffect(monster, "customBossWill/webBurst");
@@ -328,14 +332,21 @@ public class MobSkill {
                 // The imported skill action owns playback; spawning another
                 // boss would duplicate HP, drops, and combat state.
             }
-            case SUMMON, SUMMON_170, SUMMON_186, SUMMON_188, SUMMON_189,
-                 SUMMON_190, SUMMON_191, SUMMON_201, SUMMON_202, SUMMON_203 -> {
-                if (monster.getId() == 8900000) {
-                    castBossCompatEffect(monster, "customSkill/rootAbyss/pierreVideoLayer");
+            case SUMMON_188 -> {
+                if (monster.getId() == 8920005) {
+                    healBloodyQueen(monster);
+                } else {
+                    summonMonsters(monster);
                 }
-                // Queen/Vellum ultimates stay on the mob sprite (skillN / attackN).
-                // Fullscreen field-effect MCV is screen-centered, so those skills
-                // appeared in the upper-left instead of on the boss.
+            }
+            case SUMMON_201 -> {
+                if (replaceRootAbyssPhase(monster)) {
+                    return;
+                }
+                summonMonsters(monster);
+            }
+            case SUMMON, SUMMON_170, SUMMON_186, SUMMON_189,
+                 SUMMON_190, SUMMON_191, SUMMON_202, SUMMON_203 -> {
                 summonMonsters(monster);
             }
         }
@@ -552,6 +563,43 @@ public class MobSkill {
                     }
                 }
             }
+        }
+    }
+
+    private boolean replaceRootAbyssPhase(Monster monster) {
+        int level = id.level();
+        boolean pierreSplit = monster.getId() == 8900000 && level == 40;
+        boolean queenChange = RootAbyssBossCompat.isQueenBoss(monster.getId())
+                && (level == 51 || level == 52 || level == 53);
+        if (!pierreSplit && !queenChange) {
+            return false;
+        }
+
+        MapleMap map = monster.getMap();
+        Point position = monster.getPosition();
+        long inheritedHp = Math.max(1, monster.getHp());
+        for (Integer mobId : toSummon) {
+            Monster phase = LifeFactory.getMonster(mobId);
+            if (phase == null) {
+                continue;
+            }
+            long targetHp = Math.min(inheritedHp, phase.getMaxHp());
+            phase.addHp(targetHp - phase.getHp());
+            map.spawnMonsterOnGroundBelow(phase, position);
+        }
+        // New phase(s) must exist before the old form is removed so event
+        // scripts never observe a false all-monsters-dead transition.
+        map.killMonster(monster, null, false);
+        return true;
+    }
+
+    private void healBloodyQueen(Monster source) {
+        for (Monster monster : source.getMap().getAllMonsters()) {
+            if (!RootAbyssBossCompat.isQueenBoss(monster.getId()) || !monster.isAlive()) {
+                continue;
+            }
+            int amount = (int) Math.min(Integer.MAX_VALUE, Math.max(1, monster.getMaxHp() / 5));
+            monster.heal(amount, 0);
         }
     }
 

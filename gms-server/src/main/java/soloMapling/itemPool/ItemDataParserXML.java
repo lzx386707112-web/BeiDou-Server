@@ -61,7 +61,7 @@ public class ItemDataParserXML {
             }
 
         } catch (Exception e) {
-            System.err.println("Failed to parse item " + itemId + ": " + e.getMessage());
+            // BOTLOG-MUTE: System.err.println("Failed to parse item " + itemId + ": " + e.getMessage());
         }
 
         return data;
@@ -70,12 +70,12 @@ public class ItemDataParserXML {
     private static void test() {
         int itemId = 1002357;
 
-        System.out.println("reqJob: " + ItemDataParserXML.getValue(itemId, "reqJob"));
-        System.out.println("reqLevel: " + ItemDataParserXML.getValue(itemId, "reqLevel"));
-        System.out.println("price: " + ItemDataParserXML.getValue(itemId, "price"));
-        System.out.println("cash: " + ItemDataParserXML.getValue(itemId, "cash"));
-        System.out.println("incSTR: " + ItemDataParserXML.getValue(itemId, "incSTR"));
-        System.out.println("tradeBlock: " + ItemDataParserXML.getValue(itemId, "tradeBlock"));
+        // BOTLOG-MUTE: System.out.println("reqJob: " + ItemDataParserXML.getValue(itemId, "reqJob"));
+        // BOTLOG-MUTE: System.out.println("reqLevel: " + ItemDataParserXML.getValue(itemId, "reqLevel"));
+        // BOTLOG-MUTE: System.out.println("price: " + ItemDataParserXML.getValue(itemId, "price"));
+        // BOTLOG-MUTE: System.out.println("cash: " + ItemDataParserXML.getValue(itemId, "cash"));
+        // BOTLOG-MUTE: System.out.println("incSTR: " + ItemDataParserXML.getValue(itemId, "incSTR"));
+        // BOTLOG-MUTE: System.out.println("tradeBlock: " + ItemDataParserXML.getValue(itemId, "tradeBlock"));
 
     }
 

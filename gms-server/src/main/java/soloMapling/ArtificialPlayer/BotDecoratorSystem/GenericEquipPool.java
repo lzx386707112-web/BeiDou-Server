@@ -96,11 +96,11 @@ public class GenericEquipPool {
             }
 
             loaded = true;
-            System.out.println("[GenericEquipPool] Loaded " + itemCount
-                    + " items across " + pools.size() + " categories (reqLevel cached from WZ)");
+            // BOTLOG-MUTE: System.out.println("[GenericEquipPool] Loaded " + itemCount
+                    // BOTLOG-MUTE: + " items across " + pools.size() + " categories (reqLevel cached from WZ)");
         } catch (Exception e) {
-            System.err.println("[GenericEquipPool] Failed to load YAML: " + e.getMessage());
-            e.printStackTrace();
+            // BOTLOG-MUTE: System.err.println("[GenericEquipPool] Failed to load YAML: " + e.getMessage());
+            // BOTLOG-MUTE: e.printStackTrace();
         }
     }
 

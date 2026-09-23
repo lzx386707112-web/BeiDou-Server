@@ -49,7 +49,7 @@ public class DropGameLootPool {
             loadEntries(tierNode, "special_items", pool.specialEntries, pool);
         } catch (Exception e) {
             log("DropGameLootPool: Failed to load tier: " + tier);
-            e.printStackTrace();
+            // BOTLOG-MUTE: e.printStackTrace();
         }
         return pool;
     }

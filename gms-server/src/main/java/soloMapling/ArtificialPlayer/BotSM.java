@@ -90,7 +90,7 @@ public abstract class BotSM implements EventSubscriber {
             }
             updateState();
         } catch (Exception e) {
-            e.printStackTrace();
+            // BOTLOG-MUTE: e.printStackTrace();
         }
     };
     protected Trade.TradeResult lastTradeResult = null;
@@ -368,14 +368,14 @@ public abstract class BotSM implements EventSubscriber {
     // todo
     // At the moment this is not used as far as I know.
     protected void processMessages() {
-        System.out.println("BotSM processMessages");
+        // BOTLOG-MUTE: System.out.println("BotSM processMessages");
         try {
             ChatMessage message = messageQueue.getMessageNonBlocking("secondary");
             if (message.getSender() == getInteractors().getRespondant()) {
                 log("This Message is from Respondant: " + getInteractors().getRespondant().getName() + ", Msg: " + message);
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            // BOTLOG-MUTE: e.printStackTrace();
         }
     }
 
@@ -515,7 +515,7 @@ public abstract class BotSM implements EventSubscriber {
 
     public void handleEvent(GameEvent event) {
         // Process based on event type
-        System.out.println("BotSM handleEvent");
+        // BOTLOG-MUTE: System.out.println("BotSM handleEvent");
         return;
     }
 

@@ -184,7 +184,7 @@ public final class TownPresenceConfig {
             }
             return out;
         } catch (Exception e) {
-            System.out.println("[TownPresenceConfig] failed to load BotTownSystem/TownPresence.yaml: " + e.getMessage());
+            // BOTLOG-MUTE: System.out.println("[TownPresenceConfig] failed to load BotTownSystem/TownPresence.yaml: " + e.getMessage());
             return new ArrayList();
         }
     }

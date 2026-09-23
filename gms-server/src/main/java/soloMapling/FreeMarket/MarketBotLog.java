@@ -14,22 +14,22 @@ public final class MarketBotLog {
     }
 
     public static void debug(String message, Object... args) {
-        LOG.debug(message, args);
+        // BOTLOG-MUTE: soloMapling 日志已关闭，不打印
     }
 
     public static void info(String message, Object... args) {
-        LOG.info(message, args);
+        // BOTLOG-MUTE: soloMapling 日志已关闭，不打印
     }
 
     public static void warn(String message, Object... args) {
-        LOG.warn(message, args);
+        // BOTLOG-MUTE: soloMapling 日志已关闭，不打印
     }
 
     public static void error(String message, Throwable error) {
-        LOG.error(message, error);
+        // BOTLOG-MUTE: soloMapling 日志已关闭，不打印
     }
 
     public static void error(String message, Object... args) {
-        LOG.error(message, args);
+        // BOTLOG-MUTE: soloMapling 日志已关闭，不打印
     }
 }

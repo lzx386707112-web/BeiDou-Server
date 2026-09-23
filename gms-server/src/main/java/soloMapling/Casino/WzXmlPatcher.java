@@ -42,16 +42,16 @@ public class WzXmlPatcher {
      * BEFORE ItemInformationProvider caches item data.
      */
     public static void applyAllPatches() {
-        log.info("[WzXmlPatcher] Applying casino chip patches...");
+        // BOTLOG-MUTE: log.info("[WzXmlPatcher] Applying casino chip patches...");
         patchCasinoChipItems();
-        log.info("[WzXmlPatcher] All patches applied.");
+        // BOTLOG-MUTE: log.info("[WzXmlPatcher] All patches applied.");
     }
 
     private static void patchCasinoChipItems() {
         // Casino chip items 4002000-4002003 live in Item.wz/Etc/0400.img.xml
         Path xmlPath = Paths.get(WZ_BASE_PATH, "Item.wz", "Etc", "0400.img.xml");
         if (!Files.exists(xmlPath)) {
-            log.warn("[WzXmlPatcher] File not found: {}. Skipping casino chip patches.", xmlPath);
+            // BOTLOG-MUTE: log.warn("[WzXmlPatcher] File not found: {}. Skipping casino chip patches.", xmlPath);
             return;
         }
 
@@ -72,13 +72,13 @@ public class WzXmlPatcher {
 
             if (!content.equals(original)) {
                 Files.writeString(xmlPath, content, StandardCharsets.UTF_8);
-                log.info("[WzXmlPatcher] Patched: {}", xmlPath);
+                // BOTLOG-MUTE: log.info("[WzXmlPatcher] Patched: {}", xmlPath);
             } else {
-                log.info("[WzXmlPatcher] No changes needed for: {}", xmlPath);
+                // BOTLOG-MUTE: log.info("[WzXmlPatcher] No changes needed for: {}", xmlPath);
             }
 
         } catch (IOException e) {
-            log.error("[WzXmlPatcher] Failed to patch {}", xmlPath, e);
+            // BOTLOG-MUTE: log.error("[WzXmlPatcher] Failed to patch {}", xmlPath, e);
         }
     }
 
@@ -91,7 +91,7 @@ public class WzXmlPatcher {
         String itemStart = "<imgdir name=\"" + paddedItemId + "\">";
         int startIdx = content.indexOf(itemStart);
         if (startIdx == -1) {
-            log.warn("[WzXmlPatcher] Item {} not found in XML.", paddedItemId);
+            // BOTLOG-MUTE: log.warn("[WzXmlPatcher] Item {} not found in XML.", paddedItemId);
             return content;
         }
 
@@ -99,7 +99,7 @@ public class WzXmlPatcher {
         int infoStart = content.indexOf("<imgdir name=\"info\">", startIdx);
         int infoEnd = content.indexOf("</imgdir>", infoStart);
         if (infoStart == -1 || infoEnd == -1) {
-            log.warn("[WzXmlPatcher] Could not find info block for item {}.", paddedItemId);
+            // BOTLOG-MUTE: log.warn("[WzXmlPatcher] Could not find info block for item {}.", paddedItemId);
             return content;
         }
 
@@ -124,7 +124,7 @@ public class WzXmlPatcher {
             newInfoBlock = infoBlock + "      <int name=\"price\" value=\"" + newPrice + "\"/>\n";
         }
 
-        log.info("[WzXmlPatcher] Item {}: price set to {}", paddedItemId, newPrice);
+        // BOTLOG-MUTE: log.info("[WzXmlPatcher] Item {}: price set to {}", paddedItemId, newPrice);
         return content.substring(0, infoStart) + newInfoBlock + content.substring(infoEnd);
     }
 
@@ -151,7 +151,7 @@ public class WzXmlPatcher {
             // Remove the entire line including surrounding whitespace
             String patternStr = "\\s*<int name=\"" + flagName + "\" value=\"1\"/>";
             String newItemBlock = itemBlock.replaceFirst(patternStr, "");
-            log.info("[WzXmlPatcher] Item {}: removed {} flag", paddedItemId, flagName);
+            // BOTLOG-MUTE: log.info("[WzXmlPatcher] Item {}: removed {} flag", paddedItemId, flagName);
             return content.substring(0, startIdx) + newItemBlock + content.substring(itemEnd);
         }
 

@@ -37,7 +37,7 @@ public class MovementPacket {
 
         for (byte i = 0; i < numCommands; i++) {
             byte command = p.readByte();
-            System.out.println("debug: " + p.toString());
+            // BOTLOG-MUTE: System.out.println("debug: " + p.toString());
             switch (command) {
                 case 0: // normal move
                 case 5:

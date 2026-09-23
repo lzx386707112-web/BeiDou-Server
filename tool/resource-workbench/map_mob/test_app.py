@@ -10,6 +10,7 @@ import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from map_mob import app as workbench
 
@@ -170,6 +171,85 @@ class ImgPatchTests(unittest.TestCase):
         self.assertNotIn("attack2/info/ball/0", merged)
         self.assertIn("attack2/info/hit/0", merged)
         self.assertIn("attack1/0/origin", merged)
+
+    def test_canvas_companion_uses_existing_extract_without_scanning_ms_packs(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            canvas = root / "Mob" / "_Canvas" / "1234567.img"
+            extracted = root / "cache" / "Mob_1234567.img"
+            canvas.parent.mkdir(parents=True)
+            extracted.parent.mkdir(parents=True)
+            canvas.touch()
+            extracted.touch()
+            original_find = workbench.find_extracted_ms_mob
+            original_index = workbench.ms_mob_index
+            try:
+                workbench.find_extracted_ms_mob = lambda _item_id: extracted
+                workbench.ms_mob_index = lambda: self.fail("read-only comparison must not scan MS packs")
+                self.assertEqual(
+                    workbench.canvas_metadata_companion_paths(canvas, allow_extract=False),
+                    [extracted],
+                )
+            finally:
+                workbench.find_extracted_ms_mob = original_find
+                workbench.ms_mob_index = original_index
+
+    def test_canvas_companion_copy_reuses_extract_without_scanning_ms_packs(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            canvas = Path(directory) / "Mob" / "_Canvas" / "1234567.img"
+            extracted = Path(directory) / "Mob_1234567.img"
+            canvas.parent.mkdir(parents=True)
+            canvas.touch()
+            extracted.touch()
+            with mock.patch.object(workbench, "find_extracted_ms_mob", return_value=extracted), \
+                    mock.patch.object(workbench, "extract_ms_mob") as extract:
+                self.assertEqual(
+                    workbench.canvas_metadata_companion_paths(canvas, allow_extract=True),
+                    [extracted],
+                )
+                extract.assert_not_called()
+
+    def test_mob_scalar_copy_skips_canvas_metadata_and_subtree_loads_it_once(self) -> None:
+        image = workbench._verified_img_from_bytes(Path("source.img"), workbench.empty_gms_img_bytes())
+        source_path = Path("Mob/_Canvas/1234567.img")
+        scalar = workbench.WzIntProperty("attackAfter", 630)
+        subtree = workbench.WzSubProperty("info")
+        subtree.add(workbench.WzIntProperty("level", 1, subtree))
+        with mock.patch.object(workbench, "merge_canvas_metadata_tables", return_value={}) as metadata:
+            clone, _, _ = workbench.clone_compatible_mob_node(scalar, image, source_path)
+            self.assertEqual(clone.value, 630)
+            metadata.assert_not_called()
+            workbench.clone_compatible_mob_node(subtree, image, source_path)
+            metadata.assert_called_once_with(source_path, allow_extract=True)
+
+    def test_mob_attack8_keeps_self_contained_four_pixel_companion_frame(self) -> None:
+        source = workbench._TMS_DATA / "Mob/_Canvas/8930000.img"
+        companion = workbench.find_extracted_ms_mob("8930000")
+        client = workbench._ROOT / "clien/Data/Mob/8930000.img"
+        if not source.is_file() or companion is None or not client.is_file():
+            self.skipTest("Magnus 8930000 Canvas, logical record, or client sample is unavailable")
+
+        source_image = workbench.load_image(source)
+        companion_image = workbench.load_image(companion)
+        self.assertIsNone(source_image.root.get("attack8/12"))
+        logical_frame = companion_image.root.get("attack8/12")
+        self.assertIsInstance(logical_frame, workbench.WzCanvasProperty)
+        self.assertEqual((int(logical_frame.width), int(logical_frame.height)), (4, 4))
+
+        clone, _, _ = workbench.clone_compatible_mob_node(
+            source_image.root.get("attack8"), source_image, source,
+            client_image=workbench.load_image(client), copied_root="attack8", dest_mob_id="8930000",
+        )
+        names = sorted(int(child.name) for child in clone.children() if child.name.isdigit())
+        self.assertEqual(names, list(range(32)))
+        frame = clone.get("12")
+        self.assertIsInstance(frame, workbench.WzCanvasProperty)
+        self.assertEqual((int(frame.width), int(frame.height)), (4, 4))
+        self.assertEqual((int(frame.format), int(frame.format2)), (1, 0))
+        self.assertEqual(int(frame.child("delay").value), 1200)
+        self.assertEqual(int(frame.child("hide").value), 1)
+        bitmap = workbench.decode_canvas(frame, region="GMS").convert("RGBA")
+        self.assertEqual(bitmap.getchannel("A").getbbox(), (0, 0, 1, 1))
 
     def test_ms_mob_index_resolves_lucid_id_to_exact_pack_entry(self) -> None:
         if not workbench._MS_PROBE.is_file() or not workbench.ms_pack_signature():
@@ -496,9 +576,14 @@ class ImgPatchTests(unittest.TestCase):
                 self.assertIn("server", add_result)
                 self.assertEqual(client.read_bytes(), client_original)
                 self.assertEqual(server.read_bytes(), server_original)
-                workbench.add_with_server_sync(
-                    client, "", "__swimArea_sync_test__", "imgdir", None, dry_run=False, backup=False,
-                )
+                with mock.patch.object(
+                    workbench, "_verified_img_from_bytes", wraps=workbench._verified_img_from_bytes,
+                ) as verify:
+                    workbench.add_with_server_sync(
+                        client, "", "__swimArea_sync_test__", "imgdir", None,
+                        dry_run=False, backup=False,
+                    )
+                self.assertEqual(verify.call_count, 2)
                 workbench.delete_with_server_sync(
                     client, "__swimArea_sync_test__", dry_run=False, backup=False,
                 )
@@ -573,6 +658,93 @@ class ImgPatchTests(unittest.TestCase):
             self.assertEqual(server.read_bytes(), server_before)
             self.assertEqual(client.stat().st_mtime_ns, client_mtime)
             self.assertEqual(server.stat().st_mtime_ns, server_mtime)
+
+    def test_mob_copy_batches_missing_ancestor_chain_with_leaf(self) -> None:
+        with tempfile.TemporaryDirectory(prefix=".mob-copy-branch-test-", dir=workbench._HERE) as directory:
+            root = Path(directory)
+            client = root / "clien/Data/Mob/9999990.img"
+            server = root / "gms-server/wz/Mob.wz/9999990.img.xml"
+            source = root / "source/Mob/9999990.img"
+            client.parent.mkdir(parents=True)
+            server.parent.mkdir(parents=True)
+            source.parent.mkdir(parents=True)
+            client.write_bytes(workbench.empty_gms_img_bytes())
+            server.write_bytes(b'<imgdir name="9999990.img">\n</imgdir>\n')
+            source.write_bytes(workbench.empty_gms_img_bytes())
+            for parent, name, node_type, value in (
+                ("", "attack1", "imgdir", None),
+                ("attack1", "info", "imgdir", None),
+                ("attack1/info", "hit", "imgdir", None),
+                ("attack1/info/hit", "0", "int", 7),
+            ):
+                workbench.patch_img_add(
+                    source, parent, name, node_type, value, dry_run=False, backup=False,
+                )
+            original_resolver = workbench.server_xml_for_client
+            workbench.server_xml_for_client = lambda _path: server
+            try:
+                with mock.patch.object(
+                    workbench, "patch_img_add", wraps=workbench.patch_img_add,
+                ) as img_add, mock.patch.object(
+                    workbench, "xml_add_cloned_node", wraps=workbench.xml_add_cloned_node,
+                ) as xml_add:
+                    result = workbench.copy_tms_node_with_server_sync(
+                        client, source, "attack1/info/hit/0",
+                    )
+                self.assertEqual(img_add.call_count, 1)
+                self.assertEqual(xml_add.call_count, 1)
+            finally:
+                workbench.server_xml_for_client = original_resolver
+
+            image = workbench._verified_img_from_bytes(client, client.read_bytes())
+            server_nodes, _ = workbench.flatten_xml(server)
+            self.assertEqual(image.root.get("attack1/info/hit/0").value, 7)
+            self.assertEqual(server_nodes["attack1/info/hit/0"]["value"], 7)
+            self.assertEqual(
+                result["createdAncestors"], ["attack1", "attack1/info", "attack1/info/hit"],
+            )
+            self.assertEqual(result["client"]["insertedRoot"], "attack1")
+            self.assertEqual(result["server"]["insertedRoot"], "attack1")
+
+    def test_mob_copy_adds_missing_client_leaf_and_replaces_existing_server_leaf(self) -> None:
+        with tempfile.TemporaryDirectory(prefix=".mob-copy-server-replace-", dir=workbench._HERE) as directory:
+            root = Path(directory)
+            client = root / "clien/Data/Mob/9999989.img"
+            server = root / "gms-server/wz/Mob.wz/9999989.img.xml"
+            source = root / "source/Mob/9999989.img"
+            client.parent.mkdir(parents=True)
+            server.parent.mkdir(parents=True)
+            source.parent.mkdir(parents=True)
+            client.write_bytes(workbench.empty_gms_img_bytes())
+            source.write_bytes(workbench.empty_gms_img_bytes())
+            for path in (client, source):
+                workbench.patch_img_add(
+                    path, "", "attack4", "imgdir", None, dry_run=False, backup=False,
+                )
+            workbench.patch_img_add(
+                source, "attack4", "12", "int", 12, dry_run=False, backup=False,
+            )
+            server.write_bytes(b'''<imgdir name="9999989.img">
+  <imgdir name="attack4">
+    <uol name="12" value="../attack1/32"/>
+  </imgdir>
+</imgdir>
+''')
+            original_resolver = workbench.server_xml_for_client
+            workbench.server_xml_for_client = lambda _path: server
+            try:
+                result = workbench.copy_tms_node_with_server_sync(
+                    client, source, "attack4/12",
+                )
+            finally:
+                workbench.server_xml_for_client = original_resolver
+
+            image = workbench._verified_img_from_bytes(client, client.read_bytes())
+            server_nodes, _ = workbench.flatten_xml(server)
+            self.assertEqual(image.root.get("attack4/12").value, 12)
+            self.assertEqual(server_nodes["attack4/12"]["type"], "int")
+            self.assertEqual(server_nodes["attack4/12"]["value"], 12)
+            self.assertEqual(result["server"]["operation"], "replace")
 
     def test_copy_tms_leaf_populates_empty_main_file(self) -> None:
         with tempfile.TemporaryDirectory(prefix=".map-mob-copy-empty-test-", dir=workbench._HERE) as directory:
@@ -2564,6 +2736,18 @@ class WorkbenchUiTests(unittest.TestCase):
         inspector = html[html.index('id="inspectorPanel"'):html.index('id="nodeDetailDialog"')]
         self.assertNotIn('id="inspector"', inspector)
         self.assertIn("打开节点详情", inspector)
+
+    def test_selecting_tree_node_does_not_open_detail_dialog(self) -> None:
+        script = (Path(__file__).resolve().parent / "static" / "app.js").read_text(encoding="utf-8")
+        select_node = script[script.index("function selectNode(path)"):script.index("function updateNodeActions()")]
+        self.assertIn("updateNodeActions();", select_node)
+        self.assertNotIn('setInspectorMode("node")', select_node)
+        self.assertNotIn("openNodeDetailDialog()", select_node)
+
+    def test_writes_do_not_use_secondary_confirmation_dialogs(self) -> None:
+        script = (Path(__file__).resolve().parent / "static" / "app.js").read_text(encoding="utf-8")
+        self.assertNotIn("confirm(", script)
+        self.assertNotIn("dryRun: true", script[script.index("async function writeMobFrame"):])
 
 
 if __name__ == "__main__":

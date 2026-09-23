@@ -3,13 +3,14 @@
   <imgdir name="info">
     <imgdir name="skill">
       <imgdir name="0">
-        <int name="skill" value="200" />
-        <int name="level" value="40" />
-        <int name="action" value="1" />
+        <int name="skill" value="201"/>
+        <int name="action" value="1"/>
+        <int name="level" value="40"/>
+        <int name="afterDead" value="1"/>
       </imgdir>
     </imgdir>
-    <int name="level" value="30"/>
-    <string name="maxHP" value="80000000000"/>
+    <int name="level" value="190"/>
+    <string name="maxHP" value="400000000"/>
     <int name="maxMP" value="108000"/>
     <int name="PDRate" value="80"/>
     <int name="MDRate" value="80"/>

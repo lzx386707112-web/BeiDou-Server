@@ -71,6 +71,7 @@ import org.gms.server.life.MonsterInformationProvider;
 import org.gms.server.life.MonsterListener;
 import org.gms.server.life.NPC;
 import org.gms.server.life.PlayerNPC;
+import org.gms.server.life.RootAbyssBossCompat;
 import org.gms.server.life.MonsterVacCompat;
 import org.gms.server.life.SpawnPoint;
 import org.gms.server.partyquest.CarnivalFactory;
@@ -1520,7 +1521,9 @@ public class MapleMap {
             int actualDamage = LinkSystemService.applyDamage(chr, monster,
                     SetItemManager.applyDamage(chr, monster,
                             BossDamageGrowth.apply(chr, monster, damage)));
+            long hpBefore = monster.getHp();
             boolean killed = monster.damage(chr, actualDamage, false);
+            RootAbyssBossCompat.mirrorPierreDamage(chr, monster, (int) (hpBefore - monster.getHp()));
 
             selfDestruction selfDestr = monster.getStats().selfDestruction();
             if (selfDestr != null && selfDestr.getHp() > -1) {// should work ;p

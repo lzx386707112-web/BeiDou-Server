@@ -116,7 +116,7 @@ public class SocialHotPotatoManager {
                 tick();
             } catch (Exception e) {
                 log("[SocialHotPotato] Error during tick: " + e.getMessage());
-                e.printStackTrace();
+                // BOTLOG-MUTE: e.printStackTrace();
             }
             scheduleNextTick();
         }, delay, TimeUnit.MILLISECONDS);
@@ -134,7 +134,7 @@ public class SocialHotPotatoManager {
                 megaTick();
             } catch (Exception e) {
                 log("[SocialHotPotato] Error during mega tick: " + e.getMessage());
-                e.printStackTrace();
+                // BOTLOG-MUTE: e.printStackTrace();
             }
             scheduleNextMegaTick();
         }, delay, TimeUnit.MILLISECONDS);

@@ -261,7 +261,7 @@ public class OPQBot extends BotSM {
             // OPQ bots don't need to react to player chat during a run, but the
             // hook is here for future extensions (e.g. leader shouting "go").
         } catch (Exception e) {
-            e.printStackTrace();
+            // BOTLOG-MUTE: e.printStackTrace();
         }
     }
 

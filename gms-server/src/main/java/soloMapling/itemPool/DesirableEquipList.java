@@ -33,10 +33,10 @@ public class DesirableEquipList {
                 }
             }
             loaded = true;
-            System.out.println("[DesirableEquipList] Loaded " + desirableIds.size() + " whitelisted item IDs in "
-                    + (System.currentTimeMillis() - start) + "ms");
+            // BOTLOG-MUTE: System.out.println("[DesirableEquipList] Loaded " + desirableIds.size() + " whitelisted item IDs in "
+                    // BOTLOG-MUTE: + (System.currentTimeMillis() - start) + "ms");
         } catch (Exception e) {
-            System.err.println("[DesirableEquipList] Failed to load: " + e.getMessage());
+            // BOTLOG-MUTE: System.err.println("[DesirableEquipList] Failed to load: " + e.getMessage());
             loaded = true;
         }
     }

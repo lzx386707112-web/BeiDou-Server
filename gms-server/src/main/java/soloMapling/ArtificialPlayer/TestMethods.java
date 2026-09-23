@@ -97,18 +97,18 @@ public class TestMethods {
                 if (s == e) {
                     continue;
                 }
-                System.out.println(s + " -> " + e);
+                // BOTLOG-MUTE: System.out.println(s + " -> " + e);
                 moveToFMDoor(fakechar, e);
                 BotHelpers.sleepAmountSeconds(1000);
 
-                System.out.println(e + " -> " + s);
+                // BOTLOG-MUTE: System.out.println(e + " -> " + s);
                 moveToFMDoor(fakechar, s);
                 BotHelpers.sleepAmountSeconds(1000);
 
             }
             BotHelpers.sleepAmountSeconds(1000);
         }
-        System.out.println("end");
+        // BOTLOG-MUTE: System.out.println("end");
     }
 
 //    public static void testMovingBetweenFMRows(Character fakechar, int startRow, int endRow) {
@@ -178,8 +178,8 @@ public class TestMethods {
         Point mypos = c.getPlayer().getPosition();
         debugprint("mypos: " + mypos);
         Portal closest_tp_portal = mymap.findClosestTeleportPortal(mypos);
-        System.out.println("Closest tp portal: " + closest_tp_portal.getName() + ", "
-                + closest_tp_portal.getId() + ", " + closest_tp_portal.getPosition() + ", " + closest_tp_portal.getTargetMapId());
+        // BOTLOG-MUTE: System.out.println("Closest tp portal: " + closest_tp_portal.getName() + ", "
+                // BOTLOG-MUTE: + closest_tp_portal.getId() + ", " + closest_tp_portal.getPosition() + ", " + closest_tp_portal.getTargetMapId());
     }
 
     /*

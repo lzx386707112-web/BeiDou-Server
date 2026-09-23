@@ -71,7 +71,7 @@ public class BotDecorationQueue {
                 TimeUnit.MILLISECONDS
         );
 
-        System.out.println("[BotDecorationQueue] Started - interval=" + TICK_INTERVAL_MS + "ms, batch=" + BATCH_SIZE);
+        // BOTLOG-MUTE: System.out.println("[BotDecorationQueue] Started - interval=" + TICK_INTERVAL_MS + "ms, batch=" + BATCH_SIZE);
     }
 
     /**
@@ -110,7 +110,7 @@ public class BotDecorationQueue {
             BotDecorateEquips.decorateBotEquips(bot);
             BotDecorate.applyVisibleHpMp(bot);
         } catch (Exception e) {
-            System.err.println("[BotDecorationQueue] Error decorating bot " + botId + ": " + e.getMessage());
+            // BOTLOG-MUTE: System.err.println("[BotDecorationQueue] Error decorating bot " + botId + ": " + e.getMessage());
         }
     }
 

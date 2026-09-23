@@ -85,8 +85,8 @@ public class MapGraph {
                 }
             } catch (Exception e) {
                 // Handle exception, perhaps log it
-                System.err.println("Error processing element: " + element);
-                e.printStackTrace();
+                // BOTLOG-MUTE: System.err.println("Error processing element: " + element);
+                // BOTLOG-MUTE: e.printStackTrace();
             }
         }
         return elementsWithPoint;
@@ -406,23 +406,23 @@ public class MapGraph {
             // Also print to console
             StringWriter stringWriter = new StringWriter();
             exporter.exportGraph(graph, stringWriter);
-            System.out.println("DOT format output:");
-            System.out.println(stringWriter.toString());
+            // BOTLOG-MUTE: System.out.println("DOT format output:");
+            // BOTLOG-MUTE: System.out.println(stringWriter.toString());
         } catch (Exception e) {
-            e.printStackTrace();
+            // BOTLOG-MUTE: e.printStackTrace();
         }
     }
 
     public void printGraphNodesVertices() {
         // Print the graph structure
-        System.out.println("Vertices: " + graph.vertexSet());
-        System.out.println("Edges: " + graph.edgeSet());
+        // BOTLOG-MUTE: System.out.println("Vertices: " + graph.vertexSet());
+        // BOTLOG-MUTE: System.out.println("Edges: " + graph.edgeSet());
 
         // Print each vertex and its connected vertices
         for (String vertex : graph.vertexSet()) {
-            System.out.println("\nConnections for " + vertex + ":");
-            System.out.println("Outgoing edges: " + graph.outgoingEdgesOf(vertex));
-            System.out.println("Incoming edges: " + graph.incomingEdgesOf(vertex));
+            // BOTLOG-MUTE: System.out.println("\nConnections for " + vertex + ":");
+            // BOTLOG-MUTE: System.out.println("Outgoing edges: " + graph.outgoingEdgesOf(vertex));
+            // BOTLOG-MUTE: System.out.println("Incoming edges: " + graph.incomingEdgesOf(vertex));
         }
     }
 

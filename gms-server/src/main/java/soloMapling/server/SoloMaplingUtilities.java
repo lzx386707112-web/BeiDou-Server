@@ -201,12 +201,12 @@ public class SoloMaplingUtilities {
     public static boolean waitForCondition(Supplier<Boolean> condition, int maxAttempts, long delayMs) {
         for (int attempt = 1; attempt <= maxAttempts; attempt++) {
             if (condition.get()) {
-                System.out.println("Condition met on attempt " + attempt);
+                // BOTLOG-MUTE: System.out.println("Condition met on attempt " + attempt);
                 return true;
             }
 
             if (attempt < maxAttempts) {
-                System.out.println("Attempt " + attempt + " failed, waiting " + delayMs + "ms...");
+                // BOTLOG-MUTE: System.out.println("Attempt " + attempt + " failed, waiting " + delayMs + "ms...");
                 try {
                     Thread.sleep(delayMs);
                 } catch (InterruptedException e) {
@@ -216,7 +216,7 @@ public class SoloMaplingUtilities {
             }
         }
 
-        System.out.println("Max attempts (" + maxAttempts + ") reached, condition not met");
+        // BOTLOG-MUTE: System.out.println("Max attempts (" + maxAttempts + ") reached, condition not met");
         return false;
     }
 

@@ -82,7 +82,7 @@ public class BotHelpers {
 
     public static boolean checkSecondListInsideFirstList(List<MapObject> list1, List<MapObject> list2) {
         if (list1.size() < list2.size()) {
-            System.out.println("Current List is greater than 1st");
+            // BOTLOG-MUTE: System.out.println("Current List is greater than 1st");
             return false;
         }
 
@@ -95,7 +95,7 @@ public class BotHelpers {
                 }
             }
             if (!found) {
-                System.out.println("Item Not Found");
+                // BOTLOG-MUTE: System.out.println("Item Not Found");
                 return false;
             }
         }
@@ -169,12 +169,12 @@ public class BotHelpers {
     public static void waitBetweenTwoLong(long timestamp1, long timestamp2) {
         long diff = timestamp2 - timestamp1;
         if (diff > 2000) {
-            System.out.println("More than 2 seconds waiting");
+            // BOTLOG-MUTE: System.out.println("More than 2 seconds waiting");
         }
         try {
             Thread.sleep(diff);
         } catch (InterruptedException e) {
-            e.printStackTrace();
+            // BOTLOG-MUTE: e.printStackTrace();
         }
     }
 

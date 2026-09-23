@@ -3,28 +3,32 @@
   <imgdir name="info">
     <imgdir name="skill">
       <imgdir name="0">
-        <int name="skill" value="200" />
-        <int name="level" value="47" />
-        <int name="action" value="1" />
+        <int name="skill" value="201"/>
+        <int name="action" value="1"/>
+        <int name="level" value="47"/>
+        <int name="skillAfter" value="1620"/>
       </imgdir>
       <imgdir name="1">
-        <int name="skill" value="200" />
-        <int name="level" value="48" />
-        <int name="action" value="2" />
+        <int name="skill" value="201"/>
+        <int name="action" value="2"/>
+        <int name="level" value="48"/>
+        <int name="skillAfter" value="2160"/>
       </imgdir>
       <imgdir name="2">
-        <int name="skill" value="200" />
-        <int name="level" value="52" />
-        <int name="action" value="3" />
+        <int name="skill" value="201"/>
+        <int name="action" value="3"/>
+        <int name="level" value="52"/>
+        <int name="afterDead" value="1"/>
       </imgdir>
       <imgdir name="3">
-        <int name="skill" value="200" />
-        <int name="level" value="53" />
-        <int name="action" value="4" />
+        <int name="skill" value="201"/>
+        <int name="action" value="4"/>
+        <int name="level" value="53"/>
+        <int name="afterDead" value="1"/>
       </imgdir>
     </imgdir>
     <int name="level" value="190"/>
-    <int name="maxHP" value="500000000"/>
+    <int name="maxHP" value="400000000"/>
     <int name="maxMP" value="15000000"/>
     <int name="PADamage" value="1500"/>
     <int name="MADamage" value="1500"/>
@@ -36,9 +40,6 @@
     <int name="undead" value="0"/>
     <int name="PDDamage" value="30000"/>
     <int name="MDDamage" value="30000"/>
-    <imgdir name="revive">
-      <int name="0" value="8920001"/>
-    </imgdir>
     <int name="pushed" value="2100000000"/>
     <int name="mobType" value="1"/>
     <int name="boss" value="1"/>

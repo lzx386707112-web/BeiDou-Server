@@ -160,10 +160,10 @@ public final class BotTickService {
         governorWindowStartMs = now;
         if (avg > LAG_HI_MS && throttleFactor < FACTOR_MAX) {
             throttleFactor = Math.min(FACTOR_MAX, throttleFactor * 1.5d);
-            System.out.println(String.format("[BotTickService] wheel lag avg %dms - stretching cadences x%.2f", Long.valueOf(avg), Double.valueOf(throttleFactor)));
+            // BOTLOG-MUTE: System.out.println(String.format("[BotTickService] wheel lag avg %dms - stretching cadences x%.2f", Long.valueOf(avg), Double.valueOf(throttleFactor)));
         } else if (avg < LAG_LO_MS && throttleFactor > 1.0d) {
             throttleFactor = Math.max(1.0d, throttleFactor / 1.5d);
-            System.out.println(String.format("[BotTickService] wheel recovered (avg %dms) - cadence factor x%.2f", Long.valueOf(avg), Double.valueOf(throttleFactor)));
+            // BOTLOG-MUTE: System.out.println(String.format("[BotTickService] wheel recovered (avg %dms) - cadence factor x%.2f", Long.valueOf(avg), Double.valueOf(throttleFactor)));
         }
     }
 

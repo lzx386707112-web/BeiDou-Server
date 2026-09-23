@@ -147,27 +147,27 @@ public class NXItemPool {
                     if (!cacheItems.isEmpty()) {
                         pools.put(category, cacheItems);
                         cacheCount += cacheItems.size();
-                        System.out.println("[NXItemPool]   Auto-populated '" + category
-                                + "' with " + cacheItems.size() + " cash items from cache");
+                        // BOTLOG-MUTE: System.out.println("[NXItemPool]   Auto-populated '" + category
+                                // BOTLOG-MUTE: + "' with " + cacheItems.size() + " cash items from cache");
                     }
                 }
             } else {
-                System.out.println("[NXItemPool]   EquipMetadataCache not initialized — "
-                        + "empty categories will have no NX items");
+                // BOTLOG-MUTE: System.out.println("[NXItemPool]   EquipMetadataCache not initialized — "
+                        // BOTLOG-MUTE: + "empty categories will have no NX items");
             }
 
             int fallbackCount = addFallbackItemsForEmptyCategories();
             int showcaseRingCount = mergeShowcaseRings(pools);
 
             loaded = true;
-            System.out.println("[NXItemPool] Loaded " + itemCount + " curated + "
-                    + fashionCount + " fashion-script + "
-                    + cacheCount + " cache-auto + " + fallbackCount
-                    + " fallback + " + showcaseRingCount
-                    + " showcase-ring items across " + pools.size() + " categories");
+            // BOTLOG-MUTE: System.out.println("[NXItemPool] Loaded " + itemCount + " curated + "
+                    // BOTLOG-MUTE: + fashionCount + " fashion-script + "
+                    // BOTLOG-MUTE: + cacheCount + " cache-auto + " + fallbackCount
+                    // BOTLOG-MUTE: + " fallback + " + showcaseRingCount
+                    // BOTLOG-MUTE: + " showcase-ring items across " + pools.size() + " categories");
         } catch (Exception e) {
-            System.err.println("[NXItemPool] Failed to load YAML: " + e.getMessage());
-            e.printStackTrace();
+            // BOTLOG-MUTE: System.err.println("[NXItemPool] Failed to load YAML: " + e.getMessage());
+            // BOTLOG-MUTE: e.printStackTrace();
         }
     }
 
@@ -196,8 +196,8 @@ public class NXItemPool {
             }
             pools.put(category, fallback);
             count += fallback.size();
-            System.out.println("[NXItemPool]   Fallback-populated '" + category
-                    + "' with " + fallback.size() + " built-in items");
+            // BOTLOG-MUTE: System.out.println("[NXItemPool]   Fallback-populated '" + category
+                    // BOTLOG-MUTE: + "' with " + fallback.size() + " built-in items");
         }
         return count;
     }
@@ -246,7 +246,7 @@ public class NXItemPool {
             }
         }
         if (added > 0) {
-            System.out.println("[NXItemPool]   Merged " + added + " 灵魂戒指/逼王戒/名片/聊天戒指 into rings");
+            // BOTLOG-MUTE: System.out.println("[NXItemPool]   Merged " + added + " 灵魂戒指/逼王戒/名片/聊天戒指 into rings");
         }
         return added;
     }

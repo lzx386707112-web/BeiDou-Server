@@ -167,8 +167,8 @@ public final class MarketBotAmbient {
         }
         life.phase = Phase.WALK;
         life.phaseUntil = System.currentTimeMillis() + 8000;
-        MarketBotLog.debug("stroll name={} map={} fromX={} toX={} jump={}",
-                chr.getName(), chr.getMapId(), here.x, dest.x, jumpFirst);
+        // BOTLOG-MUTE: MarketBotLog.debug("stroll name={} map={} fromX={} toX={} jump={}",
+                // BOTLOG-MUTE: chr.getName(), chr.getMapId(), here.x, dest.x, jumpFirst);
         Point walkTo = dest;
         MarketBotDirector.get().runPathfind(() -> {
             if (jumpFirst) {

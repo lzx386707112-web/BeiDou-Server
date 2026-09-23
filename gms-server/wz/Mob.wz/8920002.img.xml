@@ -3,7 +3,7 @@
   <imgdir name="info">
     <int name="firstAttack" value="1"/>
     <int name="level" value="190"/>
-    <int name="maxHP" value="2000000000"/>
+    <int name="maxHP" value="600000000"/>
     <int name="maxMP" value="15000000"/>
     <int name="PADamage" value="20400"/>
     <int name="PDRate" value="120"/>
@@ -20,7 +20,27 @@
     <int name="mobType" value="1"/>
     <int name="PDDamage" value="0"/>
     <int name="MDDamage" value="0"/>
-    <int name="boss" value="0"/>
+    <int name="boss" value="1"/>
+    <imgdir name="skill">
+      <imgdir name="0">
+        <int name="skill" value="183"/>
+        <int name="action" value="1"/>
+        <int name="level" value="1"/>
+        <int name="skillAfter" value="1440"/>
+      </imgdir>
+      <imgdir name="1">
+        <int name="skill" value="201"/>
+        <int name="action" value="2"/>
+        <int name="level" value="51"/>
+        <int name="afterDead" value="1"/>
+      </imgdir>
+      <imgdir name="2">
+        <int name="skill" value="201"/>
+        <int name="action" value="3"/>
+        <int name="level" value="52"/>
+        <int name="afterDead" value="1"/>
+      </imgdir>
+    </imgdir>
   </imgdir>
   <imgdir name="stand">
     <canvas name="0" width="297" height="496" format="1">
