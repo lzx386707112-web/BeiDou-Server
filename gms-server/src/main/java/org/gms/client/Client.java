@@ -728,7 +728,9 @@ public class Client extends ChannelInboundHandlerAdapter {
                 }
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            loggedIn = false;
+            log.error("登录数据库查询失败，账号: {}", login, e);
+            return 6;
         }
 
         if (loginok == 0 || loginok == 4) {

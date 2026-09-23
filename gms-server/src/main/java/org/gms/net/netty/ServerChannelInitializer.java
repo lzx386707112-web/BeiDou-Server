@@ -8,6 +8,7 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.timeout.IdleStateHandler;
+import io.netty.util.concurrent.EventExecutorGroup;
 import org.gms.net.encryption.ClientCyphers;
 import org.gms.net.encryption.InitializationVector;
 import org.gms.net.encryption.PacketCodec;
@@ -41,17 +42,26 @@ public abstract class ServerChannelInitializer extends ChannelInitializer<Socket
     }
 
     void initPipeline(SocketChannel socketChannel, Client client) {
+        initPipeline(socketChannel, client, null);
+    }
+
+    void initPipeline(SocketChannel socketChannel, Client client, EventExecutorGroup packetExecutor) {
         final InitializationVector sendIv = InitializationVector.generateSend();
         final InitializationVector recvIv = InitializationVector.generateReceive();
         final ProtocolFactory protocolFactory = new ProtocolFactory(ClientCyphers.of(sendIv, recvIv));
         protocolFactory.getProtocol(ServerConstants.VERSION).writeInitialUnencryptedHelloPacket(socketChannel, sendIv, recvIv, client);
-        setUpHandlers(socketChannel.pipeline(), protocolFactory, client);
+        setUpHandlers(socketChannel.pipeline(), protocolFactory, client, packetExecutor);
     }
 
-    private void setUpHandlers(ChannelPipeline pipeline, ProtocolFactory protocolFactory, Client client) {
+    private void setUpHandlers(ChannelPipeline pipeline, ProtocolFactory protocolFactory, Client client,
+                               EventExecutorGroup packetExecutor) {
         pipeline.addLast("IdleStateHandler", new IdleStateHandler(0, 0, IDLE_TIME_SECONDS));
         pipeline.addLast("PacketCodec", new PacketCodec(protocolFactory));
-        pipeline.addLast("Client", client);
+        if (packetExecutor == null) {
+            pipeline.addLast("Client", client);
+        } else {
+            pipeline.addLast(packetExecutor, "Client", client);
+        }
 
         pipeline.addBefore("Client", "SendPacketLogger", sendPacketLogger);
         pipeline.addBefore("Client", "ReceivePacketLogger", receivePacketLogger);

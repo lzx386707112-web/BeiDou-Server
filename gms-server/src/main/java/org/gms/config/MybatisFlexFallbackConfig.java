@@ -15,6 +15,10 @@ import javax.sql.DataSource;
 
 @Configuration(proxyBeanMethods = false)
 public class MybatisFlexFallbackConfig {
+    static final long CONNECTION_WAIT_TIMEOUT_MS = 5_000;
+    static final int CONNECT_TIMEOUT_MS = 5_000;
+    static final int SOCKET_TIMEOUT_MS = 10_000;
+    static final int QUERY_TIMEOUT_SECONDS = 10;
 
     @Bean
     @ConditionalOnMissingBean(DataSource.class)
@@ -24,6 +28,10 @@ public class MybatisFlexFallbackConfig {
         dataSource.setUrl(environment.getProperty("mybatis-flex.datasource.mysql.url"));
         dataSource.setUsername(environment.getProperty("mybatis-flex.datasource.mysql.username"));
         dataSource.setPassword(environment.getProperty("mybatis-flex.datasource.mysql.password"));
+        dataSource.setMaxWait(CONNECTION_WAIT_TIMEOUT_MS);
+        dataSource.setConnectTimeout(CONNECT_TIMEOUT_MS);
+        dataSource.setSocketTimeout(SOCKET_TIMEOUT_MS);
+        dataSource.setQueryTimeout(QUERY_TIMEOUT_SECONDS);
         return dataSource;
     }
 

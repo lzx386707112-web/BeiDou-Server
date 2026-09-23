@@ -67,6 +67,10 @@ public final class LoginPasswordHandler implements PacketHandler {
         byte[] hwidNibbles = p.readBytes(4);
         Hwid hwid = new Hwid(HexTool.toCompactHexString(hwidNibbles));
         int loginok = c.login(login, pwd, hwid);
+        if (loginok == 6) {
+            c.sendPacket(PacketCreator.getLoginFailed(6));
+            return;
+        }
 
         if (GameConfig.getServerBoolean("automatic_register") && loginok == 5) {
             try {
@@ -98,9 +102,14 @@ public final class LoginPasswordHandler implements PacketHandler {
                 }
             } catch (SQLException | NoSuchAlgorithmException e) {
                 c.setAccID(-1);
-                e.printStackTrace();
-            } finally {
-                loginok = c.login(login, pwd, hwid);
+                log.error("自动注册失败，账号: {}", login, e);
+                c.sendPacket(PacketCreator.getLoginFailed(6));
+                return;
+            }
+            loginok = c.login(login, pwd, hwid);
+            if (loginok == 6) {
+                c.sendPacket(PacketCreator.getLoginFailed(6));
+                return;
             }
         }
 
@@ -111,10 +120,11 @@ public final class LoginPasswordHandler implements PacketHandler {
                 ps.setString(2, login);
                 ps.executeUpdate();
             } catch (SQLException e) {
-                e.printStackTrace();
-            } finally {
-                loginok = (loginok == -10) ? 0 : 23;
+                log.error("登录密码迁移失败，账号: {}", login, e);
+                c.sendPacket(PacketCreator.getLoginFailed(6));
+                return;
             }
+            loginok = (loginok == -10) ? 0 : 23;
         }
 
         if (c.hasBannedIP() || c.hasBannedMac()) {
