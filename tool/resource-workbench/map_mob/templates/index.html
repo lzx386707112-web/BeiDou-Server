@@ -76,6 +76,7 @@
       <span>–</span>
     </div>
     <div id="mobSourceOptions" class="mob-source-options"></div>
+    <button id="compareProjectMobBtn" class="mob-source-button" type="button" title="浏览项目中已有的怪物文件">📋 项目怪物</button>
     <span id="mobSourceStatus" class="mob-source-status"></span>
   </section>
 
@@ -88,6 +89,7 @@
     </div>
     <button id="copyTmsBtn" class="node-copy-button" type="button" disabled>复制选中的 TMS 节点到 A</button>
     <button id="mobSkillBtn" class="mob-skill-btn" type="button" title="打开 MobSkill 编辑器">⚡ MobSkill</button>
+    <button id="mcvCatalogBtn" class="mcv-catalog-btn" type="button" title="打开 MCV Boss 技能特效目录">🎬 MCV 目录</button>
     <button id="exportBtn" class="node-export-button" type="button" disabled>⇩ 复制修改文件到下载目录</button>
     <label class="toggle-label sync-toggle"><input id="syncServer" type="checkbox" checked><span>同步服务端 XML</span></label>
   </section>
@@ -412,6 +414,48 @@
           </div>
         </div>
       </div>
+    </div>
+  </dialog>
+
+  <dialog id="mcvCatalogDialog" class="mcv-dialog">
+    <div class="mcv-dialog-inner">
+      <div class="dialog-head">
+        <div>
+          <h2>🎬 MCV Boss 技能特效目录</h2>
+          <span class="dialog-parent-path">浏览 Boss 技能视频层与 MCV 文件的连接状态</span>
+        </div>
+        <button class="icon-button small" id="mcvCatalogClose" aria-label="关闭">×</button>
+      </div>
+      <div id="mcvCatalogContent" class="mcv-catalog-content"></div>
+    </div>
+  </dialog>
+
+  <dialog id="mcvEditDialog" class="mcv-dialog">
+    <div class="mcv-dialog-inner">
+      <div class="dialog-head">
+        <div>
+          <h2 id="mcvEditTitle">🎬 MCV 编辑器</h2>
+          <span id="mcvEditSubtitle" class="dialog-parent-path">加载中…</span>
+        </div>
+        <button class="icon-button small" id="mcvEditClose" aria-label="关闭">×</button>
+      </div>
+      <div id="mcvEditContent" class="mcv-edit-content"></div>
+    </div>
+  </dialog>
+
+  <dialog id="projectMobDialog" class="mcv-dialog">
+    <div class="mcv-dialog-inner">
+      <div class="dialog-head">
+        <div>
+          <h2>📋 项目怪物对比</h2>
+          <span class="dialog-parent-path">浏览项目中已有的怪物文件并对比</span>
+        </div>
+        <button class="icon-button small" id="projectMobClose" aria-label="关闭">×</button>
+      </div>
+      <div class="project-mob-search">
+        <input id="projectMobSearch" type="search" placeholder="搜索怪物 ID 或名称…" autocomplete="off">
+      </div>
+      <div id="projectMobList" class="project-mob-list"></div>
     </div>
   </dialog>
 
