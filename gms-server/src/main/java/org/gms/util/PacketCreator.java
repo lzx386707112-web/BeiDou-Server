@@ -7647,24 +7647,23 @@ public class PacketCreator {
         return nameplatePowerUpdate(chr.getId(), enabled, calculateNameplatePower(chr));
     }
 
-    static Packet nameplatePowerUpdate(int characterId, boolean enabled, int power) {
+    static Packet nameplatePowerUpdate(int characterId, boolean enabled, long power) {
         OutPacket p = OutPacket.create(SendOpcode.NAMEPLATE_POWER_UPDATE);
         p.writeInt(characterId);
         p.writeBool(enabled);
-        p.writeInt(enabled ? power : 0);
+        p.writeLong(enabled ? Math.max(0L, power) : 0L);
         return p;
     }
 
-    static int calculateNameplatePower(Character chr) {
+    static long calculateNameplatePower(Character chr) {
         return calculateNameplatePower(chr.getTotalStr(), chr.getTotalDex(), chr.getTotalInt(), chr.getTotalLuk(),
                 chr.getTotalWatk(), chr.getTotalMagic(), chr.getMaxHp(), chr.getMaxMp());
     }
 
-    static int calculateNameplatePower(int str, int dex, int intStat, int luk, int watk, int magic, int maxHp, int maxMp) {
+    static long calculateNameplatePower(int str, int dex, int intStat, int luk, int watk, int magic, int maxHp, int maxMp) {
         long stats = (long) str + dex + intStat + luk;
         long attack = Math.max(watk, magic);
-        long power = stats * Math.max(1L, attack) + maxHp / 10L + maxMp / 20L;
-        return (int) Math.min(Integer.MAX_VALUE, Math.max(0L, power));
+        return Math.max(0L, stats * Math.max(1L, attack) + maxHp / 10L + maxMp / 20L);
     }
 
     public static Packet setItemUpdate(Character chr) {

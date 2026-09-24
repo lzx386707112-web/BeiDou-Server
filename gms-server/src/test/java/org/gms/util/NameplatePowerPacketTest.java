@@ -29,12 +29,21 @@ class NameplatePowerPacketTest {
         Packet packet = PacketCreator.nameplatePowerUpdate(1234, true, 567890);
         ByteBuffer data = ByteBuffer.wrap(packet.getBytes()).order(ByteOrder.LITTLE_ENDIAN);
 
-        assertEquals(11, data.remaining());
+        assertEquals(15, data.remaining());
         assertEquals(0x17C, Short.toUnsignedInt(data.getShort()));
         assertEquals(1234, data.getInt());
         assertEquals(1, Byte.toUnsignedInt(data.get()));
-        assertEquals(567890, data.getInt());
+        assertEquals(567890L, data.getLong());
         assertEquals(0, data.remaining());
+    }
+
+    @Test
+    void powerAboveIntRangeSurvivesAsLong() {
+        Packet packet = PacketCreator.nameplatePowerUpdate(1234, true, 10_000_000_000L);
+        ByteBuffer data = ByteBuffer.wrap(packet.getBytes()).order(ByteOrder.LITTLE_ENDIAN);
+
+        data.position(7);
+        assertEquals(10_000_000_000L, data.getLong());
     }
 
     @Test
@@ -43,7 +52,7 @@ class NameplatePowerPacketTest {
         ByteBuffer data = ByteBuffer.wrap(packet.getBytes()).order(ByteOrder.LITTLE_ENDIAN);
 
         data.position(7);
-        assertEquals(0, data.getInt());
+        assertEquals(0, data.getLong());
     }
 
     @Test
