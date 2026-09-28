@@ -243,6 +243,14 @@ def build_D2(r):
     o += b'\x8b\x85\xb4\xfe\xff\xff'             # eax = pc1
     o += b'\x8b\x95\xb0\xfe\xff\xff'             # edx = lo
     loop = len(o)
+    # WARNING (2026-09-24): `39 /r` is CMP r/m32, r32, so this computes
+    # [table] - power and the following `jb done` exits as soon as the FIRST
+    # threshold is below the player's power -> every account above 10k power is
+    # pinned to tier 0 (the weakest title). The intended encoding is `3B /r`
+    # (CMP r32, r/m32): b'\x3b\x94\x88'. It is left as-is here only because this
+    # ladder is DEAD in the shipped artifact: patch_nameplate_series.py retargets
+    # 0x1e60 to its own D2, so cave .data+0x11E is never reached. If you ever ship
+    # the power-only build, fix the encoding here and refresh PATCHED_SHA256.
     o += b'\x39\x94\x88' + struct.pack('<i', THR - pc1)  # cmp edx,[eax+ecx*4+thr]
     o += b'\x72\x06'                             # jb done
     o += b'\x41'                                 # inc ecx

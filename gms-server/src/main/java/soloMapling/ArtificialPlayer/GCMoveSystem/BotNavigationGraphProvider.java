@@ -19,6 +19,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import org.gms.server.maps.Foothold;
@@ -48,7 +49,17 @@ final class BotNavigationGraphProvider {
     private static final int FAST_WARMUP_MAX_FOOTHOLDS = 200;
     private static final Logger log = LoggerFactory.getLogger(BotNavigationGraphProvider.class);
     private static final Path CACHE_DIR = Path.of("cache", "bot-nav", "v61");
+    /**
+     * 内存缓存条目上限。淘汰**只能逐条踢最旧的一条，绝不能整表 clear()**：
+     * {@code peekGraph(map)} / {@code peekClosestGraph} 这类按 mapId 的"容错查询"依赖缓存里
+     * 总有东西——整表清空会让 BotPhysicsEngine 的行走区域查询（{@code resolveWalkRegionLookup}）
+     * 与粗粒度导航同时拿不到图，假人就会呆站不动。
+     * 正常键空间 = 地图数 × 移动属性组合数，这个上限只是内存兜底。
+     */
+    private static final int MAX_CACHED_GRAPHS = 512;
     private static final Map<GraphCacheKey, BotNavigationGraph> GRAPHS = new ConcurrentHashMap();
+    /** 访问顺序（尾 = 最近使用），用于按最旧逐条淘汰；与 GRAPHS 同为并发容器。 */
+    private static final ConcurrentLinkedDeque<GraphCacheKey> GRAPH_LRU = new ConcurrentLinkedDeque<>();
     private static final Map<GraphCacheKey, CompletableFuture<BotNavigationGraph>> PENDING_GRAPHS = new ConcurrentHashMap();
     private static final Map<GraphCacheKey, GraphBuildReport> LAST_BUILD_REPORTS = new ConcurrentHashMap();
     private static final Map<Integer, Set<Integer>> COLLIDABLE_WALL_IDS_BY_MAP_ID = new ConcurrentHashMap();
@@ -66,6 +77,48 @@ final class BotNavigationGraphProvider {
     });
 
     BotNavigationGraphProvider() {
+    }
+
+    /**
+     * 写入导航图缓存并做容量兜底：超限时只淘汰最久未使用的一条。
+     *
+     * <p>历史教训：这里曾经写成 {@code if (size > MAX) GRAPHS.clear();}——键空间一旦超过上限，
+     * 每次 put 都会把整张表清空，于是 ① 缓存命中率归零、每次 getGraph 都重建；
+     * ② 依赖"缓存里总有东西"的容错查询（peekGraph(map)/peekClosestGraph）常年拿到 null，
+     * 假人物理与粗粒度导航失去图数据 → 表现为假人不动、不说话。禁止再改回整表清空。
+     */
+    private static void cacheGraph(GraphCacheKey key, BotNavigationGraph graph) {
+        GRAPHS.put(key, graph);
+        touchGraphKey(key);
+        while (GRAPHS.size() > MAX_CACHED_GRAPHS) {
+            GraphCacheKey oldest = GRAPH_LRU.pollFirst();
+            if (oldest == null) {
+                return;
+            }
+            if (oldest.equals(key)) {
+                GRAPH_LRU.addLast(oldest);
+                return;
+            }
+            GRAPHS.remove(oldest);
+        }
+    }
+
+    /** 命中即刷新 LRU 位置；已在尾部时直接返回，避免每次都做一次线性查找。 */
+    private static void touchGraphKey(GraphCacheKey key) {
+        if (key == null) {
+            return;
+        }
+        GraphCacheKey tail = GRAPH_LRU.peekLast();
+        if (tail != null && tail.equals(key)) {
+            return;
+        }
+        GRAPH_LRU.remove(key);
+        GRAPH_LRU.addLast(key);
+    }
+
+    /** 纯诊断数据，条目很小，按值键天然有界，不做淘汰（同样不允许整表清空）。 */
+    private static void cacheBuildReport(GraphCacheKey key, GraphBuildReport report) {
+        LAST_BUILD_REPORTS.put(key, report);
     }
 
     /* loaded from: asm-bot-mini.jar:org/gms/soloMapling/ArtificialPlayer/GCMoveSystem/BotNavigationGraphProvider$GraphCacheKey.class */
@@ -86,12 +139,31 @@ final class BotNavigationGraphProvider {
             return getClass().getSimpleName();
         }
 
+        /**
+         * 值语义。原先被重建为 identity（{@code identityHashCode} / {@code this == o}），
+         * 导致 GRAPHS / PENDING_GRAPHS / LAST_BUILD_REPORTS 三个静态缓存永不命中：
+         * 每次 getGraph 都要重新 load/build 整张导航图，并把结果永久留在缓存里，
+         * 缓存只增不删 → 服务端堆内存耗尽（OutOfMemoryError: Java heap space）。
+         */
         public final int hashCode() {
-            return System.identityHashCode(this);
+            int result = Integer.hashCode(this.mapId);
+            result = (31 * result) + Integer.hashCode(this.totalSpeedStat);
+            result = (31 * result) + Integer.hashCode(this.totalJumpStat);
+            return (31 * result) + (this.snowShoes ? 1 : 0);
         }
 
         public final boolean equals(Object o) {
-            return this == o;
+            if (this == o) {
+                return true;
+            }
+            if (!(o instanceof GraphCacheKey)) {
+                return false;
+            }
+            GraphCacheKey other = (GraphCacheKey) o;
+            return this.mapId == other.mapId
+                    && this.totalSpeedStat == other.totalSpeedStat
+                    && this.totalJumpStat == other.totalJumpStat
+                    && this.snowShoes == other.snowShoes;
         }
 
         public int mapId() {
@@ -442,12 +514,22 @@ final class BotNavigationGraphProvider {
             return getClass().getSimpleName();
         }
 
+        /** 值语义。identity 会让 JumpLandingCache 的 hits/misses 永不命中（每次采样都重跑弹道模拟）。 */
         public final int hashCode() {
-            return System.identityHashCode(this);
+            int result = Integer.hashCode(this.x);
+            result = (31 * result) + Integer.hashCode(this.y);
+            return (31 * result) + Integer.hashCode(this.launchStepX);
         }
 
         public final boolean equals(Object o) {
-            return this == o;
+            if (this == o) {
+                return true;
+            }
+            if (!(o instanceof JumpLandingKey)) {
+                return false;
+            }
+            JumpLandingKey other = (JumpLandingKey) o;
+            return this.x == other.x && this.y == other.y && this.launchStepX == other.launchStepX;
         }
 
         public int x() {
@@ -494,12 +576,30 @@ final class BotNavigationGraphProvider {
             return getClass().getSimpleName();
         }
 
+        /** 值语义。identity 会让 RopeGrabCache 的 hits/misses 永不命中（每次采样都重跑抓绳模拟）。 */
         public final int hashCode() {
-            return System.identityHashCode(this);
+            int result = Integer.hashCode(this.x);
+            result = (31 * result) + Integer.hashCode(this.y);
+            result = (31 * result) + Integer.hashCode(this.launchStepX);
+            result = (31 * result) + Integer.hashCode(this.ropeX);
+            result = (31 * result) + Integer.hashCode(this.ropeTopY);
+            return (31 * result) + Integer.hashCode(this.ropeBottomY);
         }
 
         public final boolean equals(Object o) {
-            return this == o;
+            if (this == o) {
+                return true;
+            }
+            if (!(o instanceof RopeGrabKey)) {
+                return false;
+            }
+            RopeGrabKey other = (RopeGrabKey) o;
+            return this.x == other.x
+                    && this.y == other.y
+                    && this.launchStepX == other.launchStepX
+                    && this.ropeX == other.ropeX
+                    && this.ropeTopY == other.ropeTopY
+                    && this.ropeBottomY == other.ropeBottomY;
         }
 
         public int x() {
@@ -548,6 +648,7 @@ final class BotNavigationGraphProvider {
         GraphCacheKey key = GraphCacheKey.from(map.getId(), movementProfile2);
         BotNavigationGraph cached = GRAPHS.get(key);
         if (cached != null) {
+            touchGraphKey(key);
             return cached;
         }
         return getOrStartGraphLoad(map, movementProfile2, key, false).join();
@@ -559,6 +660,7 @@ final class BotNavigationGraphProvider {
         }
         for (Map.Entry<GraphCacheKey, BotNavigationGraph> entry : GRAPHS.entrySet()) {
             if (entry.getKey().mapId() == map.getId()) {
+                touchGraphKey(entry.getKey());
                 return entry.getValue();
             }
         }
@@ -569,7 +671,12 @@ final class BotNavigationGraphProvider {
         if (map == null) {
             return null;
         }
-        return GRAPHS.get(GraphCacheKey.from(map.getId(), canonicalProfile(map, movementProfile)));
+        GraphCacheKey key = GraphCacheKey.from(map.getId(), canonicalProfile(map, movementProfile));
+        BotNavigationGraph cached = GRAPHS.get(key);
+        if (cached != null) {
+            touchGraphKey(key);
+        }
+        return cached;
     }
 
     static BotNavigationGraph peekClosestGraph(MapleMap map, BotMovementProfile movementProfile) {
@@ -578,6 +685,7 @@ final class BotNavigationGraphProvider {
         }
         GraphCacheKey requested = GraphCacheKey.from(map.getId(), canonicalProfile(map, movementProfile));
         BotNavigationGraph bestGraph = null;
+        GraphCacheKey bestKey = null;
         int bestDistance = Integer.MAX_VALUE;
         for (Map.Entry<GraphCacheKey, BotNavigationGraph> entry : GRAPHS.entrySet()) {
             GraphCacheKey key = entry.getKey();
@@ -585,9 +693,13 @@ final class BotNavigationGraphProvider {
                 int distance = Math.abs(key.totalSpeedStat() - requested.totalSpeedStat()) + Math.abs(key.totalJumpStat() - requested.totalJumpStat()) + (key.snowShoes() != requested.snowShoes() ? 1000 : 0);
                 if (bestGraph == null || distance < bestDistance) {
                     bestGraph = entry.getValue();
+                    bestKey = key;
                     bestDistance = distance;
                 }
             }
+        }
+        if (bestKey != null) {
+            touchGraphKey(bestKey);
         }
         return bestGraph;
     }
@@ -630,7 +742,7 @@ final class BotNavigationGraphProvider {
     static BotNavigationGraph rebuildGraph(MapleMap map, BotMovementProfile movementProfile) {
         GraphCacheKey key = GraphCacheKey.from(map.getId(), movementProfile);
         BotNavigationGraph rebuilt = buildGraph(map, movementProfile);
-        GRAPHS.put(key, rebuilt);
+        cacheGraph(key, rebuilt);
         CompletableFuture<BotNavigationGraph> pending = PENDING_GRAPHS.remove(key);
         if (pending != null) {
             pending.complete(rebuilt);
@@ -642,6 +754,7 @@ final class BotNavigationGraphProvider {
     private static CompletableFuture<BotNavigationGraph> getOrStartGraphLoad(MapleMap map, BotMovementProfile movementProfile, GraphCacheKey key, boolean async) {
         BotNavigationGraph cached = GRAPHS.get(key);
         if (cached != null) {
+            touchGraphKey(key);
             return CompletableFuture.completedFuture(cached);
         }
         CompletableFuture<BotNavigationGraph> existing = PENDING_GRAPHS.get(key);
@@ -657,7 +770,7 @@ final class BotNavigationGraphProvider {
             try {
                 try {
                     BotNavigationGraph graph = loadOrBuildGraph(map, movementProfile, key);
-                    GRAPHS.put(key, graph);
+                    cacheGraph(key, graph);
                     future.complete(graph);
                     PENDING_GRAPHS.remove(key, future);
                 } catch (Throwable t) {
@@ -850,7 +963,7 @@ final class BotNavigationGraphProvider {
             buildProfile.buildPortalEdgesNs = System.nanoTime() - phaseStartedAt11;
             BotNavigationGraph graph = new BotNavigationGraph(map.getId(), GRAPH_VERSION, movementProfile2, regions, regionsById, regionIdByFootholdId, outgoing, collidableWallIds, collidableFromBelowIds);
             GraphBuildReport report = buildProfile.finish();
-            LAST_BUILD_REPORTS.put(GraphCacheKey.from(map.getId(), movementProfile2), report);
+            cacheBuildReport(GraphCacheKey.from(map.getId(), movementProfile2), report);
             DebugUtilities.debugprint(new Object[]{"Built bot nav graph map {} speed={} jump={} in {} ms (regions={}, edges={}, drop={} ms, jump={} ms, jumpSamples={}, cacheHits={})", Integer.valueOf(map.getId()), Integer.valueOf(movementProfile2.totalSpeedStat()), Integer.valueOf(movementProfile2.totalJumpStat()), String.format("%.2f", Double.valueOf(report.totalBuildNs / 1000000.0d)), Integer.valueOf(report.regionCount), Integer.valueOf(report.totalEdgeCount), String.format("%.2f", Double.valueOf(report.buildDropEdgesNs / 1000000.0d)), String.format("%.2f", Double.valueOf(report.buildJumpEdgesNs / 1000000.0d)), Long.valueOf(report.jumpSampleCount), Long.valueOf(report.jumpCacheHitCount)});
             BotPhysicsEngine.clearBuildWalkRegionLookup();
             ACTIVE_BUILD_PROFILE.remove();

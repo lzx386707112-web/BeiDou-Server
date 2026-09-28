@@ -1,6 +1,20 @@
-// Adds Vellum attack10/11 FIELD_EFFECT video markers on top of the verified v69 core.
+// Draws MCV skill videos at the client's own FIELD_EFFECT layer on top of the verified v69 core.
+//
+// Layer contract (why the video may not be drawn at Present):
+// the server sends the caster one `PacketCreator.showEffect("customSkill/.../...VideoLayer")`, and
+// the matching `Map/Effect.img` node holds a single 7x5 canvas for 30000 ms. The client therefore
+// keeps drawing that tiny sprite from the skill's own field-effect layer for the whole video, and
+// that draw is the verified insertion point: it sits below the floating damage numbers and the UI.
+// Swallowing the marker draw and calling BDV_Render there keeps the native order of skill effect,
+// mobs, damage numbers and UI. Drawing at Present instead - which is what v2..v6 did, because the
+// marker signature below was never recognised - pins the video to the very end of the frame and
+// covers the damage numbers and the UI with it. See docs/tools/beidou-video-dll-integration.md
+// (10.1/10.3) and tool/client-video/README.md ("最终层级方案").
 
 #include "../../client-video/BeiDouVideoApi.h"
+#include "FirstChanceDump.h"
+#include "MarkerSignature.h"
+#include "PrologueRelocation.h"
 
 #include <windows.h>
 #include <d3d8.h>
@@ -10,10 +24,12 @@
 
 namespace {
 
+using beidou::marker::Hit;
+using beidou::marker::kFieldEffect;
+using beidou::marker::kNoMarker;
+using beidou::marker::kVellumScene;
+
 constexpr uintptr_t kExpectedImageBase = 0x00400000;
-constexpr uintptr_t kLoadLibraryAIat = 0x00AF00C0;
-constexpr uintptr_t kCoreReadyHookAddress = 0x0094F89E;
-constexpr uintptr_t kGr2DGetProcAddressIatRva = 0x0002D024;
 constexpr size_t kCreateDeviceVtableIndex = 15;
 constexpr size_t kPresentVtableIndex = 15;
 constexpr size_t kSetTextureVtableIndex = 61;
@@ -21,13 +37,24 @@ constexpr size_t kDrawPrimitiveVtableIndex = 70;
 constexpr size_t kDrawIndexedPrimitiveVtableIndex = 71;
 constexpr size_t kDrawPrimitiveUpVtableIndex = 72;
 constexpr size_t kDrawIndexedPrimitiveUpVtableIndex = 73;
+// The detour itself only needs a five byte `E9 rel32`, but it may only ever be written over whole
+// instructions: patching a fixed five bytes assumes the prologue's first instruction boundary
+// lands exactly on offset 5. That holds for the Microsoft d3d8.dll the PC loads and not for the
+// Wine builtin d3d8.dll the phone loads, which is the v4 fix documented in PrologueRelocation.h.
+constexpr size_t kMinimumPrologueBytes = 5;
+constexpr size_t kMaximumPrologueBytes = 16;
+constexpr size_t kTrampolineBytes = 32;
+static_assert(
+    kTrampolineBytes >= kMaximumPrologueBytes + 5,
+    "the trampoline has to hold the relocated prologue plus the jump back");
+constexpr DWORD kWatcdogPollMs = 50;
+constexpr DWORD kDeviceCaptureTimeoutMs = 20000;
+constexpr DWORD kStatusLogIntervalMs = 2000;
+constexpr size_t kStatusTextCapacity = 192;
 constexpr UINT kMarkerWidth = 7;
 constexpr UINT kMarkerHeight = 5;
-constexpr DWORD kCoreReadyTimeoutMs = 10000;
-constexpr DWORD kCoreReadyPollMs = 10;
-constexpr int kAttack10MarkerCode = 5;
-constexpr int kAttack11MarkerCode = 6;
-constexpr char kCoreDllName[] = "BeiDouSkillCompatCore.dll";
+constexpr char kD3D8DllName[] = "d3d8.dll";
+constexpr char kDirect3DCreate8Name[] = "Direct3DCreate8";
 constexpr char kAttack10Path[] = "Data\\Video\\root-abyss-vellum-attack10.mcv";
 constexpr char kAttack11Path[] = "Data\\Video\\root-abyss-vellum-attack11.mcv";
 
@@ -36,8 +63,6 @@ using GetLastErrorExFn = void(__stdcall*)(uint32_t, char*, uint32_t);
 using AttachDeviceFn = int(__stdcall*)(void*);
 using RenderFn = void(__stdcall*)();
 using GetStatusExFn = int(__stdcall*)(uint32_t, BdvStatus*);
-using LoadLibraryAFn = HMODULE(WINAPI*)(LPCSTR);
-using GetProcAddressFn = FARPROC(WINAPI*)(HMODULE, LPCSTR);
 using Direct3DCreate8Fn = IDirect3D8*(WINAPI*)(UINT);
 using CreateDeviceFn = HRESULT(WINAPI*)(
     IDirect3D8*, UINT, D3DDEVTYPE, HWND, DWORD,
@@ -56,14 +81,26 @@ using DrawIndexedPrimitiveUpFn = HRESULT(WINAPI*)(
 
 static_assert(sizeof(void*) == 4, "This hook must be built for the 32-bit client");
 
+// Defined below. The capture installs a code hook on d3d8!Direct3DCreate8 and the device
+// hooks start from that entry point, so both entries have to be declared before the helpers
+// that reference them.
+HRESULT WINAPI HookCreateDevice(
+    IDirect3D8*, UINT, D3DDEVTYPE, HWND, DWORD, D3DPRESENT_PARAMETERS*, IDirect3DDevice8**);
+HRESULT WINAPI HookPresent(
+    IDirect3DDevice8*, const RECT*, const RECT*, HWND, const RGNDATA*);
+IDirect3D8* WINAPI HookDirect3DCreate8(UINT sdkVersion);
+
+// Defined with the status reporting helpers at the bottom of the file. The hook installer builds
+// its evidence line with them, so they have to be visible here as well.
+char* AppendText(char* cursor, const char* end, const char* text);
+char* AppendUnsigned(char* cursor, const char* end, unsigned int value);
+
 HMODULE gVideoModule = nullptr;
 PlayFileExFn gPlayFileEx = nullptr;
 GetLastErrorExFn gGetLastErrorEx = nullptr;
 AttachDeviceFn gAttachDevice = nullptr;
 RenderFn gRender = nullptr;
 GetStatusExFn gGetStatusEx = nullptr;
-LoadLibraryAFn gRealLoadLibraryA = nullptr;
-GetProcAddressFn gRealGetProcAddress = nullptr;
 Direct3DCreate8Fn gRealDirect3DCreate8 = nullptr;
 CreateDeviceFn gRealCreateDevice = nullptr;
 PresentFn gRealPresent = nullptr;
@@ -72,12 +109,25 @@ DrawPrimitiveFn gRealDrawPrimitive = nullptr;
 DrawIndexedPrimitiveFn gRealDrawIndexedPrimitive = nullptr;
 DrawPrimitiveUpFn gRealDrawPrimitiveUp = nullptr;
 DrawIndexedPrimitiveUpFn gRealDrawIndexedPrimitiveUp = nullptr;
+unsigned char* gCreate8CodeTarget = nullptr;
+bool gCreate8CodeHooked = false;
+bool gCreateDeviceSlotHooked = false;
+bool gCreateDeviceFired = false;
 bool gMarkerBound = false;
+int gMarkerKind = kNoMarker;
 int gMarkerCode = 0;
 bool gVideoPlaying = false;
 int gActiveMarkerCode = 0;
 bool gRenderedThisFrame = false;
 bool gRenderingVideo = false;
+bool gFieldLayerLogged = false;
+bool gMarkerSeenLogged = false;
+bool gPresentFallbackLogged = false;
+bool gPlaybackActive = false;
+unsigned int gMarkerRenderFrames = 0;
+unsigned int gFallbackRenderFrames = 0;
+bool gShapeProbed = false;
+DWORD gStatusLogTick = 0;
 
 template <typename Function>
 Function FunctionFromPointer(void* pointer) {
@@ -88,27 +138,16 @@ Function FunctionFromPointer(void* pointer) {
 }
 
 template <typename Function>
-FARPROC FunctionToFarProc(Function function) {
-    static_assert(sizeof(Function) == sizeof(FARPROC), "unexpected Win32 function pointer size");
-    union {
-        Function function;
-        FARPROC address;
-    } conversion = {function};
-    return conversion.address;
+void* PointerFromFunction(Function function) {
+    static_assert(sizeof(Function) == sizeof(void*), "unexpected Win32 function pointer size");
+    void* pointer = nullptr;
+    memcpy(&pointer, &function, sizeof(pointer));
+    return pointer;
 }
 
 template <typename Function>
 Function LoadFunction(HMODULE module, const char* name) {
     return FunctionFromPointer<Function>(reinterpret_cast<void*>(GetProcAddress(module, name)));
-}
-
-bool Equals(const char* left, const char* right) {
-    if (left == nullptr || right == nullptr) return false;
-    while (*left != '\0' && *left == *right) {
-        ++left;
-        ++right;
-    }
-    return *left == *right;
 }
 
 void LogLine(const char* text) {
@@ -136,19 +175,161 @@ bool PatchPointer(void** slot, void* replacement, void** original) {
     return true;
 }
 
-bool PointerBelongsToModule(const void* pointer, HMODULE module) {
-    MEMORY_BASIC_INFORMATION info = {};
-    return pointer != nullptr && module != nullptr &&
-        VirtualQuery(pointer, &info, sizeof(info)) == sizeof(info) &&
-        info.AllocationBase == module;
+// 2026-09-28 (v2): the client diagnostics engine rewrites BeiDou.exe+0x00AF00C0 every time a
+// module loads, which silently removes any other LoadLibraryA hook from the chain. Measured
+// timeline of the failing run: Gr2D_DX8.DLL loads at 10:17:52.578, D3D8.DLL at .606 (28 ms
+// later) and the device is created immediately after, while a 10 ms polling loop can only
+// notice d3d8.dll several milliseconds too late. MCV playback therefore stopped being a race
+// about IAT slots at all: the capture has to be in place *before* the client resolves
+// Direct3DCreate8, which means hooking the export code itself.
+//
+// d3d8.dll is preloaded here (roughly 2.5 s before Gr2D_DX8.DLL in the failing run) and the
+// entry point of Direct3DCreate8 is patched with a jump through a trampoline that keeps the
+// original prologue. The client then hands us its own IDirect3D8 instance, so the CreateDevice
+// slot is patched on the exact interface the client is about to use - no IAT slot, no polling and
+// no per-object vtable assumption.
+//
+// 2026-09-28 (v4): the entry patch has to cover *whole instructions*. v3 copied and overwrote a
+// fixed five bytes, which assumes the prologue's first instruction boundary is exactly at offset
+// 5. The PC's Microsoft d3d8.dll satisfies that; the Wine builtin d3d8.dll the phone loads does
+// not, and the truncated copy decoded as `C7 E9` (#UD) and killed the process the moment the
+// trampoline ran. The trampoline now resumes at the first boundary at or past five bytes and the
+// entry keeps the same width, so a non aligned prologue is patched rather than rejected.
+bool InstallCreateDeviceSlot(void** vtable) {
+    if (vtable == nullptr) return false;
+    void* original = vtable[kCreateDeviceVtableIndex];
+    if (original == nullptr) return false;
+    if (original == PointerFromFunction(&HookCreateDevice)) {
+        gCreateDeviceSlotHooked = true;
+        return true;
+    }
+    if (gRealCreateDevice == nullptr) {
+        gRealCreateDevice = FunctionFromPointer<CreateDeviceFn>(original);
+    }
+    if (!PatchPointer(
+            &vtable[kCreateDeviceVtableIndex],
+            PointerFromFunction(&HookCreateDevice), nullptr)) {
+        return false;
+    }
+    gCreateDeviceSlotHooked = true;
+    return true;
 }
 
-bool CoreHooksAreReady(HMODULE core) {
-    const auto* branch = reinterpret_cast<const unsigned char*>(kCoreReadyHookAddress);
-    if (branch[0] != 0xE9) return false;
-    const auto displacement = *reinterpret_cast<const int32_t*>(branch + 1);
-    const void* target = branch + 5 + displacement;
-    return PointerBelongsToModule(target, core);
+// A prologue can only be relocated into the trampoline when every instruction it covers keeps its
+// meaning after being moved: no relative branch, no absolute address, no operand that spans the
+// end of the window. beidou::prologue::RelocationLength answers with the number of whole bytes to
+// relocate, and returning 0 simply downgrades us to the probe interface path below.
+bool InstallDirect3DCreate8CodeHook(HMODULE d3d8) {
+    if (d3d8 == nullptr) return false;
+    auto* target = reinterpret_cast<unsigned char*>(
+        reinterpret_cast<uintptr_t>(GetProcAddress(d3d8, kDirect3DCreate8Name)));
+    if (target == nullptr) {
+        LogLine("VELLUM VIDEO ERROR: d3d8.dll has no Direct3DCreate8 export");
+        return false;
+    }
+    // Follow export thunks so the patch lands on the real body.
+    for (int hop = 0; hop < 4; ++hop) {
+        if (target[0] == 0xE9) {
+            int32_t displacement = 0;
+            memcpy(&displacement, target + 1, sizeof(displacement));
+            target = target + 5 + displacement;
+            continue;
+        }
+        if (target[0] == 0xFF && target[1] == 0x25) {
+            void* indirect = nullptr;
+            memcpy(&indirect, target + 2, sizeof(indirect));
+            target = static_cast<unsigned char*>(indirect);
+            continue;
+        }
+        break;
+    }
+    if (gCreate8CodeHooked && gCreate8CodeTarget == target) return true;
+
+    // v4: relocate whole instructions instead of a fixed five bytes. Five is the smallest detour
+    // the jump needs; the trampoline resumes at the first instruction boundary at or past it. A
+    // prologue whose boundary is not exactly at offset 5 therefore gets patched with its extra
+    // bytes as well, instead of having an instruction cut in half.
+    const size_t relocation = beidou::prologue::RelocationLength(
+        target, kMaximumPrologueBytes, kMinimumPrologueBytes, kMaximumPrologueBytes);
+    if (relocation == 0) {
+        LogLine("VELLUM VIDEO WARN: d3d8 Direct3DCreate8 prologue is not relocatable; using the probe interface");
+        return false;
+    }
+
+    auto* trampoline = static_cast<unsigned char*>(
+        VirtualAlloc(nullptr, kTrampolineBytes, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE));
+    if (trampoline == nullptr) {
+        LogLine("VELLUM VIDEO ERROR: failed to allocate the Direct3DCreate8 trampoline");
+        return false;
+    }
+    memcpy(trampoline, target, relocation);
+    trampoline[relocation] = 0xE9;
+    int32_t back = 0;
+    back = static_cast<int32_t>((target + relocation) - (trampoline + relocation + 5));
+    memcpy(trampoline + relocation + 1, &back, sizeof(back));
+    FlushInstructionCache(GetCurrentProcess(), trampoline, relocation + 5);
+    gRealDirect3DCreate8 = FunctionFromPointer<Direct3DCreate8Fn>(trampoline);
+
+    DWORD oldProtect = 0;
+    if (!VirtualProtect(target, relocation, PAGE_EXECUTE_READWRITE, &oldProtect)) {
+        LogLine("VELLUM VIDEO ERROR: failed to make d3d8 Direct3DCreate8 writable");
+        return false;
+    }
+    int32_t jump = 0;
+    jump = static_cast<int32_t>(
+        reinterpret_cast<unsigned char*>(&HookDirect3DCreate8) - (target + 5));
+    // Both stores go through volatile pointers so the compiler keeps the order: the displacement
+    // has to be in place before the opcode, otherwise another thread could execute a jump with a
+    // half written operand. The padding that covers the rest of the relocated prologue is written
+    // between the two stores for the same reason.
+    *reinterpret_cast<volatile int32_t*>(target + 1) = jump;
+    for (size_t pad = kMinimumPrologueBytes; pad < relocation; ++pad) {
+        *reinterpret_cast<volatile unsigned char*>(target + pad) = 0x90;
+    }
+    *reinterpret_cast<volatile unsigned char*>(target) = 0xE9;
+    FlushInstructionCache(GetCurrentProcess(), target, relocation);
+    DWORD ignored = 0;
+    VirtualProtect(target, relocation, oldProtect, &ignored);
+
+    gCreate8CodeTarget = target;
+    gCreate8CodeHooked = true;
+    // The relocated width is the number that tells the two d3d8 builds apart in a log. The PC's
+    // Microsoft build reports 5, so its bytes are exactly what v3 wrote; a Wine build reports
+    // whatever its own prologue needs.
+    char buffer[160] = {};
+    char* cursor = buffer;
+    const char* end = buffer + sizeof(buffer) - 1;
+    cursor = AppendText(
+        cursor, end,
+        "VELLUM VIDEO OK: d3d8 Direct3DCreate8 code hook installed ahead of the client (relocated ");
+    cursor = AppendUnsigned(cursor, end, static_cast<unsigned int>(relocation));
+    cursor = AppendText(cursor, end, " whole prologue bytes)");
+    *cursor = '\0';
+    LogLine(buffer);
+    return true;
+}
+
+// Fallback for the (unlikely) case where the export prologue cannot be relocated: hook the
+// CreateDevice slot of an interface created here. d3d8.dll hands out static vtables, so this
+// normally covers every interface the client creates afterwards.
+bool InstallProbeInterfaceHook(HMODULE d3d8) {
+    if (gCreateDeviceSlotHooked) return true;
+    Direct3DCreate8Fn create = LoadFunction<Direct3DCreate8Fn>(d3d8, kDirect3DCreate8Name);
+    if (create == nullptr) return false;
+    IDirect3D8* probe = create(D3D_SDK_VERSION);
+    if (probe == nullptr) {
+        LogLine("VELLUM VIDEO ERROR: Direct3DCreate8 probe returned null");
+        return false;
+    }
+    void** vtable = *reinterpret_cast<void***>(probe);
+    if (!InstallCreateDeviceSlot(vtable)) {
+        LogLine("VELLUM VIDEO ERROR: IDirect3D8::CreateDevice slot is not patchable");
+        return false;
+    }
+    // Deliberately never released: if d3d8.dll ever handed out a per-object vtable, releasing
+    // the probe would free the bytes that were just patched.
+    LogLine("VELLUM VIDEO OK: IDirect3D8::CreateDevice captured through the probe interface");
+    return true;
 }
 
 bool LoadVideoModule() {
@@ -165,57 +346,148 @@ bool LoadVideoModule() {
         gAttachDevice != nullptr && gRender != nullptr && gGetStatusEx != nullptr;
 }
 
-int MarkerCodeFromA4R4G4B4(const uint16_t* pixels) {
-    if (pixels[0] != 0xF357 || pixels[1] != 0xF689 ||
-        pixels[2] != 0xFABC || pixels[3] != 0xFDEF) {
-        return 0;
-    }
-    const int code = (pixels[4] >> 8) & 0x0F;
-    return code == kAttack10MarkerCode || code == kAttack11MarkerCode ? code : 0;
-}
-
-int MarkerCodeFromA8R8G8B8(const uint32_t* pixels, bool ignoreAlpha) {
-    const uint32_t alphaMask = ignoreAlpha ? 0x00000000u : 0xFF000000u;
-    const uint32_t colorMask = ignoreAlpha ? 0x00FFFFFFu : 0xFFFFFFFFu;
-    if ((pixels[0] & colorMask) != (alphaMask | 0x00335577u) ||
-        (pixels[1] & colorMask) != (alphaMask | 0x00668899u) ||
-        (pixels[2] & colorMask) != (alphaMask | 0x00AABBCCu) ||
-        (pixels[3] & colorMask) != (alphaMask | 0x00DDEEFFu)) {
-        return 0;
-    }
-    const int red = static_cast<int>((pixels[4] >> 16) & 0xFF);
-    const int code = red / 17;
-    if (red != code * 17) return 0;
-    return code == kAttack10MarkerCode || code == kAttack11MarkerCode ? code : 0;
-}
-
-int DetectMarker(IDirect3DBaseTexture8* baseTexture) {
-    if (baseTexture == nullptr || baseTexture->GetType() != D3DRTYPE_TEXTURE) return 0;
+// The signatures themselves live in MarkerSignature.h (no Windows dependency, host tested). This
+// function only adds the D3D8 side: the marker is a texture whose canvas is 7x5 up to 8x8, and the
+// two families are told apart by their full four pixel signature - a single pixel is not enough,
+// because 0x00AABBCC appears in both.
+Hit DetectMarker(IDirect3DBaseTexture8* baseTexture) {
+    Hit hit = {kNoMarker, 0};
+    if (baseTexture == nullptr || baseTexture->GetType() != D3DRTYPE_TEXTURE) return hit;
     auto* texture = static_cast<IDirect3DTexture8*>(baseTexture);
     D3DSURFACE_DESC description = {};
     if (FAILED(texture->GetLevelDesc(0, &description)) ||
         description.Width < kMarkerWidth || description.Width > 8 ||
         description.Height < kMarkerHeight || description.Height > 8) {
-        return 0;
+        return hit;
     }
     D3DLOCKED_RECT locked = {};
-    if (FAILED(texture->LockRect(0, &locked, nullptr, D3DLOCK_READONLY))) return 0;
-    int code = 0;
+    if (FAILED(texture->LockRect(0, &locked, nullptr, D3DLOCK_READONLY))) return hit;
     if (description.Format == D3DFMT_A4R4G4B4 && locked.Pitch >= 8) {
-        code = MarkerCodeFromA4R4G4B4(static_cast<const uint16_t*>(locked.pBits));
+        const auto* pixels = static_cast<const uint16_t*>(locked.pBits);
+        if (beidou::marker::MatchesFieldEffectA4R4G4B4(pixels)) {
+            hit.kind = kFieldEffect;
+        } else {
+            hit.code = beidou::marker::VellumCodeFromA4R4G4B4(pixels);
+        }
     } else if (description.Format == D3DFMT_A8R8G8B8 && locked.Pitch >= 16) {
-        code = MarkerCodeFromA8R8G8B8(static_cast<const uint32_t*>(locked.pBits), false);
+        const auto* pixels = static_cast<const uint32_t*>(locked.pBits);
+        if (beidou::marker::MatchesFieldEffectA8R8G8B8(pixels, false)) {
+            hit.kind = kFieldEffect;
+        } else {
+            hit.code = beidou::marker::VellumCodeFromA8R8G8B8(pixels, false);
+        }
     } else if (description.Format == D3DFMT_X8R8G8B8 && locked.Pitch >= 16) {
-        code = MarkerCodeFromA8R8G8B8(static_cast<const uint32_t*>(locked.pBits), true);
+        const auto* pixels = static_cast<const uint32_t*>(locked.pBits);
+        if (beidou::marker::MatchesFieldEffectA8R8G8B8(pixels, true)) {
+            hit.kind = kFieldEffect;
+        } else {
+            hit.code = beidou::marker::VellumCodeFromA8R8G8B8(pixels, true);
+        }
     }
     texture->UnlockRect(0);
-    return code;
+    if (hit.kind == kNoMarker && hit.code != 0) hit.kind = kVellumScene;
+    return hit;
+}
+
+// BDV_Render() is BDV_RenderAll(): it draws every channel. Whoever owns the outermost Present
+// hook has to issue that call, otherwise a decoding video is never presented.
+bool AnyChannelHasVideo() {
+    if (gGetStatusEx == nullptr) return gVideoPlaying;
+    const uint32_t channels[] = {BDV_CHANNEL_BOSS_SCENE, BDV_CHANNEL_PLAYER_SKILL};
+    for (const uint32_t channel : channels) {
+        BdvStatus status = {};
+        status.structureSize = sizeof(status);
+        if (!gGetStatusEx(channel, &status)) continue;
+        if (status.state == BDV_STATE_DECODING || status.state == BDV_STATE_PLAYING) return true;
+    }
+    return false;
+}
+
+// 2026-09-28 (v3): the render decision must NOT depend on this layer being the outermost Present
+// hook. KaringSceneCompat chains its Present hook on top of these hooks - it reads the client
+// device vtable slot 15, stores the current value (this module's HookPresent) in its own table and
+// calls it on every frame end (KaringSceneCompat.log: "OK: chained after Dawn D3D8 hooks"). The
+// device vtable therefore points at Karing's entry while this hook runs, so an identity check
+// against vtable[15] is always false and silently discarded every single video frame. That was the
+// exact reason the v2 delivery attached the device yet never drew anything.
+//
+// Only Karing and the v69 core could render besides this module:
+//   * Karing calls BDV_RenderAll only while its own boss-scene video runs (it gates on an internal
+//     byte flag before reaching its render helper), so player-skill videos are never presented by
+//     it;
+//   * the v69 core reported that its D3D8 field-layer hooks never installed
+//     ("no complete D3D8 field-layer hooks were installed within 30 seconds"), so it never renders
+//     either.
+// Drawing here is therefore the only thing that puts a player-skill MCV on screen.
+char* AppendText(char* cursor, const char* end, const char* text) {
+    while (*text != '\0' && cursor < end) {
+        *cursor++ = *text++;
+    }
+    return cursor;
+}
+
+char* AppendUnsigned(char* cursor, const char* end, unsigned int value) {
+    char digits[12] = {};
+    int count = 0;
+    do {
+        digits[count++] = static_cast<char>('0' + (value % 10u));
+        value /= 10u;
+    } while (value != 0 && count < 11);
+    while (count > 0 && cursor < end) {
+        *cursor++ = digits[--count];
+    }
+    return cursor;
+}
+
+// One status line per channel every kStatusLogIntervalMs while a channel is not idle. This is the
+// evidence that separates "the decoder never produced a frame" (state=1 decoded=0) from "frames are
+// decoded but nothing is uploaded" (decoded>0 displayed=0) from "it renders fine".
+void LogChannelStatus(uint32_t channel, const BdvStatus& status) {
+    char buffer[kStatusTextCapacity] = {};
+    char* cursor = buffer;
+    const char* end = buffer + sizeof(buffer) - 1;
+    cursor = AppendText(cursor, end, "VELLUM VIDEO STATUS: channel=");
+    cursor = AppendUnsigned(cursor, end, channel);
+    cursor = AppendText(cursor, end, " state=");
+    cursor = AppendUnsigned(cursor, end, status.state);
+    cursor = AppendText(cursor, end, " decoded=");
+    cursor = AppendUnsigned(cursor, end, status.decodedFrames);
+    cursor = AppendText(cursor, end, " displayed=");
+    cursor = AppendUnsigned(cursor, end, status.displayedFrames);
+    cursor = AppendText(cursor, end, " dropped=");
+    cursor = AppendUnsigned(cursor, end, status.droppedFrames);
+    cursor = AppendText(cursor, end, " position=");
+    cursor = AppendUnsigned(cursor, end, status.positionMilliseconds);
+    cursor = AppendText(cursor, end, "ms");
+    if (status.state == BDV_STATE_ERROR && gGetLastErrorEx != nullptr) {
+        char error[kStatusTextCapacity] = {};
+        gGetLastErrorEx(channel, error, sizeof(error));
+        cursor = AppendText(cursor, end, " error=\"");
+        cursor = AppendText(cursor, end, error);
+        cursor = AppendText(cursor, end, "\"");
+    }
+    *cursor = '\0';
+    LogLine(buffer);
+}
+
+void LogChannelStatusesIfDue() {
+    if (gGetStatusEx == nullptr) return;
+    const DWORD now = GetTickCount();
+    if (now - gStatusLogTick < kStatusLogIntervalMs) return;
+    gStatusLogTick = now;
+    const uint32_t channels[] = {BDV_CHANNEL_BOSS_SCENE, BDV_CHANNEL_PLAYER_SKILL};
+    for (const uint32_t channel : channels) {
+        BdvStatus status = {};
+        status.structureSize = sizeof(status);
+        if (!gGetStatusEx(channel, &status) || status.state == BDV_STATE_IDLE) continue;
+        LogChannelStatus(channel, status);
+    }
 }
 
 bool StartVideo(int markerCode) {
-    const char* path = markerCode == kAttack10MarkerCode
+    const char* path = markerCode == beidou::marker::kVellumAttack10Code
         ? kAttack10Path
-        : markerCode == kAttack11MarkerCode ? kAttack11Path : nullptr;
+        : markerCode == beidou::marker::kVellumAttack11Code ? kAttack11Path : nullptr;
     if (path == nullptr) return false;
     if (!LoadVideoModule()) {
         LogLine("VELLUM VIDEO ERROR: BeiDouVideo.dll was not found or incompatible");
@@ -230,20 +502,67 @@ bool StartVideo(int markerCode) {
     gVideoPlaying = true;
     gActiveMarkerCode = markerCode;
     gRenderedThisFrame = false;
-    LogLine(markerCode == kAttack10MarkerCode
+    LogLine(markerCode == beidou::marker::kVellumAttack10Code
         ? "VELLUM VIDEO OK: attack10 screen started"
         : "VELLUM VIDEO OK: attack11 screen started");
     return true;
 }
 
+// One evidence line per playback: how many frames were drawn at the verified field-effect layer and
+// how many had to fall back to Present. Present sits above the UI and the floating damage numbers,
+// so a non zero `present_fallback_frames` names the exact reason a skill's damage numbers vanish -
+// the server did not send that skill's FIELD_EFFECT marker, or Map.wz lost its 7x5 node.
+void TrackPlaybackLayer(bool channelActive) {
+    if (channelActive) {
+        if (!gPlaybackActive) {
+            gPlaybackActive = true;
+            gMarkerRenderFrames = 0;
+            gFallbackRenderFrames = 0;
+        }
+        return;
+    }
+    if (!gPlaybackActive) return;
+    gPlaybackActive = false;
+    char buffer[kStatusTextCapacity] = {};
+    char* cursor = buffer;
+    const char* end = buffer + sizeof(buffer) - 1;
+    cursor = AppendText(cursor, end, "VELLUM VIDEO SUMMARY: marker_frames=");
+    cursor = AppendUnsigned(cursor, end, gMarkerRenderFrames);
+    cursor = AppendText(cursor, end, " present_fallback_frames=");
+    cursor = AppendUnsigned(cursor, end, gFallbackRenderFrames);
+    cursor = AppendText(
+        cursor, end,
+        gFallbackRenderFrames == 0
+            ? " (every frame was drawn at the skill effect layer)"
+            : " (this video had no FIELD_EFFECT marker draw)");
+    *cursor = '\0';
+    LogLine(buffer);
+}
+
+// Called from all four draw hooks. The return value means "this draw belongs to the marker and has
+// been handled", so the caller must not forward it.
 bool ConsumeMarkerDraw() {
     if (gRenderingVideo || !gMarkerBound) return false;
-    if (!gVideoPlaying || gActiveMarkerCode != gMarkerCode) StartVideo(gMarkerCode);
-    if (gVideoPlaying && !gRenderedThisFrame && gRender != nullptr) {
+    // Consume exactly the marker's own draw. Leaving the bound flag set until Present would drop
+    // every other draw of the frame, which is a silent way to lose damage numbers and effect layers.
+    const int kind = gMarkerKind;
+    const int code = gMarkerCode;
+    gMarkerBound = false;
+    gMarkerKind = kNoMarker;
+    gMarkerCode = 0;
+    if (kind == kVellumScene && (!gVideoPlaying || gActiveMarkerCode != code)) {
+        StartVideo(code);
+    }
+    if (!gRenderedThisFrame && gRender != nullptr && (gVideoPlaying || AnyChannelHasVideo())) {
         gRenderedThisFrame = true;
+        ++gMarkerRenderFrames;
         gRenderingVideo = true;
         gRender();
         gRenderingVideo = false;
+        if (!gFieldLayerLogged) {
+            gFieldLayerLogged = true;
+            LogLine("VELLUM VIDEO OK: field-effect marker draw; the video is rendered at the skill effect layer");
+        }
     }
     return true;
 }
@@ -251,8 +570,19 @@ bool ConsumeMarkerDraw() {
 HRESULT WINAPI HookSetTexture(
     IDirect3DDevice8* device, DWORD stage, IDirect3DBaseTexture8* texture) {
     if (stage == 0 && !gRenderingVideo) {
-        gMarkerCode = DetectMarker(texture);
-        gMarkerBound = gMarkerCode != 0;
+        const Hit hit = DetectMarker(texture);
+        gMarkerBound = hit.kind != kNoMarker;
+        gMarkerKind = hit.kind;
+        gMarkerCode = hit.code;
+        // One line per session, and only once the texture is actually recognised: it separates
+        // "the server never sent the FIELD_EFFECT / Map.wz lost the node" (no such line at all)
+        // from "the marker is there but no video was playing when it was drawn".
+        if (hit.kind != kNoMarker && !gMarkerSeenLogged) {
+            gMarkerSeenLogged = true;
+            LogLine(hit.kind == kFieldEffect
+                ? "VELLUM VIDEO OK: FIELD_EFFECT marker texture recognised"
+                : "VELLUM VIDEO OK: Vellum attack10/11 marker texture recognised");
+        }
     }
     return gRealSetTexture(device, stage, texture);
 }
@@ -298,37 +628,53 @@ HRESULT WINAPI HookPresent(
             gActiveMarkerCode = 0;
         }
     }
-    if (gVideoPlaying && !gRenderedThisFrame && gRender != nullptr) {
+    LogChannelStatusesIfDue();
+    // Queried once per frame: the same answer drives both the fallback decision and the per
+    // playback layer summary below.
+    const bool channelActive = AnyChannelHasVideo();
+    if (!gRenderedThisFrame && gRender != nullptr && channelActive) {
+        // Safety net only. No field-effect marker was drawn this frame, so the video has no place
+        // in the native order and has to go on top of the finished frame - above the mobs, the
+        // floating damage numbers and the UI. Reaching this branch is a resource problem (the
+        // server did not send the skill's FIELD_EFFECT, or Map.wz lost the 7x5 marker node), not a
+        // rendering problem, which is why it is reported as a warning instead of an OK line.
         gRenderedThisFrame = true;
+        ++gFallbackRenderFrames;
         gRenderingVideo = true;
         gRender();
         gRenderingVideo = false;
+        if (!gPresentFallbackLogged) {
+            gPresentFallbackLogged = true;
+            LogLine("VELLUM VIDEO WARN: Present fallback active (no field-effect marker was drawn)");
+        }
     }
+    TrackPlaybackLayer(channelActive);
     const HRESULT result = gRealPresent(device, source, destination, window, dirtyRegion);
     gRenderedThisFrame = false;
     gMarkerBound = false;
+    gMarkerKind = kNoMarker;
     gMarkerCode = 0;
     return result;
 }
 
 bool PatchDeviceHooks(void** vtable) {
     void* original = nullptr;
-    if (!PatchPointer(&vtable[kPresentVtableIndex], reinterpret_cast<void*>(&HookPresent), &original)) return false;
+    if (!PatchPointer(&vtable[kPresentVtableIndex], PointerFromFunction(&HookPresent), &original)) return false;
     if (gRealPresent == nullptr) gRealPresent = FunctionFromPointer<PresentFn>(original);
     original = nullptr;
-    if (!PatchPointer(&vtable[kSetTextureVtableIndex], reinterpret_cast<void*>(&HookSetTexture), &original)) return false;
+    if (!PatchPointer(&vtable[kSetTextureVtableIndex], PointerFromFunction(&HookSetTexture), &original)) return false;
     if (gRealSetTexture == nullptr) gRealSetTexture = FunctionFromPointer<SetTextureFn>(original);
     original = nullptr;
-    if (!PatchPointer(&vtable[kDrawPrimitiveVtableIndex], reinterpret_cast<void*>(&HookDrawPrimitive), &original)) return false;
+    if (!PatchPointer(&vtable[kDrawPrimitiveVtableIndex], PointerFromFunction(&HookDrawPrimitive), &original)) return false;
     if (gRealDrawPrimitive == nullptr) gRealDrawPrimitive = FunctionFromPointer<DrawPrimitiveFn>(original);
     original = nullptr;
-    if (!PatchPointer(&vtable[kDrawIndexedPrimitiveVtableIndex], reinterpret_cast<void*>(&HookDrawIndexedPrimitive), &original)) return false;
+    if (!PatchPointer(&vtable[kDrawIndexedPrimitiveVtableIndex], PointerFromFunction(&HookDrawIndexedPrimitive), &original)) return false;
     if (gRealDrawIndexedPrimitive == nullptr) gRealDrawIndexedPrimitive = FunctionFromPointer<DrawIndexedPrimitiveFn>(original);
     original = nullptr;
-    if (!PatchPointer(&vtable[kDrawPrimitiveUpVtableIndex], reinterpret_cast<void*>(&HookDrawPrimitiveUp), &original)) return false;
+    if (!PatchPointer(&vtable[kDrawPrimitiveUpVtableIndex], PointerFromFunction(&HookDrawPrimitiveUp), &original)) return false;
     if (gRealDrawPrimitiveUp == nullptr) gRealDrawPrimitiveUp = FunctionFromPointer<DrawPrimitiveUpFn>(original);
     original = nullptr;
-    if (!PatchPointer(&vtable[kDrawIndexedPrimitiveUpVtableIndex], reinterpret_cast<void*>(&HookDrawIndexedPrimitiveUp), &original)) return false;
+    if (!PatchPointer(&vtable[kDrawIndexedPrimitiveUpVtableIndex], PointerFromFunction(&HookDrawIndexedPrimitiveUp), &original)) return false;
     if (gRealDrawIndexedPrimitiveUp == nullptr) gRealDrawIndexedPrimitiveUp = FunctionFromPointer<DrawIndexedPrimitiveUpFn>(original);
     return gRealPresent != nullptr && gRealSetTexture != nullptr &&
         gRealDrawPrimitive != nullptr && gRealDrawIndexedPrimitive != nullptr &&
@@ -341,6 +687,7 @@ HRESULT WINAPI HookCreateDevice(
     const HRESULT result = gRealCreateDevice(
         direct3D, adapter, type, window, flags, parameters, output);
     if (FAILED(result) || output == nullptr || *output == nullptr) return result;
+    gCreateDeviceFired = true;
     void** vtable = *reinterpret_cast<void***>(*output);
     if (!PatchDeviceHooks(vtable)) {
         LogLine("VELLUM VIDEO ERROR: failed to chain D3D8 device hooks");
@@ -355,85 +702,88 @@ HRESULT WINAPI HookCreateDevice(
 }
 
 IDirect3D8* WINAPI HookDirect3DCreate8(UINT sdkVersion) {
+    // The client resolves this export hundreds of times (measured: 301 per session), so both the
+    // evidence line and the shape probe only run once. Probing on every call would also leak one
+    // IDirect3D8 per call, because the probe interface is deliberately never released.
+    if (!gShapeProbed) {
+        LogLine("VELLUM VIDEO OK: the client's Direct3DCreate8 reached the capture hook");
+    }
+    if (gRealDirect3DCreate8 == nullptr) {
+        LogLine("VELLUM VIDEO ERROR: Direct3DCreate8 trampoline is missing");
+        return nullptr;
+    }
     IDirect3D8* direct3D = gRealDirect3DCreate8(sdkVersion);
-    if (direct3D == nullptr) return nullptr;
+    if (direct3D == nullptr) {
+        LogLine("VELLUM VIDEO ERROR: Direct3DCreate8 returned null");
+        return nullptr;
+    }
     void** vtable = *reinterpret_cast<void***>(direct3D);
-    void* original = nullptr;
-    if (!PatchPointer(
-            &vtable[kCreateDeviceVtableIndex],
-            reinterpret_cast<void*>(&HookCreateDevice), &original)) {
-        LogLine("VELLUM VIDEO ERROR: failed to chain IDirect3D8::CreateDevice");
+    if (!InstallCreateDeviceSlot(vtable)) {
+        LogLine("VELLUM VIDEO ERROR: the client interface CreateDevice slot is not patchable");
         return direct3D;
     }
-    if (gRealCreateDevice == nullptr) gRealCreateDevice = FunctionFromPointer<CreateDeviceFn>(original);
-    LogLine("VELLUM VIDEO OK: Direct3DCreate8 chain installed");
+    // Evidence line: does d3d8.dll share one static vtable across instances? The CreateDevice
+    // slot of the client interface above is patched either way, so this only records which of
+    // the two shapes we are dealing with.
+    if (!gShapeProbed) {
+        gShapeProbed = true;
+        IDirect3D8* probe = gRealDirect3DCreate8(sdkVersion);
+        if (probe != nullptr) {
+            void** probeVtable = *reinterpret_cast<void***>(probe);
+            if (probeVtable == vtable) {
+                LogLine("VELLUM VIDEO OK: IDirect3D8 vtable is shared process wide");
+            } else {
+                InstallCreateDeviceSlot(probeVtable);
+                LogLine("VELLUM VIDEO WARN: IDirect3D8 hands out per-object vtables");
+            }
+        }
+    }
     return direct3D;
 }
 
-FARPROC WINAPI HookGetProcAddress(HMODULE module, LPCSTR name) {
-    FARPROC address = gRealGetProcAddress(module, name);
-    if (reinterpret_cast<uintptr_t>(name) > 0xFFFF && Equals(name, "Direct3DCreate8")) {
-        gRealDirect3DCreate8 = FunctionFromPointer<Direct3DCreate8Fn>(
-            reinterpret_cast<void*>(address));
-        if (gRealDirect3DCreate8 != nullptr) return FunctionToFarProc(&HookDirect3DCreate8);
-    }
-    return address;
-}
-
-bool InstallGr2DHook(HMODULE module) {
-    if (module == nullptr) return false;
-    auto** slot = reinterpret_cast<void**>(
-        reinterpret_cast<uintptr_t>(module) + kGr2DGetProcAddressIatRva);
-    if (*slot != reinterpret_cast<void*>(&HookGetProcAddress)) {
-        void* original = nullptr;
-        if (!PatchPointer(slot, reinterpret_cast<void*>(&HookGetProcAddress), &original)) return false;
-        gRealGetProcAddress = FunctionFromPointer<GetProcAddressFn>(original);
-    }
-    if (gRealGetProcAddress == nullptr) return false;
-    LogLine("VELLUM VIDEO OK: chained after core Gr2D hook");
-    return true;
-}
-
-HMODULE WINAPI HookLoadLibraryA(LPCSTR name) {
-    HMODULE module = gRealLoadLibraryA(name);
-    HMODULE gr2D = GetModuleHandleA("Gr2D_DX8.dll");
-    if (module != nullptr && module == gr2D) InstallGr2DHook(module);
-    return module;
-}
-
 DWORD WINAPI InstallHooks(LPVOID) {
-    LogLine("LOAD: Vellum attack10/11 video compatibility v1");
+    LogLine("LOAD: Vellum attack10/11 video compatibility v7 (d3d8 preload + whole-instruction code hook + FIELD_EFFECT layer render + first-chance C++ call sites)");
+    // Written on every start so the delivery can be told apart from earlier builds even when the
+    // client is launched out of the size-cached shared directory: never reuse the previous file
+    // size, the shared folder would keep serving the stale copy.
+    LogLine("BUILD: vellum-video-compat 2026-09-28 v7 capture=whole-instruction-prologue layer=field-effect-marker present=fallback-only deterministic firstchance=veh-summary-stack-plus-dump");
+    // The layer contract, logged once per session so one log says where the video is composited and
+    // what to check when a skill's damage numbers are hidden.
+    LogLine("LAYER: the video is drawn where the client draws the FIELD_EFFECT marker (7x5 canvas, signature F123/F456/F789/FABC in A4R4G4B4, FF112233/FF445566/FF778899/FFAABBCC in A8R8G8B8 or the same colours in X8R8G8B8), so the skill effect, the mobs, the floating damage numbers and the UI keep their native order");
+    LogLine("LAYER: Present only draws when no marker was seen in this frame; that layer sits above the damage numbers and the UI, so VELLUM VIDEO SUMMARY reports marker_frames against present_fallback_frames");
     if (reinterpret_cast<uintptr_t>(GetModuleHandleA(nullptr)) != kExpectedImageBase) {
         LogLine("VELLUM VIDEO ERROR: unexpected BeiDou.exe image base");
         return 1;
     }
-    HMODULE core = nullptr;
-    for (DWORD waited = 0; waited < kCoreReadyTimeoutMs; waited += kCoreReadyPollMs) {
-        core = GetModuleHandleA(kCoreDllName);
-        if (core != nullptr && CoreHooksAreReady(core)) break;
-        Sleep(kCoreReadyPollMs);
-    }
-    if (core == nullptr || !CoreHooksAreReady(core)) {
-        LogLine("VELLUM VIDEO ERROR: verified v69 core hooks did not become ready");
+    // 2026-09-28 (v5): the diagnostics engine (WzFileLogger.dll) only arms its first-chance dump
+    // after a null flash movie has been captured, so the 13:11 session - 19 `_com_error`s and no
+    // `flash_null_skips` - left the exception that popped the client dialog undocumented. This
+    // observer closes that gap from inside a module we own: every C++ exception leaves a summary
+    // with the real `_com_error::m_hr`, and the occurrence named in `beidou_diagnostics.ini`
+    // also leaves a dump. It never changes control flow, so the client's filter still sees
+    // exactly the exceptions it saw before.
+    beidou::firstchance::Install(&LogLine);
+    // Preloading d3d8.dll is what makes the capture race free: the client only loads it at the
+    // moment it needs a device, which is far too late to install anything from a polling thread.
+    HMODULE d3d8 = GetModuleHandleA(kD3D8DllName);
+    if (d3d8 == nullptr) d3d8 = LoadLibraryA(kD3D8DllName);
+    if (d3d8 == nullptr) {
+        LogLine("VELLUM VIDEO ERROR: d3d8.dll could not be loaded");
         return 2;
     }
-    auto** slot = reinterpret_cast<void**>(kLoadLibraryAIat);
-    if (!PointerBelongsToModule(*slot, core)) {
-        LogLine("VELLUM VIDEO ERROR: LoadLibraryA chain is not owned by the v69 core");
-        return 3;
+    if (!InstallDirect3DCreate8CodeHook(d3d8)) InstallProbeInterfaceHook(d3d8);
+    LogLine("VELLUM VIDEO OK: runtime capture armed");
+
+    for (DWORD waited = 0; waited < kDeviceCaptureTimeoutMs; waited += kWatcdogPollMs) {
+        if (gCreateDeviceFired) {
+            LogLine("VELLUM VIDEO OK: capture confirmed by a live D3D8 device");
+            return 0;
+        }
+        Sleep(kWatcdogPollMs);
     }
-    void* original = nullptr;
-    if (!PatchPointer(slot, reinterpret_cast<void*>(&HookLoadLibraryA), &original)) {
-        LogLine("VELLUM VIDEO ERROR: failed to chain LoadLibraryA");
-        return 4;
+    if (!gCreateDeviceFired) {
+        LogLine("VELLUM VIDEO ERROR: no D3D8 device was observed within the capture window");
     }
-    gRealLoadLibraryA = FunctionFromPointer<LoadLibraryAFn>(original);
-    HMODULE gr2D = GetModuleHandleA("Gr2D_DX8.dll");
-    if (gr2D != nullptr && !InstallGr2DHook(gr2D)) {
-        LogLine("VELLUM VIDEO ERROR: failed to chain existing Gr2D_DX8.dll");
-        return 5;
-    }
-    LogLine("VELLUM VIDEO OK: runtime hook chain ready");
     return 0;
 }
 

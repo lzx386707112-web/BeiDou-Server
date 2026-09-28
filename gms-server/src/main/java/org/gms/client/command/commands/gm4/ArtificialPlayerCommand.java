@@ -20,6 +20,7 @@ import soloMapling.ArtificialPlayer.BotMessagingSystem.QueueMonitor;
 import soloMapling.ArtificialPlayer.BotHelpers;
 import soloMapling.ArtificialPlayer.BotClientHandler;
 import soloMapling.ArtificialPlayer.BotBossCombatManager;
+import soloMapling.ArtificialPlayer.BotOrphanAudit;
 import soloMapling.ArtificialPlayer.BotSM;
 import soloMapling.ArtificialPlayer.BotTypeManager;
 import soloMapling.ArtificialPlayer.SocialHotPotatoManager;
@@ -137,6 +138,16 @@ public class ArtificialPlayerCommand extends Command {
                 break;
             case "create":
                 BotTypeManager.createBots(c);
+                break;
+            case "orphan":
+            case "orphans":
+            case "scanorphan":
+                BotOrphanAudit.report(c.getPlayer());
+                break;
+            case "orphanpurge":
+            case "purgeorphan":
+                int purged = BotOrphanAudit.purgeCurrentMap(c.getPlayer());
+                c.getPlayer().yellowMessage("已清理孤儿假人 " + purged + " 个（仅当前地图）。");
                 break;
             case "attack":
             case "boss":
@@ -466,6 +477,8 @@ public class ArtificialPlayerCommand extends Command {
         player.yellowMessage("!bot masscreate <start> <end>    - create multiple bots");
         player.yellowMessage("!bot massmanualstart <s> <e>     - start multiple bots");
         player.yellowMessage("!bot massmanualstop <s> <e>      - stop multiple bots");
+        player.yellowMessage("!bot orphan                      - audit bots (current map + whole server)");
+        player.yellowMessage("!bot orphanpurge                 - remove brainless bots on current map");
         player.yellowMessage("!bot attack / boss               - FM bots attack current boss");
         player.yellowMessage("-- Set Bot Type --");
         player.yellowMessage("!bot fmbot <cid>                 - set as FM bot");

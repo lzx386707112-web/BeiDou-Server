@@ -1024,7 +1024,9 @@ public class Equip extends Item {
     public int getEquipmentMaxLevelUp(Client c) {
         //未涅槃（转生）时装备初始能升级的次数
         int equipMaxLevel = GameConfig.getServerInt("use_equipment_level_up");
-        int reborn = c.getPlayer().getReborns();
+        // 转生系统未启用时按 0 次转生处理：本方法处于击杀怪物→装备经验结算的高频路径上，
+        // 直接调 getReborns() 会让系统未启用时每件装备每次结算都弹一次"重生系统未启用"提示。
+        int reborn = GameConfig.getServerBoolean("use_rebirth_system") ? c.getPlayer().getReborns() : 0;
         //每次转生装备可升级的次数
         int addLevelUp = GameConfig.getServerInt("each_time_reborn_equipment_add_level_up");
         int incremental = reborn * addLevelUp;

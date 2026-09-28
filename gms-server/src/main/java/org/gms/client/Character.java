@@ -210,6 +210,8 @@ public class Character extends AbstractCharacterObject {
     private int vanquisherKills;
     @Getter
     private int damageCap = DamageCapService.INITIAL_CAP;
+    private transient int nameplateTitleSeries = 0;
+    private transient boolean nameplateTitleSeriesLoaded = false;
     private float expRate = 1;
     private float mesoRate = 1;
     private float dropRate = 1;
@@ -1108,6 +1110,39 @@ public class Character extends AbstractCharacterObject {
         ExtendUtil.saveOrUpdateExtendValue(
                 String.valueOf(id), ExtendType.CHARACTER_EXTEND.getType(), CYGNUS_FIFTH_JOB_COMPLETED_KEY, "1"
         );
+    }
+
+    private static final String NAMEPLATE_TITLE_SERIES_KEY = "nameplate_title_series";
+    public static final int NAMEPLATE_TITLE_SERIES_COUNT = 9;
+
+    public int getNameplateTitleSeries() {
+        if (!nameplateTitleSeriesLoaded) {
+            nameplateTitleSeriesLoaded = true;
+            try {
+                ExtendValueDO value = ExtendUtil.getExtendValue(
+                        String.valueOf(id), ExtendType.CHARACTER_EXTEND.getType(), NAMEPLATE_TITLE_SERIES_KEY
+                );
+                nameplateTitleSeries = value != null ? Integer.parseInt(value.getExtendValue()) : 0;
+            } catch (Exception e) {
+                nameplateTitleSeries = 0;
+            }
+            nameplateTitleSeries = Math.max(0, Math.min(NAMEPLATE_TITLE_SERIES_COUNT - 1, nameplateTitleSeries));
+        }
+        return nameplateTitleSeries;
+    }
+
+    public void setNameplateTitleSeries(int series) {
+        int s = Math.max(0, Math.min(NAMEPLATE_TITLE_SERIES_COUNT - 1, series));
+        nameplateTitleSeries = s;
+        nameplateTitleSeriesLoaded = true;
+        ExtendUtil.saveOrUpdateExtendValue(
+                String.valueOf(id), ExtendType.CHARACTER_EXTEND.getType(), NAMEPLATE_TITLE_SERIES_KEY, String.valueOf(s)
+        );
+        if (getMap() != null) {
+            getMap().broadcastMessage(this, PacketCreator.nameplatePowerUpdate(this), true);
+        } else {
+            sendPacket(PacketCreator.nameplatePowerUpdate(this));
+        }
     }
 
     public void setMasteries(int jobId) {
@@ -10454,10 +10489,9 @@ public class Character extends AbstractCharacterObject {
      */
     public int getReborns() {
         if (!GameConfig.getServerBoolean("use_rebirth_system")) {
-            String tip = I18nUtil.getMessage("Character.USE_REBIRTH_SYSTEM");
-            yellowMessage(tip); //重生系统未启用
+            // 本方法是纯读取入口，会被经验计算、装备升级等高频路径调用。
+            // 未启用时静默返回 0 即可，提示由 setReborns / executeRebornAs 等真正执行转生的入口负责，避免刷屏。
 //            throw new NotEnabledException();
-//            log.error(tip);
             return 0;
         }
         CharactersDO charactersDO = characterService.findById(id);

@@ -26,7 +26,7 @@ class NameplatePowerPacketTest {
 
     @Test
     void enabledPacketMatchesClientDecoderContract() {
-        Packet packet = PacketCreator.nameplatePowerUpdate(1234, true, 567890);
+        Packet packet = PacketCreator.nameplatePowerUpdate(1234, 1, 567890);
         ByteBuffer data = ByteBuffer.wrap(packet.getBytes()).order(ByteOrder.LITTLE_ENDIAN);
 
         assertEquals(15, data.remaining());
@@ -38,8 +38,21 @@ class NameplatePowerPacketTest {
     }
 
     @Test
+    void titleStateByteCarriesSeriesId() {
+        Packet packet = PacketCreator.nameplatePowerUpdate(1234, 2, 10_000_000L);
+        ByteBuffer data = ByteBuffer.wrap(packet.getBytes()).order(ByteOrder.LITTLE_ENDIAN);
+
+        assertEquals(15, data.remaining());
+        assertEquals(0x17C, Short.toUnsignedInt(data.getShort()));
+        assertEquals(1234, data.getInt());
+        assertEquals(2, Byte.toUnsignedInt(data.get()));
+        assertEquals(10_000_000L, data.getLong());
+        assertEquals(0, data.remaining());
+    }
+
+    @Test
     void powerAboveIntRangeSurvivesAsLong() {
-        Packet packet = PacketCreator.nameplatePowerUpdate(1234, true, 10_000_000_000L);
+        Packet packet = PacketCreator.nameplatePowerUpdate(1234, 1, 10_000_000_000L);
         ByteBuffer data = ByteBuffer.wrap(packet.getBytes()).order(ByteOrder.LITTLE_ENDIAN);
 
         data.position(7);
@@ -48,7 +61,7 @@ class NameplatePowerPacketTest {
 
     @Test
     void disabledPacketClearsPower() {
-        Packet packet = PacketCreator.nameplatePowerUpdate(1234, false, 567890);
+        Packet packet = PacketCreator.nameplatePowerUpdate(1234, 0, 567890);
         ByteBuffer data = ByteBuffer.wrap(packet.getBytes()).order(ByteOrder.LITTLE_ENDIAN);
 
         data.position(7);

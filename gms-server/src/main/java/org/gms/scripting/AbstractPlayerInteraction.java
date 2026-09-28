@@ -85,6 +85,24 @@ public class AbstractPlayerInteraction {
         return c.getPlayer();
     }
 
+    public static final int NAMEPLATE_SERIES_FANTASY = 0;
+    public static final int NAMEPLATE_SERIES_DOULUO = 1;
+    public static final int NAMEPLATE_SERIES_DRAGON_BALL = 2;
+    public static final int NAMEPLATE_SERIES_NARUTO = 3;
+    public static final int NAMEPLATE_SERIES_ONE_PIECE = 4;
+    public static final int NAMEPLATE_SERIES_BLEACH = 5;
+    public static final int NAMEPLATE_SERIES_DEMON_SLAYER = 6;
+    public static final int NAMEPLATE_SERIES_JUJUTSU = 7;
+    public static final int NAMEPLATE_SERIES_HERO_ACADEMIA = 8;
+
+    public int getNameplateSeries() {
+        return getPlayer().getNameplateTitleSeries();
+    }
+
+    public void setNameplateSeries(int series) {
+        getPlayer().setNameplateTitleSeries(series);
+    }
+
     public int getJobId() {
         return getPlayer().getJob().getId();
     }

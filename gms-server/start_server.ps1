@@ -541,7 +541,13 @@ Write-Ok "端口 $ServerPort 空闲。"
 
 # ---- 6. start ----
 Write-Step '6/6' '启动服务端' '工作目录必须是 jar 所在目录，这样相对路径 wz、scripts-zh-CN、logs 才会生效。'
+# JVM 参数。服务端与客户端跑在同一台机器（本机 Windows 11 虚拟机内存 6G），
+# 堆上限必须明显小于物理内存，否则 JVM 一涨到上限就把系统推进磁盘交换，
+# 表现为"假人很少、不动、不说话"。2G 是 6G 机器上留出系统+客户端余量的保守值。
+# 若服务端改到 ≥16G 的机器，可用环境变量 BEIDOU_JAVA_OPTS 覆盖（例如 -Xmx4g）。
+$javaOpts = if ($env:BEIDOU_JAVA_OPTS) { $env:BEIDOU_JAVA_OPTS } else { '-Xms512m -Xmx2g -XX:+UseG1GC' }
 $javaArgs = @()
+if ($javaOpts) { $javaArgs += @($javaOpts -split '\s+' | Where-Object { $_ }) }
 if ($Config) { $javaArgs += "-Dspring.config.location=$Config" }
 $javaArgs += @('-jar', $Jar)
 $javaArgs += $AppArgs

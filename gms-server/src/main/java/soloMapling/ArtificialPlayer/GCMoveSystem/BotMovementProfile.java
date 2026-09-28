@@ -34,12 +34,31 @@ final class BotMovementProfile implements Serializable {
         return getClass().getSimpleName();
     }
 
+    /**
+     * 值语义。原先被重建为 identity（{@code identityHashCode} / {@code this == o}），
+     * 而 {@link BotMovementManager#refreshMovementProfile} 里是
+     * {@code if (updated.equals(entry.movementProfile)) return false;}：
+     * {@code updated} 每次都是新对象，identity 比较永远为 false，于是每次刷新都会
+     * 判定"移动属性变了" → 清空该假人的导航状态（反复重新寻路）
+     * → 每次都去 warm 一次导航图（叠加缓存键失效就是无上限重建 + 堆增长）。
+     */
     public final int hashCode() {
-        return System.identityHashCode(this);
+        int result = Integer.hashCode(this.totalSpeedStat);
+        result = (31 * result) + Integer.hashCode(this.totalJumpStat);
+        return (31 * result) + (this.snowShoes ? 1 : 0);
     }
 
     public final boolean equals(Object o) {
-        return this == o;
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof BotMovementProfile)) {
+            return false;
+        }
+        BotMovementProfile other = (BotMovementProfile) o;
+        return this.totalSpeedStat == other.totalSpeedStat
+                && this.totalJumpStat == other.totalJumpStat
+                && this.snowShoes == other.snowShoes;
     }
 
     public int totalSpeedStat() {

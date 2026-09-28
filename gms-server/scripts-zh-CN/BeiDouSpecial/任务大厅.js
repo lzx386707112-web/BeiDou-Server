@@ -23,11 +23,22 @@
 /**
  * @description 拍卖行中心脚本
  */
+// ============================================================
+// 血衣合成 / 怪物卡戒 / Boss成长 / 跑环 / 狩猎 已移到主菜单 9900001：
+//   角色提升 = 血衣合成、怪物卡戒、Boss成长
+//   每日日常 = 跑环、狩猎
+// 这里只保留 每日任务 / 主线任务 / 世界任务
+// ============================================================
+// 每格定宽（半角单位）+ 格间隔，一行三格总宽约 36，远小于对话框宽度（约 54）
+var 菜单格宽 = 12;
+var 菜单格间隔 = 2;
+
 var OldTitle = "\t\t\t\t\t#e#k欢迎来到#r[任务大厅]#k系统#n\t\t\t\t\r\n";
 var status = -1;
 var i = 0;
 
 function start() {
+    status = -1;
     action(1, 0, 0)
 }
 
@@ -43,20 +54,35 @@ function action(mode, type, selection) {
     if (status === 0) {
         let text = OldTitle;
         text += "#b \r\n";
-        text += "#L0#每日任务#l\t\t\t";
-        text += "#L1#主线任务#l\t\t\t";
-        text += "#L2#血衣合成#l\t\r\n\r\n";
-        text += "#L3#怪物卡戒#l\t\t\t";
-        text += "#L4#世界任务#l\t\t\t";
-        text += "#L5#跑环#l\t\r\n\r\n";
-        text += "#L6#狩猎#l\t\t\t";
-        text += "#L7#Boss成长#l\t\r\n\r\n";
+        text += 菜单行([[0, "每日任务"], [1, "主线任务"], [2, "世界任务"]]);
         cm.sendSimple(text);
     } else if (status === 1) {
         doSelect(selection);
     } else {
         cm.dispose();
     }
+}
+
+// 一行菜单：半角 [] 括号 + 空格定宽对齐（制表符宽度不可控，不要改回去）
+function 菜单行(条目列表) {
+    let 行 = "";
+    for (let n = 0; n < 条目列表.length; n++) {
+        行 += "#L" + 条目列表[n][0] + "##b[" + 条目列表[n][1] + "]#k#l";
+        if (n < 条目列表.length - 1) {
+            let 补 = 菜单格宽 + 菜单格间隔 - 取显示宽("[" + 条目列表[n][1] + "]");
+            行 += " ".repeat(补 > 0 ? 补 : 菜单格间隔);
+        }
+    }
+    return 行 + "\r\n";
+}
+
+// 半角宽度：中日韩全角字符按 2 计，其余按 1 计
+function 取显示宽(文本) {
+    let 宽 = 0;
+    for (let n = 0; n < 文本.length; n++) {
+        宽 += 文本.charCodeAt(n) > 0x2E80 ? 2 : 1;
+    }
+    return 宽;
 }
 
 function doSelect(selection) {
@@ -68,22 +94,7 @@ function doSelect(selection) {
             openNpc("任务/主线任务");
             break;
         case 2:
-            openNpc("任务/血衣合成");  //明珠港怪物卡戒指NPC
-            break;
-        case 3:
-            openNpc("2006");
-            break;
-        case 4:
             openNpc("任务/世界任务");
-            break;
-        case 5:
-            openNpc("任务/跑环");
-            break;
-        case 6:
-            openNpc("任务/狩猎");
-            break;
-        case 7:
-            openNpc("Boss成长系统");
             break;
         default:
             cm.sendOk("该功能暂不支持，敬请期待！");

@@ -36,6 +36,9 @@ final class BotNavigationManager {
     private static final int PORTAL_ENTER_EXTRA_TICKS_MAX = 3;
     private static final long SLOW_PATHFIND_WARN_NS = 250000000;
     private static final long SLOW_PATHFIND_WARN_COOLDOWN_MS = 10000;
+    // 安全阀：正常 A* 的生成状态数上限约为「可达边数 × 2」，远低于此值。
+    // 超过它说明启发式/图数据异常，此时保留已找到的 bestGoalState 并收工，避免状态无限膨胀吃满堆。
+    private static final int MAX_GENERATED_STATES = 200000;
     private static final long EPSILON_SALT = 15290385;
     private static final Logger log = LoggerFactory.getLogger(BotNavigationManager.class);
     private static final AtomicLong slowPathfindNextWarnAtMs = new AtomicLong();
@@ -88,12 +91,30 @@ final class BotNavigationManager {
             return getClass().getSimpleName();
         }
 
+        /**
+         * 值语义。原先被重建为 identity（{@code identityHashCode} / {@code this == o}），
+         * 导致 runSearch 的 gScore / cameFrom 去重完全失效：每个后继都被当成新状态，
+         * A* 退化为无 closed set 的树搜索，单次寻路可生成十几万个状态。
+         * point 在整条导航链路中只读（无 in-place 修改），可安全参与哈希。
+         */
         public final int hashCode() {
-            return System.identityHashCode(this);
+            int result = Integer.hashCode(this.regionId);
+            result = (31 * result) + (this.point == null ? 0 : this.point.hashCode());
+            return (31 * result) + (this.viaPortal ? 1 : 0);
         }
 
         public final boolean equals(Object o) {
-            return this == o;
+            if (this == o) {
+                return true;
+            }
+            if (!(o instanceof SearchState)) {
+                return false;
+            }
+            SearchState other = (SearchState) o;
+            if (this.regionId != other.regionId || this.viaPortal != other.viaPortal) {
+                return false;
+            }
+            return this.point == null ? other.point == null : this.point.equals(other.point);
         }
 
         public int regionId() {
@@ -837,9 +858,10 @@ final class BotNavigationManager {
             int usableEdges = 0;
             int relaxations = 0;
             int openPeak = 1;
+            boolean stateBudgetExhausted = false;
             gScore.put(startState, 0);
             open.add(new SearchNode(startState, 0, hValue(graph, startPos, targetPos, zeroHeuristic, randomized, epsilon)));
-            while (!open.isEmpty()) {
+            while (!open.isEmpty() && !stateBudgetExhausted) {
                 SearchNode current = open.poll();
                 if (current.cost != gScore.getOrDefault(current.state, Integer.MAX_VALUE).intValue()) {
                     staleNodes++;
@@ -886,6 +908,10 @@ final class BotNavigationManager {
                                 int fScore = tentativeCost + hValue(graph, edge.endPoint, targetPos, zeroHeuristic, randomized, epsilon);
                                 open.add(new SearchNode(nextState, tentativeCost, fScore));
                                 openPeak = Math.max(openPeak, open.size());
+                                if (relaxations >= MAX_GENERATED_STATES) {
+                                    stateBudgetExhausted = true;
+                                    break;
+                                }
                             }
                         }
                     }

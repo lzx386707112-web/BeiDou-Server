@@ -89,6 +89,8 @@ def main():
         secs[nm] = struct.unpack_from('<IIII', p, s + 8)
         if nm == '.text':
             text_sh = s
+    # .reloc raw span: (VirtualSize, VirtualAddress, SizeOfRawData, PointerToRawData)
+    reloc_raw, reloc_rsize = secs['.reloc'][3], secs['.reloc'][2]
 
     # ---------- 1. byte diff map ----------
     allowed = [
@@ -98,6 +100,7 @@ def main():
         (ftext(CAVE_COMMON), ftext(CAVE_COMMON) + CAVE_COMMON_LEN - 1),
         (ftext(CAVE_C), ftext(CAVE_C) + CAVE_C_LEN - 1),
         (text_sh + 8, text_sh + 11),          # .text VirtualSize
+        (reloc_raw, reloc_raw + reloc_rsize - 1),   # .reloc: 两条僵尸条目改写为 ABSOLUTE 填充（见 fix_dll_reloc_hygiene.py）
         (e + 24 + 64, e + 24 + 67),           # optional header CheckSum
     ]
     ranges = []
@@ -217,6 +220,32 @@ def main():
         blob = p[ftext(site):ftext(site) + ln]
         assert b'\x8b\x1b' not in blob and b'\x8b\x36' not in blob
     print('6. the unguarded `mov (%reg),%reg` reads are gone from both sites: OK')
+
+    # ---------- 7. no stale relocation entry may sit on the patched sites ----------
+    # A HIGHLOW entry left on the rel32 of `call STUB_A` / `jmp CAVE_C` makes the
+    # loader rewrite the branch target as soon as the DLL is relocated
+    # (delta != 0).  Proven on 2026-09-24: the phone's dump and the other
+    # player's PC hit 0x09616640 / 0x198A6640 / 0x198A66B0 this way.
+    reloc_entries = []
+    rp = reloc_raw
+    while rp + 8 <= reloc_raw + reloc_rsize:
+        page, bsz = struct.unpack_from('<II', p, rp)
+        if page == 0 and bsz == 0:
+            break
+        for k in range((bsz - 8) // 2):
+            ent = struct.unpack_from('<H', p, rp + 8 + 2 * k)[0]
+            reloc_entries.append((ent >> 12, page + (ent & 0xFFF)))
+        rp += bsz
+        if rp % 4:
+            rp = (rp + 3) & ~3
+    targets = {rva for typ, rva in reloc_entries if typ == 3}
+    for site in (SITE_A, SITE_C):
+        # the rel32 of the 5-byte branch lives at site+2..site+5
+        hit = sorted(r for r in targets if site + 2 <= r <= site + 5)
+        assert not hit, 'stale HIGHLOW entry on patched branch at %s: %s' % (
+            hex(site), [hex(x) for x in hit])
+    print('7. no HIGHLOW entry overlaps the patched branches (0x%x / 0x%x): OK'
+          % (SITE_A, SITE_C))
     print()
     print('ALL CONTRACT CHECKS PASSED for', PATCHED)
     print('sha256 =', hashlib.sha256(p).hexdigest())

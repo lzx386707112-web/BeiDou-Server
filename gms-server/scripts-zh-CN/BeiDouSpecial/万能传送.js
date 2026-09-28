@@ -164,14 +164,6 @@ var monstermaps = Array(
 
 var townmaps = Array(
     Array(910000000, 0, "自由市场#r              （消耗0金币）#b"),
-    Array(680100000, 500, "冒险岛周末集市#r  （消耗5百金币）#b"),
-    Array(271000000, 10000, "未来之门#r              （消耗1万金币）#b"),
-    Array(271030000, 10000, "骑士团要塞入口#r  （消耗1万金币）#b"),
-    Array(105200000, 10000, "鲁塔比斯入口#r      （消耗1万金币）#b"),
-    Array(272000000, 10000, "时间裂缝#r              （消耗1万金币）#b"),
-    Array(272020000, 10000, "扭曲时间神殿1#r    （消耗1万金币）#b"),
-    Array(272020110, 10000, "阿卡伊勒祭坛前#r  （消耗1万金币）#b"),
-    Array(272030000, 10000, "次元的缝隙#r          （消耗1万金币）#b"),
     Array(1000000, 0, "彩虹岛新手村#r      （消耗0金币）#b"),
     Array(104000000, 500, "明珠港#r                  （消耗5百金币）#b"),
     Array(100000000, 800, "射手村#r                  （消耗8百金币）#b"),
@@ -218,27 +210,45 @@ var townmaps = Array(
     Array(240070000, 5000, "逆奥之城#r              （消耗5千金币）#b"),
     Array(802000100, 10000, "未来东京#r              （消耗1万金币）#b"),
     Array(270000100, 10000, "时间神殿#r              （消耗1万金币）#b"),
-    Array(450001000, 10000, "无名村#r                  （消耗1万金币）#b"),
-    Array(450015060, 10000, "真香村#r                  （消耗1万金币）#b"),
-    Array(450002000, 10000, "啾啾村#r                  （消耗1万金币）#b"),
-    Array(450003000, 10000, "梦都拉克兰#r          （消耗1万金币）#b"),
-    Array(450005000, 10000, "神秘森林阿尔卡娜#r  （消耗1万金币）#b"),
-    // Array(450006130, 10000, "记忆沼泽莫拉斯#r      （消耗1万金币）#b"),
-    Array(450007040, 10000, "太初之海埃斯佩拉#r  （消耗1万金币）#b"),
-    Array(450014050, 10000, "反转城市地下避难处#r      （消耗1万金币）#b"),
+);
+
+//------------------------------------------------------------------------
+// 未来之门（均由 level1 进入；破败射手村=271010000，客户端有该文件，WZ 地图名未收录）
+//------------------------------------------------------------------------
+var futuregatemaps = Array(
+    Array(105200000, 10000, "鲁塔比斯#r（消耗1万金币）#b"),
+    Array(272000000, 10000, "阿卡伊勒#r（消耗1万金币）#b"),
+    Array(271010000, 10000, "破败射手村#r（消耗1万金币）#b"),
+    Array(273000000, 10000, "黄昏勇士部落#r（消耗1万金币）#b"),
+    Array(271030000, 10000, "骑士团要塞#r（消耗1万金币）#b"),
+    Array(211060000, 10000, "狮子王城#r（消耗1万金币）#b"),
+    Array(807000000, 10000, "枫叶丘陵#r（消耗1万金币）#b")
+);
+
+//------------------------------------------------------------------------
+// 神秘河（level2）
+//------------------------------------------------------------------------
+var arcanerivermaps = Array(
+    Array(450001000, 10000, "无名村#r（消耗1万金币）#b"),
+    Array(450014050, 10000, "反转城市#r（消耗1万金币）#b"),
+    Array(450015060, 10000, "真香村#r（消耗1万金币）#b"),
+    Array(450002000, 10000, "啾啾村#r（消耗1万金币）#b"),
+    Array(450003000, 10000, "梦都拉克兰#r（消耗1万金币）#b"),
+    Array(450005000, 10000, "神秘森林阿尔卡娜#r（消耗1万金币）#b"),
+    Array(450007040, 10000, "太初之海埃斯佩拉#r（消耗1万金币）#b"),
     Array(450007170, 10000, "埃斯佩拉她沉睡的大海#r（消耗1万金币）#b"),
-    Array(450016000, 10000, "塞拉斯繁星沉睡之地#r  （消耗1万金币）#b"),
-    Array(450009100, 10000, "泰涅布利斯月之桥#r      （消耗1万金币）#b"),
-    Array(450011120, 10000, "泰涅布利斯苦痛迷宫#r  （消耗1万金币）#b"),
-    Array(450012000, 10000, "泰涅布利斯利曼#r          （消耗1万金币）#b"),
-    Array(273000000, 10000, "黄昏的勇士之村#r        （消耗1万金币）#b"),
-    Array(211060000, 10000, "狮子王城#r              （消耗1万金币）#b"),
-    Array(807000000, 10000, "枫叶丘陵#r              （消耗1万金币）#b"),
-    Array(410007000, 10000, "奥迪温云上的城市#r  （消耗1万金币）#b"),
-    Array(410007020, 10000, "桃源境#r                  （消耗1万金币）#b"),
-    Array(865000001, 10000, "凯梅尔兹交易所#r      （消耗1万金币）#b"),
-    Array(951000000, 10000, "怪物公园#r                （消耗1万金币）#b")
-    //Array(749020000,0,"国庆蛋糕地图")
+    Array(450016000, 10000, "塞拉斯繁星沉睡之地#r（消耗1万金币）#b"),
+    Array(450009100, 10000, "泰涅布利斯月之桥#r（消耗1万金币）#b"),
+    Array(450011120, 10000, "泰涅布利斯苦痛迷宫#r（消耗1万金币）#b"),
+    Array(450012000, 10000, "泰涅布利斯利曼#r（消耗1万金币）#b")
+);
+
+//------------------------------------------------------------------------
+// 格兰蒂斯（level3）
+//------------------------------------------------------------------------
+var grandismaps = Array(
+    Array(410007000, 10000, "奥迪温云上的城市#r（消耗1万金币）#b"),
+    Array(410007020, 10000, "桃源境#r（消耗1万金币）#b")
 );
 
 //------------------------------------------------------------------------
@@ -261,6 +271,35 @@ var fubenmaps = Array(
 
 var status;
 
+// 主菜单：3 列定宽对齐
+//   菜单格宽 = 最长那格的显示宽（"冒险岛周末集市" = 16 半角单位）
+//   一行总宽 = 3×格宽 + 2×格间隔 = 52，超过对话框宽度（约 54 半角单位）就会折行
+var 菜单格宽 = 16;
+var 菜单格间隔 = 2;
+
+// 半角显示宽度：中日韩全角算 2，其余算 1
+function 取显示宽(文本) {
+    var 宽 = 0;
+    for (var n = 0; n < 文本.length; n++) {
+        宽 += 文本.charCodeAt(n) > 0x2E80 ? 2 : 1;
+    }
+    return 宽;
+}
+
+// 一行菜单：半角 [] 括号 + 空格补到定宽（全角【】+制表符实测会撑爆换行）
+function 菜单行(条目列表) {
+    var 行 = "";
+    for (var n = 0; n < 条目列表.length; n++) {
+        var 格 = "[" + 条目列表[n][1] + "]";
+        行 += "#L" + 条目列表[n][0] + "##b" + 格 + "#k#l";
+        if (n < 条目列表.length - 1) {
+            var 补 = 菜单格宽 + 菜单格间隔 - 取显示宽(格);
+            行 += " ".repeat(补 > 0 ? 补 : 菜单格间隔);
+        }
+    }
+    return 行 + "\r\n";
+}
+
 //Start
 function start() {
     levelStart();
@@ -270,27 +309,58 @@ function start() {
  * @description 如果是sendSelectLevel，那么会根据玩家的选项自动路由到对应的level+selection方法
  */
 function levelStart() {
-    let text = "尊贵的大人，您想去哪里呢？（100级后可使用高级BOSS传送）\r\n";
-    text += "#b#L0#城镇地图#l\t\t\t\t\t\t\t\t\t";
-    text += "#L1#副本组队#l\r\n";
-    text += "#L2#练级地图#l\t\t\t\t\t\t\t\t\t";
-    text += "#L3#野外boss#l\r\n";
+    let text = "尊贵的大人，您想去哪里呢？\r\n\r\n";
+    text += "#b" + 菜单行([[0, "冒险岛世界"], [1, "未來之門"], [2, "神秘河"]]);
+    text += 菜单行([[3, "格兰蒂斯"], [4, "副本组队"], [5, "练级地图"]]);
+    var 第三行 = [[6, "野外Boss"], [7, "冒险岛周末集市"]];
     if (cm.getPlayer().getLevel() >= 100) {
-        text += "#L4#高级BOSS地图#l\r\n";
+        第三行.push([8, "高级BOSS地图"]);
     }
+    text += 菜单行(第三行);
 
     cm.sendSelectLevel(text);
 }
 
-function level0() {
+// 通用：列出一份地图清单，选择后路由到 level<nextLevel>
+function 显示地图列表(nextLevel, list) {
     let text = "#b";
-    for (let i = 0; i < townmaps.length; i++) {
-        text += "#L" + i + "#" + townmaps[i][2] + "#l\r\n";
+    for (let i = 0; i < list.length; i++) {
+        text += "#L" + i + "#" + list[i][2] + "#l\r\n";
     }
-    cm.sendNextSelectLevel("Town", text);
+    cm.sendNextSelectLevel(nextLevel, text);
+}
+
+// 通用：扣金币传送
+function 传送(列表, selection) {
+    var cost = 列表[selection][1];
+    if (cm.getPlayer().getMeso() < cost) {
+        cm.sendOk("您的金币不足，无法传送！需要 " + cost + " 金币。");
+        cm.dispose();
+        return;
+    }
+    cm.gainMeso(-cost);
+    cm.getPlayer().saveLocationOnWarp();
+    cm.warp(列表[selection][0]);
+    cm.dispose();
+}
+
+function level0() {
+    显示地图列表("Town", townmaps);
 }
 
 function level1() {
+    显示地图列表("FutureGate", futuregatemaps);
+}
+
+function level2() {
+    显示地图列表("ArcaneRiver", arcanerivermaps);
+}
+
+function level3() {
+    显示地图列表("Grandis", grandismaps);
+}
+
+function level4() {
     let text = "#r#L999#注意：副本传送费用10万！(点击查看副本产出)\r\n\r\n#b";
     for (let i = 0; i < fubenmaps.length; i++) {
         text += "#L" + i + "#" + fubenmaps[i][2] + "#l\r\n";
@@ -298,29 +368,21 @@ function level1() {
     cm.sendNextSelectLevel("Fuben", text);
 }
 
-
-function level2() {
-    let text = "#b";
-    for (let i = 0; i < monstermaps.length; i++) {
-        text += "#L" + i + "#" + monstermaps[i][2] + "#l\r\n";
-    }
-    cm.sendNextSelectLevel("LevelUp", text);
+function level5() {
+    显示地图列表("LevelUp", monstermaps);
 }
 
-function level3() {
-    let text = "#b";
-    for (let i = 0; i < bossmaps1.length; i++) {
-        text += "#L" + i + "#" + bossmaps1[i][2] + "#l\r\n";
-    }
-    cm.sendNextSelectLevel("Boss1", text);
+function level6() {
+    显示地图列表("Boss1", bossmaps1);
 }
 
-function level4() {
-    let text = "#b";
-    for (let i = 0; i < bossmaps2.length; i++) {
-        text += "#L" + i + "#" + bossmaps2[i][2] + "#l\r\n";
-    }
-    cm.sendNextSelectLevel("Boss2", text);
+function level7() {
+    // 冒险岛周末集市：直接传送，不再进入城镇列表
+    传送(Array(Array(680100000, 500)), 0);
+}
+
+function level8() {
+    显示地图列表("Boss2", bossmaps2);
 }
 
 
@@ -547,6 +609,18 @@ function levelBoss1(selection) {
     cm.getPlayer().saveLocationOnWarp();
     cm.warp(bossmaps1[selection][0]);
     cm.dispose();
+}
+
+function levelFutureGate(selection) {
+    传送(futuregatemaps, selection);
+}
+
+function levelArcaneRiver(selection) {
+    传送(arcanerivermaps, selection);
+}
+
+function levelGrandis(selection) {
+    传送(grandismaps, selection);
 }
 
 function levelLevelUp(selection) {

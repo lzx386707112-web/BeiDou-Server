@@ -7644,14 +7644,15 @@ public class PacketCreator {
         ItemInformationProvider ii = ItemInformationProvider.getInstance();
         boolean enabled = chr.getInventory(InventoryType.EQUIPPED).list().stream()
                 .anyMatch(item -> ii.isNameTagRing(item.getItemId()));
-        return nameplatePowerUpdate(chr.getId(), enabled, calculateNameplatePower(chr));
+        int titleState = enabled ? chr.getNameplateTitleSeries() + 1 : 0;
+        return nameplatePowerUpdate(chr.getId(), titleState, calculateNameplatePower(chr));
     }
 
-    static Packet nameplatePowerUpdate(int characterId, boolean enabled, long power) {
+    static Packet nameplatePowerUpdate(int characterId, int titleState, long power) {
         OutPacket p = OutPacket.create(SendOpcode.NAMEPLATE_POWER_UPDATE);
         p.writeInt(characterId);
-        p.writeBool(enabled);
-        p.writeLong(enabled ? Math.max(0L, power) : 0L);
+        p.writeByte(titleState);
+        p.writeLong(titleState != 0 ? Math.max(0L, power) : 0L);
         return p;
     }
 

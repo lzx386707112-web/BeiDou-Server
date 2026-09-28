@@ -7,6 +7,10 @@ DEFAULT_JAR="$HOME/Downloads/BeiDou.jar"
 TARGET_JAR="$SERVER_DIR/target/BeiDou.jar"
 DEFAULT_PID_FILE="$SERVER_DIR/BeiDou.pid"
 DEFAULT_LOG_FILE="$SERVER_DIR/logs/BeiDou.out.log"
+# 堆上限务必明显小于物理内存：服务端与客户端常在同一台机器上，
+# 堆一涨到上限就会触发磁盘交换，表现为"假人很少、不动、不说话"。
+# 2G 是按 6G 内存机器（Windows 虚拟机）留出系统余量的保守值，可用 BEIDOU_JAVA_OPTS 覆盖。
+DEFAULT_JAVA_OPTS="-Xms512m -Xmx2g -XX:+UseG1GC"
 
 usage() {
   cat <<'USAGE'
@@ -31,6 +35,7 @@ gms-server/target/BeiDou.jar；两者都不存在时，才用 Spring Boot Maven 
 
 环境变量:
   JAVA_HOME_21  自动检测失败时，手动指定 JDK 21 路径
+  BEIDOU_JAVA_OPTS  覆盖默认 JVM 参数（默认: -Xms512m -Xmx2g -XX:+UseG1GC）
 USAGE
 }
 
@@ -267,7 +272,14 @@ if [[ ! -f "$jar" ]]; then
   fi
 fi
 
+java_opts="${BEIDOU_JAVA_OPTS:-$DEFAULT_JAVA_OPTS}"
+
 java_args=()
+if [[ -n "$java_opts" ]]; then
+  # 允许 BEIDOU_JAVA_OPTS 里写多个以空格分隔的参数，这里按词拆分是有意为之
+  # shellcheck disable=SC2206
+  java_args+=($java_opts)
+fi
 if [[ -n "$config" ]]; then
   java_args+=("-Dspring.config.location=$config")
 fi
@@ -276,10 +288,13 @@ if [[ "$has_app_args" -eq 1 ]]; then
   java_args+=("${app_args[@]}")
 fi
 
-mvn_args=(org.springframework.boot:spring-boot-maven-plugin:run -Dmaven.test.skip=true)
+mvn_jvm_args="$java_opts"
 if [[ -n "$config" ]]; then
-  mvn_args+=("-Dspring-boot.run.jvmArguments=-Dspring.config.location=$config")
+  mvn_jvm_args="$mvn_jvm_args -Dspring.config.location=$config"
 fi
+
+mvn_args=(org.springframework.boot:spring-boot-maven-plugin:run -Dmaven.test.skip=true)
+mvn_args+=("-Dspring-boot.run.jvmArguments=$mvn_jvm_args")
 if [[ "$has_app_args" -eq 1 ]]; then
   app_arg_value="$(IFS=,; printf '%s' "${app_args[*]}")"
   mvn_args+=("-Dspring-boot.run.arguments=$app_arg_value")

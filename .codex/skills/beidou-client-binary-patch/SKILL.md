@@ -1,119 +1,456 @@
 ---
 name: beidou-client-binary-patch
-description: Safely patch the BeiDou-Server 32-bit client binaries (BeiDou.exe and compatibility DLLs under clien/) with byte-level, evidence-backed changes — suppressing a crash, skipping a call/exception, guarding a stale pointer. Use for any task that edits a shipped binary rather than WZ/IMG data, and for diagnosing first-chance exceptions or access violations reported by the diagnostic DLLs.
+description: Safely patch the BeiDou-Server 32-bit client binaries and compatibility DLLs with evidence-backed byte changes. Use for client crash diagnosis, first-chance exceptions, protocol hooks, native Canvas/nameplate drawing, and any shipped binary patch.
 agent_created: true
 ---
 
-# BeiDou client binary patch workflow
+# BeiDou 客户端二进制补丁技能
 
-Use this skill only in the `BeiDou-Server` repository, for `clien/*.exe` and
-`clien/*.dll` edits. For WZ/IMG resources use `beidou-wz-img` instead.
+只用于本仓库 `clien/*.exe`、`clien/*.dll` 的二进制修改。WZ/IMG 资源使用
+`beidou-wz-img`。必须遵守 `AGENTS.md`，先取证、再反汇编、再补丁，最后做
+静态契约验证和运行时日志验收。禁止根据一个崩溃地址连续盲改。
 
-The repository `AGENTS.md` rules still apply: smallest evidence-backed change,
-preserve the worktree, never full-tree rewrite a binary, replays and gates
-before delivery.
+## 一、固定工作流
 
-## Worked examples to copy from
+### 1. 先确认基线和现场
 
-- `tool/client-debug/wz-file-logger-fix/` — code-cave stub + guard, DLL with
-  `DYNAMIC_BASE` (stub must be position independent).
-- `tool/client-debug/beidou-skip-media-com-error/` — 1-byte
-  `jge` → `jmp` to skip a `_com_error` throw, fixed-ImageBase EXE.
+1. 先执行 `git status --short`，记录用户已有改动。
+2. 找最新的 `clien/diagnostics/session-*.log`，不要让用户手工转发日志。
+3. 从 `first_chance_av` / `event=crash` 中记录模块、模块偏移、EIP、寄存器、
+   `exception_info` 和调用栈。
+4. 对照同一时刻的 DLL 日志，确认是加载、解包、状态表、绘制、清理中的哪一阶段。
+5. 对二进制建立不可变原始备份和 SHA-256。补丁脚本只能从原始备份重建，不能
+   在已经修改过的 DLL 上叠加第二层未知修改。
 
-Both follow the same layout: `README.md`, `patch_<name>.py`,
-`test_<name>_contract.py`, `backup/<file>.orig`. Copy that layout for new work.
+### 2. 修改前建立完整契约
 
-## Step 1 — get the evidence before touching a byte
+对每个 patch site 记录：
 
-1. `git status --short` first. `clien/BeiDou.exe` is git-tracked, so a pristine
-   baseline is recoverable with
-   `git cat-file blob HEAD:clien/BeiDou.exe > /tmp/base.exe`.
-   **Never** `rtk git show > binary-file`; RTK filtering corrupts binary stdout.
-2. Read the newest `clien/diagnostics/session-*.log`. Match the fault to a
-   module+RVA (`WzFileLogger.dll+0x24f4`) and to a first-chance record
-   (`first_chance_cpp code=0xe06d7363` = MSVC `_com_error`;
-   `exception_info="i0=0x19930520;..."` is the C++ EH magic).
-3. Parse the matching `.dmp` and cross-check the throw site by its **arguments**,
-   not by the nominal frame. See "Frame semantics" below.
+- 原始指令边界和覆盖长度；
+- 输入寄存器、输出寄存器、栈参数；
+- 跳回点之后至少 20 条指令读取的寄存器；
+- 每个状态表 `base+offset` 的所有原始引用；
+- 所有 IAT 调用的真实槽位；
+- code cave 的实际零填充范围；
+- 跳转源和回跳地址是否都是指令边界。
 
-## Step 2 — pin the exact patch site
+最终必须反汇编生成后的 DLL，而不是只检查生成器准备写入的 byte array。
 
-Disassemble with `i686-w64-mingw32-objdump -d -M intel --start-address=…
---stop-address=…`. Two idioms recur in this client:
+## 二、名牌战力 `0x17C` 的已验证正确方法
 
-- **Exception suppression**: `test %eax,%eax` / `jge <normal>` /
-  `push <riid>` / `push %obj` / `push %eax` / `call _com_raise_error`.
-  Converting `jge` (`0x7d`) to `jmp` (`0xeb`) is a **1-byte** fix that sends the
-  failure down the function's normal continuation. Prefer it over NOP-ing the
-  whole block: the dead bytes stay intact and the diff stays minimal.
-- **Stale-pointer guard**: a cached module RVA dereferenced with only a NULL
-  check; add a `VirtualQuery` + `AllocationBase` validation stub in `.text`
-  tail padding.
+当前正确实现参考：
 
-Before patching, prove the target block is dead: no relative branch anywhere in
-the section may land inside it. Both relative encodings must be checked —
-`e8/e9 rel32`, `0f 8x rel32`, `7x rel8`.
+```text
+tool/client-debug/BeiDouSetItemCompat/patch_nameplate_power.py
+```
 
-## Step 3 — frame semantics traps (cost the most time)
+不要重新设计这条路径，除非先明确证明当前协议或客户端版本已经变化。
 
-- `mov eax,<imm>; call <helper>` at function entry is `__EH_prolog3_catch`
-  (e.g. `BeiDou.exe` `0xa60b98`). It **does** establish `ebp`, even though the
-  source has no `push ebp; mov ebp,esp`. So `[ebp+8]`, `[ebp-0xc]`,
-  `mov fs:0,ecx` in the epilogue are ordinary frame locals, not garbage.
-- `[ebp+8]` is not always arg1's *value*. Check the epilogue: a function that
-  ends `mov eax,[ebp+8]` **returns arg1**, and `_com_raise_error`'s frame is
-  3 args (`hr`, `pUnk`, `riid`). Attribute a dump frame by matching the push
-  order, e.g. `push 0xbd8318 / push ebx / push eax` → `[ebp+8]=hr`,
-  `[ebp+0xc]=pUnk`, `[ebp+0x10]=riid`.
-- Argument slots of a frameless-looking helper may be **compiler stack-slot
-  reuse**: at a bare `call X` with no preceding `push`, `X`'s `[ebp+8]` /
-  `[ebp+0xc]` are leftovers from earlier pushes. Reconstruct the whole sequence
-  and subtract each callee's `ret n` to know which value sits where. This is
-  how you decide whether a recovered pointer will be NULL — and therefore
-  whether skipping an exception leads to a graceful branch or a NULL deref.
-- Before declaring a skip safe, find the caller's explicit failure branch
-  (`cmp eax,ebx(0)` / `je <benign path>`). If the caller already has a
-  "result is empty → return E_NOINTERFACE, no throw" arm, the skip is by design.
+### 1. 协议布局
 
-## Step 4 — PE layout gotchas
+服务端发送 opcode 后 15 字节：
 
-- Section header field order is `VirtualSize(+8)`, `VirtualAddress(+12, RVA —
-  not the absolute VA)`, `SizeOfRawData(+16)`, `PointerToRawData(+20)`.
-  Getting these off by four silently "passes" then fails.
-- CheckSum field = `e_lfanew + 24 + 64`. Recompute it after any patch
-  (algorithm: sum 16-bit words with the field zeroed, fold carry, add file
-  length).
-- Read `DllCharacteristics` (`opt + 70`). `0x0040` = `DYNAMIC_BASE`: then any
-  stub must be position independent. `BeiDou.exe` is `0x0000` with ImageBase
-  `0x400000`, so in-place bytes need no relocations.
-- If `SizeOfRawData == VirtualSize`, the section's tail zero padding is mapped
-  RX and is a safe code cave — but do **not** use `0xAEFA20`, which already
-  holds the loader thunk for `DawnWarriorSkillCompat.dll`.
+```text
+characterId: 4 字节，小端序
+enabled:     1 字节
+power:       8 字节，小端序
+```
 
-## Step 5 — verify, and verify the right property
+服务端使用 `writeLong`，战力计算不能再截断到 `Integer.MAX_VALUE`。
 
-`test_*_contract.py` must assert more than "the bytes changed":
+### 2. 原生状态表布局必须保持兼容
 
-- one code byte differs from `backup/*.orig` plus at most the 4-byte checksum
-  field — enumerate the diff offsets and bound them;
-- the patched instruction decodes to what you intended (capstone;
-  **only `/opt/homebrew/bin/python3` has capstone**, the managed venv does not);
-- **reachability, not presence**: dead bytes remain in the file, so a
-  "`call _com_raise_error` no longer appears in the function" assertion is
-  wrong. Do a DFS from the function entry over fall-through plus direct branch
-  edges, and assert the throw is unreachable — then run the same analysis on the
-  backup and assert it *was* reachable. That differential is the real proof.
-- PE checksum self-consistent, section headers, section count and file size all
-  unchanged.
+状态表条目 stride 仍为 16 字节：
 
-Run the patch script twice and require the second run to report
-`already patched` with an unchanged sha256.
+```text
+entry + 0x00: characterId
+entry + 0x04: power 低 32 位
+entry + 0x08: enabled 低 8 位
+entry + 0x09..0x0B: power 高 24 位
+entry + 0x0C: 原生名牌 Canvas/对象指针
+```
 
-## Step 6 — deliver
+保存方式为：
 
-- Deliver only the changed binary to `~/Downloads/<中文功能名>/` plus a short
-  `说明.txt` (what changed, sha256 before/after, how to roll back). Keep the
-  original in `tool/client-debug/<name>/backup/`.
-- Do not claim the fix works at runtime. State the runtime gate explicitly: the
-  user must launch the client and check `clien/diagnostics/session-*.log` for
-  the absence of the matching `first_chance_cpp` / `crash` record.
+```text
+packed = enabled | (powerHigh24 << 8)
+```
+
+绝对不能把 `enabled` 搬到 `entry+0x0C`。`+0x0C` 是原版绘制对象指针，
+把 `1` 写到这里会在后续虚表调用时崩溃。
+
+### 3. 64 位数字必须手工转换
+
+旧版客户端的 `wsprintfA` 不可靠支持 `%I64d` 和 `%*I64d`。不能把这两个格式
+直接交给它，否则会出现字面量格式符、乱码或参数错位。
+
+正确流程：
+
+1. 读取 low32 和 high24；
+2. 在 DLL 内使用无依赖整数算法将 64 位值转换成十进制 ASCII；
+3. 复用原版千分位插入逻辑；
+4. 根据整数 power 选择等级名；
+5. 只用 `%s` 拼接最终显示文本：
+
+```text
+%s || 战斗力：%s
+```
+
+最终文本必须写入原生 label 缓冲区 `[ebp-0xF8]`，不能把诊断缓冲区、数字临时
+缓冲区或日志文本当作 `MakeNameplate` 的显示参数。
+
+等级名以客户端实际字符串编码写入，当前版本使用 GBK，并确保每个字符串以 NUL
+结尾。诊断文本（`ACCEPT`、`P-CREATE` 等）必须与可见 label 格式串完全分离。
+
+### 4. 绘制生命周期和寄存器契约
+
+重复收到相同 `0x17C` 状态时，应跳过销毁/重建 Canvas；启用但没有 Canvas 时
+才允许创建；禁用且没有 Canvas 时不应触发刷新。
+
+自定义日志路径如果已经替换原版 formatter/logger，必须直接跳到验证过的函数尾部。
+不要落入要求 `EBX` 指向栈字符串的原版代码，因为自定义路径中 `EBX` 可能是
+characterId。
+
+每个 cave 必须保留跳回后继代码所需的寄存器。特别注意后继可能执行 `call edx`；
+这种情况下 cave 不能把 `edx` 当临时寄存器，除非在跳回前恢复。
+
+## 三、已知高危错误清单
+
+补丁脚本和人工审查必须拒绝以下情况：
+
+- `8B 73 80` 实际是 `[ebx-0x80]`，不是 `[ebx+0x80]`；后者使用
+  `8B B3 80 00 00 00`。
+- **成对 opcode 的操作数方向**（`39/3B`、`01/03`、`09/0B`、`21/23`、`29/2B`、`31/33`）：
+  `39 /r` 是 `CMP r/m32, r32`（dest = 内存），`3B /r` 才是 `CMP r32, r/m32`（dest = 寄存器）。
+  写反**不会报错、不会崩**，只会让整个比较取反 —— 实测把 `cmp edx,[表+ecx*4]`
+  误写成 `cmp [表+ecx*4],edx`，配 `jb done` 后档位阶梯直接反转：战力越高档位越低，
+  400 万战力被钉在最低档，而战力不足 1 万反而拿最高档。
+  **脚本注释里声称的操作数顺序必须与反汇编输出逐字对照**，并在验证阶段用
+  Capstone 断言首字节与 `op_str` 前缀（见第四节第 12 条）。
+- 不得把 `entry+0xC` 用作 enabled。
+- 不得把 IAT `RVA 0x310014` 当成 `wsprintfA`；当前 DLL 已验证槽位是
+  `RVA 0x310114`。
+- 不得把活跃代码 `RVA 0x1FB4` 当作 cave；当前已验证 `.text` slack 是
+  `RVA 0x3FB4`。
+- 不得把可执行 cave 放在节 `VirtualSize` 之外。`BeiDouSetItemCompat.dll`
+  的 `.text` 在 `RVA 0x3FB4` 结束，放在 `.text` 尾部 slack 的代码在某些
+  Windows 加载器上不会被映射，首次进入即触发执行违例（`i0=8`）。可执行
+  代码必须放在有完整 `VirtualSize` 覆盖的节中（例如新增 RWX 节）。
+- 不得把 `89 04 24` 这种 3 字节指令按 4 字节计算覆盖长度。
+- 不得覆盖半条指令、原版 call 或跳回地址的首字节。
+- 不得在跳回后仍需使用 `edx` 时改写 `edx`。
+- 不得用 `%I64d` 显示战力。
+- 不得把日志格式串送入实际绘制参数。
+- 看到 `ACCEPT` 只能证明收包成功，不能证明绘制正确。
+
+## 四、必须执行的静态验证
+
+每个补丁都必须：
+
+1. 校验输入 SHA-256 是预期基线；
+2. 从原始备份重建，不叠加 patch；
+3. 校验 PE 节表、节数量、文件大小不变；
+4. 校验 code cave 原本全为零；
+5. 用 Capstone 反汇编最终 DLL；
+6. 逐个解析最终的 call、IAT、内存位移、格式串地址和回跳目标；
+7. 检查所有跳转起止地址为完整指令边界；
+8. 检查原版状态表 offset 的全部引用没有语义冲突；
+9. 验证格式字符串只包含支持的 `%s`/普通整数格式；
+10. 连续运行补丁脚本两次，第二次必须报告 already patched，SHA-256 不变；
+11. 不以“DLL 能加载”代替验证。
+12. **逐条断言关键运算指令的操作数方向**：比较 / 加法 / 位运算在反汇编后要检查
+    `op_str` 里 dest 到底是寄存器还是内存，并与设计意图一致。成对 opcode
+    （`39/3B` 等）写反后字节完全合法、能通过结构校验，"结果取反"只在运行时暴露。
+    断言写法：定位该指令 → `assert insn.bytes[0] == 0x3B` →
+    `assert insn.op_str.startswith('edx, dword ptr [eax + ecx*4')` → 再断言其下一条
+    是期望的条件跳转。这类断言同时要放进契约测试，对**修复前的产物必须报错**。
+
+如果使用 checksum，必须重新计算 PE checksum；如果不改变 checksum，要明确记录
+该 DLL 加载链不校验 checksum 的证据。
+
+## 五、运行时验收
+
+用户启动客户端后，代理必须自行读取最新日志确认：
+
+- `ACCEPT` 出现；
+- 可见文本是真实 GBK 文本，不是字面格式符、乱码或诊断日志；
+- 启用、更新、禁用、重新启用均正常；
+- 重复包没有持续销毁/重建同一个 Canvas；
+- 最新 `session-*.log` 没有 `BeiDouSetItemCompat.dll` 访问违例；
+- 没有由首个崩溃引发的 `WzFileLogger.dll` 清理崩溃。
+
+没有经过实际日志和屏幕结果验证时，只能说“静态验证通过”，不能声称运行正常。
+
+## 六、交付规则
+
+为每个新补丁保留：
+
+```text
+README.md
+test_<name>_contract.py
+patch_<name>.py
+backup/<original>.orig
+```
+
+说明文件必须记录：修改目标、原始/最终 SHA-256、回滚方法、已完成的静态验证和
+尚未完成的运行时验证。二进制修改只交付必要文件，不提交日志、dump 或临时产物。
+
+## 七、必须先证明「进程真的加载了这份二进制」
+
+**这是最容易翻车的一步。** 客户端跑在 Parallels 的 Windows 虚拟机里，经
+`C:\Mac\Home\...` 读 macOS 共享目录。实测到过：补丁字节在盘上、文件写入时间
+也早于本次启动，但崩溃转储证明进程执行的仍是**未打补丁的代码**；而
+`diagnostic_file` 记录的 `write_time` 与 Mac 的 `mtime` **逐位一致**——
+**元数据是新的，内容却是旧的**。
+
+小型 minidump **不抓代码页**，`Dump.read(va)` 会返回「页不在转储中」，
+所以不能靠读内存字节判版本。用这两条自证判据：
+
+1. `MINIDUMP_MODULE` 记录（偏移：`BaseOfImage`+0、`SizeOfImage`+8、
+   `CheckSum`+12、`TimeDateStamp`+16、`ModuleNameRva`+20，记录长 108 字节）：
+   把 `CheckSum` 与候选文件的 PE CheckSum 比对即可判版本。
+2. **崩溃 EIP 的模块内偏移** vs 补丁后该偏移的字节。若补丁处已是 `nop` 或
+   已改成 `call cave`，就**不可能**在它上面触发访问违例。这条比 CheckSum 更硬，
+   因为它直接约束执行流。
+
+交付说明里必须附上虚拟机内的核对步骤：
+`certutil -hashfile "<路径>" SHA256` ↔ Mac 侧 `shasum -a 256`；不一致就改用
+虚拟机本地磁盘（如 `C:\BeiDou\`）、或先删/改名再复制、或断开重连共享目录，
+改名运行也能绕过按文件名缓存。
+
+### 缓存失效与「文件大小是否变化」强相关
+
+为什么改 IMG/WZ 能生效、改 exe/dll 不生效？因为**原地等长字节替换不改变文件大小**，
+而 `WZImage` 的改动通常改变大小。共享目录驱动转发了 `size`/`mtime`，但 Windows
+的缓存没有失效。所以：
+
+- **二进制补丁的部署成本天然比资源补丁高**，交付时必须显式提醒；
+- 让用户做的动作按可靠性排序：① 重启虚拟机 → ② 在虚拟机里 `del` + `copy`
+  （**源文件必须在虚拟机本地磁盘上**，否则读源还是走缓存）→ ③ 整个 client
+  复制到本地磁盘运行；
+- 可以给一个 `.bat` 把「校验 → 删除 → 重建 → 再校验」串起来，并**检测脚本自身
+  是不是还在 `C:\Mac\Home\...` 下运行**（是则警告，因为源可能也是旧的）；
+- 如果反复出现「盘上是对的、进程里是旧的」，可在下一次交付时**故意让文件大小
+  发生变化**（例如给自定义诊断 DLL 追加少量填充），使 `diagnostic_file size=`
+  变成一个天然探针。副作用需自行评估，`BeiDou.exe` 上有 nProtect 类模块
+  （`nmconew.dll`）时不要轻易改它的体积。
+
+**未核对哈希之前，不得断言补丁无效，也不得转而怀疑补丁逻辑。**
+
+## 八、代码洞桩的写法与栈平衡
+
+先尝试「就地改 1~2 字节」（例如把 `jge` 改 `jmp` 让失败路径走正常收尾）；
+空间不够再用洞。BeiDou.exe 的可用洞：
+
+- `0xAEFE30` 起约 464 字节全零、**零入口** —— 真正空闲区；
+- `0xAEFA20` 是 DawnWarriorSkillCompat 加载器 thunk；
+- `0xAEFD80..0xAEFE2E` 是另一个既有桩（结尾 `e9 …`）。
+
+后两者都在空闲区**之前**，不要覆盖。**别信「上一轮笔记说这段是空的」**，
+每次都要重新验证区域全零且无分支落入。
+
+推荐 `call cave` + 桩尾 `ret` 的形式，返回地址显式落在洞里，不需要近距离洞：
+
+```text
+就地 6 字节 = E8 rel32 (5) + 90 (1)     ; ret 落在那颗 90 上，再自然流入原下一条指令
+桩内保留原有的 mov/push/call 三条，前面加 test + je
+```
+
+**栈账必须把被搬走的 callee 的 `ret N` 算进去。** `push arg` 使 ESP-4，
+stdcall callee 的 `ret N` 会把自己的参数弹掉，所以桩的 `ret` 之后 ESP 必须与
+「基线走同一分支到回跳点」时相等。BeiDou.exe 实例：
+
+```text
+入桩 E-8 → push eax 后 E-12 → AddRef 的 `ret 4` 回 E-8 → 桩 `ret` 回 E-4
+基线 je 跳过路径到 0x410FFB 也是 E-4  ✔ 两条路径一致
+```
+
+就地原有的条件跳转（如 `je`）**不要动**，只把「会崩的那半条路径」改走洞，
+未命中的路径零改动、零风险。
+
+## 九、PE 布局的坑
+
+- **节表里的 `VirtualAddress` 是 RVA，不是 VA。** BeiDou.exe：`ImageBase=0x400000`、
+  `.text` `RVA=0x1000 / raw=0x1000 / rsize=0x6EF000`（`rsize == vsize`，所以尾部
+  填充区映射为 RX 可当洞），因此 `va_to_off(va) = va - 0x400000`。
+  不要把 `0x1000`（RVA）和 `0x401000`（VA）混着比。
+- BeiDou.exe 的 PE CheckSum 字段在**文件偏移 `0x180`**（`e_lfanew+24+64`）。
+- 先跑一次「重算 CheckSum == 文件里已有的值」作为算法自检，过了再谈改写。
+
+### 重定位表（`.reloc`）必须与补丁同步 —— 「PC 好、手机崩」的头号成因
+
+DLL 有 `.reloc`（HIGHLOW/type 3）时：加载器会把每个条目所指的 4 字节当成
+「映像内绝对地址」，加上 `实际基址 − ImageBase`。**补丁改变了代码布局却没同步
+`.reloc`，就会留下指向代码填充区的僵尸条目**：按首选基址加载（delta=0）时它是空操作，
+DLL 一旦被重定位（Wine/Box86、或 Windows 抽到别的基址），填充字节就被改写。
+
+实测（`BeiDouSetItemCompat.dll`，手机落在 `0x78700000`，delta `0x12A80000`）：
+
+```text
+RVA 0x1EDC: 90 90 90 90 → 90 90 38 A3      # 第 4 字节变成 A3
+RVA 0x1EDF 正是 .data+0x1F3 的 `jmp 0x65C81EDF` 落点
+          →  CPU 执行 A3 90 90 90 90 = mov dword ptr [0x90909090], eax
+          →  C0000005 写 0x90909090，进程退出
+```
+
+判据与流程：
+
+1. 遍历 `.reloc` 块链（`page(4) + blocksize(4) + word*`），对每个 `type!=0` 条目
+   读出目标 RVA 处的 DWORD；**不在 `[ImageBase, ImageBase+SizeOfImage)` 内且非 0
+   的条目就是僵尸**（对照转储的完整模块表确认它不是别的模块的地址）。
+2. 一并检查两类重叠：条目落在 `0x90` 填充里（改成别的指令），或**落在一条
+   `call/jmp rel32` 的中间**（重定位后跳转/调用目标变野指针）。
+   `WzFileLogger.dll` 就是后者：`0x24EC` 压在 STUB_A 的 `call` 上、`0x4413` 压在
+   CAVE_C 的 `jmp` 上 → 手机第二次崩溃 `eip=0x09616640`、栈顶返回 `WzFileLogger+0x24EF`。
+3. 修复＝删条目 + 重建块链（每块 4 字节对齐，用 type 0 补位）+ 同步
+   `DataDirectory[5].Size` 与 `.reloc` 的 `VirtualSize` + 清零 raw 尾部 + 重算 CheckSum。
+   **文件长度不变；按首选基址运行时内存映像逐字节不变**（delta=0 时这些条目本来就是空操作）。
+4. 反向验证：用探针 delta（如 `0x12340000`）模拟重定位，断言这些 RVA 的字节
+   在修复前会变、修复后不变；再按手机的真实加载基址反汇编崩溃点，确认恢复成原指令。
+5. 工具：`tool/client-debug/BeiDouSetItemCompat/fix_dll_reloc_hygiene.py <dll> [--apply]`，
+   不带 `--apply` 只报告，可对 `clien/*.dll` 批量巡检。
+
+#### ⚠️ 不要再说「PC 上不会触发」（2026-09-24 第二次现场推翻）
+
+早期结论「PC 通常落在首选基址、所以只在手机崩」是**错的**。实测他人 PC：
+
+| 会话 | `WzFileLogger.dll` 实际基址 | 首选 `0x6DD00000` → delta | 被损坏的 `call STUB_A` 目标 |
+|---|---|---|---|
+| 手机（Wine/Box86） | `0x78610000` | `0x0B710000` | `0x09616640`（转储记录） |
+| PC 第 1 次启动 | `0x5F7C0000` | `0xF1AC0000` | `0x0B7C6640`（日志记录） |
+| PC 第 2 次启动 | `0x598B0000` | `0xECBB0000` | `0x148B6640` / `jmp` → `0x148B66B0` |
+| PC 第 3 次启动 | `0x5F8A0000` | `0xF1BA0000` | `0x198A6640` / `jmp` → `0x198A66B0` |
+
+要点：
+
+* 这些补丁 DLL 都带 `DYNAMIC_BASE`，**Windows 上每次开机都会重定位**，僵尸条目必然生效；
+* 同一开机周期内，同一加载顺序下 Windows 给的基址是**固定**的
+  → 表现为「这台电脑每次崩在同一个地址」，很容易被误判成"某张地图/某个技能的问题"；
+* 损坏后的跳转目标**低 16 位恒定等于桩的 RVA**（`…6640`=STUB_A、`…66B0`=CAVE_C），
+  只有高位字节随基址变。**这条规律可以直接用来从纯日志反解模块基址**：
+
+  ```text
+  已知 site A: RVA 0x24EA,E8 51 41 00 00 ; 条目 RVA 0x24EC（原值 0x90000041）
+  受损 rel32 = 0x51 | (((base - ImageBase + 0x41) & 0xFFFFFF) << 8)
+  目标      = base + 0x24EF + rel32
+  → 由日志里的 eip（= 目标）反解 base，再正算 site C 的目标，两边就能互相校验
+  ```
+
+  `EquipSlotDiagnostic.log` 里每个会话都有的 `EQUIP EXCEPTION: eip=…6640` 就是这个
+  `call STUB_A` 的现场 —— **看到它以 `6640`/`66B0` 结尾，直接判为僵尸条目，不必再查地图和资源**。
+
+#### 交付纪律：改完不发 = 没修
+
+这条 bug 复发的原因不是技术，是流程：本地修好后**只改了仓库里的文件、没有重新发货，
+也没有提交**，对方继续用旧 DLL 复现。因此：
+
+* 任何补丁完成后，**必须跑一次 `fix_dll_reloc_hygiene.py clien/*.dll`**（全量，不只改动的那个）；
+* 契约测试必须包含「`type==3` 条目不得落在被打过补丁的 `call/jmp rel32` 区间内」这条断言
+  （见 `wz-file-logger-fix/test_flash_slot_guard_contract.py` 第 7 步），否则下次重建会悄悄带回来；
+* 交付包必须写明**修复前后的 CheckSum/sha256**，并附校验脚本，让接收方能自证拿到的是新版；
+* 同一份修复**要么提交进 git，要么在交付记录里留指纹** —— 否则「已修」和「已发货」会脱节。
+
+## 十、契约测试里容易写错的断言
+
+- **不要直接断言 capstone 渲染出来的操作数文本**，先打印实际值再写断言：
+  `ret 8` 的 `op_str` 是 `"8"`（不是 `"0x8"`）；`call dword ptr [ecx + 4]`
+  去空格后是 `dwordptr[ecx+4]`。用 `insn.size` / `insn.bytes` 做硬判据更稳。
+- **可达性差分**才是「崩点/抛点被消掉」的正确判据：基线里从函数入口可达
+  `mov ecx,[eax]`，补丁后 `eax==0` 的路径不可达。不要在函数体里 grep
+  「还有没有那条 call」——死代码字节是刻意保留的，那个断言必然假失败。
+- 必须断言「没碰的东西」：上一轮已打过的补丁点、已知加载器 thunk、
+  洞前面那个桩的结尾字节、函数尾声的若干字节、以及最终字节差异清单。
+- **读 `.text` 字节时注意基准**：如果把 `.text` 切成 `data[raw:raw+rsize]`，
+  那么取某 VA 必须用 `va - TEXT_VA`，**不能再加 `PointerToRawData`**；
+  但读 PE 头/CheckSum 要用**整个文件**的 `data`。两套基准混用会得到
+  「基线字节是 0xff」这类假失败，或直接 `IndexError`。
+
+## 十一、覆盖长度必须避开「后继指令依赖的字节」
+
+替换区间的**右端点不是「凑够能放下 jmp」就行**，必须回头看回跳点之后的
+两三条指令依赖什么。
+
+BeiDou.exe 实例（`0x401D3E`）：
+
+```text
+401D3E  8B 46 20        mov eax,[esi+0x20]
+401D41  8B 40 14        mov eax,[eax+0x14]
+401D44  85 C0           test eax,eax     <-- 桩要跳回这里来设置 ZF
+401D46  8B DA           mov ebx,edx      <-- 也不能被吃掉
+401D48  74 04           je 0x401D4E      <-- 依赖上面那条 test 的 ZF
+```
+
+`0x401D3E..0x401D43` 共 6 字节放 `E9 rel32`(5) + `90`(1)。若贪图整体对齐改成
+8 字节（连 `85 C0` 一起替换），桩跳回 `0x401D44` 时就没有东西设置 ZF，
+`0x401D48` 的 `je` 会读到上一条指令遗留的标志位 —— **静默的错误分支**，
+比崩还难查。
+
+结论：**先画出「替换区间 → 桩 → 回跳点 → 后继依赖」的完整图，再定长度。**
+
+## 十二、被替换区间「有外部入口」不一定是禁区
+
+不要用「有分支跳进来就放弃」这种一刀切。要**判断每个入口处的寄存器状态
+是否满足桩的前提**：
+
+`0x401D52` 有唯一外部入口 `0x401DBC: add edi,4; jmp 0x401D52`（内层循环回跳），
+那里 `edi` 必然非零，走桩首条 `test edi,edi` 会原样通过 —— 行为完全等价，
+所以可以改。契约测试里应对这类入口做**显式豁免**（`allow=(0x401D52,)`），
+而不是假装它不存在，也不是因为它存在就绕开这个修法。
+
+反之，如果入口处的寄存器可能不满足桩的前提，就必须把桩写成对**所有入口**
+都安全的形式，或者选择别的替换点（例如改 `je` 的目标而不是改解引用处）。
+
+## 十三、统一补丁：一个入口，禁止脚本叠加
+
+同一个二进制上叠多个独立补丁脚本是**反复出错的主要来源**：
+
+- 每个脚本都假设自己看到的是原始字节，叠加顺序一变就互相破坏；
+- 更难发现的是**区间长度变化**这类问题（例如某个脚本多吃了一个字节），
+  叠加后没有任何一处会报错，但某个回跳点前的标志位设置已经没了。
+
+正确做法：**一个目录、一个脚本、一个基线**，从 `backup/<name>.orig`
+**完整生成**完整结果。
+
+- 幂等判定用**整文件 SHA-256 比较**，不要用「逐个补丁点字节符合期望」——
+  后者在替换长度变化时会误判为「已完成」而跳过写盘。
+- 每个补丁点写进脚本时都带 `old` 字节，生成前 `assert actual == old`，
+  这样一旦基线不对会立刻失败，而不是产出混合体。
+- 交付前跑一次「重跑脚本 → 报告与磁盘完全一致」，以及**从基线重新生成的
+  结果哈希**应当稳定。
+
+## 十四、给他人分发的交付包怎么打
+
+补丁本体只是两个文件，但交付包要自己会「装上并证明装上了」。固定结构：
+
+```
+<功能名>/
+  BeiDou.exe / <其它被改的二进制>   ← 要替换的文件，放最外层
+  WzFileLogger.dll
+  安装.bat                          ← 自动备份 + 替换 + 逐字节校验
+  说明.txt  / 修改文件清单.txt       ← 中文文档
+  原始版本参考/                      ← 修复前版本，仅参照/回滚
+```
+
+要点与坑：
+
+- **安装脚本必须先备份对方原文件**（`备份_日期_时间/`），再替换。跨人分发时，
+  对方自己的原文件才是正确的回滚目标，我们的 `原始版本参考` 只是参照。
+- **替换用「先 `del` 再 `copy`」**，并在最后用 `fc /b` 源↔目标逐字节比对。
+  共享目录下 `copy /y` 可能报成功却仍是旧内容；`del`+`copy` 能让文件对象重建，
+  而 `fc /b` 是唯一能戳穿「元数据新、内容旧」的检查（见第七节）。
+- 校验**不要依赖 `certutil` 输出解析**（不同 Windows 版本空格格式不同）。
+  `fc /b` 做自动判定，把 SHA256 打印出来给人眼核对即可。
+- **`.bat` 必须存成 GBK + CRLF**（中文 Windows 的 cmd 默认 936 代码页）。
+  存成 UTF-8 会让所有中文提示变乱码。不要用 `powershell -Command "...中文路径..."`
+  —— 从 cmd 传中文路径给 PowerShell 会被按控制台代码页误解码。
+  另外别把中文写进 `if` 比较或文件名变量，只放在 `echo` 文本里。
+- **`.txt` 存成 UTF-8 with BOM + CRLF**，记事本打开才不会乱码。
+- **zip 必须带 UTF-8 文件名标志位**：macOS 的 `zip -r` 写 UTF-8 文件名却
+  **不打 `0x800` 标志**，中文 Windows 解压会乱码。用 Python：
+  `zipfile.ZipFile(...).write(...)`（非 ASCII 名会自动置 `0x800`）。
+  打包后断言每个 entry 的 `flag_bits & 0x800` 为真。
+- 交付包**只放二进制和文档**，不要把 `diagnostics/` 日志、dump、补丁脚本、
+  备份目录塞进去。补丁脚本留在仓库 `tool/client-debug/` 下。
+- 说明里必须写清：**换了文件后要重启虚拟机**（共享目录缓存），
+  以及**回滚用哪一份**、**还崩时该回收哪些日志**（session-*.log / crash-*.dmp /
+  崩溃时的 exe SHA256）——有这三样才能直接定位而不用猜。
