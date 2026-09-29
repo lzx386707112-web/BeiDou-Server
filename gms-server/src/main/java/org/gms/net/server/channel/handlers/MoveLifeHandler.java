@@ -74,6 +74,10 @@ public final class MoveLifeHandler extends AbstractMovementPacketHandler {
         }
 
         Monster monster = (Monster) mmo;
+        if (org.gms.server.life.SeedTowerCompat.controls(player, monster)) {
+            c.sendPacket(PacketCreator.moveMonsterResponse(objectid, moveid, monster.getMp(), false));
+            return;
+        }
         boolean traceKaringBoss = KARING_BOSS_IDS.contains(monster.getId());
         boolean traceArcanaMob = monster.getId() == 8644001
                 && (map.getId() == 450005120 || map.getId() == 450005131);

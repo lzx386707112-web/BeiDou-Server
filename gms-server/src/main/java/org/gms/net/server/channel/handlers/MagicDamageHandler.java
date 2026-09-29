@@ -669,6 +669,9 @@ public final class MagicDamageHandler extends AbstractDealDamageHandler {
 		chr.getAutobanManager().spam(8);*/
 
         AttackInfo attack = parseDamage(p, chr, false, true);
+        if (org.gms.server.life.SeedTowerCompat.handleAttack(chr, attack)) {
+            return;
+        }
         if (chr.getBuffEffect(BuffStat.MORPH) != null) {
             if (chr.getBuffEffect(BuffStat.MORPH).isMorphWithoutAttack()) {
                 // How are they attacking when the client won't let them?

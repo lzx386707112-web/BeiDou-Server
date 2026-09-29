@@ -249,6 +249,7 @@ public class Character extends AbstractCharacterObject {
     private transient int localstr, localdex, localluk, localint_, localmagic, localwatk;
     private transient int equipmaxhp, equipmaxmp, equipstr, equipdex, equipluk, equipint_, equipmagic, equipwatk, localchairhp, localchairmp;
     private transient SetItemManager.Bonus setItemBonus = SetItemManager.Bonus.NONE;
+    private final Set<BuffStat> setItemNativeStatsSent = new HashSet<>();
     private transient volatile LinkSystemService.Bonus linkBonus = LinkSystemService.Bonus.NONE;
     private int localchairrate;
     @Getter
@@ -1011,6 +1012,7 @@ public class Character extends AbstractCharacterObject {
         if (client.getChannelServer().getPlayerStorage().getCharacterById(getId()) != null) {
             updateLocalStats();
             sendPacket(PacketCreator.cancelBuff(buffstats));
+            syncSetItemNativeStats();
             if (!buffstats.isEmpty()) {
                 getMap().broadcastMessage(this, PacketCreator.cancelForeignBuff(getId(), buffstats), false);
             }
@@ -2049,6 +2051,7 @@ public class Character extends AbstractCharacterObject {
      */
     public void setMapTransitionComplete() {
         this.mapTransitioning.set(false);
+        syncSetItemNativeStats();
     }
 
     public void changePage(int page) {
@@ -2961,6 +2964,7 @@ public class Character extends AbstractCharacterObject {
         updateLocalStats();
         getMap().broadcastMessage(PacketCreator.nameplatePowerUpdate(this));
         sendPacket(PacketCreator.setItemUpdate(this));
+        syncSetItemNativeStats();
         if (getMessenger() != null) {
             getWorldServer().updateMessenger(getMessenger(), getName(), getWorld(), client.getChannel());
         }
@@ -3920,6 +3924,7 @@ public class Character extends AbstractCharacterObject {
             }
 
             updateEffects(updatedBuffs);
+            syncSetItemNativeStats();
         } finally {
             effLock.unlock();
         }
@@ -3954,6 +3959,7 @@ public class Character extends AbstractCharacterObject {
         dropBuffStats(cancelEffectInternal(effect, overwrite, startTime, removedStats));
         updateLocalStats();
         updateEffects(removedStats);
+        syncSetItemNativeStats();
 
         return !removedStats.isEmpty();
     }
@@ -4571,6 +4577,7 @@ public class Character extends AbstractCharacterObject {
         }
 
         updateLocalStats();
+        if (!isSilent) syncSetItemNativeStats();
     }
 
     private static int getJobMapChair(Job job) {
@@ -5279,8 +5286,62 @@ public class Character extends AbstractCharacterObject {
     public void refreshSetItemBonuses() {
         updateLocalStats();
         sendPacket(PacketCreator.setItemUpdate(this));
+        syncSetItemNativeStats();
         if (getMap() != null) {
             getMap().broadcastMessage(PacketCreator.nameplatePowerUpdate(this));
+        }
+    }
+
+    public List<Pair<BuffStat, Integer>> mergeSetItemNativeStats(List<Pair<BuffStat, Integer>> stats) {
+        effLock.lock();
+        chrLock.lock();
+        try {
+            return stats.stream().map(stat -> new Pair<>(stat.getLeft(),
+                    setItemNativeStatValue(stat.getLeft(), stat.getRight()))).toList();
+        } finally {
+            chrLock.unlock();
+            effLock.unlock();
+        }
+    }
+
+    private int setItemNativeStatValue(BuffStat stat, int skillBuff) {
+        if (org.gms.server.SetItemNativeStats.key(stat) == null) return skillBuff;
+        int equipment = 0;
+        for (Item item : getInventory(InventoryType.EQUIPPED)) {
+            if (item.getPosition() <= -100 || item.getPosition() >= 0) continue;
+            if (ItemConstants.isSecondaryWeapon(item.getItemId())
+                    && !ItemConstants.canEquipSecondaryWeapon(item.getItemId(), job)) continue;
+            equipment += org.gms.server.SetItemNativeStats.equipmentValue((Equip) item, stat);
+        }
+        return org.gms.server.SetItemNativeStats.mergedValue(setItemBonus, stat, equipment, skillBuff);
+    }
+
+    public void syncSetItemNativeStats() {
+        effLock.lock();
+        chrLock.lock();
+        try {
+            long now = Server.getInstance().getCurrentTime();
+            for (BuffStat stat : org.gms.server.SetItemNativeStats.STATS) {
+                String key = org.gms.server.SetItemNativeStats.key(stat);
+                boolean active = setItemBonus.get(key) != 0 || setItemBonus.get(key + "Pct") != 0;
+                if (!active && !setItemNativeStatsSent.contains(stat)) continue;
+                BuffStatValueHolder holder = effects.get(stat);
+                if (holder == null && !active) {
+                    sendPacket(PacketCreator.cancelBuff(List.of(stat)));
+                } else {
+                    int source = holder == null ? 0 : holder.effect.getBuffSourceId();
+                    long expires = holder == null ? Long.MAX_VALUE
+                            : buffExpires.getOrDefault(source, now);
+                    int duration = (int) Math.min(Integer.MAX_VALUE, Math.max(1L, expires - now));
+                    int value = setItemNativeStatValue(stat, holder == null ? 0 : holder.value);
+                    sendPacket(PacketCreator.giveBuff(source, duration, List.of(new Pair<>(stat, value))));
+                }
+                if (active) setItemNativeStatsSent.add(stat);
+                else setItemNativeStatsSent.remove(stat);
+            }
+        } finally {
+            chrLock.unlock();
+            effLock.unlock();
         }
     }
 
@@ -7628,15 +7689,16 @@ public class Character extends AbstractCharacterObject {
             setItemBonus = SetItemManager.compute(this).bonus();
             recalcEquipStats();
 
-            localMaxHp += setItemBonus.get("HP");
-            localMaxMp += setItemBonus.get("MP");
-            localstr += setItemBonus.get("STR");
-            localdex += setItemBonus.get("DEX");
-            localint_ += setItemBonus.get("INT");
-            localluk += setItemBonus.get("LUK");
-            localwatk += setItemBonus.get("PAD");
-            localmagic += setItemBonus.get("MAD");
-            localmagic += setItemBonus.get("INT");
+            localMaxHp = setItemBonus.apply("HP", localMaxHp);
+            localMaxMp = setItemBonus.apply("MP", localMaxMp);
+            localstr = setItemBonus.apply("STR", localstr);
+            localdex = setItemBonus.apply("DEX", localdex);
+            localluk = setItemBonus.apply("LUK", localluk);
+            int setInt = setItemBonus.apply("INT", localint_);
+            localmagic = (int) Math.min(Integer.MAX_VALUE, (long) localmagic + setInt - localint_);
+            localint_ = setInt;
+            localwatk = setItemBonus.apply("PAD", localwatk);
+            localmagic = setItemBonus.apply("MAD", localmagic);
 
             localMaxHp += linkBonus.hp();
             localMaxMp += linkBonus.mp();

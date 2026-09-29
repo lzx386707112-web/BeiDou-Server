@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>当前 Boss 血量一览</title>
+<style>
+  :root{--bg:#0f1116;--panel:#171a21;--panel2:#1d2129;--line:#2a2f3a;--tx:#e6e9ef;--tx2:#98a1b3;--acc:#e05c5c;--acc2:#63b3ed;--ok:#5fbf85;}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.6 -apple-system,"PingFang SC","Microsoft YaHei",Segoe UI,sans-serif;}
+  .wrap{max-width:1180px;margin:0 auto;padding:28px 20px 60px;}
+  h1{font-size:22px;margin:0 0 6px;}
+  .sub{color:var(--tx2);font-size:13px;margin-bottom:18px;}
+  .cards{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:18px;}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 16px;min-width:150px;}
+  .card b{display:block;font-size:20px;color:var(--acc);}
+  .card span{color:var(--tx2);font-size:12px;}
+  .bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px;}
+  input,button{font:inherit;color:var(--tx);background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:7px 12px;outline:none;}
+  input{min-width:220px}
+  button{cursor:pointer}
+  button.on{border-color:var(--acc);color:var(--acc)}
+  table{width:100%;border-collapse:collapse;background:var(--panel);border-radius:10px;overflow:hidden;}
+  th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top;}
+  th{background:var(--panel2);color:var(--tx2);font-weight:600;cursor:pointer;white-space:nowrap;user-select:none;}
+  th:hover{color:var(--tx)}
+  td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;}
+  tr:hover td{background:#1a1e26}
+  .name{font-weight:600}
+  .ids{color:var(--tx2);font-size:12px}
+  .g1{border-left:3px solid var(--acc);}
+  .g2{border-left:3px solid var(--acc2);}
+  .badge{display:inline-block;font-size:11px;padding:1px 7px;border-radius:20px;border:1px solid var(--line);color:var(--tx2);margin:2px 4px 0 0;}
+  .badge.warn{color:#f0b95e;border-color:#5a4a25;}
+  .meter{height:6px;border-radius:4px;background:linear-gradient(90deg,#e05c5c,#f0b95e);margin-top:4px;}
+  .mob{width:120px;display:inline-block;vertical-align:middle}
+  h2{font-size:16px;margin:26px 0 10px;color:var(--tx2);}
+  .note{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 18px;color:var(--tx2);font-size:13px;}
+  .note b{color:var(--tx)}
+  code{background:var(--panel2);padding:1px 5px;border-radius:5px;color:#d5b06a;}
+  tr.hide{display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>当前 Boss 血量一览</h1>
+  <div class="sub">数据来源：服务端 <code>gms-server/wz/Mob.wz/&lt;id&gt;.img.xml</code> 与客户端 <code>clien/Data/Mob/&lt;id&gt;.img</code> 实测读取，名称取 <code>wz-zh-CN/String.wz/Mob.img.xml</code>。生成时间 2026-09-29。</div>
+
+  <div class="cards">
+    <div class="card"><b>监视者卡洛斯</b><span>最高血量 295 亿（ID 8880803）</span></div>
+    <div class="card"><b>46</b><span>列出记录数（35 条主批次 + 11 条关联）</span></div>
+    <div class="card"><b>2631.5 亿</b><span>主批次合计有效血量</span></div>
+    <div class="card"><b>3652.0 亿</b><span>全部列出记录合计</span></div>
+  </div>
+
+  <div class="bar">
+    <input id="q" placeholder="搜索名称 / ID">
+    <button class="on" data-g="all">全部</button>
+    <button data-g="boss-hp-pass">主批次</button>
+    <button data-g="related">关联记录</button>
+    <span class="ids">点击表头排序</span>
+  </div>
+
+  <table id="t">
+    <thead>
+      <tr>
+        <th data-k="name">名称</th>
+        <th data-k="id" class="n">ID</th>
+        <th data-k="slv" class="n">等级</th>
+        <th data-k="shp" class="n">服务端 maxHP</th>
+        <th data-k="chp" class="n">客户端 maxHP</th>
+        <th data-k="yi" class="n">亿</th>
+        <th data-k="z">备注</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <h2>口径与注意</h2>
+  <div class="note">
+    <p><b>1｜主批次（红线）</b>＝ <code>tool/scripts/migration/sync_boss_hp_pass.py</code> 的 HP 名单，2026-09-23 提交「四傻完善」落地；已逐条比对文件，实际值与脚本目标值完全一致。</p>
+    <p><b>2｜客户端 int32 夹取</b>：服务端把高血量写成 <code>&lt;string name="maxHP"&gt;</code> 走 long 多管血；客户端 IMG 只能存 int32，超过 21.47 亿一律被夹成 <code>2147483647</code>，这是既有约定，不是丢数据。</p>
+    <p><b>3｜跨端与文档漂移</b>：<code>8840000</code> 班·雷昂服务端 150 级、客户端 180 级，双端不一致；<code>8880142</code> 露希妲第三阶段双端都是 330 级（同链 8880140/8880141 为 160 级）。<code>docs/migrations/boss-only-migration.md</code> 与 <code>shenshuo-boss-pack.md</code> 里写的 50 亿 / 300 亿是调平前的旧值，现网已按主批次改过。</p>
+  </div>
+</div>
+<script>
+const ROWS = [{"id": "8880803", "name": "监视者卡洛斯", "group": "boss-hp-pass", "shp": 29500000000, "chp": 2147483647, "slv": 199, "clv": 199, "yi": 295.0, "notes": ["客户端 int32 夹取", "文档旧值 300 亿（docs/migrations/shenshuo-boss-pack.md）"]}, {"id": "8880400", "name": "觉醒希拉", "group": "boss-hp-pass", "shp": 28500000000, "chp": 2147483647, "slv": 255, "clv": 255, "yi": 285.0, "notes": ["客户端 int32 夹取", "文档旧值 300 亿（docs/migrations/shenshuo-boss-pack.md）"]}, {"id": "8645009", "name": "亲卫队长敦凯尔", "group": "boss-hp-pass", "shp": 26500000000, "chp": 2147483647, "slv": 160, "clv": 160, "yi": 265.0, "notes": ["客户端 int32 夹取", "文档旧值 300 亿（docs/migrations/shenshuo-boss-pack.md）"]}, {"id": "8880700", "name": "守护天使绿水灵", "group": "boss-hp-pass", "shp": 22000000000, "chp": 2147483647, "slv": 220, "clv": 220, "yi": 220.0, "notes": ["客户端 int32 夹取", "文档旧值 300 亿（docs/migrations/shenshuo-boss-pack.md）"]}, {"id": "8880000", "name": "麦格纳斯", "group": "boss-hp-pass", "shp": 19000000000, "chp": 2147483647, "slv": 190, "clv": 190, "yi": 190.0, "notes": ["客户端 int32 夹取", "文档旧值 50 亿（docs/migrations/boss-only-migration.md）"]}, {"id": "8880140", "name": "梦中的路西德", "group": "boss-hp-pass", "shp": 12000000000, "chp": 2147483647, "slv": 160, "clv": 160, "yi": 120.0, "notes": ["客户端 int32 夹取", "文档旧值 50 亿（docs/migrations/boss-only-migration.md）"]}, {"id": "8880141", "name": "梦中的路西德", "group": "boss-hp-pass", "shp": 12000000000, "chp": 2147483647, "slv": 160, "clv": 160, "yi": 120.0, "notes": ["客户端 int32 夹取", "文档旧值 50 亿（docs/migrations/boss-only-migration.md）"]}, {"id": "8880110", "name": "戴米安", "group": "boss-hp-pass", "shp": 10500000000, "chp": 2147483647, "slv": 210, "clv": 210, "yi": 105.0, "notes": ["客户端 int32 夹取"]}, {"id": "8880111", "name": "戴米安", "group": "boss-hp-pass", "shp": 10500000000, "chp": 2147483647, "slv": 210, "clv": 210, "yi": 105.0, "notes": ["客户端 int32 夹取"]}, {"id": "8850011", "name": "希纳斯", "group": "boss-hp-pass", "shp": 10500000000, "chp": 2147483647, "slv": 190, "clv": 190, "yi": 105.0, "notes": ["客户端 int32 夹取"]}, {"id": "8880300", "name": "威尔", "group": "boss-hp-pass", "shp": 8400000000, "chp": 2147483647, "slv": 200, "clv": 200, "yi": 84.0, "notes": ["客户端 int32 夹取", "文档旧值 50 亿（docs/migrations/boss-only-migration.md）"]}, {"id": "8880301", "name": "威尔", "group": "boss-hp-pass", "shp": 8400000000, "chp": 2147483647, "slv": 200, "clv": 200, "yi": 84.0, "notes": ["客户端 int32 夹取", "文档旧值 50 亿（docs/migrations/boss-only-migration.md）"]}, {"id": "8880302", "name": "威尔", "group": "boss-hp-pass", "shp": 8400000000, "chp": 2147483647, "slv": 200, "clv": 200, "yi": 84.0, "notes": ["客户端 int32 夹取", "文档旧值 50 亿（docs/migrations/boss-only-migration.md）"]}, {"id": "8880340", "name": "神选者塞伦", "group": "boss-hp-pass", "shp": 7000000000, "chp": 2147483647, "slv": 240, "clv": 240, "yi": 70.0, "notes": ["客户端 int32 夹取"]}, {"id": "8880341", "name": "神选者塞伦", "group": "boss-hp-pass", "shp": 7000000000, "chp": 2147483647, "slv": 240, "clv": 240, "yi": 70.0, "notes": ["客户端 int32 夹取"]}, {"id": "8880342", "name": "神选者塞伦", "group": "boss-hp-pass", "shp": 7000000000, "chp": 2147483647, "slv": 255, "clv": 255, "yi": 70.0, "notes": ["客户端 int32 夹取"]}, {"id": "8880343", "name": "神选者塞伦", "group": "boss-hp-pass", "shp": 7000000000, "chp": 2147483647, "slv": 240, "clv": 240, "yi": 70.0, "notes": ["客户端 int32 夹取"]}, {"id": "8880344", "name": "神选者塞伦", "group": "boss-hp-pass", "shp": 7000000000, "chp": 2147483647, "slv": 240, "clv": 240, "yi": 70.0, "notes": ["客户端 int32 夹取"]}, {"id": "8840000", "name": "班·雷昂", "group": "boss-hp-pass", "shp": 6300000000, "chp": 2147483647, "slv": 150, "clv": 180, "yi": 63.0, "notes": ["客户端 int32 夹取", "等级双端不一致（服务端 150 / 客户端 180）"]}, {"id": "8860000", "name": "阿卡伊勒", "group": "boss-hp-pass", "shp": 2100000000, "chp": 2100000000, "slv": 170, "clv": 170, "yi": 21.0, "notes": []}, {"id": "9450040", "name": "濃姬", "group": "boss-hp-pass", "shp": 2100000000, "chp": 2100000000, "slv": 190, "clv": 190, "yi": 21.0, "notes": []}, {"id": "8880830", "name": "窮奇", "group": "boss-hp-pass", "shp": 2100000000, "chp": 2100000000, "slv": 250, "clv": 250, "yi": 21.0, "notes": []}, {"id": "8880831", "name": "檮杌", "group": "boss-hp-pass", "shp": 2100000000, "chp": 2100000000, "slv": 250, "clv": 250, "yi": 21.0, "notes": []}, {"id": "8880832", "name": "混沌", "group": "boss-hp-pass", "shp": 2100000000, "chp": 2100000000, "slv": 250, "clv": 250, "yi": 21.0, "notes": []}, {"id": "9421583", "name": "森蘭丸", "group": "boss-hp-pass", "shp": 1000000000, "chp": 1000000000, "slv": 195, "clv": 195, "yi": 10.0, "notes": []}, {"id": "8930000", "name": "混沌貝倫", "group": "boss-hp-pass", "shp": 600000000, "chp": 600000000, "slv": 190, "clv": 190, "yi": 6.0, "notes": []}, {"id": "8920002", "name": "混沌血腥皇后", "group": "boss-hp-pass", "shp": 600000000, "chp": 600000000, "slv": 190, "clv": 190, "yi": 6.0, "notes": []}, {"id": "8920001", "name": "混沌血腥皇后", "group": "boss-hp-pass", "shp": 500000000, "chp": 500000000, "slv": 190, "clv": 190, "yi": 5.0, "notes": ["文档旧值 30 亿（docs/migrations/root-abyss-migration.md）"]}, {"id": "8910000", "name": "混沌班班", "group": "boss-hp-pass", "shp": 400000000, "chp": 400000000, "slv": 190, "clv": 190, "yi": 4.0, "notes": []}, {"id": "8900000", "name": "混沌比艾樂", "group": "boss-hp-pass", "shp": 400000000, "chp": 400000000, "slv": 190, "clv": 190, "yi": 4.0, "notes": []}, {"id": "8900001", "name": "混沌比艾樂", "group": "boss-hp-pass", "shp": 400000000, "chp": 400000000, "slv": 190, "clv": 190, "yi": 4.0, "notes": ["文档旧值 30 亿（docs/migrations/root-abyss-migration.md）"]}, {"id": "8900002", "name": "混沌比艾樂", "group": "boss-hp-pass", "shp": 400000000, "chp": 400000000, "slv": 190, "clv": 190, "yi": 4.0, "notes": []}, {"id": "8920000", "name": "混沌血腥皇后", "group": "boss-hp-pass", "shp": 400000000, "chp": 400000000, "slv": 190, "clv": 190, "yi": 4.0, "notes": []}, {"id": "9600087", "name": "钻机", "group": "boss-hp-pass", "shp": 250000000, "chp": 250000000, "slv": 100, "clv": 100, "yi": 2.5, "notes": []}, {"id": "9421581", "name": "森蘭丸", "group": "boss-hp-pass", "shp": 200000000, "chp": 200000000, "slv": 129, "clv": 129, "yi": 2.0, "notes": []}, {"id": "8870000", "name": "希拉", "group": "related", "shp": 30000000000, "chp": 2000000000, "slv": 220, "clv": 220, "yi": 300.0, "notes": ["客户端 int32 夹取"]}, {"id": "8870200", "name": "希拉（白发模式）", "group": "related", "shp": 30000000000, "chp": 2000000000, "slv": 190, "clv": 190, "yi": 300.0, "notes": ["客户端 int32 夹取"]}, {"id": "8880142", "name": "梦中的路西德", "group": "related", "shp": 20000000000, "chp": 2000000000, "slv": 330, "clv": 330, "yi": 200.0, "notes": ["客户端 int32 夹取", "等级异常：同链 8880140/141 为 160 级"]}, {"id": "8880152", "name": "梦中的路西德", "group": "related", "shp": 5000000000, "chp": 2000000000, "slv": 230, "clv": 230, "yi": 50.0, "notes": ["客户端 int32 夹取"]}, {"id": "8880153", "name": "梦中的路西德", "group": "related", "shp": 5000000000, "chp": 2000000000, "slv": 230, "clv": 230, "yi": 50.0, "notes": ["客户端 int32 夹取"]}, {"id": "8880154", "name": "梦中的路西德", "group": "related", "shp": 5000000000, "chp": 2000000000, "slv": 230, "clv": 230, "yi": 50.0, "notes": ["客户端 int32 夹取"]}, {"id": "9600318", "name": "天魔僵尸", "group": "related", "shp": 5000000000, "chp": 2100000000, "slv": 200, "clv": 200, "yi": 50.0, "notes": ["客户端 int32 夹取"]}, {"id": "8930001", "name": "混沌貝倫的尾巴", "group": "related", "shp": 600000000, "chp": 600000000, "slv": 190, "clv": 190, "yi": 6.0, "notes": ["文档旧值 30 亿（docs/migrations/root-abyss-migration.md）"]}, {"id": "8920005", "name": "混沌魅惑之鏡", "group": "related", "shp": 550000000, "chp": 550000000, "slv": 190, "clv": 190, "yi": 5.5, "notes": []}, {"id": "8880305", "name": "凝视之眼", "group": "related", "shp": 500000000, "chp": 500000000, "slv": 200, "clv": 200, "yi": 5.0, "notes": []}, {"id": "8910001", "name": "混沌班班的無意識", "group": "related", "shp": 400000000, "chp": 400000000, "slv": 190, "clv": 190, "yi": 4.0, "notes": ["文档旧值 30 亿（docs/migrations/root-abyss-migration.md）"]}];
+const TB = document.querySelector('#t tbody');
+const fmt = v => v === null ? '—' : v.toLocaleString('en-US');
+const maxYi = Math.max(...ROWS.map(r => r.yi || 0));
+let sortKey = 'shp', dir = -1, group = 'all', q = '';
+function render(){
+  let rows = ROWS.filter(r => (group === 'all' || r.group === group) &&
+    (!q || r.name.toLowerCase().includes(q) || r.id.includes(q)));
+  rows.sort((a,b) => {
+    if (sortKey === 'name') return a.name.localeCompare(b.name, 'zh') * dir;
+    if (sortKey === 'id') return (a.id < b.id ? -1 : a.id > b.id ? 1 : 0) * dir;
+    const av = a[sortKey] ?? -1, bv = b[sortKey] ?? -1;
+    return ((av > bv) - (av < bv)) * dir;
+  });
+  TB.innerHTML = rows.map(r => `
+    <tr class="${r.group === 'boss-hp-pass' ? 'g1' : 'g2'}">
+      <td><div class="name">${r.name}</div>
+          <div class="meter mob"><i style="display:block;height:6px;border-radius:4px;background:linear-gradient(90deg,#e05c5c,#f0b95e);width:${Math.max(3, (r.yi||0)/maxYi*100)}%"></i></div></td>
+      <td class="n ids">${r.id}</td>
+      <td class="n">${r.slv ?? '—'}</td>
+      <td class="n">${fmt(r.shp)}</td>
+      <td class="n ids">${fmt(r.chp)}</td>
+      <td class="n" style="color:#e05c5c;font-weight:600">${r.yi ?? '—'}</td>
+      <td>${r.notes.map(n => `<span class="badge warn">${n}</span>`).join('') || '<span class="ids">—</span>'}</td>
+    </tr>`).join('');
+}
+document.querySelectorAll('th').forEach(th => th.onclick = () => {
+  const k = th.dataset.k; if (!k) return;
+  dir = (sortKey === k) ? -dir : -1; sortKey = k; render();
+});
+document.querySelectorAll('.bar button').forEach(b => b.onclick = () => {
+  group = b.dataset.g;
+  document.querySelectorAll('.bar button').forEach(x => x.classList.toggle('on', x === b));
+  render();
+});
+document.getElementById('q').oninput = e => { q = e.target.value.trim().toLowerCase(); render(); };
+render();
+</script>
+</body>
+</html>

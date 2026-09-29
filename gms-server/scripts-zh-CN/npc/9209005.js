@@ -60,7 +60,7 @@ function action(mode, type, selection) {
     status++;
     if (status == 0) {
         var text = "欢迎来到锻造系统，我什么都能造！客官请选择你要锻造的装备#b";
-        var options = ["不速之客系列", "乌特格鲁德系列", "法弗纳系列", "漩涡系列"];
+        var options = ["不速之客系列", "乌特格鲁德系列"];
         for (var i = 0; i < options.length; i++) {
             text += "\r\n#L" + i + "# " + options[i] + "#l";
         }
@@ -76,13 +76,7 @@ function action(mode, type, selection) {
             cm.sendSimple(sel);
         } else if (series == 1) {
             sendWeaponList(UTGARD);
-        } else if (series == 2) {
-            cm.sendOk("法弗纳系列还在筹备中，请稍后再来。");
-            cm.dispose();
-        } else {
-            cm.sendOk("漩涡系列还在筹备中，请稍后再来。");
-            cm.dispose();
-        }
+        }  
     } else if (status == 2) {
         if (series == 0) {
             guestTier = selection;

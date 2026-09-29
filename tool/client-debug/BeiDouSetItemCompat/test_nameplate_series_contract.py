@@ -56,6 +56,11 @@ if start is not None:
 for start, end in changed:
     allowed = start < 0x400 or any(a <= start < b for a, b in (
         (0x1131, 0x1137), (0x1260, 0x1275), (0x1BDC, 0x1BE6), (0x1C1E, 0x1C4D),
+        # stat-label patch: RVA 0x3673 (file 0x2A73) is the MesoRate tail of the
+        # set-panel label chain, rewritten to `je +5 / jmp cave / nop` so the
+        # PDD/MDD/ACC/EVA probes in .titles can run.  See patch_stat_labels.py
+        # and test_stat_labels_contract.py for the exhaustive contract.
+        (0x2A73, 0x2A7B),
         # .reloc rebuild: the baseline carries stale HIGHLOW entries pointing at
         # code padding. They are stripped so the image survives being loaded at a
         # relocated base (Wine/Box86), see fix_dll_reloc_hygiene.py.

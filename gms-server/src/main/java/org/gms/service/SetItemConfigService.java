@@ -47,8 +47,10 @@ public class SetItemConfigService {
     private static final String CONFIG_TYPE = "server";
     private static final String CONFIG_SUB_TYPE = "Set Items";
     private static final int FIRST_CUSTOM_DEFINITION_ID = 20_000;
-    private static final int MAX_SLOTS = 20;
-    private static final int MAX_ITEMS_PER_SLOT = 50;
+    private static final int MAX_ACTIVE_DEFINITIONS = 96;
+    private static final int MAX_SLOTS = 8;
+    private static final int MAX_ITEMS_PER_SLOT = 10;
+    private static final int MAX_TIER_STATS = 24;
     private static final int MAX_NAME_LENGTH = 64;
     private static final int MAX_FLAT_VALUE = 1_000_000;
     private static final int MAX_RATE_VALUE = 10_000;
@@ -65,7 +67,7 @@ public class SetItemConfigService {
         Map<String, Map<String, Integer>> bonuses = parseBonuses(
                 valueOf(CONFIG_CODE), baseDefinitions);
         SetItemBonusOverrides.replaceAll(bonuses, catalogState.customDefinitions(),
-                catalogState.disabledBuiltInIds());
+                catalogState.disabledBuiltInIds(), catalogState.slotOverrides());
     }
 
     public int reloadAndRefresh() {
@@ -99,13 +101,18 @@ public class SetItemConfigService {
             result.add(new SetItemConfigDTO(definition.id(), definition.jobIndex(),
                     definition.name(), definition.completeCount(),
                     SetItemManager.isBuiltIn(definition.id()),
-                    SetItemManager.isEnabled(definition.id()), slots, List.copyOf(tiers)));
+                    SetItemManager.isEnabled(definition.id()), slots, List.copyOf(tiers),
+                    base.slots().stream().map(slot -> slot.stream()
+                            .map(itemId -> new SetItemEquipmentDTO(itemId,
+                                    itemName(itemInformation, itemId))).toList()).toList(),
+                    SetItemBonusOverrides.slotOverrides().containsKey(definition.id())));
         }
         return List.copyOf(result);
     }
 
     @Transactional(rollbackFor = Exception.class)
     public synchronized int create(SetItemDefinitionCreateDTO request) {
+        validateCatalogCapacity();
         int definitionId = nextCustomDefinitionId();
         SetItemManager.Definition definition = buildDefinition(request, definitionId, true);
         List<SetItemManager.Definition> customDefinitions = new ArrayList<>(
@@ -120,6 +127,9 @@ public class SetItemConfigService {
     public synchronized int setBuiltInEnabled(int definitionId, boolean enabled) {
         if (!SetItemManager.isBuiltIn(definitionId)) {
             throw BizException.illegalArgument("只有内置套装可以停用或恢复");
+        }
+        if (enabled && !SetItemManager.isEnabled(definitionId)) {
+            validateCatalogCapacity();
         }
         Set<Integer> disabled = new LinkedHashSet<>(
                 SetItemBonusOverrides.disabledBuiltInIds());
@@ -146,11 +156,14 @@ public class SetItemConfigService {
         }
         Map<String, Map<String, Integer>> bonuses = mutableSnapshot();
         removeDefinitionOverrides(bonuses, definitionId);
+        Map<Integer, List<List<Integer>>> slots = new LinkedHashMap<>(
+                SetItemBonusOverrides.slotOverrides());
+        slots.remove(definitionId);
         saveConfig(CONFIG_CODE, JSON.toJSONString(bonuses));
         saveConfig(CATALOG_CONFIG_CODE, serializeCatalog(customDefinitions,
-                SetItemBonusOverrides.disabledBuiltInIds()));
+                SetItemBonusOverrides.disabledBuiltInIds(), slots));
         SetItemBonusOverrides.replaceAll(bonuses, customDefinitions,
-                SetItemBonusOverrides.disabledBuiltInIds());
+                SetItemBonusOverrides.disabledBuiltInIds(), slots);
         return refreshOnlineCharacters();
     }
 
@@ -170,12 +183,26 @@ public class SetItemConfigService {
         if (!request.getTiers().keySet().equals(requiredCounts)) {
             throw BizException.illegalArgument("套装档位不完整或包含未知档位");
         }
+        Map<Integer, List<List<Integer>>> slots = new LinkedHashMap<>(
+                SetItemBonusOverrides.slotOverrides());
+        if (request.getSlots() != null) {
+            List<List<Integer>> validated = validateSlots(request.getSlots(), true);
+            validateTierSlots(definition, validated);
+            if (validated.equals(definition.slots())) {
+                slots.remove(definitionId);
+            } else {
+                slots.put(definitionId, validated);
+            }
+        }
         Map<String, Map<String, Integer>> updated = mutableSnapshot();
         removeDefinitionOverrides(updated, definitionId);
         for (SetItemManager.Tier tier : definition.tiers()) {
             Map<String, Integer> values = request.getTiers().get(tier.requiredCount());
             if (values == null) {
                 throw BizException.illegalArgument("套装档位属性不能为空");
+            }
+            if (values.size() > MAX_TIER_STATS) {
+                throw BizException.illegalArgument("每档最多支持 " + MAX_TIER_STATS + " 项属性");
             }
             Map<String, Integer> differences = new LinkedHashMap<>();
             for (Map.Entry<String, Integer> stat : values.entrySet()) {
@@ -197,7 +224,7 @@ public class SetItemConfigService {
                 updated.put(SetItemBonusOverrides.key(definitionId, tier.requiredCount()), differences);
             }
         }
-        persistBonuses(updated);
+        persistConfiguration(updated, slots);
         return refreshOnlineCharacters();
     }
 
@@ -206,7 +233,10 @@ public class SetItemConfigService {
         requireDefinition(definitionId);
         Map<String, Map<String, Integer>> updated = mutableSnapshot();
         removeDefinitionOverrides(updated, definitionId);
-        persistBonuses(updated);
+        Map<Integer, List<List<Integer>>> slots = new LinkedHashMap<>(
+                SetItemBonusOverrides.slotOverrides());
+        slots.remove(definitionId);
+        persistConfiguration(updated, slots);
         return refreshOnlineCharacters();
     }
 
@@ -215,6 +245,12 @@ public class SetItemConfigService {
                 .filter(definition -> definition.id() == definitionId)
                 .findFirst()
                 .orElseThrow(() -> BizException.illegalArgument("套装不存在: " + definitionId));
+    }
+
+    private void validateCatalogCapacity() {
+        if (SetItemManager.definitions().size() >= MAX_ACTIVE_DEFINITIONS) {
+            throw BizException.illegalArgument("客户端最多支持 " + MAX_ACTIVE_DEFINITIONS + " 套启用套装");
+        }
     }
 
     private void validateValue(String stat, Integer value) {
@@ -300,13 +336,13 @@ public class SetItemConfigService {
 
     private CatalogState parseCatalog(String json) {
         if (json == null || json.isBlank()) {
-            return new CatalogState(List.of(), Set.of());
+            return new CatalogState(List.of(), Set.of(), Map.of());
         }
         try {
             SetItemCatalogStorageDTO storage = JSON.parseObject(
                     json, SetItemCatalogStorageDTO.class);
             if (storage == null) {
-                return new CatalogState(List.of(), Set.of());
+                return new CatalogState(List.of(), Set.of(), Map.of());
             }
             List<SetItemManager.Definition> customDefinitions = new ArrayList<>();
             Set<Integer> definitionIds = new HashSet<>();
@@ -327,11 +363,23 @@ public class SetItemConfigService {
                         .filter(SetItemManager::isBuiltIn)
                         .forEach(disabled::add);
             }
+            Map<Integer, List<List<Integer>>> slots = new LinkedHashMap<>();
+            List<SetItemManager.Definition> definitions = new ArrayList<>(SetItemManager.builtInDefinitions());
+            definitions.addAll(customDefinitions);
+            if (storage.getSlotOverrides() != null) {
+                for (SetItemManager.Definition definition : definitions) {
+                    List<List<Integer>> candidate = storage.getSlotOverrides().get(definition.id());
+                    if (candidate == null) continue;
+                    List<List<Integer>> validated = validateSlots(candidate, false);
+                    validateTierSlots(definition, validated);
+                    if (!validated.equals(definition.slots())) slots.put(definition.id(), validated);
+                }
+            }
             return new CatalogState(List.copyOf(customDefinitions),
-                    Collections.unmodifiableSet(disabled));
+                    Collections.unmodifiableSet(disabled), Collections.unmodifiableMap(slots));
         } catch (RuntimeException exception) {
             log.error("Invalid custom set item catalog config; using built-in catalog", exception);
-            return new CatalogState(List.of(), Set.of());
+            return new CatalogState(List.of(), Set.of(), Map.of());
         }
     }
 
@@ -350,39 +398,12 @@ public class SetItemConfigService {
         if (jobIndex == null || jobIndex < -1 || jobIndex > 4) {
             throw BizException.illegalArgument("适用职业必须是全职业或五大职业系之一");
         }
-        if (request.getSlots() == null || request.getSlots().isEmpty()
-                || request.getSlots().size() > MAX_SLOTS) {
-            throw BizException.illegalArgument("套装槽位数量必须在 1 到 " + MAX_SLOTS + " 之间");
-        }
-        List<List<Integer>> slots = new ArrayList<>();
-        Set<Integer> allItems = new HashSet<>();
-        ItemInformationProvider itemInformation = verifyEquipmentData
-                ? ItemInformationProvider.getInstance() : null;
-        for (List<Integer> sourceSlot : request.getSlots()) {
-            if (sourceSlot == null || sourceSlot.isEmpty()
-                    || sourceSlot.size() > MAX_ITEMS_PER_SLOT) {
-                throw BizException.illegalArgument(
-                        "每个槽位必须包含 1 到 " + MAX_ITEMS_PER_SLOT + " 件候选装备");
-            }
-            List<Integer> slot = new ArrayList<>();
-            for (Integer itemId : sourceSlot) {
-                if (itemId == null || itemId <= 0
-                        || ItemConstants.getInventoryType(itemId) != InventoryType.EQUIP) {
-                    throw BizException.illegalArgument("套装槽位只能包含装备物品ID");
-                }
-                if (!allItems.add(itemId)) {
-                    throw BizException.illegalArgument("同一件装备不能出现在多个套装槽位中: " + itemId);
-                }
-                if (verifyEquipmentData && (itemInformation.getName(itemId) == null
-                        || !itemInformation.itemDataExists(itemId))) {
-                    throw BizException.illegalArgument("装备不存在: " + itemId);
-                }
-                slot.add(itemId);
-            }
-            slots.add(List.copyOf(slot));
-        }
+        List<List<Integer>> slots = validateSlots(request.getSlots(), verifyEquipmentData);
         if (request.getTiers() == null || request.getTiers().isEmpty()) {
             throw BizException.illegalArgument("至少需要一个套装效果档位");
+        }
+        if (verifyEquipmentData && request.getTiers().size() > 8) {
+            throw BizException.illegalArgument("最多支持 8 个套装效果档位");
         }
         List<SetItemManager.Tier> tiers = new ArrayList<>();
         request.getTiers().entrySet().stream()
@@ -396,6 +417,9 @@ public class SetItemConfigService {
                     }
                     if (sourceStats == null || sourceStats.isEmpty()) {
                         throw BizException.illegalArgument("套装效果属性不能为空");
+                    }
+                    if (verifyEquipmentData && sourceStats.size() > MAX_TIER_STATS) {
+                        throw BizException.illegalArgument("每档最多支持 " + MAX_TIER_STATS + " 项属性");
                     }
                     Map<String, Integer> stats = new LinkedHashMap<>();
                     for (Map.Entry<String, Integer> stat : sourceStats.entrySet()) {
@@ -420,9 +444,58 @@ public class SetItemConfigService {
                 .orElse(FIRST_CUSTOM_DEFINITION_ID - 1) + 1;
     }
 
+    private List<List<Integer>> validateSlots(List<List<Integer>> candidates,
+                                               boolean verifyEquipmentData) {
+        int maxSlots = verifyEquipmentData ? MAX_SLOTS : 20;
+        int maxItems = verifyEquipmentData ? MAX_ITEMS_PER_SLOT : 50;
+        if (candidates == null || candidates.isEmpty() || candidates.size() > maxSlots) {
+            throw BizException.illegalArgument("套装槽位数量必须在 1 到 " + MAX_SLOTS + " 之间");
+        }
+        List<List<Integer>> slots = new ArrayList<>();
+        Set<Integer> allItems = new HashSet<>();
+        for (List<Integer> sourceSlot : candidates) {
+            if (sourceSlot == null || sourceSlot.isEmpty() || sourceSlot.size() > maxItems) {
+                throw BizException.illegalArgument("每个槽位必须包含 1 到 " + MAX_ITEMS_PER_SLOT + " 件候选装备");
+            }
+            for (Integer itemId : sourceSlot) {
+                if (itemId == null || itemId <= 0
+                        || ItemConstants.getInventoryType(itemId) != InventoryType.EQUIP) {
+                    throw BizException.illegalArgument("套装槽位只能包含装备物品ID");
+                }
+                if (!allItems.add(itemId)) {
+                    throw BizException.illegalArgument("同一件装备不能出现在多个套装槽位中: " + itemId);
+                }
+            }
+            slots.add(List.copyOf(sourceSlot));
+        }
+        if (verifyEquipmentData) {
+            ItemInformationProvider itemInformation = ItemInformationProvider.getInstance();
+            for (Integer itemId : allItems) {
+                if (itemInformation.getName(itemId) == null || !itemInformation.itemDataExists(itemId)) {
+                    throw BizException.illegalArgument("装备不存在: " + itemId);
+                }
+            }
+        }
+        return List.copyOf(slots);
+    }
+
+    private void validateTierSlots(SetItemManager.Definition definition, List<List<Integer>> slots) {
+        if (definition.tiers().stream().anyMatch(tier -> tier.requiredCount() > slots.size())) {
+            throw BizException.illegalArgument("套装槽位数量不能少于现有效果档位所需件数");
+        }
+    }
+
     private String serializeCatalog(List<SetItemManager.Definition> customDefinitions,
                                     Set<Integer> disabledBuiltInIds) {
+        return serializeCatalog(customDefinitions, disabledBuiltInIds,
+                SetItemBonusOverrides.slotOverrides());
+    }
+
+    private String serializeCatalog(List<SetItemManager.Definition> customDefinitions,
+                                    Set<Integer> disabledBuiltInIds,
+                                    Map<Integer, List<List<Integer>>> slots) {
         SetItemCatalogStorageDTO storage = new SetItemCatalogStorageDTO();
+        storage.setSlotOverrides(slots);
         storage.setDisabledBuiltInIds(new LinkedHashSet<>(disabledBuiltInIds));
         storage.setCustomDefinitions(customDefinitions.stream()
                 .map(this::toStoredDefinition)
@@ -481,11 +554,14 @@ public class SetItemConfigService {
         }
     }
 
-    private void persistBonuses(Map<String, Map<String, Integer>> bonuses) {
+    private void persistConfiguration(Map<String, Map<String, Integer>> bonuses,
+                                      Map<Integer, List<List<Integer>>> slots) {
         saveConfig(CONFIG_CODE, JSON.toJSONString(bonuses));
+        saveConfig(CATALOG_CONFIG_CODE, serializeCatalog(SetItemBonusOverrides.customDefinitions(),
+                SetItemBonusOverrides.disabledBuiltInIds(), slots));
         SetItemBonusOverrides.replaceAll(bonuses,
                 SetItemBonusOverrides.customDefinitions(),
-                SetItemBonusOverrides.disabledBuiltInIds());
+                SetItemBonusOverrides.disabledBuiltInIds(), slots);
     }
 
     private void persistCatalog(List<SetItemManager.Definition> customDefinitions,
@@ -497,7 +573,8 @@ public class SetItemConfigService {
     }
 
     private record CatalogState(List<SetItemManager.Definition> customDefinitions,
-                                Set<Integer> disabledBuiltInIds) {
+                                Set<Integer> disabledBuiltInIds,
+                                Map<Integer, List<List<Integer>>> slotOverrides) {
     }
 
     private int refreshOnlineCharacters() {

@@ -1,0 +1,16 @@
+LOAD: Vellum attack10/11 video compatibility v7 (d3d8 preload + whole-instruction code hook + FIELD_EFFECT layer render + first-chance C++ call sites)
+BUILD: vellum-video-compat 2026-09-28 v7 capture=whole-instruction-prologue layer=field-effect-marker present=fallback-only deterministic firstchance=veh-summary-stack-plus-dump
+LAYER: the video is drawn where the client draws the FIELD_EFFECT marker (7x5 canvas, signature F123/F456/F789/FABC in A4R4G4B4, FF112233/FF445566/FF778899/FFAABBCC in A8R8G8B8 or the same colours in X8R8G8B8), so the skill effect, the mobs, the floating damage numbers and the UI keep their native order
+LAYER: Present only draws when no marker was seen in this frame; that layer sits above the damage numbers and the UI, so VELLUM VIDEO SUMMARY reports marker_frames against present_fallback_frames
+FIRST-CHANCE: status=armed filter=0xe06d7363 summarize_limit=64 dump_after=1 exe=0x00400000+0xa94000 stack_dwords=96 ini="C:\Mac\Home\Documents\mxd\BeiDou-Server\clien\beidou_diagnostics.ini"
+VELLUM VIDEO OK: d3d8 Direct3DCreate8 code hook installed ahead of the client (relocated 5 whole prologue bytes)
+VELLUM VIDEO OK: runtime capture armed
+VELLUM VIDEO OK: the client's Direct3DCreate8 reached the capture hook
+VELLUM VIDEO OK: IDirect3D8 vtable is shared process wide
+FIRST-CHANCE CPP: occurrence=1 code=0xe06d7363 tid=10908 address=0x75589e4f object=0x001ae4a8 hr=0x00000000 stack="s7:+0x744ee0 s16:+0x6f2664 s22:+0x660beb s27:+0x6f2664 s36:+0x744ee0 s38:+0x95764* s40:+0x744ee0 s43:+0x95319* s44:+0x7f1ad0"
+FIRST-CHANCE DUMP: status=ok reason=first-chance-cpp occurrence=1 error=0 path="C:\Mac\Home\Documents\mxd\BeiDou-Server\clien\diagnostics\first-chance-cpp-20260929-120432-pid6472-68387515.dmp"
+VELLUM VIDEO OK: D3D8 device attached
+VELLUM VIDEO OK: capture confirmed by a live D3D8 device
+FIRST-CHANCE CPP: occurrence=2 code=0xe06d7363 tid=10908 address=0x75589e4f object=0x001adf74 hr=0x80004003 E_POINTER stack="s7:+0x744b18 s14:+0x7f0b00 s17:+0x63cb s22:+0x660beb s27:+0x7f6300 s36:+0x744b18 s38:+0x6605e7* s40:+0x744b18 s41:+0x741240 s46:+0x65fdef* s49:+0x264d* s52:+0xa497*"
+FIRST-CHANCE CPP: occurrence=3 code=0xe06d7363 tid=10908 address=0x75589e4f object=0x001adf74 hr=0x80004003 E_POINTER stack="s7:+0x744b18 s14:+0x7f0b00 s17:+0x63cb s22:+0x660beb s27:+0x7f6300 s36:+0x744b18 s38:+0x6605e7* s40:+0x744b18 s41:+0x741240 s46:+0x65fdef* s49:+0x264d* s52:+0xa497*"
+FIRST-CHANCE CPP: occurrence=4 code=0xe06d7363 tid=10908 address=0x75589e4f object=0x001adf74 hr=0x80004003 E_POINTER stack="s7:+0x744b18 s14:+0x7f0b00 s17:+0x63cb s22:+0x660beb s27:+0x7f6300 s36:+0x744b18 s38:+0x6605e7* s40:+0x744b18 s41:+0x741240 s46:+0x65fdef* s49:+0x264d* s52:+0xa497*"

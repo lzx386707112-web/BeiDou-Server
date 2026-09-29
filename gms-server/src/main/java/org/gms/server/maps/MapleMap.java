@@ -1507,6 +1507,9 @@ public class MapleMap {
     }
 
     public boolean damageMonster(final Character chr, final Monster monster, final int damage) {
+        if (org.gms.server.life.SeedTowerCompat.protectsTarget(chr, monster)) {
+            return false;
+        }
         if (monster.getId() == MobId.ZAKUM_1 || monster.getId() == MobId.CHAOS_ZAKUM_1) {
             for (MapObject object : chr.getMap().getMapObjects()) {
                 Monster mons = chr.getMap().getMonsterByOid(object.getObjectId());

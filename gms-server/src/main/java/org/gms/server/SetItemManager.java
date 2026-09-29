@@ -25,11 +25,15 @@ public final class SetItemManager {
             "STR", "DEX", "INT", "LUK", "PAD", "MAD", "PDD", "MDD",
             "ACC", "EVA", "SPD", "JMP", "HP", "MP", "FinalDamage",
             "BossDamage", "ExpRate", "AllStatPct", "HPpct", "MPpct",
-            "DropRate", "MesoRate", "StatusRes", "BuffDuration"
+            "DropRate", "MesoRate", "StatusRes", "BuffDuration",
+            "STRPct", "DEXPct", "INTPct", "LUKPct", "PADPct", "MADPct",
+            "PDDPct", "MDDPct", "ACCPct", "EVAPct", "HPPct", "MPPct"
     };
     public static final Set<String> SUPPORTED_STAT_KEYS = Set.of(
-            "STR", "DEX", "INT", "LUK", "PAD", "MAD", "HP", "MP",
-            "FinalDamage", "BossDamage", "ExpRate", "DropRate", "MesoRate");
+            "STR", "DEX", "INT", "LUK", "PAD", "MAD", "PDD", "MDD", "ACC", "EVA",
+            "HP", "MP", "FinalDamage", "BossDamage", "ExpRate", "DropRate", "MesoRate",
+            "STRPct", "DEXPct", "INTPct", "LUKPct", "PADPct", "MADPct",
+            "PDDPct", "MDDPct", "ACCPct", "EVAPct", "HPPct", "MPPct");
 
     public record Tier(int requiredCount, Map<String, Integer> stats) {
     }
@@ -46,11 +50,17 @@ public final class SetItemManager {
         private final Map<String, Integer> values = new LinkedHashMap<>();
 
         private void add(Map<String, Integer> stats) {
-            stats.forEach((key, value) -> values.merge(key, value, Integer::sum));
+            stats.forEach((key, value) -> values.merge(key, value,
+                    (left, right) -> (int) Math.min(Integer.MAX_VALUE, (long) left + right)));
         }
 
         public int get(String key) {
             return values.getOrDefault(key, 0);
+        }
+
+        public int apply(String key, int base) {
+            long flat = Math.max(0L, (long) base + get(key));
+            return (int) Math.min(Integer.MAX_VALUE, flat + flat * get(key + "Pct") / 100L);
         }
     }
 
@@ -171,7 +181,9 @@ public final class SetItemManager {
     private static Definition withOverrides(Definition definition,
                                             Map<String, Map<String, Integer>> overrides) {
         List<Tier> tiers = new ArrayList<>(definition.tiers().size());
-        boolean changed = false;
+        List<List<Integer>> slots = SetItemBonusOverrides.slotOverrides()
+                .getOrDefault(definition.id(), definition.slots());
+        boolean changed = !slots.equals(definition.slots());
         for (Tier tier : definition.tiers()) {
             Map<String, Integer> replacement = overrides.get(
                     SetItemBonusOverrides.key(definition.id(), tier.requiredCount()));
@@ -197,7 +209,7 @@ public final class SetItemManager {
             return definition;
         }
         return new Definition(definition.id(), definition.jobIndex(), definition.name(),
-                definition.slots(), Collections.unmodifiableList(tiers), definition.story());
+                slots, Collections.unmodifiableList(tiers), definition.story());
     }
 
     public static int applyDamage(Character chr, Monster monster, int damage) {

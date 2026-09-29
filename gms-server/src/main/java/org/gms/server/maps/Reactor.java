@@ -381,6 +381,9 @@ public class Reactor extends AbstractMapObject {
      * @param c 客户端
      */
     public void hitReactor(boolean wHit, int charPos, short stance, int skillid, Client c) {
+        if (!org.gms.server.life.SeedTowerCompat.allowReactorHit(c.getPlayer(), this)) {
+            return;
+        }
         try {
             if (!this.isActive()) {
                 return;  // 如果不活跃则直接返回

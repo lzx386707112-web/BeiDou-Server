@@ -1349,6 +1349,9 @@ public final class RangedAttackHandler extends AbstractDealDamageHandler {
         chr.getAutobanManager().spam(8);*/
 
         AttackInfo attack = parseDamage(p, chr, true, false);
+        if (org.gms.server.life.SeedTowerCompat.handleAttack(chr, attack)) {
+            return;
+        }
         boolean fourSeasonsRainFrenzy = hasFourSeasonsRainFrenzy(chr, attack);
         applyShadowBitePassive(attack, chr);
         List<Integer> shadowBiteDamageTemplate = attack.skill == NightWalker.SHADOW_BITE

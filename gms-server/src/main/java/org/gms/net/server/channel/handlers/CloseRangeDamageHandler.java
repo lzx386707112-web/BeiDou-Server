@@ -1321,6 +1321,9 @@ public final class CloseRangeDamageHandler extends AbstractDealDamageHandler {
         chr.getAutobanManager().spam(8);*/
 
         AttackInfo attack = parseDamage(p, chr, false, false);
+        if (org.gms.server.life.SeedTowerCompat.handleAttack(chr, attack)) {
+            return;
+        }
         if (isServerOnlyLightningSpearSkill(attack.skill)) {
             return;
         }

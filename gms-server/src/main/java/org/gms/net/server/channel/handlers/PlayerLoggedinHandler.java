@@ -273,6 +273,7 @@ public final class PlayerLoggedinHandler extends AbstractPacketHandler {
             c.sendPacket(PacketCreator.getCharInfo(player));    //这里发送登录成功封包
             c.sendPacket(PacketCreator.nameplatePowerUpdate(player));
             c.sendPacket(PacketCreator.setItemUpdate(player));
+            player.syncSetItemNativeStats();
             if (player.isHidden()) {
                 if (!GameConfig.getServerBoolean("use_auto_hide_gm")) {
                     player.toggleHide(true);

@@ -114,6 +114,55 @@ characterId。
 每个 cave 必须保留跳回后继代码所需的寄存器。特别注意后继可能执行 `call edx`；
 这种情况下 cave 不能把 `edx` 当临时寄存器，除非在跳回前恢复。
 
+## 二·补、给「属性 key → 中文标签」比较链追加分支
+
+现成参考：`tool/client-debug/BeiDouSetItemCompat/patch_stat_labels.py`
+＋ `test_stat_labels_contract.py` ＋ `README-stat-labels.md`（套装面板 PDD/MDD/ACC/EVA）。
+这条链目前有 9 个分支，**预留的键还有 SPD/JMP/AllStatPct/HPpct/MPpct/StatusRes/BuffDuration**
+—— 下次加标签照抄这个脚本改 `CHECKS` 表即可，别重新设计。
+
+**编码分工（最容易搞反，我为此白跑了两轮）**：
+
+| 角色 | 编码 | 证据 |
+| --- | --- | --- |
+| 服务端下发的 key | **ANSI** | 比较走 `lstrcmpA`（IAT 槽 `0x65F900F4`） |
+| 面板显示的中文标签 | **UTF-16LE** | 渲染走 `wsprintfW`（IAT 槽 `0x65F90118`），`%s` 吃宽串 |
+
+所以用 `strings` / GBK 正则扫 DLL **永远找不到中文标签**，必须按 UTF-16LE 扫（或直接
+反汇编取 `mov eax, imm32` 的即时数当 VA 再回读）。
+
+**追加分支的正确落点：链尾那块 8 字节**（本例 RVA `0x3673`）：
+
+```text
+原: ba 8c 54 c8 65   mov edx, 兜底标签VA
+    0f 45 c2         cmovne eax, edx        ; key 不匹配才用兜底
+改: 74 05            je  +5                 ; == MesoRate → 保留 eax，直达共用尾部
+    e9 rel32         jmp cave
+    90               nop
+```
+
+**为什么能这么做**：`push`/`mov` 不改标志位，所以前面 `test eax,eax` 的 ZF 在跳到 cave
+时仍然有效；cave 里第一件事就是自己的 `lstrcmpA`，再 `test eax,eax` 重算 ZF。
+到达共用尾部（`wsprintfW`）时 **esp / eax / ebx / esi 必须与原件逐位一致**。
+
+**cave 内每块 22 字节**，且**全程不许动 esp**（`lstrcmpA` 是 stdcall 被调方弹参）：
+
+```text
+c7 44 24 04 <key_VA>   mov dword ptr [esp+4], key    ; 复用原有参数槽
+89 1c 24               mov [esp], ebx                ; ebx = 服务端 key 缓冲
+ff d6                  call esi                      ; lstrcmpA
+85 c0                  test eax, eax
+b8 <label_VA>          mov eax, label
+74 <rel8>              je common
+```
+
+- **后缀判定要复算一遍**：该链后缀由「key 含 `Damage`/`Rate`/`Pct`（大小写敏感子串）
+  或等于 `StatusRes`/`BuffDuration`」决定 → `%`，否则空串。新键若命中这些子串会多出 `%`。
+  `PDD/MDD/ACC/EVA` 都不命中，所以是「物理防御力 +30」而不是「+30%」。**契约测试必须断言后缀为空**。
+- **既有块的字节数不统一**（前 4 块 `0f 84 rel32`＝28 字节，后 5 块 `74 rel8`＝24 字节），
+  解析既有链要按「`lstrcmpA` 调用模式」匹配，**不要假设固定 stride**。
+- 新 key 槽／标签槽／兜底槽的 HIGHLOW 条目见 §九「反向：新增 cave」——这条最容易漏。
+
 ## 三、已知高危错误清单
 
 补丁脚本和人工审查必须拒绝以下情况：
@@ -309,6 +358,41 @@ RVA 0x1EDF 正是 .data+0x1F3 的 `jmp 0x65C81EDF` 落点
    在修复前会变、修复后不变；再按手机的真实加载基址反汇编崩溃点，确认恢复成原指令。
 5. 工具：`tool/client-debug/BeiDouSetItemCompat/fix_dll_reloc_hygiene.py <dll> [--apply]`，
    不带 `--apply` 只报告，可对 `clien/*.dll` 批量巡检。
+
+#### 反向：**新增** cave 里放了绝对地址即时数 → 必须自己补条目
+
+上一条讲删僵尸，这条讲相反方向，漏掉同样「PC 正常、手机野指针」。
+
+**先查基线的既有约定，别自己猜。** 如果目标函数里每个绝对地址即时数都已有 1:1 条目，
+那说明这个 DLL 的作者是按「会被重定位运行」写的，新 cave 必须照做：
+
+```text
+BeiDouSetItemCompat.dll 标签比较链实测：
+  9 个 key 槽  RVA 0x3595/0x35B1/0x35CD/0x35E9/0x3601/0x3619/0x3631/0x3649/0x3661
+  9 个标签槽   RVA 0x35A2/0x35BE/0x35DA/0x35F6/0x360E/0x3626/0x363E/0x3656/0x366E
+  兜底槽       RVA 0x3674
+  → 每条的偏移都是 5 字节指令（`68 imm32` / `B8+r imm32`）的 **+1**，一条不漏
+```
+
+- 新增条目写进一个**新 page 块**（`page(4) + blocksize(4) + word*`，4 字节对齐、
+  type 0 补位），并同步 `DataDirectory[5].Size` 与 `.reloc` `VirtualSize` + 重算 CheckSum。
+- **改写了原即时数的字节 → 原条目失效**：交给 `fix_dll_reloc_hygiene.py` 摘掉，
+  不要手工删（它同时负责重建块链与目录尺寸）。
+- 断言：条目数必须等于「基线条数 − 失效条数 + 新增条数」（本次 `323 → 331` =
+  323 − 1 + 9），且**逐条读出目标 dword 必须落在 `[ImageBase, +SizeOfImage)` 内或为 0**。
+
+#### cave 放哪个节：优先找「已映射但没用满」的洞
+
+- `BeiDouSetItemCompat.dll` 的 `.titles`（VA `0x65F92000`、`VirtualSize 0x4AA`、
+  `SizeOfRawData 0x600`、**RWX**）就是这种洞 —— 它的数据只用了一半。
+- **但 cave 必须落在映射范围内**：`VirtualSize` 只到 `0x4AA` 时，cave 写在 raw 偏移
+  `0x4EAC` 是**没被映射**的。把 `VirtualSize` 抬到 `SizeOfRawData`（`0x4AA → 0x600`）
+  才安全。**节头 VSize 变化要进契约测试的差异白名单**。
+- 不验证这一点会在严格加载器上表现为「执行访问违例」，而且只在真正用到该页时发作。
+
+> 另：改这类节头时**别把 RVA 和文件偏移混着用**。该 DLL `ImageBase 0x65C80000`、
+> `.text` `RVA 0x1000 / raw 0x400`（差 `0xC00`），`.titles` 则是 `RVA 0x312000 / raw 0x4A00`。
+> 两次失败都是同一类错误，写死两个常量表比现算更稳。
 
 #### ⚠️ 不要再说「PC 上不会触发」（2026-09-24 第二次现场推翻）
 

@@ -1354,7 +1354,8 @@ public class StatEffect {
             if (isDash() || isInfusion()) {
                 target.sendPacket(PacketCreator.givePirateBuff(activeStats, (skill ? sourceid : -sourceid), (int) leftDuration));
             } else {
-                target.sendPacket(PacketCreator.giveBuff((skill ? sourceid : -sourceid), (int) leftDuration, activeStats));
+                target.sendPacket(PacketCreator.giveBuff((skill ? sourceid : -sourceid), (int) leftDuration,
+                        target.mergeSetItemNativeStats(activeStats)));
             }
         }
     }
@@ -1413,7 +1414,8 @@ public class StatEffect {
             Packet buff = null;
             Packet mbuff = null;
             if (this.isActive(applyto)) {
-                buff = PacketCreator.giveBuff((skill ? sourceid : -sourceid), localDuration, localstatups);
+                buff = PacketCreator.giveBuff((skill ? sourceid : -sourceid), localDuration,
+                        applyto.mergeSetItemNativeStats(localstatups));
             }
             if (isDash()) {
                 buff = PacketCreator.givePirateBuff(statups, sourceid, seconds);

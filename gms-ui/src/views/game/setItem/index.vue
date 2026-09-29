@@ -189,11 +189,17 @@
 
     <a-modal
       v-model:visible="editorVisible"
-      :width="'min(760px, calc(100vw - 32px))'"
+      :width="'min(960px, calc(100vw - 32px))'"
       :title="editorTitle"
       :footer="false"
       unmount-on-close
     >
+      <SetItemSlotEditor
+        v-if="editing"
+        v-model="editSlots"
+        :minimum-slots="minimumSlots"
+      />
+      <a-divider />
       <a-tabs v-if="editing" v-model:active-key="activeTier">
         <a-tab-pane
           v-for="tier in editing.tiers"
@@ -207,41 +213,50 @@
               :xs="24"
               :sm="12"
             >
-              <a-form-item :label="$t(`setItem.stat.${stat}`)">
-                <div class="stat-editor-control">
-                  <a-input-number
-                    v-model="editValues[tier.requiredCount][stat]"
-                    :min="0"
-                    :max="statMaximum(stat)"
-                    :step="1"
-                    :precision="0"
-                    hide-button
-                  />
-                  <a-tooltip :content="$t('setItem.action.removeStat')">
-                    <a-button
-                      type="text"
-                      status="danger"
-                      size="mini"
-                      @click="removeEditorStat(tier.requiredCount, stat)"
-                    >
-                      <template #icon><icon-close /></template>
-                    </a-button>
-                  </a-tooltip>
+              <a-form-item
+                class="stat-form-item"
+                :label="$t(`setItem.stat.${setItemStatBase(stat)}`)"
+              >
+                <div class="stat-editor-field">
+                  <div class="stat-editor-control">
+                    <SetItemStatValue
+                      v-model="editValues[tier.requiredCount][stat]"
+                      :stat-key="stat"
+                      :disabled-keys="
+                        Object.keys(editValues[tier.requiredCount]).filter(
+                          (key) => key !== stat
+                        )
+                      "
+                      @update:stat-key="
+                        changeEditorStat(tier.requiredCount, stat, $event)
+                      "
+                    />
+                    <a-tooltip :content="$t('setItem.action.removeStat')">
+                      <a-button
+                        type="text"
+                        status="danger"
+                        size="mini"
+                        @click="removeEditorStat(tier.requiredCount, stat)"
+                      >
+                        <template #icon><icon-close /></template>
+                      </a-button>
+                    </a-tooltip>
+                  </div>
+                  <span v-if="stat in tier.defaultStats" class="default-value">
+                    {{
+                      $t('setItem.defaultValue', {
+                        value: tier.defaultStats[stat],
+                      })
+                    }}
+                  </span>
+                  <span v-else class="default-value">
+                    {{ $t('setItem.newStat') }}
+                  </span>
                 </div>
-                <span v-if="stat in tier.defaultStats" class="default-value">
-                  {{
-                    $t('setItem.defaultValue', {
-                      value: tier.defaultStats[stat],
-                    })
-                  }}
-                </span>
-                <span v-else class="default-value">
-                  {{ $t('setItem.newStat') }}
-                </span>
               </a-form-item>
             </a-col>
           </a-row>
-          <a-space v-if="availableEditorStats(tier.requiredCount).length">
+          <a-space v-if="availableEditorStats(tier.requiredCount).length" wrap>
             <a-select
               v-model="newStats[tier.requiredCount]"
               :placeholder="$t('setItem.action.addStat')"
@@ -252,7 +267,8 @@
                 :key="stat"
                 :value="stat"
               >
-                {{ $t(`setItem.stat.${stat}`) }}
+                {{ $t(`setItem.stat.${setItemStatBase(stat)}`)
+                }}{{ stat.endsWith('Pct') ? ' (%)' : '' }}
               </a-option>
             </a-select>
             <a-button
@@ -297,6 +313,9 @@
     deleteCustomSetItem,
     resetSetItem,
     SET_ITEM_STAT_KEYS,
+    SET_ITEM_PERCENT_BASES,
+    setItemStatBase,
+    setItemStatMaximum,
     SetItemDefinition,
     SetItemEquipment,
     setBuiltInSetItemEnabled,
@@ -307,6 +326,8 @@
     handleEquipmentPreviewError,
   } from '@/utils/mapleStoryAPI';
   import SetItemCreateModal from './SetItemCreateModal.vue';
+  import SetItemSlotEditor from './SetItemSlotEditor.vue';
+  import SetItemStatValue from './SetItemStatValue.vue';
 
   const { t } = useI18n();
   const { loading, setLoading } = useLoading(false);
@@ -319,6 +340,13 @@
   const editing = ref<SetItemDefinition>();
   const activeTier = ref('');
   const editValues = reactive<Record<number, Record<string, number>>>({});
+  const editSlots = ref<SetItemEquipment[][]>([]);
+  const minimumSlots = computed(() =>
+    Math.max(
+      1,
+      ...(editing.value?.tiers.map((tier) => tier.requiredCount) ?? [])
+    )
+  );
   const newStats = reactive<Record<number, string | undefined>>({});
   const createModal = ref<InstanceType<typeof SetItemCreateModal>>();
 
@@ -350,6 +378,7 @@
   };
 
   const isCustomized = (definition: SetItemDefinition) =>
+    definition.slotsCustomized ||
     definition.tiers.some((tier) => tier.customized);
 
   const previewEquipment = (definition: SetItemDefinition) => {
@@ -358,21 +387,6 @@
       if (slot[0]) result.push(slot[0]);
     });
     return result.slice(0, 6);
-  };
-
-  const statMaximum = (stat: string) => {
-    const normalized = stat.toLowerCase();
-    const rateStats = [
-      'finaldamage',
-      'bossdamage',
-      'statusres',
-      'buffduration',
-    ];
-    return normalized.endsWith('rate') ||
-      normalized.endsWith('pct') ||
-      rateStats.includes(normalized)
-      ? 10000
-      : 1000000;
   };
 
   const loadCatalog = async () => {
@@ -388,6 +402,9 @@
   const openEditor = (definition: SetItemDefinition) => {
     if (!definition.enabled) return;
     editing.value = definition;
+    editSlots.value = definition.slots.map((slot) =>
+      slot.map((item) => ({ ...item }))
+    );
     Object.keys(editValues).forEach((key) => delete editValues[Number(key)]);
     Object.keys(newStats).forEach((key) => delete newStats[Number(key)]);
     definition.tiers.forEach((tier) => {
@@ -398,19 +415,25 @@
   };
 
   const fillDefaults = () => {
+    editSlots.value = (editing.value?.defaultSlots ?? []).map((slot) =>
+      slot.map((item) => ({ ...item }))
+    );
     editing.value?.tiers.forEach((tier) => {
       editValues[tier.requiredCount] = { ...tier.defaultStats };
     });
   };
 
   const availableEditorStats = (requiredCount: number) =>
-    SET_ITEM_STAT_KEYS.filter(
-      (stat) => !(stat in (editValues[requiredCount] || {}))
-    );
+    Object.keys(editValues[requiredCount] || {}).length >= 24
+      ? []
+      : [
+          ...SET_ITEM_STAT_KEYS,
+          ...SET_ITEM_PERCENT_BASES.map((key) => `${key}Pct`),
+        ].filter((stat) => !(stat in (editValues[requiredCount] || {})));
 
   const addEditorStat = (requiredCount: number) => {
     const stat = newStats[requiredCount];
-    if (!stat) return;
+    if (!stat || !availableEditorStats(requiredCount).includes(stat)) return;
     const tier = editing.value?.tiers.find(
       (entry) => entry.requiredCount === requiredCount
     );
@@ -422,11 +445,32 @@
     delete editValues[requiredCount][stat];
   };
 
+  const changeEditorStat = (
+    requiredCount: number,
+    previous: string,
+    key: string
+  ) => {
+    if (key === previous || key in editValues[requiredCount]) return;
+    editValues[requiredCount][key] = Math.min(
+      editValues[requiredCount][previous],
+      setItemStatMaximum(key)
+    );
+    delete editValues[requiredCount][previous];
+  };
+
   const saveDefinition = async () => {
     if (!editing.value) return;
+    if (editSlots.value.some((slot) => slot.length === 0)) {
+      Message.warning(t('setItem.validation.emptySlot'));
+      return;
+    }
     saving.value = true;
     try {
-      const { data } = await updateSetItem(editing.value.id, editValues);
+      const { data } = await updateSetItem(
+        editing.value.id,
+        editValues,
+        editSlots.value.map((slot) => slot.map((item) => item.id))
+      );
       Message.success(t('setItem.save.success', { count: data }));
       editorVisible.value = false;
       await loadCatalog();
@@ -478,9 +522,15 @@
   }
 
   .default-value {
-    margin-left: 8px;
+    display: block;
+    margin-top: 4px;
     color: var(--color-text-3);
     white-space: nowrap;
+  }
+
+  .stat-editor-field {
+    width: 100%;
+    min-width: 0;
   }
 
   .stat-editor-control {
@@ -528,6 +578,17 @@
   }
 
   @media (max-width: 575px) {
+    .stat-form-item {
+      flex-direction: column;
+      :deep(.arco-form-item-label-col) {
+        flex: none;
+        padding: 0 0 6px;
+      }
+      :deep(.arco-form-item-wrapper-col) {
+        flex: none;
+        width: 100%;
+      }
+    }
     .modal-actions {
       align-items: stretch;
       flex-direction: column;

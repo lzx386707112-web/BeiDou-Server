@@ -7,6 +7,10 @@ export const SET_ITEM_STAT_KEYS = [
   'LUK',
   'PAD',
   'MAD',
+  'PDD',
+  'MDD',
+  'ACC',
+  'EVA',
   'HP',
   'MP',
   'FinalDamage',
@@ -15,6 +19,13 @@ export const SET_ITEM_STAT_KEYS = [
   'DropRate',
   'MesoRate',
 ] as const;
+
+export const SET_ITEM_PERCENT_BASES = SET_ITEM_STAT_KEYS.slice(0, 12);
+export const setItemStatBase = (key: string) => key.replace(/Pct$/, '');
+export const setItemStatIsPercent = (key: string) =>
+  key.endsWith('Pct') || key.endsWith('Rate') || key.endsWith('Damage');
+export const setItemStatMaximum = (key: string) =>
+  setItemStatIsPercent(key) ? 10000 : 1000000;
 
 export interface SetItemTier {
   requiredCount: number;
@@ -36,6 +47,8 @@ export interface SetItemDefinition {
   builtIn: boolean;
   enabled: boolean;
   slots: SetItemEquipment[][];
+  defaultSlots: SetItemEquipment[][];
+  slotsCustomized: boolean;
   tiers: SetItemTier[];
 }
 
@@ -52,9 +65,10 @@ export function getSetItemCatalog() {
 
 export function updateSetItem(
   definitionId: number,
-  tiers: Record<number, Record<string, number>>
+  tiers: Record<number, Record<string, number>>,
+  slots?: number[][]
 ) {
-  return axios.put<number>(`/setItem/v1/${definitionId}`, { tiers });
+  return axios.put<number>(`/setItem/v1/${definitionId}`, { tiers, slots });
 }
 
 export function resetSetItem(definitionId: number) {
