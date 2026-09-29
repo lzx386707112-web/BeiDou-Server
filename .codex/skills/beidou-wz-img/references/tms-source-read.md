@@ -146,3 +146,33 @@ java -cp "<orange-wz>/target/classes:<orange-wz>/target/dependency/*:/tmp/tms-wz
 「仓库图缺 VRTop/mobRate」。要么全量 dict 对比，要么把 key 列表列全。
 ⚠️ 仓库 2730 段地图**没有 `standAlone`/`partyStandAlone`/`noMapCmd`/`fieldType=0`**——
 这些 TMS 侧值是 0，缺失等价，不算缺口；但 `lvLimit=180` 与 `onUserEnter` 缺失是实打实的。
+
+## TMS 源数据选哪一个（实测）
+
+| 要什么 | 用哪个源 | 说明 |
+|---|---|---|
+| 怪物**完整数据**（info 血量/等级 + 动画） | `~/Documents/mxd/TMS/ms-extract/Mob_0000X/Mob_<id>.img` | wzpy 用 BMS 密钥直读。⚠️ `MapleStory-IMG/Data/Mob/` **只有 `_Canvas/<id>.img`**（纯动画帧，没有 info），不能当迁移源 |
+| 任务**四件套** | `MapleStory-IMG/Data/Quest/QuestData/<id>.img` | 顶层就是 QuestInfo / Check / Act / Say |
+| 地图 info | `MapleStory-IMG/Data/Map/Map/Map*/<id>.img` | 或复用 `MapScan` 产出的 tsv |
+| 道具 / NPC / 怪物名 | `MapleStory-IMG/Data/String/{Etc,Mob,Npc}.img` | `String/Etc.img` 顶层有个 `Etc` 容器节点；`String/Mob.img` 是直挂 |
+
+- **ID 一律 8 位补零**：`Item/Etc/0403.img` 里叫 `04033732`，`wz/Item.wz/Etc/0403.img.xml` 同理。
+  用 7 位去匹配会假阴性（踩过两次）。
+- **勋章 `114xxxx` 在 `Character/Accessory/01143125.img`**，不在 `Item/Install/`。
+- **台词里常藏落点**：例如 31930 的 `Say/1/stop/mob/0` 直接写「變形樹妖王位於 `#m273020400`」，
+  比反推地图靠谱；批量搜 `#m(\d{9})` 能一次拿到所有任务引用的地图。
+
+## 任务导入规范（照抄仓库已有的 37 条）
+
+纯数据驱动（无过场）时，按这套裁剪：
+
+- `QuestInfo`：只留 `name` / `area` / `0` / `1` / `2`（`category`、`recommend`、`rewardSummary`、`reqType` 剥掉）
+- `Check/0`：`lvmin` → `npc` → `quest/0/{id,state,order}`
+- `Check/1`：`order` → `npc` → `mob|item/0/{id,count,order}`
+- `Act`：`0` 留空；`1` 放 `exp` + `item`（剥 `potentialGrade`）
+- `Say`：`0` / `1` 都留空 imgdir（服务端会走默认任务流）
+- 剥 `startscript` / `endscript`；`QuestActionHandler` 在脚本缺失时回退 `quest.start(player,npc)`
+- NPC 换人：`1105001 赫麗娜`（聯盟會議場，仓库没有）→ `1022000 武術教練`（102000003）；
+  31965 的 `1105003/1105004` 本来就在 273000000，**不要动**
+
+参考脚本：`tool/scripts/migration/import_twilight_perion_quest_chain.py`。

@@ -63,33 +63,63 @@ found holes”; scope to maps this migration actually rewrote.
 
 ### `connect` ropes and ladders
 
-**Problem.** TMS `oS=connect` uses modern `l1` folders (`16`, `22`, `39`,
-`53`, `60`–`65`, …). The old client’s proven tree is
-`connect/{rope|ladder}/0/{0–4}`. Leaving modern `l1` makes ropes vanish.
-Blindly forcing **every** map’s `l1` to `0` breaks Victoria / El Nath /
-Magatia ropes that already use legacy `l1=1..4`.
+An entry is `l0` (folder `rope`/`ladder`), `l1` (style), `l2` (piece). The client
+walks `connect/{l0}/{l1}/{l2}` literally, so **the only thing that makes a rope
+vanish is a style or piece index that does not exist in
+`clien/Data/Map/Obj/connect.img`.** That asset is complete: rope styles `0`-`82`,
+ladder styles `0`-`87`, and untouched GMS towns already use `l1` up to `43`
+(rope, 12 971 objects) and `67` (ladder, 7 503 objects).
 
-Stripping `connect` or `spineAni` without filling names creates the gaps
-above.
+**Correction (2026-09-29).** The earlier rule here — "remap `l1` outside
+`{0,1,2,3,4}` to `0` and clamp `l2` to `0-4`" — is wrong on both counts. It was
+derived from `migrate_arcane_river_expansion.downgrade_connect_nodes()`, which
+*synthesises* display nodes from `ladderRope` collision data and therefore had
+to pick a style; picking `0` there says nothing about maps whose real style is
+known. Applying the same flattening to a source map that carries its own
+`l1`/`l2` keeps TMS's piece indices but swaps the style, and because style `0`
+pieces are 49/30/30/120/49 px while TMS picked its indices against the heights of
+its own style (`8`, `22`, `45`, `60`, `65`, `73`, …), the pieces stop tiling and
+the rope renders **with holes** — what players report as "绳子断断续续".
 
 **Solution.**
 
-- Remap `l1` to `0` only when it is **not** already in `{0,1,2,3,4}`.
-- Clamp `l2` to `0–4`. Keep `l0` as `rope` or `ladder`.
-- Same-length string mutate on the existing records; mirror in XML.
+- Keep the source `l1`/`l2` whenever `connect/{l0}/{l1}/{l2}` resolves in the
+  client's `connect.img`. Verify the piece count, not just the style.
+- Only when the style or piece is missing, fall back to the legacy flat mapping
+  (`l1="0"`, piece clamped to the real piece count of style `0`).
+- Match source and client connect objects by **physical placement**
+  `(layer, x, y, z, l0)`, never by the numeric child name. The two trees order
+  their `obj` children differently, so name-based pairing silently compares
+  unrelated ropes.
+- Same-length string mutate on the existing records; mirror in XML. A two-digit
+  value grows the record by one byte — `mutate_img` rebases the string-block
+  references and the enclosing size fields, then re-`scan_img`s the result.
 - On maps this task migrated, strip leftover modern object fields
   (`spineAni` as a whole object, `questex` / `tags` / `timeScale` as
   fields). Do not mass-strip `tags` from unmodified GMS towns.
 - After connect edits, re-scan for numeric gaps and fill them.
 
-Analogue: a working Arcane River or Monster Park map whose connect nodes
-already sit at `l1=0`, `l2` in `0–4`.
+**Measuring rope continuity.** For each chain grouped by `(layer, l0, x)`, take
+every piece's `height` and `origin.y`, convert to a span
+`[y - origin.y, y - origin.y + height]` (`origin` is a `WzVectorProperty` whose
+`.value` is an `(x, y)` tuple), sort the spans and sum the uncovered intervals.
+A correct rope reports `0`. Residual holes can be legitimate: two separate short
+ropes at the same `x` in one layer are merged by the grouping, so always compare
+against the source tree's own number before calling it a defect.
+
+Worked example — Seed Tower 1-20F, 297 values across
+`992002000/992003000/992011000/992016000/992017000/992019000`
+(`repair_seed_tower_20f_ropes.py`): uncovered pixels went 639/1435/0/858/895/114
+to 0/0/0/450/0/1, where `450` is what the TMS source itself measures for
+`992016000`.
 
 ### Contract tests
 
 `tool/scripts/migration/test_monster_park_late_course_obj_gaps.py` and a
-second generator pass with `maps_needing_repair() == []`. In-game: enter
-the map, climb ropes/ladders, look for missing or duplicated objects.
+second generator pass with `maps_needing_repair() == []`. For rope work also
+assert, per connect object, that `connect/{l0}/{l1}/{l2}` resolves in
+`connect.img` — not that `l1` sits in some fixed set. In-game: enter the map,
+climb ropes/ladders, look for missing or duplicated objects.
 
 ## Existing map IMG
 
@@ -107,6 +137,52 @@ Project the life node from a working analogue and verify at least:
 After insertion, prove every pre-existing `life` record is byte-for-byte
 unchanged and its relative order is preserved. Reopen the map and verify the
 new node values exactly.
+
+## Map `life` is correct but nothing spawns (instance / PQ maps)
+
+Symptom: client IMG and server XML both list many `life` mobs, but in game
+only the script-spawned ones appear. The map data is not the bug.
+
+- The periodic mob respawn (`RespawnTask` -> `ch.getMapFactory().updateMaps()`
+  -> `MapleMap.respawn()`) only walks the **channel** `MapManager`.
+- An event instance builds its own `MapManager` (`EventInstanceManager`), so
+  its maps never receive that tick.
+- `resetPQ()` on floor/stage entry runs `clearMapObjects()` ->
+  `killAllMonsters()`, then `instanceMapFirstSpawn()`, which respawns **only
+  `mobTime == -1`** spawn points. Rooms whose `life` uses `mobTime: 0` are
+  wiped and stay wiped.
+
+Every working PQ script refills itself, e.g. `HenesysPQ.js`:
+
+    function respawnStages(eim) {
+        eim.getInstanceMap(910010000).instanceMapRespawn();
+        eim.schedule("respawnStages", 15 * 1000);
+    }
+
+Checklist: `grep instanceMapRespawn` in the event script. If it is missing
+while the map's `life` uses `mobTime: 0`, that is the bug. Add a
+self-rescheduling `eim.schedule` that calls `instanceMapRespawn()`, plus one
+immediate call right after the floor warp so the room starts populated.
+`mobTime: -1` rooms are deliberately one-shot and need nothing; rooms with no
+`life` mobs are inert (numShouldSpawn <= 0).
+
+In-game verification: GM `!debug mobsp` lists every spawn point with
+总刷怪点 / 已刷怪 / 可刷怪, and `!debug map` prints the live monster count.
+
+### Editing a clear condition in these PQ scripts
+
+These scripts clear a floor from two places, and a naive edit leaves a bypass:
+
+- a floor-specific branch inside `monsterKilled()` (e.g. `if (id==9309131) markClear(eim)`);
+- the generic tail of `monsterKilled()`:
+  `if (goals[f] && f!=3 && f!=13 && f!=18 && num(eim,"score")>=goals[f]) markClear(eim)`.
+
+When a floor must satisfy **several** conditions, do not just add the extra
+condition to the floor branch — exclude that floor from the generic line
+(`f!=1`) and evaluate the whole rule in one helper (`floor1Check(eim)`) called
+from every contributing event, so the order of the conditions never matters.
+Also add any new counter key to the reset array in `enterFloor()`, or it leaks
+across floors. Boss/objective mobs usually do **not** increment `score`.
 
 ## NPC and mob resources
 
@@ -187,7 +263,8 @@ does not make the server spawn or control the entity.
 - Static reopen of each affected IMG, with exact resource/spawn-path assertions;
   do not create a temporary WZ unless the user explicitly requests packaging.
 - For migrated maps: `back` and every layer `obj` have names `0..max` with
-  no holes; leftover modern `connect` `l1` is only `0–4`; `spineAni` /
+  no holes; every `connect` resolves as `connect/{l0}/{l1}/{l2}` inside
+  `Map/Obj/connect.img`; `spineAni` /
   `questex` / `tags` / `timeScale` are gone on maps this task rewrote.
 - For migrated mobs with `ball`: `type=2`, `bulletSpeed` present,
   `hit/attach=1` when `hit` exists.

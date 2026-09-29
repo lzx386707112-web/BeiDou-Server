@@ -140,6 +140,21 @@ def sanitize_map(root, mid):
             for field in a.OBJ_UNSUPPORTED:
                 a.remove_child(c, field)
             if a.child_value(c, "oS") == "connect":
+                # WARNING: this flattening is over-conservative. The client's
+                # Map/Obj/connect.img keeps the whole style table (rope 0-82,
+                # ladder 0-87) and untouched GMS towns already use rope l1 up to
+                # 43, so the real compatibility gate is "does
+                # connect/{l0}/{l1}/{l2} resolve", not "is l1 in 0-4". Swapping
+                # the style while keeping TMS's piece indices makes the pieces
+                # stop tiling and the ropes render with holes.
+                #
+                # Behaviour is intentionally left unchanged here: install()
+                # refuses to rewrite an already installed standalone IMG, so a
+                # rule change would break the documented idempotence contract.
+                # The installed Seed maps are corrected incrementally by
+                # tool/scripts/migration/repair_seed_tower_20f_ropes.py, which
+                # restores the TMS l1/l2 wherever connect.img can express them.
+                # Any future full re-migration must run that repair afterwards.
                 if str(a.child_value(c, "l1")) not in {"0", "1", "2", "3", "4"}:
                     a.set_string(c, "l1", "0")
                 a.set_string(c, "l2", str(max(0, min(4, int(a.child_value(c, "l2") or 0)))))

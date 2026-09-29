@@ -72,6 +72,22 @@ def decoder_parity(parsed):
     return len(samples)
 
 
+CONNECT_ASSET = "clien/Data/Map/Obj/connect.img"
+
+
+def connect_style_table(parsed):
+    """`(kind, style) -> piece count` for the client's rope/ladder asset.
+
+    The compatibility gate for a `connect` object is that
+    `connect/{l0}/{l1}/{l2}` resolves in `connect.img`, not that `l1` sits in
+    some fixed small set: untouched GMS towns already use rope styles up to 43.
+    """
+    asset = parsed.get(CONNECT_ASSET) or load(CONNECT_ASSET)
+    return {(kind.name, style.name): len(style.children())
+            for kind in asset.root.children() if isinstance(kind, a.WzSubProperty)
+            for style in kind.children()}
+
+
 def validate():
     manifest = json.loads(m.MANIFEST.read_text())
     parsed = {}
@@ -112,6 +128,7 @@ def validate():
                 parent.remove(added)
             assert ET.tostring(old) == ET.tostring(new), xml_path
     parity = decoder_parity(parsed)
+    connect_styles = connect_style_table(parsed)
     legacy = {"clien/Data/String/Skill.img"}
     dependencies = 0
     for mid in m.MAP_IDS:
@@ -131,7 +148,12 @@ def validate():
         for layer in [c for c in im.root.children() if c.name.isdigit()]:
             for n in layer.child("obj").children() if layer.child("obj") else []:
                 if a.child_value(n, "oS") == "connect":
-                    assert str(a.child_value(n, "l1")) in {"0","1","2","3","4"}
+                    kind = str(a.child_value(n, "l0"))
+                    style = str(a.child_value(n, "l1"))
+                    piece = int(a.child_value(n, "l2"))
+                    pieces = connect_styles.get((kind, style))
+                    assert pieces is not None, (mid, kind, style)
+                    assert 0 <= piece < pieces, (mid, kind, style, piece, pieces)
         deps = a.collect_dependencies(im)
         for (kind, name), branches in deps["assets"].items():
             path = f"clien/Data/Map/{kind}/{name}.img"

@@ -17,6 +17,7 @@
     <int name="VRLeft" value="-1564"/>
     <int name="VRBottom" value="500"/>
     <int name="VRRight" value="1656"/>
+    <int name="lvLimit" value="180"/>
   </imgdir>
   <imgdir name="back">
     <imgdir name="0">
@@ -498,6 +499,19 @@
       <int name="cy" value="67"/>
       <int name="rx0" value="880"/>
       <int name="rx1" value="980"/>
+    </imgdir>
+    <imgdir name="16">
+      <string name="type" value="n"/>
+      <string name="id" value="2142007"/>
+      <int name="x" value="-213"/>
+      <int name="y" value="63"/>
+      <int name="mobTime" value="0"/>
+      <int name="f" value="0"/>
+      <int name="hide" value="0"/>
+      <int name="fh" value="72"/>
+      <int name="cy" value="67"/>
+      <int name="rx0" value="-263"/>
+      <int name="rx1" value="-163"/>
     </imgdir>
   </imgdir>
   <imgdir name="reactor"></imgdir>

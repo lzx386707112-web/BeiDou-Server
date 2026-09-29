@@ -1,0 +1,73 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>黃昏的勇士之村 — 缺口补齐与闭环核对</title><style>
+:root{--bg:#0f1116;--panel:#171a21;--line:#2a2f3a;--tx:#e6e9ef;--tx2:#98a1b3;--acc:#e05c5c;--ok:#5fbf85;--warn:#f0b95e}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);
+font:14px/1.7 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
+.wrap{max-width:1000px;margin:0 auto;padding:30px 20px 70px}
+h1{font-size:22px;margin:0 0 6px}h2{font-size:16px;margin:28px 0 10px;border-left:3px solid var(--acc);padding-left:10px}
+.sub{color:var(--tx2);font-size:13px;margin-bottom:18px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--tx2);font-size:12px;background:var(--panel)}
+tr:hover td{background:#1a1e26}
+code{background:#1d2129;padding:1px 5px;border-radius:5px;font-size:12px;color:#d5b06a;
+font-family:ui-monospace,Menlo,monospace}
+.tag{font-size:11px;padding:1px 9px;border-radius:20px;border:1px solid var(--line);white-space:nowrap}
+.tag.ok{border-color:#3d5140;color:#8fd6a2;background:#16211a}
+.tag.warn{border-color:#5a4a3b;color:#e6b98f;background:#241f18}
+.note{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:13px 17px;
+color:var(--tx2);font-size:13px;margin:12px 0}.note b{color:var(--tx)}
+.note ul{margin:6px 0 0;padding-left:18px}
+</style></head><body><div class="wrap">
+<h1>黃昏的勇士之村 — 缺口补齐与闭环核对</h1>
+<div class="sub">保持<b>无过场</b>（不写 quest 脚本、不恢复 <code>startscript/endscript</code>），全部走数据驱动。共改动 32 个文件，全部通过解析校验（0 失败）。</div>
+<h2>闭环核对清单</h2><table><tr><th style="width:26px">#</th><th style="width:180px">项</th><th style="width:90px">结果</th><th>说明</th></tr>
+<tr><td>1</td><td><b>副本地图 2730 段</b></td><td><span class="tag ok">完成</span></td><td>地图、portal、life、foothold 两端齐全</td></tr>
+<tr><td>2</td><td><b>主线任务 31900→31965</b></td><td><span class="tag ok">完成</span></td><td>QuestInfo/Check/Act/Say 四件套完整，前置链自洽</td></tr>
+<tr><td>3</td><td><b>日常任务 31916–31944</b></td><td><span class="tag ok">完成</span></td><td>本次新增 31930–31944 共 15 条（此前只到 31929）</td></tr>
+<tr><td>4</td><td><b>主题副本入口 1345</b></td><td><span class="tag ok">完成</span></td><td>npc 已按既有规则映射为 1022000</td></tr>
+<tr><td>5</td><td><b>主线 NPC 可达性</b></td><td><span class="tag ok">完成</span></td><td>1105001→1022000；1105003/1105004/2140000/2140002/2142011/21421xx 均在 2730 图内</td></tr>
+<tr><td>6</td><td><b>脚本召唤怪落地</b></td><td><span class="tag ok">完成</span></td><td>9100043 驅夢者的手下属新迁移；8620012 變形樹妖王原已存在但无布点</td></tr>
+<tr><td>7</td><td><b>任务道具定义</b></td><td><span class="tag ok">完成</span></td><td>新增 4033730 / 4033731 / 4033750–4033754 共 7 个 ETC 及名称描述</td></tr>
+<tr><td>8</td><td><b>任务道具掉落</b></td><td><span class="tag ok">完成</span></td><td>新增 V2.1.104；4033750←8620005、4033751←8620009、4033752←8620011、4033753←8620004、4033754←8620008、4033730←8620009、4033731←8620011（均 50%）</td></tr>
+<tr><td>9</td><td><b>地图等级限制</b></td><td><span class="tag ok">完成</span></td><td>lvLimit=180 两端补齐</td></tr>
+<tr><td>10</td><td><b>日常链最后一环</b></td><td><span class="tag ok">完成</span></td><td>31918/31919 的村长阿勒斯 2142001→2142106（副本内阿勒斯）；幽灵斯坦 2142007 布点至 273000000</td></tr>
+<tr><td>11</td><td><b>第一章 311xx（31 条）</b></td><td><span class="tag warn">跳过</span></td><td>NPC 2142001–2142009 / 1101002 全在 271010000，2710 段缺 186 张图；导入只会得到死任务</td></tr>
+</table>
+<h2>本次做了什么</h2>
+<div class="note"><ul>
+<li><b>迁移怪物</b>：<code>9100043 驅夢者的手下</code> 是 TMS 的 <code>summonType=1</code> 脚本召唤物，
+两端都没有 → 从 <code>ms-extract/Mob_00000/Mob_9100043.img</code> 迁出，60 张画布全部转 GMS ARGB4444。</li>
+<li><b>布点</b>：<code>8620012 變形樹妖王</code>（25.5M HP，boss）→ <code>273020400 寒風蕭瑟的墓地</code>，
+落点来自 TMS 任务 31930 台词原文「變形樹妖王位於 <code>#m273020400</code>」，<code>mobTime=-1</code>（boss 只刷一次）；
+<code>9100043</code> → <code>273060300 戰士們的決戰之地</code>，<code>mobTime=0</code>（31915 是可重复任务）。</li>
+<li><b>补任务</b>：31930–31944 共 15 条，严格照抄仓库既有 37 条的裁剪规范（QuestInfo 只留 name/area/0/1/2、
+Act 留 exp+item、Say 留空、剥脚本钩子）。</li>
+<li><b>补道具与掉落</b>：31932–31940 要用的 7 个 ETC 此前两端都不存在，补齐定义＋名称描述，
+并按道具描述里点名的怪物配掉落（新迁移 <code>V2.1.104</code>）。</li>
+<li><b>打通最后一环</b>：31918/31919 要找的「村长阿勒斯」住在第一章 <code>271010000</code>，
+重映射为副本内已有的 <code>2142106 阿勒斯</code>；幽灵斯坦 <code>2142007</code> 资源两端都在、
+只是没布点，直接放到 <code>273000000</code>。</li>
+</ul></div>
+<h2>实机验收步骤</h2>
+<div class="note"><ul>
+<li>满 185 级角色找 <b>武術教練(1022000)</b>（勇士之村·勇士聖殿 102000003）接 31900，一路做到 31965。</li>
+<li>31908 需击杀 變形木妖×20（273010000 / 273020000 一带）。</li>
+<li>31913 需击杀 <b>驅夢者的手下</b>×1 → 现在在 <code>273060300</code>。</li>
+<li>31964 需 4030048×1（由 8620010 掉落）。</li>
+<li>31965 完成后日常全开：31923–31944，其中 31930 打 <b>變形樹妖王</b>（<code>273020400</code>）、
+31933–31940 收集类道具已在对应怪物上配了掉落。</li>
+<li>客户端资源改完记得按大小校验哈希（共享目录会按文件大小缓存），必要时重启虚拟机。</li>
+</ul></div>
+<h2>未做 / 需你定夺</h2>
+<div class="note"><ul>
+<li><b>第一章（311xx，31 条）</b>：NPC 与 186 张 2710 实例图都不在仓库，
+强行导入只会得到一堆点不开的死任务。场地脚本 <code>cygnus_Summon</code> / <code>cygnus_ExpeditionEnter</code> /
+<code>knights_Summon</code> 仓库里都有，真要补就是「先迁图再导任务」的独立工程。</li>
+<li><b>9100043 的落点是我选的</b>：TMS 台词没有地图线索（原版靠道具触发脚本传送），
+我放在 273060300「戰士們的決戰之地」。想换图告诉我，一条命令就能改。</li>
+<li><b><code>lvLimit</code> 服务端不拦截</b>：只在 <code>MapDetectService</code> 自检里读，
+补它只是数据完整，不会真的挡低等级玩家。</li>
+</ul></div>
+</div></body></html>

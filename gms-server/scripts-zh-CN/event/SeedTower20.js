@@ -19,7 +19,7 @@ var SEED_DATA = {"0":{"portals":{"sp":[-324,32,"",""],"ptDirectionOut":[723,59,"
 
 var goals = {1:100, 3:1000, 4:300, 6:300, 8:100, 11:300, 13:80, 16:200, 18:10};
 var instructions = {
-    1:"消灭 100 只古代水灵，或击败古代超级水灵。",
+    1:"消灭 100 只古代水灵，并击败古代超级水灵。两个条件都要完成本层才结束。",
     2:"拾取数字卡，在同色石碑按上。卡牌数字必须更大；紫卡万能。",
     3:"拾取乌龟蛋累计 1000 分，金蛋每个 50 分。",
     4:"平衡分达到 300。正确一侧 +5，错误一侧 -1；先打左边。",
@@ -64,6 +64,7 @@ function playerEntry(eim, chr) {
     cleanItems(chr);
     enterFloor(eim, chr, 1);
     eim.schedule("tick", 500);
+    eim.schedule("respawnFloor", 1000);
 }
 function cleanItems(chr) {
     var api = chr.getAbstractPlayerInteraction();
@@ -86,6 +87,21 @@ function drop(eim, dropper, id, count) {
     var chr = player(eim);
     if (chr) map(eim).spawnItemDrop(dropper, chr, new Item(id, 0, count), dropper.getPosition(), false, false);
 }
+// 副本实例地图不参与服务端全地图刷新：RespawnTask 只遍历频道 MapManager，
+// 而事件实例用的是 EventInstanceManager 自己那份 MapManager。所以每层必须
+// 自己把地图 life 刷怪点补回来，否则进场 resetPQ() 清一次就再也没有了。
+function respawnFloor(eim) {
+    if (num(eim,"ending") || num(eim,"disposed")) return;
+    var m = map(eim);
+    if (m) m.instanceMapRespawn();
+    eim.schedule("respawnFloor", 5000);
+}
+// 第 1 层通关要两个条件同时满足：消灭 100 只普通古代水灵（9309046/9309047），
+// 并且击败古代超级水灵（9309131）。顺序不限，先做完哪个都行，两个都完成才过关。
+// 注意：普通水灵只有 38 个刷怪点，必须靠 respawnFloor 周期补怪才凑得够 100 只。
+function floor1Check(eim) {
+    if (num(eim,"score") >= goals[1] && num(eim,"bossDown")) markClear(eim);
+}
 function markClear(eim) {
     if (num(eim,"completed")) return;
     set(eim,"completed",1);
@@ -100,13 +116,14 @@ function enterFloor(eim, chr, next) {
     if (floor(eim)) map(eim).killAllMonsters();
     cleanItems(chr);
     set(eim,"floor",next);
-    ["kills","score","completed","side","correct","leaks","wave","shots","misses","yellow","red","puzzle","far","route","roarAt","oilAt","webAt","warning","warningAt"].forEach(function(k){set(eim,k,0);});
+    ["kills","score","bossDown","completed","side","correct","leaks","wave","shots","misses","yellow","red","puzzle","far","route","roarAt","oilAt","webAt","warning","warningAt"].forEach(function(k){set(eim,k,0);});
     set(eim,"entered",now()); set(eim,"lastTick",now());
     var m = eim.getInstanceMap(992000000 + next * 1000);
     m.resetPQ(chr.getLevel());
     var portals = SEED_DATA[String(next)].portals;
     var entrance = next == 4 ? "inLeft" : (portals.in00 ? "in00" : "sp");
     teleport(chr,m,entrance);
+    m.instanceMapRespawn();
     if (next != 5 && next != 15) eim.startEventTimer(num(eim,"remaining"));
     else markClear(eim);
     eim.spawnNpc(2540000, chr.getPosition(), m);
@@ -152,7 +169,7 @@ function progress(eim) {
         for(var i=1;i<=8;i++) if(num(eim,"solved."+i)) saved.push(i+"="+num(eim,"answer."+i));
         text+="当前第 "+(num(eim,"puzzle")+1)+" 段，已标记 "+saved.join("，");
     }
-    else if (goals[f]) text += num(eim,"score")+"/"+goals[f]+(f==4 ? "，当前打"+(num(eim,"side") ? "右" : "左")+"侧" : "")+(f==13 ? "，漏怪 "+num(eim,"leaks")+"/5" : "");
+    else if (goals[f]) text += num(eim,"score")+"/"+goals[f]+(f==1 ? "，超级水灵"+(num(eim,"bossDown") ? "已击败" : "存活") : "")+(f==4 ? "，当前打"+(num(eim,"side") ? "右" : "左")+"侧" : "")+(f==13 ? "，漏怪 "+num(eim,"leaks")+"/5" : "");
     else text += instructions[f];
     say(eim,text);
 }
@@ -163,7 +180,11 @@ function monsterKilled(mob,eim,hasKiller) {
     if(id>=9309400 && id<=9309402) return;
     if (num(eim,"completed")) return;
     inc(eim,"kills",1);
-    if (f==1) { if(id==9309131) markClear(eim); else inc(eim,"score",1); }
+    if (f==1) {
+        if(id==9309131) set(eim,"bossDown",1);
+        else inc(eim,"score",1);
+        floor1Check(eim);
+    }
     if (f==2) {
         var card = random(10)==0 ? 4009928 : 4009900+random(28);
         drop(eim,mob,card,1);
@@ -191,7 +212,7 @@ function monsterKilled(mob,eim,hasKiller) {
         else if(map(eim).getAllMonsters().size()==0) startWave(eim);
     }
     if(f==20 && id==9309205) finish(eim);
-    if(goals[f] && f!=3 && f!=13 && f!=18 && num(eim,"score")>=goals[f]) markClear(eim);
+    if(goals[f] && f!=1 && f!=3 && f!=13 && f!=18 && num(eim,"score")>=goals[f]) markClear(eim);
     if(num(eim,"kills")%10==0) progress(eim);
 }
 function allMonstersDead(eim,hasKiller) {}

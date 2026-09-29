@@ -587,6 +587,13 @@
     <string name="name" value="The 2nd Monster Carnival" />
     <string name="sortkey" value="71" />
   </imgdir>
+  <imgdir name="1345">
+    <string name="name" value="[主題副本]黃昏的勇士之村"/>
+    <int name="area" value="49"/>
+    <string name="0" value="新楓之谷聯盟的赫麗娜請求了協助.捏造出的未來的真相似乎漸漸顯露...必須揭開被捏造出來的未來的真相和背後的黑幕!&#13;&#10;&#13;&#10;-#e建議等級#n：190等級以上&#13;&#10;-#e移動方法#n&#13;&#10;1)捏造出的未來任務&#13;&#10;2)透過次元之鏡移動到新楓之谷聯盟會議場&#13;&#10;-#e最終獎勵#n：&#13;&#10;#i1032183:##t1032183#&#13;&#10;#i2049709:##t2049709#"/>
+    <string name="1" value="新楓之谷聯盟的赫麗娜請求了協助.捏造出的未來的真相似乎漸漸顯露...必須揭開被捏造出來的未來的真相和背後的黑幕!&#13;&#10;&#13;&#10;-#e建議等級#n：190等級以上&#13;&#10;-#e移動方法#n&#13;&#10;1)捏造出的未來任務&#13;&#10;2)透過次元之鏡移動到新楓之谷聯盟會議場&#13;&#10;-#e最終獎勵#n：&#13;&#10;#i1032183:##t1032183#&#13;&#10;#i2049709:##t2049709#"/>
+    <string name="2" value="新楓之谷聯盟的赫麗娜請求了協助.捏造出的未來的真相似乎漸漸顯露...必須揭開被捏造出來的未來的真相和背後的黑幕!&#13;&#10;&#13;&#10;-#e建議等級#n：190等級以上&#13;&#10;-#e移動方法#n&#13;&#10;1)捏造出的未來任務&#13;&#10;2)透過次元之鏡移動到新楓之谷聯盟會議場&#13;&#10;-#e最終獎勵#n：&#13;&#10;#i1032183:##t1032183#&#13;&#10;#i2049709:##t2049709#"/>
+  </imgdir>
   <imgdir name="2000">
     <string name="0" value="勇士部落的酋长要修房子。。。" />
     <string name="1" value="荒凉的高原村勇士部落。。。 在那里我见到了酋长，他穿得真奇怪。他拜托我收集为修理房子所需要的#b30个树枝和50个木块#k来。要是我答应他的请求，我就可以得到他的盾牌。但我不答应的话，难道他真会吃了我？\n\n#t4000018# #b#c4000018##k/50\n#t4000003# #b#c4000003##k/30" />
@@ -24809,6 +24816,111 @@
     <string name="2" value="找到了罗杰。" />
     <int name="area" value="20" />
     <string name="name" value="你好，我是莎丽" />
+  </imgdir>
+  <imgdir name="31930">
+    <string name="name" value="[未來之門] 麥吉的試驗"/>
+    <int name="area" value="47"/>
+    <string name="0" value="位於#b幽靈之地入口#k的#b麥吉#k說獨自消滅不斷出現的#r石巨人#k很難，但想考驗我的實力。"/>
+    <string name="1" value="#b麥吉#k說想看看我有沒有能力能夠幫助自己，要我消滅#r變形樹妖王#k證明我的能力。消滅#r變形樹妖王#k後，回去找麥吉吧。"/>
+    <string name="2" value="消滅了#r變形的樹妖王#k之後才通過了 #b麥吉的試驗#k。"/>
+  </imgdir>
+  <imgdir name="31931">
+    <string name="name" value="[未來之門] 麥吉的石巨人狩獵"/>
+    <int name="area" value="47"/>
+    <string name="0" value="確認實力的#b麥吉#k說有#b拜託的事情#k。會是什麼事情呢？"/>
+    <string name="1" value="#b麥吉#k說必須消滅#r數量增加的石巨人#k，防止他們闖入避難處。消滅#r古代黑石巨人#k #b50隻#k吧。"/>
+    <string name="2" value="為了維護原住民避難處的安全，消滅#b古代黑石巨人50隻#k了。"/>
+  </imgdir>
+  <imgdir name="31932">
+    <string name="name" value="[未來之門] 勇士之村戰士們的靈魂"/>
+    <int name="area" value="47"/>
+    <string name="0" value="#b麥吉#k說針對 #r巨人持續暴增的原因#k他有話要說。聽聽麥吉的話吧。"/>
+    <string name="1" value="根據麥吉所說，因為#r勇士之村戰士的冤魂#k的關係，石巨人不斷地出現。收集狩獵#r古代混種石巨人#k可獲得的#b勇士之村戰士的冤魂#k，拿去給在#b原住民避難處#k的#r酋長#k。"/>
+    <string name="2" value="收集#r勇士之村戰士的冤魂#k拿給 #b酋長#k時他為勇士之村的戰士舉行了追悼儀式。"/>
+  </imgdir>
+  <imgdir name="31933">
+    <string name="name" value="[未來之門] 緊缺的工料"/>
+    <int name="area" value="47"/>
+    <string name="0" value="#b變節的阿勒斯#k正在嘀咕什麼。詢問是什麼事情。"/>
+    <string name="1" value="他說製作#r黑魔法師石像#k所需要的材料不足，拜託我去消滅#r變形的鋼之肥肥#k且幫忙收集#b#t4033753##k。#b25個#k應該就夠了．．．石像需要那麼多鐵嗎．．．？"/>
+    <string name="2" value="去找#b黑暗阿勒斯#k，並且把#b#t4033753# 25個#k交給他了。露出陰險的笑容..."/>
+  </imgdir>
+  <imgdir name="31934">
+    <string name="name" value="[未來之門] 依然緊缺的工料"/>
+    <int name="area" value="47"/>
+    <string name="0" value="收下變形的盔甲碎片的阿勒斯說還需要#b額外的金屬#k。聽聽看詳細的內容吧。"/>
+    <string name="1" value="他說#r變形鐵面怪人#k平常都戴著巨大的鐵板，如果能把它拿來就對製作石像很有幫助。#b石像需要巨大的鐵板．．．？#k 嗯．．．"/>
+    <string name="2" value="已消滅#r變形鐵面怪人#k並將#b#t4033754##k交給了他。聽到阿勒斯詭異的笑聲。"/>
+  </imgdir>
+  <imgdir name="31935">
+    <string name="name" value="[未來之門] 勇士之村的名物1"/>
+    <int name="area" value="47"/>
+    <string name="0" value="#b變節的吉可穆德#k說為防備 #r黑魔法師的石像#k完工，有許多 #b要做的事情#k。詢問是什麼事情。"/>
+    <string name="1" value="#r黑魔法師的石像#k完工後勇士之村即將成為 #b知名的觀光城市#k。因此要事先製作觀光商品．．．打倒#r變形火肥肥#k收集 #b #t4033750##k吧。聽說大概是要畫圖畫．．．"/>
+    <string name="2" value="去找#b黑暗吉可穆德#k，並且把#b#t4033750#25個#k交給他了。"/>
+  </imgdir>
+  <imgdir name="31936">
+    <string name="name" value="[未來之門] 勇士之村的名物2"/>
+    <int name="area" value="47"/>
+    <string name="0" value="#b變節的吉可穆德#k說只有一個觀光商品還是不夠。他說還要收集#r另外一種#k ...聽聽詳細的內容吧。"/>
+    <string name="1" value="#b變心的吉可穆德#k說勇士之村附近的商品已經製作好了，這次盡可能要使用距離勇士之村較遠的材料製作商品。消滅#r古代石巨人#k後取得#b #t4033751##k吧。"/>
+    <string name="2" value="幫#b變節的吉可穆德#k收集了 #b#t4033751##k交給他。"/>
+  </imgdir>
+  <imgdir name="31937">
+    <string name="name" value="[未來之門] 勇士之村的名物3"/>
+    <int name="area" value="47"/>
+    <string name="0" value="#b變節的吉可穆德#k說他有 #r最後一次委託的事情#k。去聽聽看有什麼事吧。"/>
+    <string name="1" value="#b變節的吉可穆德#k聽到了有 #r#t4033752##k的消息。變節的吉可穆德想和#t4033751#一起限量販售 #t4033752#，最後一次委託收集 #r#t4033752##k給他。"/>
+    <string name="2" value="幫#b變節的吉可穆德#k找到了 #r#t4033752##k。"/>
+  </imgdir>
+  <imgdir name="31938">
+    <string name="name" value="[未來之門] 思念的孫女生日1"/>
+    <int name="area" value="47"/>
+    <string name="0" value="黃昏的勇士之村的#b酋長#k說有事情要拜託。"/>
+    <string name="1" value="黃昏的勇士之村的#b酋長#k拜託去 #r調查位於避難處的#k孫女#b比石頭更硬的頭#k當作 #r生日禮物#k..."/>
+    <string name="2" value="黃昏的勇士之村的#b酋長#k拜託去 #r調查位於避難處的#k孫女#b比石頭更硬的頭#k當作 #r生日禮物#k..."/>
+  </imgdir>
+  <imgdir name="31939">
+    <string name="name" value="[未來之門] 思念的孫女生日2"/>
+    <int name="area" value="47"/>
+    <string name="0" value="聽聽#b比石頭更硬的頭#k想要什麼 #r生日禮物#k吧。"/>
+    <string name="1" value="#b比石頭更硬的頭#k說他想知道從前 #r爺爺說的故事#k的結局是什麼。轉告#b黃昏的勇士之村#k的 #b酋長#k吧。"/>
+    <string name="2" value="#b比石頭更硬的頭#k說他想知道從前 #r爺爺說的故事#k的結局是什麼。轉告#b黃昏的勇士之村#k的 #b酋長#k吧。"/>
+  </imgdir>
+  <imgdir name="31940">
+    <string name="name" value="[未來之門] 思念的孫女生日3"/>
+    <int name="area" value="47"/>
+    <string name="0" value="與#b酋長#k對話。"/>
+    <string name="1" value="#b肥肥教練#k說要送#r故事書#k給孫女。前往黃昏的勇士之村附近狩獵#r變形鐵面怪人#k，收集#b戰士們的意志10張#k後，交給#b避難處#k的#b比石頭還堅硬的大頭#k吧。"/>
+    <string name="2" value="#b肥肥教練#k說要送#r故事書#k給孫女當禮物。前往黃昏的勇士之村附近狩獵#r變形鐵面怪人#k，收集#b戰士們的意志10張#k 交給#b避難處#k的#b比石頭還堅硬的大頭#k了。"/>
+  </imgdir>
+  <imgdir name="31941">
+    <string name="name" value="[未來之門] 思念的孫女生日4"/>
+    <int name="area" value="47"/>
+    <string name="0" value="與#b比石頭更硬的頭#k對話。"/>
+    <string name="1" value="#b比石頭更硬的頭#k說，他不是想聽故事而是想要 #r和爺爺在一起#k。轉告#b酋長#k吧。"/>
+    <string name="2" value="#b比石頭更硬的頭#k說，他不是想聽故事而是想要 #r和爺爺在一起#k。轉告#b酋長#k吧。"/>
+  </imgdir>
+  <imgdir name="31942">
+    <string name="name" value="[未來之門] 當年我也戰鬥過"/>
+    <int name="area" value="47"/>
+    <string name="0" value="#b原住民避難處#k的 #b酋長#k很像述說自己的過去。與酋長對話。"/>
+    <string name="1" value="#b酋長#k說自己以前曾是#r知名的戰士#k，如果想變成和自己一樣，就去消滅#r變形石面怪人#k #b100隻#k。"/>
+    <string name="2" value="已經消滅#r變形石面怪人#k #b100隻#k了。"/>
+  </imgdir>
+  <imgdir name="31943">
+    <string name="name" value="[未來之門] 往年我也很奮勇2"/>
+    <int name="area" value="47"/>
+    <string name="0" value="#b酋長#k說靠 #r變形木面怪人#k之類是不可能成為戰士的。聽聽是什麼意思吧。"/>
+    <string name="1" value="為了成為#b酋長#k所說的 #r一流的戰士#k，去消滅 #r變形石面怪人#k #b200隻#k吧。"/>
+    <string name="2" value="已消滅#r變形石面怪人#k #b200隻#k。"/>
+  </imgdir>
+  <imgdir name="31944">
+    <string name="name" value="[未來之門] 往年我也很奮勇3"/>
+    <int name="area" value="47"/>
+    <string name="0" value="#b酋長#k逐漸開始肯定我了。聽說還有#r最後一個試驗#k...去詢問是什麼試驗吧。"/>
+    <string name="1" value="#b酋長#k說若能消滅最近出現的 #變形鐵面怪人#k #b200隻#k，就會肯定他是 #r一流的戰士#k。"/>
+    <string name="2" value="消滅了#r變形鐵面怪人#k #b200隻#k。"/>
   </imgdir>
   <imgdir name="52015">
     <string name="0" value="因环境破坏与过度开发，沼泽地的面积逐渐缩小。失去生存环境的鳄鱼群便时常出现在村庄。不晓得是否有方法可以让鳄鱼群重新回到沼泽地呢？" />
