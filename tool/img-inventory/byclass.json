@@ -1,0 +1,1316 @@
+{
+ "seconds": 76.9,
+ "files_total": 6500,
+ "clien_img_bytes": 7209809966,
+ "counts": {
+  "Npc": {
+   "fmt1": 2881,
+   "canvas": 4641,
+   "file_bytes": 14625189,
+   "files": 981,
+   "fmt2": 1760,
+   "payload_bytes": 3024553
+  },
+  "Mob": {
+   "fmt1": 10491,
+   "canvas": 14207,
+   "file_bytes": 219130783,
+   "files": 284,
+   "fmt2": 3716,
+   "payload_bytes": 51540612
+  },
+  "Map/Obj": {
+   "fmt1": 3370,
+   "canvas": 3673,
+   "file_bytes": 96993921,
+   "files": 28,
+   "fmt2": 303,
+   "payload_bytes": 6599855
+  },
+  "Morph": {
+   "fmt1": 351,
+   "canvas": 400,
+   "file_bytes": 1607053,
+   "files": 9,
+   "fmt2": 49,
+   "payload_bytes": 186487
+  },
+  "Effect/DamageSkin": {
+   "fmt1": 4200,
+   "canvas": 4200,
+   "file_bytes": 5025436,
+   "files": 100
+  },
+  "Character/Weapon": {
+   "fmt2": 40985,
+   "canvas": 41416,
+   "file_bytes": 113529279,
+   "files": 549,
+   "payload_bytes": 103461672,
+   "fmt1": 431
+  },
+  "Character/Ring": {
+   "fmt2": 333,
+   "canvas": 333,
+   "file_bytes": 397239,
+   "files": 134,
+   "payload_bytes": 321543
+  },
+  "Map/Map": {
+   "fmt1": 315,
+   "canvas": 367,
+   "file_bytes": 14100504,
+   "files": 367,
+   "fmt2": 52,
+   "payload_bytes": 726658
+  },
+  "Character/Hair": {
+   "fmt1": 5803,
+   "canvas": 6231,
+   "file_bytes": 13831566,
+   "files": 984,
+   "fmt2": 428,
+   "payload_bytes": 779287
+  },
+  "Character/Face": {
+   "fmt2": 28527,
+   "canvas": 28978,
+   "file_bytes": 13150725,
+   "files": 784,
+   "payload_bytes": 8127152,
+   "fmt1": 451
+  },
+  "Character/Longcoat": {
+   "fmt2": 45048,
+   "canvas": 45048,
+   "file_bytes": 17369806,
+   "files": 275,
+   "payload_bytes": 11179356
+  },
+  "Character/Accessory": {
+   "fmt2": 1270,
+   "canvas": 1348,
+   "file_bytes": 1115181,
+   "files": 379,
+   "payload_bytes": 448695,
+   "fmt1": 78
+  },
+  "Character/Cape": {
+   "fmt2": 8189,
+   "canvas": 8361,
+   "file_bytes": 8291783,
+   "files": 137,
+   "payload_bytes": 6855750,
+   "fmt1": 172
+  },
+  "Character/TamingMob": {
+   "fmt2": 1097,
+   "canvas": 1125,
+   "file_bytes": 3489698,
+   "files": 30,
+   "payload_bytes": 3140377,
+   "fmt1": 28
+  },
+  "Character/Cap": {
+   "fmt2": 6293,
+   "canvas": 6299,
+   "file_bytes": 58567129,
+   "files": 405,
+   "payload_bytes": 51179729,
+   "fmt1": 6
+  },
+  "Character/Pants": {
+   "fmt2": 4837,
+   "canvas": 4912,
+   "file_bytes": 1765252,
+   "files": 65,
+   "payload_bytes": 1041219,
+   "fmt1": 75
+  },
+  "Character/Glove": {
+   "fmt2": 8959,
+   "canvas": 9123,
+   "file_bytes": 2117353,
+   "files": 66,
+   "payload_bytes": 954182,
+   "fmt1": 164
+  },
+  "Item/Pet": {
+   "fmt2": 3593,
+   "canvas": 3664,
+   "file_bytes": 6000073,
+   "files": 45,
+   "payload_bytes": 5302792,
+   "fmt1": 71
+  },
+  "Character/Coat": {
+   "fmt2": 13237,
+   "canvas": 13569,
+   "file_bytes": 3875077,
+   "files": 85,
+   "payload_bytes": 2124760,
+   "fmt1": 332
+  },
+  "Character/Shoes": {
+   "fmt2": 9588,
+   "canvas": 9879,
+   "file_bytes": 3180092,
+   "files": 134,
+   "payload_bytes": 1650667,
+   "fmt1": 291
+  },
+  "Character/PetEquip": {
+   "fmt2": 8749,
+   "canvas": 8749,
+   "file_bytes": 3233508,
+   "files": 38,
+   "payload_bytes": 2548905
+  },
+  "Reactor": {
+   "fmt1": 749,
+   "canvas": 764,
+   "file_bytes": 10926312,
+   "files": 46,
+   "fmt2": 15,
+   "payload_bytes": 89037
+  },
+  "Map/Back": {
+   "fmt2": 190,
+   "canvas": 1461,
+   "fmt1": 1271,
+   "file_bytes": 66234567,
+   "files": 28,
+   "payload_bytes": 9334176
+  },
+  "UI": {
+   "fmt1": 263,
+   "canvas": 1763,
+   "file_bytes": 17171551,
+   "files": 2,
+   "fmt2": 1500,
+   "payload_bytes": 7108194
+  },
+  "Map/Tile": {
+   "fmt1": 254,
+   "canvas": 340,
+   "file_bytes": 834068,
+   "files": 16,
+   "fmt2": 86,
+   "payload_bytes": 174196
+  },
+  "Character/Android": {
+   "fmt1": 12,
+   "canvas": 12,
+   "file_bytes": 8784,
+   "files": 6
+  },
+  "Item/Consume": {
+   "fmt2": 10,
+   "canvas": 14,
+   "file_bytes": 9207,
+   "files": 3,
+   "payload_bytes": 6087,
+   "fmt1": 4
+  },
+  "Character": {
+   "fmt1": 240,
+   "canvas": 240,
+   "file_bytes": 4453764,
+   "files": 2
+  },
+  "Character/Shield": {
+   "fmt2": 474,
+   "canvas": 474,
+   "file_bytes": 430341,
+   "files": 14,
+   "payload_bytes": 362373
+  },
+  "Map/WorldMap": {
+   "fmt1": 3,
+   "canvas": 9,
+   "file_bytes": 1278588,
+   "files": 4,
+   "fmt2": 6,
+   "payload_bytes": 1027838
+  },
+  "Skill": {
+   "fmt2": 834,
+   "canvas": 4148,
+   "fmt1": 3314,
+   "file_bytes": 104252422,
+   "files": 11,
+   "payload_bytes": 4461320
+  },
+  "Item/Etc": {
+   "fmt1": 124,
+   "canvas": 264,
+   "fmt2": 140,
+   "file_bytes": 184619,
+   "files": 3,
+   "payload_bytes": 78147
+  },
+  "Item/Cash": {
+   "fmt1": 355,
+   "canvas": 355,
+   "file_bytes": 682006,
+   "files": 4
+  },
+  "Effect": {
+   "fmt1": 572,
+   "canvas": 585,
+   "fmt2": 13,
+   "file_bytes": 1993742,
+   "files": 3,
+   "payload_bytes": 44335
+  },
+  "Character/Afterimage": {
+   "fmt1": 242,
+   "canvas": 242,
+   "file_bytes": 360201,
+   "files": 2
+  }
+ },
+ "classes": {
+  "Character/Weapon": {
+   "measured": 15134,
+   "LOSSLESS": 14100,
+   "COLOUR_LOSS": 1034
+  },
+  "Npc": {
+   "measured": 1758,
+   "LOSSLESS": 1678,
+   "COLOUR_LOSS": 80
+  },
+  "Character/Ring": {
+   "measured": 333,
+   "LOSSLESS": 331,
+   "COLOUR_LOSS": 2
+  },
+  "Character/Face": {
+   "measured": 23109,
+   "LOSSLESS": 23060,
+   "COLOUR_LOSS": 49
+  },
+  "Character/Longcoat": {
+   "measured": 8250,
+   "LOSSLESS": 7462,
+   "COLOUR_LOSS": 788
+  },
+  "Character/Accessory": {
+   "measured": 1270,
+   "LOSSLESS": 1248,
+   "COLOUR_LOSS": 22
+  },
+  "Character/Cape": {
+   "measured": 2895,
+   "LOSSLESS": 2689,
+   "COLOUR_LOSS": 206
+  },
+  "Character/TamingMob": {
+   "measured": 618,
+   "LOSSLESS": 569,
+   "COLOUR_LOSS": 48,
+   "ALPHA_ONLY": 1
+  },
+  "Character/Cap": {
+   "measured": 2905,
+   "COLOUR_LOSS": 550,
+   "LOSSLESS": 2355
+  },
+  "Character/Pants": {
+   "measured": 1920,
+   "LOSSLESS": 1920
+  },
+  "Character/Glove": {
+   "measured": 1950,
+   "LOSSLESS": 1892,
+   "COLOUR_LOSS": 58
+  },
+  "Item/Pet": {
+   "measured": 1320,
+   "LOSSLESS": 1166,
+   "COLOUR_LOSS": 154
+  },
+  "Character/Coat": {
+   "measured": 2490,
+   "LOSSLESS": 2477,
+   "COLOUR_LOSS": 13
+  },
+  "Character/Hair": {
+   "measured": 416,
+   "COLOUR_LOSS": 416
+  },
+  "Mob": {
+   "measured": 1734,
+   "LOSSLESS": 1387,
+   "COLOUR_LOSS": 347
+  },
+  "Character/Shoes": {
+   "measured": 3895,
+   "LOSSLESS": 3894,
+   "COLOUR_LOSS": 1
+  },
+  "Character/PetEquip": {
+   "measured": 1082,
+   "LOSSLESS": 1081,
+   "COLOUR_LOSS": 1
+  },
+  "Morph": {
+   "measured": 49,
+   "LOSSLESS": 49
+  },
+  "Map/Map": {
+   "measured": 52,
+   "LOSSLESS": 39,
+   "COLOUR_LOSS": 13
+  },
+  "Map/Back": {
+   "measured": 112,
+   "COLOUR_LOSS": 12,
+   "LOSSLESS": 100
+  },
+  "Item/Consume": {
+   "measured": 10,
+   "LOSSLESS": 10
+  },
+  "Character/Shield": {
+   "measured": 392,
+   "LOSSLESS": 392
+  },
+  "Map/Tile": {
+   "measured": 86,
+   "LOSSLESS": 77,
+   "COLOUR_LOSS": 9
+  },
+  "Reactor": {
+   "measured": 15,
+   "LOSSLESS": 15
+  },
+  "Skill": {
+   "measured": 123,
+   "LOSSLESS": 123
+  },
+  "Map/WorldMap": {
+   "measured": 6,
+   "LOSSLESS": 2,
+   "COLOUR_LOSS": 4
+  },
+  "Item/Etc": {
+   "measured": 30,
+   "LOSSLESS": 30
+  },
+  "Map/Obj": {
+   "measured": 64,
+   "COLOUR_LOSS": 23,
+   "LOSSLESS": 41
+  },
+  "Effect": {
+   "measured": 13,
+   "LOSSLESS": 10,
+   "COLOUR_LOSS": 3
+  },
+  "UI": {
+   "measured": 30,
+   "LOSSLESS": 20,
+   "COLOUR_LOSS": 10
+  }
+ },
+ "class_bytes": {
+  "Character/Weapon": {
+   "LOSSLESS": 17565712,
+   "LOSSLESS_c4": 15198677,
+   "LOSSLESS_px": 46060891,
+   "COLOUR_LOSS": 11403699,
+   "COLOUR_LOSS_c4": 4381690,
+   "COLOUR_LOSS_px": 15658365
+  },
+  "Npc": {
+   "LOSSLESS": 2672319,
+   "LOSSLESS_c4": 2379350,
+   "LOSSLESS_px": 4702107,
+   "COLOUR_LOSS": 363519,
+   "COLOUR_LOSS_c4": 308479,
+   "COLOUR_LOSS_px": 643564
+  },
+  "Character/Ring": {
+   "LOSSLESS": 309876,
+   "LOSSLESS_c4": 279002,
+   "LOSSLESS_px": 554968,
+   "COLOUR_LOSS": 1852,
+   "COLOUR_LOSS_c4": 1468,
+   "COLOUR_LOSS_px": 10140
+  },
+  "Character/Face": {
+   "LOSSLESS": 6636534,
+   "LOSSLESS_c4": 5910950,
+   "LOSSLESS_px": 14351621,
+   "COLOUR_LOSS": 15310,
+   "COLOUR_LOSS_c4": 12746,
+   "COLOUR_LOSS_px": 29053
+  },
+  "Character/Longcoat": {
+   "LOSSLESS": 1836337,
+   "LOSSLESS_c4": 1579301,
+   "LOSSLESS_px": 3298141,
+   "COLOUR_LOSS": 249469,
+   "COLOUR_LOSS_c4": 208634,
+   "COLOUR_LOSS_px": 465406
+  },
+  "Character/Accessory": {
+   "LOSSLESS": 445963,
+   "LOSSLESS_c4": 394814,
+   "LOSSLESS_px": 689017,
+   "COLOUR_LOSS": 7223,
+   "COLOUR_LOSS_c4": 5989,
+   "COLOUR_LOSS_px": 8683
+  },
+  "Character/Cape": {
+   "LOSSLESS": 1848428,
+   "LOSSLESS_c4": 1586661,
+   "LOSSLESS_px": 4612201,
+   "COLOUR_LOSS": 742200,
+   "COLOUR_LOSS_c4": 592472,
+   "COLOUR_LOSS_px": 1634112
+  },
+  "Character/TamingMob": {
+   "LOSSLESS": 2087880,
+   "LOSSLESS_c4": 1906519,
+   "LOSSLESS_px": 6212619,
+   "COLOUR_LOSS": 150698,
+   "COLOUR_LOSS_c4": 125073,
+   "COLOUR_LOSS_px": 462796,
+   "ALPHA_ONLY": 854,
+   "ALPHA_ONLY_c4": 625,
+   "ALPHA_ONLY_px": 960
+  },
+  "Character/Cap": {
+   "COLOUR_LOSS": 8432217,
+   "COLOUR_LOSS_c4": 3050374,
+   "COLOUR_LOSS_px": 35152550,
+   "LOSSLESS": 1543256,
+   "LOSSLESS_c4": 1337924,
+   "LOSSLESS_px": 4390191
+  },
+  "Character/Pants": {
+   "LOSSLESS": 417796,
+   "LOSSLESS_c4": 355506,
+   "LOSSLESS_px": 727587
+  },
+  "Character/Glove": {
+   "LOSSLESS": 203150,
+   "LOSSLESS_c4": 173359,
+   "LOSSLESS_px": 257475,
+   "COLOUR_LOSS": 9331,
+   "COLOUR_LOSS_c4": 6965,
+   "COLOUR_LOSS_px": 8094
+  },
+  "Item/Pet": {
+   "LOSSLESS": 1397409,
+   "LOSSLESS_c4": 1223156,
+   "LOSSLESS_px": 2837426,
+   "COLOUR_LOSS": 339953,
+   "COLOUR_LOSS_c4": 280755,
+   "COLOUR_LOSS_px": 680189
+  },
+  "Character/Coat": {
+   "LOSSLESS": 364623,
+   "LOSSLESS_c4": 308362,
+   "LOSSLESS_px": 564162,
+   "COLOUR_LOSS": 8924,
+   "COLOUR_LOSS_c4": 6727,
+   "COLOUR_LOSS_px": 14500
+  },
+  "Character/Hair": {
+   "COLOUR_LOSS": 745209,
+   "COLOUR_LOSS_c4": 377588,
+   "COLOUR_LOSS_px": 926529
+  },
+  "Mob": {
+   "LOSSLESS": 14910099,
+   "LOSSLESS_c4": 12871877,
+   "LOSSLESS_px": 53684657,
+   "COLOUR_LOSS": 2741294,
+   "COLOUR_LOSS_c4": 2279540,
+   "COLOUR_LOSS_px": 11569147
+  },
+  "Character/Shoes": {
+   "LOSSLESS": 612614,
+   "LOSSLESS_c4": 518544,
+   "LOSSLESS_px": 1046706,
+   "COLOUR_LOSS": 730,
+   "COLOUR_LOSS_c4": 627,
+   "COLOUR_LOSS_px": 1024
+  },
+  "Character/PetEquip": {
+   "LOSSLESS": 357390,
+   "LOSSLESS_c4": 304435,
+   "LOSSLESS_px": 848748,
+   "COLOUR_LOSS": 660,
+   "COLOUR_LOSS_c4": 596,
+   "COLOUR_LOSS_px": 990
+  },
+  "Morph": {
+   "LOSSLESS": 186683,
+   "LOSSLESS_c4": 157303,
+   "LOSSLESS_px": 553080
+  },
+  "Map/Map": {
+   "LOSSLESS": 330708,
+   "LOSSLESS_c4": 283165,
+   "LOSSLESS_px": 545418,
+   "COLOUR_LOSS": 397140,
+   "COLOUR_LOSS_c4": 155685,
+   "COLOUR_LOSS_px": 291466
+  },
+  "Map/Back": {
+   "COLOUR_LOSS": 209379,
+   "COLOUR_LOSS_c4": 30009,
+   "COLOUR_LOSS_px": 442618,
+   "LOSSLESS": 5915477,
+   "LOSSLESS_c4": 5060614,
+   "LOSSLESS_px": 20436863
+  },
+  "Item/Consume": {
+   "LOSSLESS": 6118,
+   "LOSSLESS_c4": 5365,
+   "LOSSLESS_px": 9842
+  },
+  "Character/Shield": {
+   "LOSSLESS": 298487,
+   "LOSSLESS_c4": 258081,
+   "LOSSLESS_px": 504662
+  },
+  "Map/Tile": {
+   "LOSSLESS": 166938,
+   "LOSSLESS_c4": 144401,
+   "LOSSLESS_px": 312616,
+   "COLOUR_LOSS": 7958,
+   "COLOUR_LOSS_c4": 6894,
+   "COLOUR_LOSS_px": 10155
+  },
+  "Reactor": {
+   "LOSSLESS": 89097,
+   "LOSSLESS_c4": 76797,
+   "LOSSLESS_px": 125537
+  },
+  "Skill": {
+   "LOSSLESS": 583655,
+   "LOSSLESS_c4": 499608,
+   "LOSSLESS_px": 1512574
+  },
+  "Map/WorldMap": {
+   "LOSSLESS": 541302,
+   "LOSSLESS_c4": 476181,
+   "LOSSLESS_px": 601600,
+   "COLOUR_LOSS": 476736,
+   "COLOUR_LOSS_c4": 255033,
+   "COLOUR_LOSS_px": 388359
+  },
+  "Item/Etc": {
+   "LOSSLESS": 16920,
+   "LOSSLESS_c4": 14662,
+   "LOSSLESS_px": 29807
+  },
+  "Map/Obj": {
+   "COLOUR_LOSS": 54457,
+   "COLOUR_LOSS_c4": 42900,
+   "COLOUR_LOSS_px": 170778,
+   "LOSSLESS": 393739,
+   "LOSSLESS_c4": 343559,
+   "LOSSLESS_px": 804186
+  },
+  "Effect": {
+   "LOSSLESS": 17068,
+   "LOSSLESS_c4": 14887,
+   "LOSSLESS_px": 80229,
+   "COLOUR_LOSS": 27319,
+   "COLOUR_LOSS_c4": 23544,
+   "COLOUR_LOSS_px": 161505
+  },
+  "UI": {
+   "LOSSLESS": 68584,
+   "LOSSLESS_c4": 58114,
+   "LOSSLESS_px": 159095,
+   "COLOUR_LOSS": 232818,
+   "COLOUR_LOSS_c4": 173501,
+   "COLOUR_LOSS_px": 444252
+  }
+ },
+ "ratio": {
+  "Character/Weapon": {
+   "x2.0": 14774,
+   "tail_zero": 14774,
+   "x1.0": 360
+  },
+  "Npc": {
+   "x2.0": 1669,
+   "tail_zero": 1669,
+   "x1.0": 89
+  },
+  "Character/Ring": {
+   "x2.0": 262,
+   "tail_zero": 262,
+   "x1.0": 71
+  },
+  "Character/Face": {
+   "x1.0": 11019,
+   "x2.0": 12090,
+   "tail_zero": 12090,
+   "x0.5": 65
+  },
+  "Character/Longcoat": {
+   "x2.0": 6720,
+   "tail_zero": 6720,
+   "x1.0": 1530
+  },
+  "Character/Accessory": {
+   "x2.0": 1079,
+   "tail_zero": 1079,
+   "x1.0": 191
+  },
+  "Character/Cape": {
+   "x2.0": 2645,
+   "tail_zero": 2645,
+   "x1.0": 250
+  },
+  "Character/TamingMob": {
+   "x2.0": 208,
+   "tail_zero": 208,
+   "x1.0": 410
+  },
+  "Character/Cap": {
+   "x2.0": 2622,
+   "tail_zero": 2622,
+   "x1.0": 283
+  },
+  "Character/Pants": {
+   "x2.0": 1920,
+   "tail_zero": 1920
+  },
+  "Character/Glove": {
+   "x2.0": 1920,
+   "tail_zero": 1920,
+   "x1.0": 30
+  },
+  "Item/Pet": {
+   "x2.0": 1320,
+   "tail_zero": 1320
+  },
+  "Character/Coat": {
+   "x2.0": 2310,
+   "tail_zero": 2310,
+   "x1.0": 180
+  },
+  "Character/Hair": {
+   "x1.0": 416
+  },
+  "Mob": {
+   "x2.0": 1470,
+   "tail_zero": 1470,
+   "x1.0": 264
+  },
+  "Character/Shoes": {
+   "x2.0": 3415,
+   "tail_zero": 3415,
+   "x1.0": 480
+  },
+  "Character/PetEquip": {
+   "x2.0": 1082,
+   "tail_zero": 1082
+  },
+  "Morph": {
+   "x2.0": 49,
+   "tail_zero": 49
+  },
+  "Map/Map": {
+   "x2.0": 47,
+   "tail_zero": 47,
+   "x1.0": 5
+  },
+  "Map/Back": {
+   "x1.0": 15,
+   "x2.0": 97,
+   "tail_zero": 97
+  },
+  "Item/Consume": {
+   "x2.0": 10,
+   "tail_zero": 10
+  },
+  "Character/Shield": {
+   "x2.0": 392,
+   "tail_zero": 392
+  },
+  "Map/Tile": {
+   "x2.0": 62,
+   "tail_zero": 62,
+   "x1.0": 24
+  },
+  "Reactor": {
+   "x1.0": 4,
+   "x2.0": 11,
+   "tail_zero": 11
+  },
+  "Skill": {
+   "x2.0": 123,
+   "tail_zero": 123
+  },
+  "Map/WorldMap": {
+   "x2.0": 6,
+   "tail_zero": 6
+  },
+  "Item/Etc": {
+   "x2.0": 30,
+   "tail_zero": 30
+  },
+  "Map/Obj": {
+   "x2.0": 30,
+   "tail_zero": 30,
+   "x1.0": 34
+  },
+  "Effect": {
+   "x1.0": 13
+  },
+  "UI": {
+   "x2.0": 30,
+   "tail_zero": 30
+  }
+ },
+ "zlib": {
+  "Character/Weapon": {
+   "payload_all": 103461672,
+   "c8": 28969411,
+   "c4": 19580367
+  },
+  "Npc": {
+   "payload_all": 3024553,
+   "c8": 3035838,
+   "c4": 2687829
+  },
+  "Character/Ring": {
+   "payload_all": 321543,
+   "c8": 311728,
+   "c4": 280470
+  },
+  "Character/Face": {
+   "payload_all": 8127152,
+   "c8": 6651844,
+   "c4": 5923696
+  },
+  "Character/Longcoat": {
+   "payload_all": 11179356,
+   "c8": 2085806,
+   "c4": 1787935
+  },
+  "Character/Accessory": {
+   "payload_all": 448695,
+   "c8": 453186,
+   "c4": 400803
+  },
+  "Character/Cape": {
+   "payload_all": 6855750,
+   "c8": 2590628,
+   "c4": 2179133
+  },
+  "Character/TamingMob": {
+   "payload_all": 3140377,
+   "c8": 2239432,
+   "c4": 2032217
+  },
+  "Character/Cap": {
+   "payload_all": 51179729,
+   "c8": 9975473,
+   "c4": 4388298
+  },
+  "Character/Pants": {
+   "payload_all": 1041219,
+   "c8": 417796,
+   "c4": 355506
+  },
+  "Character/Glove": {
+   "payload_all": 954182,
+   "c8": 212481,
+   "c4": 180324
+  },
+  "Item/Pet": {
+   "payload_all": 5302792,
+   "c8": 1737362,
+   "c4": 1503911
+  },
+  "Character/Coat": {
+   "payload_all": 2124760,
+   "c8": 373547,
+   "c4": 315089
+  },
+  "Character/Hair": {
+   "payload_all": 779287,
+   "c8": 745209,
+   "c4": 377588
+  },
+  "Mob": {
+   "payload_all": 51540612,
+   "c8": 17651393,
+   "c4": 15151417
+  },
+  "Character/Shoes": {
+   "payload_all": 1650667,
+   "c8": 613344,
+   "c4": 519171
+  },
+  "Character/PetEquip": {
+   "payload_all": 2548905,
+   "c8": 358050,
+   "c4": 305031
+  },
+  "Morph": {
+   "payload_all": 186487,
+   "c8": 186683,
+   "c4": 157303
+  },
+  "Map/Map": {
+   "payload_all": 726658,
+   "c8": 727848,
+   "c4": 438850
+  },
+  "Map/Back": {
+   "payload_all": 9334176,
+   "c8": 6124856,
+   "c4": 5090623
+  },
+  "Item/Consume": {
+   "payload_all": 6087,
+   "c8": 6118,
+   "c4": 5365
+  },
+  "Character/Shield": {
+   "payload_all": 362373,
+   "c8": 298487,
+   "c4": 258081
+  },
+  "Map/Tile": {
+   "payload_all": 174196,
+   "c8": 174896,
+   "c4": 151295
+  },
+  "Reactor": {
+   "payload_all": 89037,
+   "c8": 89097,
+   "c4": 76797
+  },
+  "Skill": {
+   "payload_all": 4461320,
+   "c8": 583655,
+   "c4": 499608
+  },
+  "Map/WorldMap": {
+   "payload_all": 1027838,
+   "c8": 1018038,
+   "c4": 731214
+  },
+  "Item/Etc": {
+   "payload_all": 78147,
+   "c8": 16920,
+   "c4": 14662
+  },
+  "Map/Obj": {
+   "payload_all": 6599855,
+   "c8": 448196,
+   "c4": 386459
+  },
+  "Effect": {
+   "payload_all": 44335,
+   "c8": 44387,
+   "c4": 38431
+  },
+  "UI": {
+   "payload_all": 7108194,
+   "c8": 301402,
+   "c4": 231615
+  }
+ },
+ "errors": {
+  "Character/Weapon": {
+   "px": 61719256,
+   "rgb": 143915665.0,
+   "a": 8533880.0,
+   "rgbmax": 15,
+   "amax": 15,
+   "a_changed": 1553922
+  },
+  "Npc": {
+   "px": 5345671,
+   "rgb": 1117441.0,
+   "a": 0.0,
+   "rgbmax": 15,
+   "amax": 0,
+   "a_changed": 0
+  },
+  "Character/Ring": {
+   "px": 565108,
+   "rgb": 6674.0,
+   "a": 0.0,
+   "rgbmax": 15,
+   "amax": 0,
+   "a_changed": 0
+  },
+  "Character/Face": {
+   "px": 14380674,
+   "rgb": 7820.0,
+   "a": 0.0,
+   "rgbmax": 15,
+   "amax": 0,
+   "a_changed": 0
+  },
+  "Character/Longcoat": {
+   "px": 3763547,
+   "rgb": 3304910.0,
+   "a": 0.0,
+   "rgbmax": 8,
+   "amax": 0,
+   "a_changed": 0
+  },
+  "Character/Accessory": {
+   "px": 697700,
+   "rgb": 7454.0,
+   "a": 0.0,
+   "rgbmax": 15,
+   "amax": 0,
+   "a_changed": 0
+  },
+  "Character/Cape": {
+   "px": 6246313,
+   "rgb": 2016192.0,
+   "a": 0.0,
+   "rgbmax": 15,
+   "amax": 0,
+   "a_changed": 0
+  },
+  "Character/TamingMob": {
+   "px": 6676375,
+   "rgb": 3423493.0,
+   "a": 33961.0,
+   "rgbmax": 15,
+   "amax": 15,
+   "a_changed": 5852
+  },
+  "Character/Cap": {
+   "px": 39542741,
+   "rgb": 162486450.0,
+   "a": 10657274.0,
+   "rgbmax": 15,
+   "amax": 15,
+   "a_changed": 1948444
+  },
+  "Character/Pants": {
+   "px": 727587,
+   "rgb": 0.0,
+   "a": 0.0,
+   "rgbmax": 0,
+   "amax": 0,
+   "a_changed": 0
+  },
+  "Character/Glove": {
+   "px": 265569,
+   "rgb": 28286.0,
+   "a": 0.0,
+   "rgbmax": 13,
+   "amax": 0,
+   "a_changed": 0
+  },
+  "Item/Pet": {
+   "px": 3517615,
+   "rgb": 541923.0,
+   "a": 0.0,
+   "rgbmax": 15,
+   "amax": 0,
+   "a_changed": 0
+  },
+  "Character/Coat": {
+   "px": 578662,
+   "rgb": 29028.0,
+   "a": 0.0,
+   "rgbmax": 15,
+   "amax": 0,
+   "a_changed": 0
+  },
+  "Character/Hair": {
+   "px": 926529,
+   "rgb": 10052927.0,
+   "a": 456742.0,
+   "rgbmax": 15,
+   "amax": 15,
+   "a_changed": 76846
+  },
+  "Mob": {
+   "px": 65253804,
+   "rgb": 5381654.0,
+   "a": 79541.0,
+   "rgbmax": 15,
+   "amax": 15,
+   "a_changed": 13481
+  },
+  "Character/Shoes": {
+   "px": 1047730,
+   "rgb": 2045.0,
+   "a": 0.0,
+   "rgbmax": 15,
+   "amax": 0,
+   "a_changed": 0
+  },
+  "Character/PetEquip": {
+   "px": 849738,
+   "rgb": 6.0,
+   "a": 0.0,
+   "rgbmax": 3,
+   "amax": 0,
+   "a_changed": 0
+  },
+  "Morph": {
+   "px": 553080,
+   "rgb": 0.0,
+   "a": 0.0,
+   "rgbmax": 0,
+   "amax": 0,
+   "a_changed": 0
+  },
+  "Map/Map": {
+   "px": 836884,
+   "rgb": 1822344.0,
+   "a": 172535.0,
+   "rgbmax": 15,
+   "amax": 15,
+   "a_changed": 30627
+  },
+  "Map/Back": {
+   "px": 20879481,
+   "rgb": 2995967.0,
+   "a": 406931.0,
+   "rgbmax": 15,
+   "amax": 15,
+   "a_changed": 75840
+  },
+  "Item/Consume": {
+   "px": 9842,
+   "rgb": 0.0,
+   "a": 0.0,
+   "rgbmax": 0,
+   "amax": 0,
+   "a_changed": 0
+  },
+  "Character/Shield": {
+   "px": 504662,
+   "rgb": 0.0,
+   "a": 0.0,
+   "rgbmax": 0,
+   "amax": 0,
+   "a_changed": 0
+  },
+  "Map/Tile": {
+   "px": 322771,
+   "rgb": 463.0,
+   "a": 0.0,
+   "rgbmax": 1,
+   "amax": 0,
+   "a_changed": 0
+  },
+  "Reactor": {
+   "px": 125537,
+   "rgb": 0.0,
+   "a": 0.0,
+   "rgbmax": 0,
+   "amax": 0,
+   "a_changed": 0
+  },
+  "Skill": {
+   "px": 1512574,
+   "rgb": 0.0,
+   "a": 0.0,
+   "rgbmax": 0,
+   "amax": 0,
+   "a_changed": 0
+  },
+  "Map/WorldMap": {
+   "px": 989959,
+   "rgb": 1807095.0,
+   "a": 11181.0,
+   "rgbmax": 15,
+   "amax": 15,
+   "a_changed": 2279
+  },
+  "Item/Etc": {
+   "px": 29807,
+   "rgb": 0.0,
+   "a": 0.0,
+   "rgbmax": 0,
+   "amax": 0,
+   "a_changed": 0
+  },
+  "Map/Obj": {
+   "px": 974964,
+   "rgb": 80997.0,
+   "a": 0.0,
+   "rgbmax": 15,
+   "amax": 0,
+   "a_changed": 0
+  },
+  "Effect": {
+   "px": 241734,
+   "rgb": 196746.0,
+   "a": 0.0,
+   "rgbmax": 1,
+   "amax": 0,
+   "a_changed": 0
+  },
+  "UI": {
+   "px": 603347,
+   "rgb": 191695.0,
+   "a": 0.0,
+   "rgbmax": 15,
+   "amax": 0,
+   "a_changed": 0
+  }
+ },
+ "worst": {
+  "Character/Weapon": [
+   15,
+   "Data/Character/Weapon/01702471.img::49/swingT3/1/weapon",
+   79,
+   46
+  ],
+  "Npc": [
+   15,
+   "Data/Npc/9400534.img::stand/0",
+   122,
+   111
+  ],
+  "Character/Ring": [
+   15,
+   "Data/Character/Ring/01112238.img::info/sample",
+   91,
+   60
+  ],
+  "Character/Face": [
+   15,
+   "Data/Character/Face/00021037.img::glitter/0/face",
+   27,
+   18
+  ],
+  "Character/Longcoat": [
+   8,
+   "Data/Character/Longcoat/01053518.img::sit/0/mailArm",
+   17,
+   14
+  ],
+  "Character/Accessory": [
+   15,
+   "Data/Character/Accessory/01012161.img::info/icon",
+   33,
+   30
+  ],
+  "Character/Cape": [
+   15,
+   "Data/Character/Cape/01102532.img::info/icon",
+   36,
+   36
+  ],
+  "Character/TamingMob": [
+   15,
+   "Data/Character/TamingMob/01912019.img::1902026/fly/0/0",
+   28,
+   37
+  ],
+  "Character/Cap": [
+   15,
+   "Data/Character/Cap/01009983.img::stabOF/2/default1",
+   465,
+   380
+  ],
+  "Character/Glove": [
+   13,
+   "Data/Character/Glove/01082505.img::swingT1/2/lGlove",
+   13,
+   14
+  ],
+  "Item/Pet": [
+   15,
+   "Data/Item/Pet/5000019.img::chat/7",
+   45,
+   68
+  ],
+  "Character/Coat": [
+   15,
+   "Data/Character/Coat/01042312.img::info/icon",
+   34,
+   33
+  ],
+  "Character/Hair": [
+   15,
+   "Data/Character/Hair/00030094.img::default/hairOverHead",
+   53,
+   42
+  ],
+  "Mob": [
+   15,
+   "Data/Mob/9410088.img::die1/5",
+   105,
+   72
+  ],
+  "Character/Shoes": [
+   15,
+   "Data/Character/Shoes/01072637.img::info/iconRaw",
+   32,
+   32
+  ],
+  "Character/PetEquip": [
+   3,
+   "Data/Character/PetEquip/01802071.img::info/iconRaw",
+   33,
+   30
+  ],
+  "Map/Map": [
+   15,
+   "Data/Map/Map/Map2/240040511.img::miniMap/canvas",
+   100,
+   115
+  ],
+  "Map/Back": [
+   15,
+   "Data/Map/Back/timeTemple.img::back/1",
+   30,
+   480
+  ],
+  "Map/Tile": [
+   1,
+   "Data/Map/Tile/SeoMoonJungFieldTW.img::enH0/0",
+   90,
+   9
+  ],
+  "Map/WorldMap": [
+   15,
+   "Data/Map/WorldMap/WorldMap140.img::BaseImg/0",
+   640,
+   470
+  ],
+  "Map/Obj": [
+   15,
+   "Data/Map/Obj/trapSG.img::moving/animal/0/5",
+   86,
+   92
+  ],
+  "Effect": [
+   1,
+   "Data/Effect/OnUserEff.img::guideEffect/aranTutorial/tutorialGuide1/0",
+   453,
+   97
+  ],
+  "UI": [
+   15,
+   "Data/UI/Login2.img::Common/SoftKey/BtDel/normal/0",
+   38,
+   33
+  ]
+ },
+ "failures": {
+  "short": 65,
+  "decompress:ValueError": 2
+ }
+}

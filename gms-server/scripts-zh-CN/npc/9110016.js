@@ -105,26 +105,6 @@ function action(mode, type, selection) {
  cm.serverNotice("『高级百宝箱』：恭喜"+ cm.getChar().getName() +"，获得传说中的黑龙项环!");
 			cm.gainItem(1122000    , 1);
 			}
-			else if (itemchance == 85) {
- cm.serverNotice("『高级百宝箱』：恭喜"+ cm.getChar().getName() +"，获得传说中的战士真心之链!");
-			cm.gainItem(1122029    , 1);
-			}
-			else if (itemchance == 86) {
- cm.serverNotice("『高级百宝箱』：恭喜"+ cm.getChar().getName() +"，获得传说中的法师真心之链!");
-			cm.gainItem(1122030    , 1);
-			}
-			else if (itemchance == 87) {
- cm.serverNotice("『高级百宝箱』：恭喜"+ cm.getChar().getName() +"，获得传说中的弓手真心之链!");
-			cm.gainItem(1122031   , 1);
-			}	
-			else if (itemchance == 88) {
- cm.serverNotice("『高级百宝箱』：恭喜"+ cm.getChar().getName() +"，获得传说中的飞侠真心之链!");
-			cm.gainItem(1122032    , 1);
-			}
-			else if (itemchance == 89) {
- cm.serverNotice("『高级百宝箱』：恭喜"+ cm.getChar().getName() +"，获得传说中的海盗真心之链!");
-			cm.gainItem(1122033    , 1);
-			}
 			else if (itemchance == 90) {
  cm.serverNotice("『高级百宝箱』：恭喜"+ cm.getChar().getName() +"，获得传说中的扎昆头盔!");
 			cm.gainItem(1002357    , 1);
@@ -497,34 +477,6 @@ cm.serverNotice("『高级百宝箱』：恭喜"+ cm.getChar().getName() +"，�
 cm.serverNotice("『高级百宝箱』：恭喜"+ cm.getChar().getName() +"，获得绝世 温暖的围脖!");
 			cm.gainItem(1122018 , 1);
 			}
-			else if (itemchance == 183) { 
-cm.serverNotice("『高级百宝箱』：恭喜"+ cm.getChar().getName() +"，获得绝世 封印的心之链!");
-			cm.gainItem(1122019, 1);
-			}
-			else if (itemchance == 184) { 
-cm.serverNotice("『高级百宝箱』：恭喜"+ cm.getChar().getName() +"，获得绝世 战士心之链!");
-			cm.gainItem(1122024 , 1);
-			}
-			else if (itemchance == 185) { 
-cm.serverNotice("『高级百宝箱』：恭喜"+ cm.getChar().getName() +"，获得绝世 法师心之链!");
-			cm.gainItem(1122025, 1);
-			}
-			else if (itemchance == 186) { 
-cm.serverNotice("『高级百宝箱』：恭喜"+ cm.getChar().getName() +"，获得绝世 弓手心之链!");
-			cm.gainItem(1122026, 1);
-			}
-			else if (itemchance == 187) { 
-cm.serverNotice("『高级百宝箱』：恭喜"+ cm.getChar().getName() +"，获得绝世 飞侠心之链!");
-			cm.gainItem(1122027, 1);
-			}
-			else if (itemchance == 188) { 
-cm.serverNotice("『高级百宝箱』：恭喜"+ cm.getChar().getName() +"，获得绝世 海盗心之链!");
-			cm.gainItem(1122028 , 1);
-			}
-			else if (itemchance == 189) { 
-cm.serverNotice("『高级百宝箱』：恭喜"+ cm.getChar().getName() +"，获得绝世 午餐盒!");
-			cm.gainItem(1302100, 1);
-			}
 			else if (itemchance == 190) { 
 cm.serverNotice("『高级百宝箱』：恭喜"+ cm.getChar().getName() +"，获得绝世 山炮!");
 			cm.gainItem(1302104, 1);
@@ -544,82 +496,6 @@ cm.serverNotice("『高级百宝箱』：恭喜"+ cm.getChar().getName() +"，�
 			else if (itemchance == 194) { 
 cm.serverNotice("『高级百宝箱』：恭喜"+ cm.getChar().getName() +"，获得绝世 黎明乌之翼!");
 			cm.gainItem(1402050, 1);
-			}
-			else if (itemchance == 195) { 
-cm.serverNotice("『高级百宝箱』：恭喜"+ cm.getChar().getName() +"，获得绝世 心之恋!");
-			cm.gainItem(1122039, 1);
-			}
-			else if (itemchance == 196) { 
-cm.serverNotice("『高级百宝箱』：恭喜"+ cm.getChar().getName() +"，获得绝世 心之恋!");
-			cm.gainItem(1122040, 1);
-			}
-			else if (itemchance == 197) { 
-cm.serverNotice("『高级百宝箱』：恭喜"+ cm.getChar().getName() +"，获得绝世 心之恋!");
-			cm.gainItem(1122041, 1);
-			}
-			else if (itemchance == 198) { 
-cm.serverNotice("『高级百宝箱』：恭喜"+ cm.getChar().getName() +"，获得绝世 心之恋!");
-			cm.gainItem(1122042, 1);
-			}
-			else if (itemchance == 199) { 
-cm.serverNotice("『高级百宝箱』：恭喜"+ cm.getChar().getName() +"，获得绝世 心之恋!");
-			cm.gainItem(1122043, 1);
-			}
-			else if (itemchance == 200) { 
-cm.serverNotice("『高级百宝箱』：恭喜"+ cm.getChar().getName() +"，获得绝世 心之恋!");
-			cm.gainItem(1122044, 1);
-			}
-			else if (itemchance == 201) { 
-cm.serverNotice("『高级百宝箱』：恭喜"+ cm.getChar().getName() +"，获得绝世 心之恋!");
-			cm.gainItem(1122045, 1);
-			}
-			else if (itemchance == 202) { 
-cm.serverNotice("『高级百宝箱』：恭喜"+ cm.getChar().getName() +"，获得绝世 心之恋!");
-			cm.gainItem(1122046, 1);
-			}
-			else if (itemchance == 203) { 
-cm.serverNotice("『高级百宝箱』：恭喜"+ cm.getChar().getName() +"，获得绝世 心之恋!");
-			cm.gainItem(1122047, 1);
-			}
-			else if (itemchance == 204) { 
-cm.serverNotice("『高级百宝箱』：恭喜"+ cm.getChar().getName() +"，获得绝世 心之恋!");
-			cm.gainItem(1122048, 1);
-			}
-			else if (itemchance == 205) { 
-cm.serverNotice("『高级百宝箱』：恭喜"+ cm.getChar().getName() +"，获得绝世 心之恋!");
-			cm.gainItem(1122049, 1);
-			}
-			else if (itemchance == 206) { 
-cm.serverNotice("『高级百宝箱』：恭喜"+ cm.getChar().getName() +"，获得绝世 心之恋!");
-			cm.gainItem(1122050, 1);
-			}
-			else if (itemchance == 207) { 
-cm.serverNotice("『高级百宝箱』：恭喜"+ cm.getChar().getName() +"，获得绝世 心之恋!");
-			cm.gainItem(1122051, 1);
-			}
-			else if (itemchance == 208) { 
-cm.serverNotice("『高级百宝箱』：恭喜"+ cm.getChar().getName() +"，获得绝世 心之恋!");
-			cm.gainItem(1122052, 1);
-			}
-			else if (itemchance == 209) { 
-cm.serverNotice("『高级百宝箱』：恭喜"+ cm.getChar().getName() +"，获得绝世  心之恋!");
-			cm.gainItem(1122053, 1);
-			}
-			else if (itemchance == 210) { 
-cm.serverNotice("『高级百宝箱』：恭喜"+ cm.getChar().getName() +"，获得绝世  心之恋!");
-			cm.gainItem(1122054, 1);
-			}
-			else if (itemchance == 211) { 
-cm.serverNotice("『高级百宝箱』：恭喜"+ cm.getChar().getName() +"，获得绝世  心之恋!");
-			cm.gainItem(1122055, 1);
-			}
-			else if (itemchance == 212) { 
-cm.serverNotice("『高级百宝箱』：恭喜"+ cm.getChar().getName() +"，获得绝世  心之恋!");
-			cm.gainItem(1122056, 1);
-			}
-			else if (itemchance == 213) { 
-cm.serverNotice("『高级百宝箱』：恭喜"+ cm.getChar().getName() +"，获得绝世  心之恋!");
-			cm.gainItem(1122057, 1);
 			}
 			else if (itemchance == 214) { 
 cm.serverNotice("『高级百宝箱』：恭喜"+ cm.getChar().getName() +"，获得绝世  休彼德蔓的项链!");

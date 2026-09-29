@@ -73,10 +73,6 @@ function action(mode, type, selection) {
  cm.serverNotice("『活动公告』：恭喜"+ cm.getChar().getName() +"，获得南瓜灯笼!");
 			cm.gainItem(1402044, 1);
 			}
-			else if (itemchance == 74) {
- cm.serverNotice("『活动公告』：恭喜"+ cm.getChar().getName() +"，获得枫叶3年旗!");
-			cm.gainItem(1412028, 1);
-			}
 			else if (itemchance == 75) {
  cm.serverNotice("『活动公告』：恭喜"+ cm.getChar().getName() +"，获得酒瓶!");
 			cm.gainItem(1422011, 1);

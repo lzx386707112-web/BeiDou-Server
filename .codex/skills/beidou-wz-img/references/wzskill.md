@@ -65,6 +65,26 @@ Full serialization is acceptable only for a genuinely new standalone IMG or a
 new temporary artifact. A new record inside an existing IMG is not a new
 standalone artifact and still requires raw insertion.
 
+### Technique 2 can refuse, and it refuses on equipment IMGs
+
+`replace_img_record` raises `string reference at 0x... points into replaced
+bytes` when some other record's string reference targets a byte inside the span
+being replaced and the replacement changes the span length. Measured on random
+client files, roughly 1 in 6 files that hold an ARGB8888 canvas hits this, and
+every refusal landed under `Character/` (equipment). The refusal is correct
+behaviour — a shorter span would leave a dangling offset.
+
+Consequences:
+
+- A size-changing canvas rewrite is **not** universally available. Probe the
+  exact file before planning one; do not assume the patcher will accept it.
+- When technique 2 refuses, fall back to technique 1 (same-length in-place
+  payload patch), which is structurally inert: it changes no size field, so no
+  reference has to be rebased.
+- Reserve extra time for `Character/` equipment IMGs. They hold the largest
+  ARGB8888 pool and are the surface most likely to reject a variable-length
+  edit.
+
 ## 3. Move data across regions safely
 
 The TMS tree is typically BMS-keyed while this client is GMS-keyed. Load source
@@ -81,6 +101,26 @@ A valid Canvas header is insufficient. Decode it with
 `wzpy.canvas.decode_canvas(..., region="GMS")` and verify expected visible
 frames have a non-empty bounding box. Treat intentional `1x1` placeholders
 separately from visible frames.
+
+### ARGB8888 payloads can be twice the declared size
+
+Measured across the shipped client: most `format=2` (ARGB8888) canvases
+decompress to **exactly `2 * width * height * 4` bytes**, and the trailing half
+is **all zero**. The client reads only the leading `width * height * 4` bytes.
+The redundant plane costs almost nothing compressed (all-zero data, ~3%), so it
+is not reclaimable space — but it is a decoding trap.
+
+- Slice `raw[: width * height * 4]` before reshaping to `(h, w, 4)`. A reshape
+  of the full buffer raises, and `decode_canvas` only appears to work because
+  PIL ignores the excess.
+- Never treat such a payload as a double-width or double-height image. The
+  leading quadrant is the real sprite; the rest is padding.
+- Any re-encoding must decide explicitly what to do with the plane. Dropping it
+  buys ~3% and changes the record length, so prefer a same-length in-place
+  payload patch (technique 1 above) and zero-pad back to the original payload
+  length.
+
+Confirm the case per canvas with `len(_decompress(node, key)) / (w * h * 4)`.
 
 ## 4. Keep server XML incremental
 

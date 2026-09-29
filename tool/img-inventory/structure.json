@@ -1,0 +1,161 @@
+{
+ "files_scanned": 53915,
+ "probe1_variable_length_refusal": {
+  "sample": 120,
+  "counts": {
+   "no_8888_payload": 39,
+   "accepted": 68,
+   "refused_string_reference": 13
+  },
+  "by_top_dir": {
+   "Map": {
+    "no_8888_payload": 13
+   },
+   "Character": {
+    "accepted": 53,
+    "no_8888_payload": 15,
+    "refused_string_reference": 13
+   },
+   "Npc": {
+    "accepted": 14,
+    "no_8888_payload": 2
+   },
+   "Mob": {
+    "no_8888_payload": 5,
+    "accepted": 1
+   },
+   "Effect": {
+    "no_8888_payload": 1
+   },
+   "Reactor": {
+    "no_8888_payload": 3
+   }
+  }
+ },
+ "probe2_same_length_inplace": [
+  {
+   "file": "Data/Character/Shoes/01070103.img",
+   "canvas": "30x26",
+   "payload_offset": 176,
+   "payload_len": 422,
+   "changed_bytes": 418,
+   "all_inside_payload": true,
+   "length_unchanged": true,
+   "reparses_clean": true
+  },
+  {
+   "file": "Data/Character/Cap/01000080.img",
+   "canvas": "33x31",
+   "payload_offset": 102,
+   "payload_len": 504,
+   "changed_bytes": 504,
+   "all_inside_payload": true,
+   "length_unchanged": true,
+   "reparses_clean": true
+  },
+  {
+   "file": "Data/Map/Map/Map9/925020900.img",
+   "canvas": "70x62",
+   "payload_offset": 6244,
+   "payload_len": 2779,
+   "changed_bytes": 2758,
+   "all_inside_payload": true,
+   "length_unchanged": true,
+   "reparses_clean": true
+  },
+  {
+   "file": "Data/Character/Coat/01049002.img",
+   "canvas": "30x28",
+   "payload_offset": 102,
+   "payload_len": 489,
+   "changed_bytes": 486,
+   "all_inside_payload": true,
+   "length_unchanged": true,
+   "reparses_clean": true
+  },
+  {
+   "file": "Data/Character/Cap/01001052.img",
+   "canvas": "33x31",
+   "payload_offset": 102,
+   "payload_len": 787,
+   "changed_bytes": 782,
+   "all_inside_payload": true,
+   "length_unchanged": true,
+   "reparses_clean": true
+  },
+  {
+   "file": "Data/Character/Cap/01002894.img",
+   "canvas": "28x30",
+   "payload_offset": 102,
+   "payload_len": 442,
+   "changed_bytes": 440,
+   "all_inside_payload": true,
+   "length_unchanged": true,
+   "reparses_clean": true
+  },
+  {
+   "file": "Data/Character/Face/00025155.img",
+   "canvas": "33x18",
+   "payload_offset": 276,
+   "payload_len": 457,
+   "changed_bytes": 452,
+   "all_inside_payload": true,
+   "length_unchanged": true,
+   "reparses_clean": true
+  }
+ ],
+ "probe3_zero_tail_plane": {
+  "summary": {
+   "rgb_canvases": 427,
+   "has_tail": 339,
+   "tail_all_zero": 339,
+   "tail_nonzero": 0,
+   "measured_payload_mb": 0.072,
+   "measured_without_tail_mb": 0.07,
+   "measured_tail_raw_mb": 0.5,
+   "tail_share_of_compressed_pct": 2.871
+  },
+  "per_file": [
+   {
+    "file": "Data/Npc/9901109.img",
+    "canvases": 2,
+    "payload_mb": 0.0,
+    "without_tail_mb": 0.0,
+    "tail_raw_mb": 0.0,
+    "recoverable_pct": -20.0
+   },
+   {
+    "file": "Data/Character/Longcoat/01051052.img",
+    "canvases": 166,
+    "payload_mb": 0.037,
+    "without_tail_mb": 0.036,
+    "tail_raw_mb": 0.3,
+    "recoverable_pct": 3.14
+   },
+   {
+    "file": "Data/Character/Accessory/01032039.img",
+    "canvases": 4,
+    "payload_mb": 0.001,
+    "without_tail_mb": 0.001,
+    "tail_raw_mb": 0.0,
+    "recoverable_pct": 3.31
+   },
+   {
+    "file": "Data/Character/Coat/01041069.img",
+    "canvases": 165,
+    "payload_mb": 0.033,
+    "without_tail_mb": 0.032,
+    "tail_raw_mb": 0.2,
+    "recoverable_pct": 2.58
+   },
+   {
+    "file": "Data/Npc/9904337.img",
+    "canvases": 2,
+    "payload_mb": 0.0,
+    "without_tail_mb": 0.0,
+    "tail_raw_mb": 0.0,
+    "recoverable_pct": -20.0
+   }
+  ]
+ }
+}

@@ -1,0 +1,144 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>全量 ARGB8888 → ARGB4444 转换可行性评估</title>
+<style>
+  :root{--bg:#0f1116;--panel:#171a21;--panel2:#1d2129;--line:#2a2f3a;--tx:#e6e9ef;--tx2:#98a1b3;--acc:#e05c5c;--acc2:#63b3ed;--ok:#5fbf85;--warn:#f0b95e;}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.6 -apple-system,"PingFang SC","Microsoft YaHei",Segoe UI,sans-serif;}
+  .wrap{max-width:1240px;margin:0 auto;padding:28px 20px 60px;}
+  h1{font-size:22px;margin:0 0 6px;}
+  h2{font-size:16px;margin:30px 0 10px;color:var(--tx2);}
+  h3{font-size:14px;margin:20px 0 8px;}
+  .sub{color:var(--tx2);font-size:13px;margin-bottom:18px;}
+  .cards{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 16px;min-width:172px;flex:1 1 172px;}
+  .card b{display:block;font-size:19px;color:#fff;line-height:1.3;}
+  .card span{color:var(--tx2);font-size:12px;}
+  .verdict{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--acc);border-radius:8px;padding:12px 16px;margin:10px 0 18px;}
+  .verdict.ok{border-left-color:var(--ok);}
+  .verdict.warn{border-left-color:var(--warn);}
+  table{width:100%;border-collapse:collapse;background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden;font-size:13px;}
+  th,td{padding:7px 10px;text-align:right;border-bottom:1px solid var(--line);}
+  th:first-child,td:first-child{text-align:left;}
+  th{background:var(--panel2);color:var(--tx2);font-weight:600;white-space:nowrap;}
+  tr:last-child td{border-bottom:none;}
+  code{background:var(--panel2);padding:1px 5px;border-radius:4px;font-size:12px;color:#cbd5e1;}
+  .v-ok{color:var(--ok)}.v-warn{color:var(--warn)}.v-bad{color:var(--acc)}
+  ul{margin:8px 0 8px 18px;padding:0}li{margin:5px 0}
+  .note{color:var(--tx2);font-size:12px;margin-top:6px;}
+  .meter{display:inline-block;height:7px;border-radius:4px;background:var(--acc2);vertical-align:middle;}
+</style></head><body><div class='wrap'>
+<h1>全客户端 ARGB8888 → ARGB4444 转换可行性评估</h1>
+<div class='sub'>数据源：<code>clien/</code> 全部 53,915 个 IMG、1,900,191 个画布（普查耗时 463s）；按文件随机抽样测量后按目录加权外推。脚本 <code>tool/img-inventory/scan_4444_full.py</code> + <code>probe_structure.py</code>；全程只读，未改写任何客户端文件。</div>
+<div class='verdict warn'><b>能转，但「全改成 4444」有三个真问题，建议不要全量做。</b><br>编码不是障碍：老客户端本来就在渲染 323,861 个 ARGB4444 画布，按 <code>AGENTS.md</code> 迁移的技能载荷也是 4444 且能播。真正的障碍是：<br>① <b>省的空间集中在「会掉色」的那部分</b>——位逐位无损的画布占 94.3%，但它们的冗余早已被 zlib 吃掉，转过去只小 13.1%；而会掉色的画布能小 53.7%。想省 0.5 GB 就得接受掉色。<br>② <b>全量改写要动 48,664 个文件</b>，命中项目里明令禁止的整树重写形态；而且现有增量补丁器对变长替换的拒绝率是 16%（全部落在 <code>Character/</code> 装备），这条路现在是断的。<br>③ <b>结构上真正安全的路线（等长原地补丁）带一个仓库内无证据的假设</b>：压缩后变短的部分要用 0 补齐，客户端能否容忍 zlib 流后的填充字节，只能真机验。</div>
+<div class='cards'>
+<div class='card'><b>1,576,132</b><span>待转换的 ARGB8888 画布</span></div>
+<div class='card'><b>323,861</b><span>已是 ARGB4444（占 17%）</span></div>
+<div class='card'><b>48,664</b><span>含 8888 画布的 IMG 文件</span></div>
+<div class='card'><b>2.11 GB</b><span>8888 画布载荷总量</span></div>
+<div class='card'><b>547.1 MB~621.3 MB</b><span>全量转换预估可省（客户端的 8~9%）</span></div>
+<div class='card'><b>94.3%</b><span>画布转 4444 后像素完全不变</span></div>
+<div class='card'><b>16%</b><span>变长替换被工具链拒绝</span></div>
+</div>
+<h2>1. 体积：省得动，但省的不是你以为的那部分</h2>
+<div class='verdict'>ARGB4444 的未压缩数据确实是 8888 的一半，但 IMG 里的画布是 <b>zlib 压缩存储</b>，实际能省多少取决于「被丢掉的那 4 位里还剩多少信息量」。</div>
+<table><tr><th>画布类别</th><th>占 8888 画布数</th><th>占 8888 压缩体积</th><th>转换前</th><th>转换后</th><th>比值</th><th>说明</th></tr>
+<tr><td><b>位逐位无损</b></td><td>94.3%</td><td>69.9%</td><td>59.0 MB</td><td>51.2 MB</td><td>86.9%</td><td>四个通道的值本来就是 17 的倍数（低 4 位 = 高 4 位的复制），转 4444 后像素完全不变</td></tr>
+<tr><td><b>仅 alpha 变</b></td><td>0.0%</td><td>0.0%</td><td>0.0 MB</td><td>0.0 MB</td><td>73.2%</td><td>颜色完全一致，只有 alpha 台阶改变</td></tr>
+<tr><td><b>会掉色</b></td><td>5.7%</td><td>30.1%</td><td>25.4 MB</td><td>11.8 MB</td><td>46.3%</td><td>有颜色通道被量化，存在可见色带风险</td></tr>
+<tr><td><b>合计</b></td><td>100%</td><td>100%</td><td><b>84.3 MB</b></td><td><b>63.0 MB</b></td><td><b>74.7%</b></td><td></td></tr>
+</table>
+<div class='note'><b>这是本次评估最反直觉的结论</b>：位逐位无损的画布（94.3% 个、70% 体积）只能省 13.1%——它们的低 4 位是高 4 位的复制，zlib 早就把这层冗余吃掉了；而会掉色的画布能省 53.7%，因为被丢掉的那 4 位正是它的信息量所在。<br>换算到全客户端：<b>只转无损子集约省 198.0 MB，画质零风险；全量约省 547.1 MB~621.3 MB（客户端 6.71 GB 的 8~9%），代价是那 5.7% 的画布掉色。</b></div>
+<h3>按目录（收益从大到小）</h3>
+<table><tr><th>分类</th><th>含 8888 画布</th><th>8888 载荷</th><th>4444 后</th><th>比值</th><th>可省</th><th>位逐位无损（按体积）</th><th>会掉色（按体积）</th></tr>
+<tr><td><code>Character/Weapon</code></td><td>349,542</td><td>842.5 MB</td><td>540.6 MB</td><td>64%</td><td>301.9 MB</td><td><span class='meter' style='width:51px'></span> 57%</td><td class='v-bad'>43%</td></tr>
+<tr><td><code>Character/Cap</code></td><td>47,561</td><td>297.1 MB</td><td>184.3 MB</td><td>62%</td><td>112.8 MB</td><td><span class='meter' style='width:37px'></span> 41%</td><td class='v-bad'>59%</td></tr>
+<tr><td><code>Mob</code></td><td>26,926</td><td>360.9 MB</td><td>309.5 MB</td><td>86%</td><td>51.4 MB</td><td><span class='meter' style='width:67px'></span> 75%</td><td class=''>25%</td></tr>
+<tr><td><code>Map/Back</code></td><td>1,117</td><td>66.3 MB</td><td>28.3 MB</td><td>43%</td><td>38.0 MB</td><td><span class='meter' style='width:28px'></span> 31%</td><td class='v-bad'>69%</td></tr>
+<tr><td><code>Map/Obj</code></td><td>4,831</td><td>82.9 MB</td><td>67.1 MB</td><td>81%</td><td>15.8 MB</td><td><span class='meter' style='width:68px'></span> 75%</td><td class=''>25%</td></tr>
+<tr><td><code>Character/Longcoat</code></td><td>354,127</td><td>82.5 MB</td><td>70.7 MB</td><td>86%</td><td>11.8 MB</td><td><span class='meter' style='width:81px'></span> 89%</td><td class=''>11%</td></tr>
+<tr><td><code>UI</code></td><td>7,497</td><td>17.8 MB</td><td>9.7 MB</td><td>55%</td><td>8.1 MB</td><td><span class='meter' style='width:4px'></span> 5%</td><td class='v-bad'>95%</td></tr>
+<tr><td><code>Character/Cape</code></td><td>64,478</td><td>52.7 MB</td><td>45.0 MB</td><td>85%</td><td>7.6 MB</td><td><span class='meter' style='width:75px'></span> 83%</td><td class=''>17%</td></tr>
+<tr><td><code>Item/Pet</code></td><td>32,835</td><td>50.7 MB</td><td>43.9 MB</td><td>86%</td><td>6.8 MB</td><td><span class='meter' style='width:73px'></span> 82%</td><td class=''>18%</td></tr>
+<tr><td><code>Character/Face</code></td><td>224,457</td><td>61.3 MB</td><td>54.6 MB</td><td>89%</td><td>6.7 MB</td><td><span class='meter' style='width:89px'></span> 99%</td><td class=''>1%</td></tr>
+<tr><td><code>Npc</code></td><td>15,665</td><td>34.0 MB</td><td>27.6 MB</td><td>81%</td><td>6.4 MB</td><td><span class='meter' style='width:70px'></span> 78%</td><td class=''>22%</td></tr>
+<tr><td><code>Effect</code></td><td>696</td><td>11.6 MB</td><td>6.0 MB</td><td>52%</td><td>5.6 MB</td><td><span class='meter' style='width:9px'></span> 10%</td><td class='v-bad'>90%</td></tr>
+<tr><td><code>Skill</code></td><td>6,265</td><td>36.8 MB</td><td>31.3 MB</td><td>85%</td><td>5.5 MB</td><td><span class='meter' style='width:89px'></span> 99%</td><td class=''>1%</td></tr>
+<tr><td><code>Character/TamingMob</code></td><td>11,269</td><td>35.0 MB</td><td>30.9 MB</td><td>88%</td><td>4.1 MB</td><td><span class='meter' style='width:77px'></span> 86%</td><td class=''>14%</td></tr>
+<tr><td><code>Character/Coat</code></td><td>116,170</td><td>18.6 MB</td><td>15.8 MB</td><td>85%</td><td>2.8 MB</td><td><span class='meter' style='width:89px'></span> 99%</td><td class=''>1%</td></tr>
+<tr><td><code>Character/Hair</code></td><td>3,687</td><td>6.5 MB</td><td>4.0 MB</td><td>61%</td><td>2.6 MB</td><td><span class='meter' style='width:2px'></span> 0%</td><td class='v-bad'>100%</td></tr>
+<tr><td><code>Character/Shoes</code></td><td>98,840</td><td>16.5 MB</td><td>14.0 MB</td><td>85%</td><td>2.5 MB</td><td><span class='meter' style='width:89px'></span> 99%</td><td class=''>1%</td></tr>
+<tr><td><code>Character/PetEquip</code></td><td>53,636</td><td>17.4 MB</td><td>14.9 MB</td><td>86%</td><td>2.5 MB</td><td><span class='meter' style='width:89px'></span> 99%</td><td class=''>1%</td></tr>
+<tr><td><code>Map/WorldMap</code></td><td>55</td><td>9.7 MB</td><td>7.4 MB</td><td>76%</td><td>2.3 MB</td><td><span class='meter' style='width:38px'></span> 42%</td><td class='v-bad'>58%</td></tr>
+<tr><td><code>Map</code></td><td>1,100</td><td>19.6 MB</td><td>17.6 MB</td><td>90%</td><td>2.1 MB</td><td><span class='meter' style='width:90px'></span> 100%</td><td class=''>0%</td></tr>
+<tr><td><code>Map/Map</code></td><td>457</td><td>4.8 MB</td><td>3.1 MB</td><td>64%</td><td>1.7 MB</td><td><span class='meter' style='width:48px'></span> 53%</td><td class='v-bad'>47%</td></tr>
+<tr><td><code>Character/Pants</code></td><td>47,064</td><td>9.3 MB</td><td>7.9 MB</td><td>85%</td><td>1.4 MB</td><td><span class='meter' style='width:90px'></span> 100%</td><td class=''>0%</td></tr>
+<tr><td><code>Character/Glove</code></td><td>85,914</td><td>8.4 MB</td><td>7.2 MB</td><td>85%</td><td>1.2 MB</td><td><span class='meter' style='width:89px'></span> 99%</td><td class=''>1%</td></tr>
+<tr><td><code>Character/Shield</code></td><td>4,471</td><td>3.1 MB</td><td>2.6 MB</td><td>86%</td><td>0.4 MB</td><td><span class='meter' style='width:85px'></span> 94%</td><td class=''>6%</td></tr>
+<tr><td><code>Character/Accessory</code></td><td>10,108</td><td>3.7 MB</td><td>3.2 MB</td><td>89%</td><td>0.4 MB</td><td><span class='meter' style='width:88px'></span> 98%</td><td class=''>2%</td></tr>
+<tr><td><code>Morph</code></td><td>645</td><td>2.6 MB</td><td>2.2 MB</td><td>85%</td><td>0.4 MB</td><td><span class='meter' style='width:90px'></span> 100%</td><td class=''>0%</td></tr>
+<tr><td><code>Reactor</code></td><td>324</td><td>2.8 MB</td><td>2.4 MB</td><td>86%</td><td>0.4 MB</td><td><span class='meter' style='width:17px'></span> 19%</td><td class='v-bad'>81%</td></tr>
+<tr><td><code>Character/Ring</code></td><td>2,644</td><td>2.5 MB</td><td>2.3 MB</td><td>90%</td><td>0.3 MB</td><td><span class='meter' style='width:87px'></span> 96%</td><td class=''>4%</td></tr>
+<tr><td><code>Item/Etc</code></td><td>2,539</td><td>1.4 MB</td><td>1.2 MB</td><td>84%</td><td>0.2 MB</td><td><span class='meter' style='width:77px'></span> 86%</td><td class=''>14%</td></tr>
+<tr><td><code>Map/Tile</code></td><td>463</td><td>1.4 MB</td><td>1.2 MB</td><td>87%</td><td>0.2 MB</td><td><span class='meter' style='width:87px'></span> 97%</td><td class=''>3%</td></tr>
+<tr><td><code>Item/Consume</code></td><td>647</td><td>0.4 MB</td><td>0.4 MB</td><td>86%</td><td>0.1 MB</td><td><span class='meter' style='width:79px'></span> 88%</td><td class=''>12%</td></tr>
+<tr><td><code>Item/Install</code></td><td>52</td><td>0.0 MB</td><td>0.0 MB</td><td>85%</td><td>0.0 MB</td><td><span class='meter' style='width:90px'></span> 100%</td><td class=''>0%</td></tr>
+<tr><td><code>Item/Cash</code></td><td>50</td><td>0.0 MB</td><td>0.0 MB</td><td>87%</td><td>0.0 MB</td><td><span class='meter' style='width:78px'></span> 86%</td><td class=''>14%</td></tr>
+<tr><td><b>合计</b></td><td><b>1,576,132</b></td><td><b>2.11 GB</b></td><td><b>1.58 GB</b></td><td><b>75%</b></td><td><b>547.1 MB</b></td><td colspan=2></td></tr>
+</table>
+<div class='note'>收益最大的两个正好是掉色最重的两个：<code>Character/Weapon</code>（842 MB，约 43% 体积会掉色）与 <code>Character/Cap</code>（297 MB，约 59% 会掉色）。而 <code>Effect</code>(89%)、<code>UI</code>(93%)、<code>Character/Hair</code>(99%) 几乎全是掉色——头发渐变、UI 描边、光效 logo 正是 4 bit 通道最不友好的内容。</div>
+<h2>2. 画质：平均误差很小，但集中在最显眼的地方</h2>
+<table><tr><th>指标（抽样 576 M 像素）</th><th>实测</th></tr><tr><td>RGB 平均绝对误差</td><td>0.65 / 255</td></tr><tr><td>单像素 RGB 最大误差</td><td>15 / 255（≈6%）</td></tr><tr><td>alpha 平均绝对误差</td><td>0.13 / 255</td></tr><tr><td>alpha 被改动的像素占比</td><td>2.3%</td></tr></table>
+<div class='note'>平均误差之所以小，是因为 94.3% 的画布本来就无损。一旦落到剩下 5.7% 上，误差就是 15/255 的硬量化台阶，在渐变、抗锯齿描边、半透明阴影上表现为可见色带与色阶断裂。</div>
+<h3>误差分布（按目录，像素最多的 14 个）</h3>
+<table><tr><th>分类</th><th>像素</th><th>RGB 平均</th><th>RGB 最大</th><th>alpha 平均</th><th>alpha 改变</th></tr>
+<tr><td><code>Character/Weapon</code></td><td>133.5 M</td><td>0.62</td><td>15</td><td>0.15</td><td>2.73%</td></tr>
+<tr><td><code>Mob</code></td><td>113.2 M</td><td>0.05</td><td>15</td><td>0.00</td><td>0.05%</td></tr>
+<tr><td><code>Character/Cap</code></td><td>95.1 M</td><td>1.92</td><td>15</td><td>0.18</td><td>3.33%</td></tr>
+<tr><td><code>Map/Back</code></td><td>50.8 M</td><td>1.10</td><td>15</td><td>0.38</td><td>7.05%</td></tr>
+<tr><td><code>Character/Face</code></td><td>30.2 M</td><td>0.01</td><td>15</td><td>0.00</td><td>0.00%</td></tr>
+<tr><td><code>Npc</code></td><td>29.5 M</td><td>0.38</td><td>15</td><td>0.49</td><td>6.57%</td></tr>
+<tr><td><code>Character/TamingMob</code></td><td>25.0 M</td><td>0.29</td><td>15</td><td>0.01</td><td>0.14%</td></tr>
+<tr><td><code>Character/Cape</code></td><td>12.8 M</td><td>0.07</td><td>15</td><td>0.00</td><td>0.00%</td></tr>
+<tr><td><code>Map/WorldMap</code></td><td>9.8 M</td><td>0.40</td><td>15</td><td>0.01</td><td>0.14%</td></tr>
+<tr><td><code>Map/Obj</code></td><td>8.4 M</td><td>0.08</td><td>15</td><td>0.06</td><td>1.17%</td></tr>
+<tr><td><code>Item/Pet</code></td><td>8.2 M</td><td>0.06</td><td>15</td><td>0.00</td><td>0.00%</td></tr>
+<tr><td><code>UI</code></td><td>8.0 M</td><td>0.38</td><td>15</td><td>0.02</td><td>0.33%</td></tr>
+<tr><td><code>Character/Longcoat</code></td><td>8.0 M</td><td>0.25</td><td>15</td><td>0.00</td><td>0.00%</td></tr>
+<tr><td><code>Map/Map</code></td><td>6.2 M</td><td>0.58</td><td>15</td><td>0.16</td><td>2.91%</td></tr>
+</table>
+<h2>3. 工程障碍（与画质无关，但决定能不能落地）</h2>
+<h3>3.1 变长替换会被工具链拒绝</h3>
+<div class='verdict'>对 120 个随机文件里第一个 8888 画布，用现成的增量补丁器做「把记录替换成它自己」——变长替换里最温和的情形：接受 68 个、拒绝 13 个（<b>16%</b>）。拒绝信息是 <code>string reference at 0x… points into replaced bytes</code>：有别的记录的字符串引用指向这段字节，缩短它会产生悬空指针，补丁器选择报错而不是写出坏文件。被拒的全部落在 <code>Character/</code> 装备上。</div>
+<table><tr><th>探测结果</th><th>文件数</th></tr>
+<tr><td><code>accepted</code></td><td>68</td></tr>
+<tr><td><code>no_8888_payload</code></td><td>39</td></tr>
+<tr><td><code>refused_string_reference</code></td><td>13</td></tr>
+</table>
+<div class='note'>按顶层目录：<code>Map</code>={&#x27;no_8888_payload&#x27;: 13} <code>Character</code>={&#x27;accepted&#x27;: 53, &#x27;no_8888_payload&#x27;: 15, &#x27;refused_string_reference&#x27;: 13} <code>Npc</code>={&#x27;accepted&#x27;: 14, &#x27;no_8888_payload&#x27;: 2} <code>Mob</code>={&#x27;no_8888_payload&#x27;: 5, &#x27;accepted&#x27;: 1} <code>Effect</code>={&#x27;no_8888_payload&#x27;: 1} <code>Reactor</code>={&#x27;no_8888_payload&#x27;: 3}</div>
+<h3>3.2 唯一结构上安全的路线：等长原地载荷补丁</h3>
+<div class='verdict ok'>把载荷区域<b>原地</b>覆盖成同样长度的字节：文件长度不变、不触碰任何 size 字段、不需要重定位任何字符串引用。在 7 个文件上实测：改动字节全部落在载荷区间内、长度不变、重解析无告警。</div>
+<table><tr><th>文件</th><th>画布</th><th>载荷区间</th><th>改动字节</th><th>全在载荷内</th><th>长度不变</th><th>重解析干净</th></tr>
+<tr><td><code>Data/Character/Shoes/01070103.img</code></td><td>30x26</td><td>[176, 598)</td><td>418</td><td><span class='v-ok'>✓</span></td><td><span class='v-ok'>✓</span></td><td><span class='v-ok'>✓</span></td></tr>
+<tr><td><code>Data/Character/Cap/01000080.img</code></td><td>33x31</td><td>[102, 606)</td><td>504</td><td><span class='v-ok'>✓</span></td><td><span class='v-ok'>✓</span></td><td><span class='v-ok'>✓</span></td></tr>
+<tr><td><code>Data/Map/Map/Map9/925020900.img</code></td><td>70x62</td><td>[6244, 9023)</td><td>2,758</td><td><span class='v-ok'>✓</span></td><td><span class='v-ok'>✓</span></td><td><span class='v-ok'>✓</span></td></tr>
+<tr><td><code>Data/Character/Coat/01049002.img</code></td><td>30x28</td><td>[102, 591)</td><td>486</td><td><span class='v-ok'>✓</span></td><td><span class='v-ok'>✓</span></td><td><span class='v-ok'>✓</span></td></tr>
+<tr><td><code>Data/Character/Cap/01001052.img</code></td><td>33x31</td><td>[102, 889)</td><td>782</td><td><span class='v-ok'>✓</span></td><td><span class='v-ok'>✓</span></td><td><span class='v-ok'>✓</span></td></tr>
+<tr><td><code>Data/Character/Cap/01002894.img</code></td><td>28x30</td><td>[102, 544)</td><td>440</td><td><span class='v-ok'>✓</span></td><td><span class='v-ok'>✓</span></td><td><span class='v-ok'>✓</span></td></tr>
+<tr><td><code>Data/Character/Face/00025155.img</code></td><td>33x18</td><td>[276, 733)</td><td>452</td><td><span class='v-ok'>✓</span></td><td><span class='v-ok'>✓</span></td><td><span class='v-ok'>✓</span></td></tr>
+</table>
+<div class='verdict warn'><b>但这条路有一个仓库内无证据的假设</b>：4444 载荷压缩后通常更短，等长要求把剩余字节补 0。客户端 zlib 解码器是否容忍流结束后的填充字节，本仓库无法验证——<b>必须在实机上先试一个文件，不能假设。</b></div>
+<h3>3.3 载荷里藏着一个「一倍零平面」</h3>
+<div class='verdict warn'>抽样 191,913 个 8888 画布的载荷里，<b>79.6%</b> 解压出来的字节数是 <code>w×h×4</code> 的<b>整整 2 倍</b>，多出来的后半段 <b>100.0% 全为 0</b>，客户端只读前 <code>w×h×4</code>。<br>这段冗余原始数据有几百 MB，但全零数据 zlib 压完几乎没有成本——去掉它只回收 2.9%。<b>所以它不是一个可回收空间，而是一个必须理解的坑</b>：任何把载荷当成 2 倍像素来处理的工具都会画错；<code>decode_canvas</code> 现在“能用”只是因为 PIL 恰好忽略了多余字节。</div>
+<h2>4. 建议</h2>
+<div class='verdict ok'><b>不要全量。</b>按「收益 ÷ 风险」排序，只做窄子集。</div>
+<ul>
+<li><b>第一优先：只转「位逐位无损」的画布（94.3% 个、70% 体积）。</b>像素零变化、可自动判定、无需人眼验收，约省 198.0 MB。这是唯一能全程自动化的部分。</li>
+<li><b>第二优先（需人眼验收）：<code>Character/Weapon</code> + <code>Character/Cap</code></b>，合计可省 414.8 MB，但这两块同时是掉色最重的（约 43% / 59% 体积），必须先截图比对装备外观再决定。</li>
+<li><b>不要碰</b>：<code>Item/Install</code>、<code>Map/Tile</code>、<code>Morph</code>（已 100% 是 4444）、<code>Skill</code>（99% 无损且省得极少）、<code>Effect</code> / <code>UI</code>（89% / 93% 会掉色，收益还小）。</li>
+<li><b>绝对不能碰</b> <code>Skill/</code> 里已按 <code>AGENTS.md</code> 转成 4444 的迁移技能载荷。那是规范红线，<code>format=1, format2=0</code> 必须保住。</li>
+<li><b>验证门槛（缺一不可）</b>：① 生成器跑两遍、哈希一致；② 载荷区间外字节逐字节不变；③ 解析无 <code>truncated</code>、无 <code>parse_warnings</code>；④ 抽样画布解码出可见像素且尺寸不变；⑤ <b>真机启动 + 进游戏看装备 / 头发 / 特效 / UI</b>。前四条仓库里能做，第五条只有你能做。</li>
+</ul>
+<h2>5. 复现命令</h2>
+<table><tr><th>目的</th><th>命令</th></tr><tr><td>全客户端普查（约 8 分钟）</td><td><code>python3 tool/img-inventory/scan_4444_full.py --per-file 8</code></td></tr><tr><td>按类别的体积拆分（约 80 秒）</td><td><code>python3 tool/img-inventory/scan_4444_full.py --per-file 30 --max-files 6500 --out byclass.json</code></td></tr><tr><td>结构安全三探测</td><td><code>python3 tool/img-inventory/probe_structure.py</code></td></tr><tr><td>三种载荷策略体积对比</td><td><code>python3 tool/img-inventory/test_record_fidelity.py</code></td></tr><tr><td>本报告</td><td><code>python3 tool/img-inventory/render_4444_report.py</code></td></tr></table>
+</div></body></html>
