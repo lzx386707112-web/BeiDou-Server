@@ -122,15 +122,15 @@ RETIRED_MARKERS = (
 RETIRED_SIZES = (8704, 9216, 10240, 11264, 17920, 18944, 19968)
 
 NEW_MARKERS = (
-    b"VELLUM VIDEO OK: d3d8 Direct3DCreate8 code hook installed ahead of the client",
-    b"VELLUM VIDEO OK: the client's Direct3DCreate8 reached the capture hook",
-    b"VELLUM VIDEO OK: capture confirmed by a live D3D8 device",
-    b"VELLUM VIDEO OK: FIELD_EFFECT marker texture recognised",
-    b"VELLUM VIDEO OK: field-effect marker draw; the video is rendered at the skill effect layer",
-    b"VELLUM VIDEO WARN: Present fallback active (no field-effect marker was drawn)",
-    b"VELLUM VIDEO SUMMARY: marker_frames=",
+    b"VIDEO LAYER OK: d3d8 Direct3DCreate8 code hook installed ahead of the client",
+    b"VIDEO LAYER OK: the client's Direct3DCreate8 reached the capture hook",
+    b"VIDEO LAYER OK: capture confirmed by a live D3D8 device",
+    b"VIDEO LAYER OK: FIELD_EFFECT marker texture recognised",
+    b"VIDEO LAYER OK: field-effect marker draw; the video is rendered at the skill effect layer",
+    b"VIDEO LAYER WARN: Present fallback active (no field-effect marker was drawn)",
+    b"VIDEO LAYER SUMMARY: marker_frames=",
     b"LAYER: the video is drawn where the client draws the FIELD_EFFECT marker",
-    b"VELLUM VIDEO STATUS: channel=",
+    b"VIDEO LAYER STATUS: channel=",
     b"FIRST-CHANCE: status=armed filter=0xe06d7363",
     b"FIRST-CHANCE CPP: occurrence=",
     b"FIRST-CHANCE DUMP: status=",
@@ -329,9 +329,7 @@ int main() {
 
 # Host side harness for the marker signature matcher. MarkerSignature.h has no Windows dependency,
 # so the exact bytes that decide "this draw is the FIELD_EFFECT insertion point" can be asserted
-# here. The v7 defect was precisely this check: the module only knew the Root Abyss (Vellum)
-# signature, so the FIELD_EFFECT marker stayed invisible and every skill fell through to the
-# Present fallback, which composites the video above the damage numbers and the UI.
+# here. A missed marker falls through to Present, above the damage numbers and UI.
 MARKER_HARNESS = r'''
 #include "@HEADER@"
 
@@ -379,36 +377,8 @@ int main() {
     Check(!MatchesFieldEffectA8R8G8B8(alphaZero, false), "alpha is significant in A8R8G8B8");
     Check(MatchesFieldEffectA8R8G8B8(alphaZero, true), "alpha is ignored in X8R8G8B8");
 
-    // Root Abyss (Vellum) attack10/11: same 7x5 rule, different signature, plus a code pixel.
-    const uint16_t vellum10[8] = {0xF357, 0xF689, 0xFABC, 0xFDEF, 0xF58E, 0, 0, 0};
-    Check(VellumCodeFromA4R4G4B4(vellum10) == 5, "attack10 code 5 from the fifth pixel");
-    const uint16_t vellum11[8] = {0xF357, 0xF689, 0xFABC, 0xFDEF, 0xF68E, 0, 0, 0};
-    Check(VellumCodeFromA4R4G4B4(vellum11) == 6, "attack11 code 6 from the fifth pixel");
-    const uint16_t vellumOtherCode[8] = {0xF357, 0xF689, 0xFABC, 0xFDEF, 0xF48E, 0, 0, 0};
-    Check(VellumCodeFromA4R4G4B4(vellumOtherCode) == 0, "code outside 5/6 rejected");
-
-    const uint32_t vellum10_8888[8] = {
-        0xFF335577, 0xFF668899, 0xFFAABBCC, 0xFFDDEEFF, 0xFF5588EE, 0, 0, 0};
-    Check(VellumCodeFromA8R8G8B8(vellum10_8888, false) == 5, "attack10 code 5 in A8R8G8B8");
-    const uint32_t vellum11_8888[8] = {
-        0xFF335577, 0xFF668899, 0xFFAABBCC, 0xFFDDEEFF, 0xFF6688EE, 0, 0, 0};
-    Check(VellumCodeFromA8R8G8B8(vellum11_8888, false) == 6, "attack11 code 6 in A8R8G8B8");
-    const uint32_t vellumOtherCode_8888[8] = {
-        0xFF335577, 0xFF668899, 0xFFAABBCC, 0xFFDDEEFF, 0xFF4488EE, 0, 0, 0};
-    Check(VellumCodeFromA8R8G8B8(vellumOtherCode_8888, false) == 0, "8888 code outside 5/6 rejected");
-    const uint32_t vellum10_x8[8] = {
-        0x00335577, 0x00668899, 0x00AABBCC, 0x00DDEEFF, 0x005588EE, 0, 0, 0};
-    Check(VellumCodeFromA8R8G8B8(vellum10_x8, true) == 5, "attack10 code 5 in X8R8G8B8");
-
-    // 0x00AABBCC belongs to both families, so only the whole four pixel signature may decide: a
-    // marker that mixes them has to match neither, and the families have to stay disjoint.
     const uint16_t mixed[8] = {0xF123, 0xF456, 0xFABC, 0xFDEF, 0, 0, 0, 0};
-    Check(!MatchesVellumA4R4G4B4(mixed), "mixed signature is not a vellum marker");
     Check(!MatchesFieldEffectA4R4G4B4(mixed), "mixed signature is not a field-effect marker");
-    Check(!MatchesFieldEffectA4R4G4B4(vellum10), "vellum marker is not a field-effect marker");
-    Check(!MatchesVellumA4R4G4B4(field4444), "field-effect marker is not a vellum marker");
-    Check(!MatchesVellumA8R8G8B8(field8888, false), "families stay disjoint in A8R8G8B8");
-    Check(!MatchesFieldEffectA8R8G8B8(vellum10_8888, false), "families stay disjoint both ways");
 
     std::printf("cases=%zu failures=%zu\n", checked, failures);
     return failures == 0 ? 0 : 1;
@@ -437,18 +407,12 @@ def code_only(source: str) -> str:
 
 
 class VellumVideoCompatContract(unittest.TestCase):
-    def test_only_new_vellum_screens_are_mapped(self) -> None:
+    def test_root_abyss_video_routes_are_removed(self) -> None:
         source = SOURCE.read_text()
         signature = MARKER_SIGNATURE.read_text()
-        self.assertIn("kVellumAttack10Code = 5", signature)
-        self.assertIn("kVellumAttack11Code = 6", signature)
-        self.assertIn("root-abyss-vellum-attack10.mcv", source)
-        self.assertIn("root-abyss-vellum-attack11.mcv", source)
-        # The codes are defined once, in the header the host harness compiles.
-        self.assertNotIn("kAttack10MarkerCode", source)
-        self.assertNotIn("kAttack11MarkerCode", source)
-        for old_name in ("pierre.mcv", "vonbon.mcv", "queen.mcv", "root-abyss-vellum.mcv"):
-            self.assertNotIn(old_name, source)
+        for retired in ("kVellum", "VellumCode", "root-abyss", "StartVideo"):
+            self.assertNotIn(retired, source)
+            self.assertNotIn(retired, signature)
 
     def test_extension_still_loads_after_the_verified_core(self) -> None:
         wrapper = WRAPPER.read_text()
@@ -524,7 +488,7 @@ class VellumVideoCompatContract(unittest.TestCase):
         # instead of on top of the damage numbers. Byte exactness matters here, so the whole four
         # pixel signature is asserted on the host, including both near misses and the pixel that the
         # two marker families share.
-        self.run_host_harness(MARKER_HARNESS, MARKER_SIGNATURE, "cases=20 failures=0")
+        self.run_host_harness(MARKER_HARNESS, MARKER_SIGNATURE, "cases=8 failures=0")
 
     def run_host_harness(self, harness_text: str, header: Path, expected: str) -> None:
         compiler = shutil.which("c++") or shutil.which("clang++")
@@ -665,7 +629,7 @@ class VellumVideoCompatContract(unittest.TestCase):
         # no marker draw, and it says so in the log instead of reporting a plain success.
         present = source.index("HRESULT WINAPI HookPresent(")
         fallback = source.index("++gFallbackRenderFrames;", present)
-        warn = source.index("VELLUM VIDEO WARN: Present fallback active", present)
+        warn = source.index("VIDEO LAYER WARN: Present fallback active", present)
         self.assertLess(fallback, warn)
 
     def test_the_video_is_drawn_at_the_field_effect_marker(self) -> None:
@@ -689,13 +653,7 @@ class VellumVideoCompatContract(unittest.TestCase):
         clear = source.index("gMarkerBound = false;", consume)
         render = source.index("gRender();", consume)
         self.assertLess(clear, render)
-        self.assertLess(clear, source.index("StartVideo(code);", consume))
-        # Both marker families have to be reachable from the D3D8 side, and the fifth pixel code
-        # must only ever start a mapped Root Abyss screen.
-        self.assertIn("beidou::marker::VellumCodeFromA4R4G4B4", source)
-        self.assertIn("beidou::marker::VellumCodeFromA8R8G8B8", source)
-        self.assertIn("if (hit.kind == kNoMarker && hit.code != 0) hit.kind = kVellumScene;", source)
-        self.assertIn("if (kind == kVellumScene && (!gVideoPlaying || gActiveMarkerCode != code))", source)
+        self.assertNotIn("StartVideo", source)
 
     def test_present_hook_reports_channel_health(self) -> None:
         # Without the periodic status line a failed run cannot be told apart from a decoder that

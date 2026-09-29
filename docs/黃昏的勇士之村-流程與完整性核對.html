@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>黃昏的勇士之村 — 流程还原与完整性核对</title>
+<style>
+  :root{--bg:#0f1116;--panel:#171a21;--panel2:#1d2129;--line:#2a2f3a;--tx:#e6e9ef;--tx2:#98a1b3;
+        --acc:#e05c5c;--acc2:#63b3ed;--ok:#5fbf85;--warn:#f0b95e;--pur:#b392f0;--miss:#e05c5c;}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--tx);
+       font:14px/1.7 -apple-system,"PingFang SC","Microsoft YaHei",Segoe UI,sans-serif;}
+  .wrap{max-width:1180px;margin:0 auto;padding:30px 20px 80px;}
+  h1{font-size:24px;margin:0 0 8px;}
+  h2{font-size:17px;margin:34px 0 12px;border-left:3px solid var(--acc);padding-left:10px;}
+  h3{font-size:14px;margin:16px 0 8px;color:var(--acc2);}
+  .sub{color:var(--tx2);font-size:13px;margin-bottom:18px;line-height:1.85;}
+  .cards{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0;}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:11px 15px;min-width:128px;flex:1;}
+  .card b{display:block;font-size:20px;color:var(--acc);}
+  .card.good b{color:var(--ok);}
+  .card.warn b{color:var(--warn);}
+  .card span{color:var(--tx2);font-size:12px;}
+  table{width:100%;border-collapse:collapse;margin:8px 0 4px;font-size:13px;}
+  th,td{text-align:left;padding:7px 9px;border-bottom:1px solid var(--line);vertical-align:top;}
+  th{color:var(--tx2);font-weight:600;font-size:12px;background:var(--panel);}
+  tr:hover td{background:#1a1e26;}
+  code,.mono{font-family:ui-monospace,Menlo,monospace;font-size:12px;color:#d5b06a;}
+  code{background:var(--panel2);padding:1px 5px;border-radius:5px;}
+  .tag{font-size:11px;padding:1px 8px;border-radius:20px;border:1px solid var(--line);color:var(--tx2);white-space:nowrap;display:inline-block;}
+  .tag.ok{border-color:#3d5140;color:#8fd6a2;background:#16211a;}
+  .tag.no{border-color:#5a3a3a;color:#e69191;background:#241a1c;}
+  .tag.warn{border-color:#5a4a3b;color:#e6b98f;}
+  .tag.info{border-color:#3b4a5e;color:#8fb8e6;}
+  .note{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 18px;color:var(--tx2);font-size:13px;margin:12px 0;}
+  .note b{color:var(--tx);}
+  .note ul{margin:6px 0 0;padding-left:18px;}
+  .key{background:linear-gradient(180deg,#1b1f28,#171a21);border:1px solid #39404e;border-radius:12px;padding:16px 20px;margin:14px 0;}
+  .key h3{margin:0 0 6px;color:var(--acc2);font-size:14px;}
+  .flow{display:flex;flex-wrap:wrap;gap:5px;align-items:center;margin:8px 0;}
+  .qn{background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:3px 8px;font-size:12px;}
+  .qn b{color:var(--acc2);font-weight:600;}
+  .qn.ok{border-color:#35543f;} .qn.no{border-color:#5a3a3a;opacity:.65;}
+  .arrow{color:#4a5262;font-size:12px;}
+  details{background:var(--panel);border:1px solid var(--line);border-radius:10px;margin-bottom:8px;overflow:hidden;}
+  details[open]{border-color:#39404e;}
+  summary{cursor:pointer;padding:11px 14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;list-style:none;font-weight:600;}
+  summary::-webkit-details-marker{display:none}
+  summary::before{content:"▸";color:var(--tx2);font-size:12px;}
+  details[open] summary::before{content:"▾";}
+  .body{padding:2px 16px 14px;border-top:1px solid var(--line);}
+  .g{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:6px;}
+  .g div{background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:5px 9px;font-size:12px;
+         font-family:ui-monospace,Menlo,monospace;color:var(--tx2);}
+  .g div b{color:var(--acc2);font-weight:600;}
+  .legend{color:#6f7787;font-size:11.5px;margin-top:6px;}
+</style></head><body><div class="wrap">
+<h1>黃昏的勇士之村 — 流程还原与完整性核对</h1>
+<div class="sub">对照源：<code>~/Documents/mxd/TMS/MapleStory-IMG/Data</code>（TMS 273 客户端）+ <code>TMS/MapleStory/</code>（客户端安装目录）　|　核对对象：<code>clien/Data</code>（BeiDou 客户端）+ <code>gms-server/wz-zh-CN</code> + <code>gms-server/scripts-zh-CN</code><br>副本本体 = 地图段 <code>2730xxxxxx</code>（24 张），主线任务 <code>31900–31965</code>，前置章节 = <code>2710xxxxxx</code>（被破壞的弓箭手村 / 騎士團要塞）</div>
+<div class="cards">
+<div class="card good"><b>24 / 24</b><span>副本地图（含 portal / life / foothold）</span></div>
+<div class="card good"><b>23 / 23</b><span>副本主线任务定义（QuestInfo+Check+Act+Say）</span></div>
+<div class="card warn"><b>0 / 13</b><span>原版脚本钩子被保留数（TMS 侧有 13 处）</span></div>
+<div class="card warn"><b>20 / 20</b><span>NPC 对话脚本缺失</span></div>
+<div class="card warn"><b>47</b><span>关联任务在两端口径下都不存在</span></div>
+</div>
+<h2>一、先回答：「完整的脚本流程」拿得到吗</h2>
+<div class="key"><h3>要分两层看</h3>
+<ul>
+<li><b>「流程」= 能拿到，而且已经 100% 还原。</b> TMS 客户端的 <code>Quest/QuestData/*.img</code>
+里带着每个任务的 <code>QuestInfo / Check / Act / Say</code> 四大块：任务名、三句说明文本、
+前置任务与状态、要求 NPC / 等级 / 道具 / 怪物数量、奖励 EXP、以及<b>脚本文件名</b>。
+把它们按前置关系串起来，就是一份完整的玩家流程说明书。</li>
+<li><b>「脚本本体」= 拿不到。</b> 我在整个 <code>~/Documents/mxd/TMS/</code> 下搜了 <code>*.js</code>，
+命中 <b>0 个</b>。TMS 目录是<b>纯客户端安装</b>（<code>MapleStory.exe</code> + <code>Data/</code> + 一堆 DLL），
+任务脚本 <code>q31903s.js</code> 之类是<b>服务端</b>的东西，客户端根本不携带。
+所以「原版 JS 源码」这条路是封死的，只能自己按流程重写。</li>
+</ul></div>
+<h2>二、完整流程（84 条任务链，已还原）</h2>
+<div class="sub">下表由 TMS 的 <code>Check/quest</code> 前置关系重建。状态栏：<span class="tag ok">在庫</span> = 仓库 QuestInfo/Check/Act/Say 四件套齐全；<span class="tag no">缺定義</span> = 客户端与服务端都没有这条任务。</div>
+<h3>2.1 副本本體主線（area=268，273000000 段的居民群）</h3><table><tr><th>ID</th><th>任務名</th><th>領取 NPC</th><th>等級</th><th>EXP</th><th>前置</th><th>狀態</th></tr>
+<tr><td class='mono'>31900</td><td>[黃昏的勇士之村] 第二次設計的未來</td><td>赫麗娜 <span class='mono'>1105001</span></td><td>LV185</td><td>—</td><td class='mono' style='color:#8fb8e6'></td><td><span class="tag ok">在庫</span> <span class="tag no">腳本被剝離</span></td></tr>
+<tr><td class='mono'>31901</td><td>[黃昏的勇士之村] 勇士之村民意調查</td><td>赫麗娜 <span class='mono'>1105001</span></td><td>LV185</td><td>2436.8萬</td><td class='mono' style='color:#8fb8e6'>← 31900</td><td><span class="tag ok">在庫</span> <span class="tag no">腳本被剝離</span></td></tr>
+<tr><td class='mono'>31902</td><td>[黃昏的勇士之村] 勇士之村不吉利的夢</td><td>武术教练 <span class='mono'>1022000</span></td><td>LV185</td><td>2639.9萬</td><td class='mono' style='color:#8fb8e6'>← 31901</td><td><span class="tag ok">在庫</span> <span class="tag info">純數據</span></td></tr>
+<tr><td class='mono'>31903</td><td>[黃昏的勇士之村] 前往黃昏的勇士之村</td><td>赫麗娜 <span class='mono'>1105001</span></td><td>LV185</td><td>2843.0萬</td><td class='mono' style='color:#8fb8e6'>← 31902</td><td><span class="tag ok">在庫</span> <span class="tag no">腳本被剝離</span></td></tr>
+<tr><td class='mono'>31904</td><td>[黃昏的勇士之村] 調查黃昏的勇士之村 1</td><td>吉米 <span class='mono'>2142100</span></td><td>LV185</td><td>3046.0萬</td><td class='mono' style='color:#8fb8e6'>← 31903</td><td><span class="tag ok">在庫</span> <span class="tag info">純數據</span></td></tr>
+<tr><td class='mono'>31905</td><td>[黃昏的勇士之村] 調查黃昏的勇士之村 2</td><td>酋長 <span class='mono'>2142103</span></td><td>LV185</td><td>3249.1萬</td><td class='mono' style='color:#8fb8e6'>← 31904</td><td><span class="tag ok">在庫</span> <span class="tag info">純數據</span></td></tr>
+<tr><td class='mono'>31906</td><td>[黃昏的勇士之村] 調查黃昏的勇士之村 3</td><td>修行者 <span class='mono'>2142105</span></td><td>LV185</td><td>3452.2萬</td><td class='mono' style='color:#8fb8e6'>← 31905</td><td><span class="tag ok">在庫</span> <span class="tag info">純數據</span></td></tr>
+<tr><td class='mono'>31907</td><td>[黃昏的勇士之村] 調查黃昏的勇士之村 4</td><td>吉可穆德 <span class='mono'>2142107</span></td><td>LV185</td><td>956.4萬</td><td class='mono' style='color:#8fb8e6'>← 31906</td><td><span class="tag ok">在庫</span> <span class="tag no">腳本被剝離</span></td></tr>
+<tr><td class='mono'>31908</td><td>[黃昏的勇士之村] 調查黃昏的勇士之村 5</td><td>— <span class='mono'></span></td><td>LV185</td><td>7716.6萬</td><td class='mono' style='color:#8fb8e6'>← 31907</td><td><span class="tag ok">在庫</span> <span class="tag info">純數據</span></td></tr>
+<tr><td class='mono'>31909</td><td>[黃昏的勇士之村] 調查黃昏的勇士之村 6</td><td>— <span class='mono'></span></td><td>LV185</td><td>4061.4萬</td><td class='mono' style='color:#8fb8e6'>← 31908</td><td><span class="tag ok">在庫</span> <span class="tag no">腳本被剝離</span></td></tr>
+<tr><td class='mono'>31910</td><td>[黃昏的勇士之村] 操控夢者的目的</td><td>赫麗娜 <span class='mono'>1105001</span></td><td>LV185</td><td>—</td><td class='mono' style='color:#8fb8e6'>← 31909</td><td><span class="tag ok">在庫</span> <span class="tag no">腳本被剝離</span></td></tr>
+<tr><td class='mono'>31911</td><td>[黃昏的勇士之村] 收集夢的材料</td><td>汉斯 <span class='mono'>1032001</span></td><td>LV185</td><td>8935.1萬</td><td class='mono' style='color:#8fb8e6'>← 31910</td><td><span class="tag ok">在庫</span> <span class="tag no">腳本被剝離</span></td></tr>
+<tr><td class='mono'>31912</td><td>[黃昏的勇士之村] 收集無意識的碎片</td><td>汉斯 <span class='mono'>1032001</span></td><td>LV185</td><td>1782.4萬</td><td class='mono' style='color:#8fb8e6'>← 31911</td><td><span class="tag ok">在庫</span> <span class="tag no">腳本被剝離</span></td></tr>
+<tr><td class='mono'>31913</td><td>[黃昏的勇士之村] 記憶碎片</td><td>汉斯 <span class='mono'>1032001</span></td><td>LV185</td><td>4873.7萬</td><td class='mono' style='color:#8fb8e6'>← 31912</td><td><span class="tag ok">在庫</span> <span class="tag info">純數據</span></td></tr>
+<tr><td class='mono'>31914</td><td>[黃昏的勇士之村] 有關敵人的線索</td><td>汉斯 <span class='mono'>1032001</span></td><td>LV185</td><td>5279.8萬</td><td class='mono' style='color:#8fb8e6'>← 31913</td><td><span class="tag ok">在庫</span> <span class="tag no">腳本被剝離</span></td></tr>
+<tr><td class='mono'>31915</td><td>[任務] 消滅操控夢者的手下</td><td>— <span class='mono'></span></td><td>LV185</td><td>—</td><td class='mono' style='color:#8fb8e6'></td><td><span class="tag ok">在庫</span> <span class="tag no">腳本被剝離</span></td></tr>
+<tr><td class='mono'>31960</td><td>[黃昏的勇士之村] 夢的背後</td><td>記憶者 <span class='mono'>2142011</span></td><td>LV185</td><td>5482.9萬</td><td class='mono' style='color:#8fb8e6'>← 31914</td><td><span class="tag ok">在庫</span> <span class="tag info">純數據</span></td></tr>
+<tr><td class='mono'>31961</td><td>[黃昏的勇士之村] 找尋忘卻迷霧</td><td>— <span class='mono'></span></td><td>LV185</td><td>5685.9萬</td><td class='mono' style='color:#8fb8e6'>← 31960</td><td><span class="tag ok">在庫</span> <span class="tag info">純數據</span></td></tr>
+<tr><td class='mono'>31962</td><td>[黃昏的勇士之村] 魔法提煉1</td><td>神殿管理人 <span class='mono'>2140000</span></td><td>LV185</td><td>5889.0萬</td><td class='mono' style='color:#8fb8e6'>← 31961</td><td><span class="tag ok">在庫</span> <span class="tag no">腳本被剝離</span></td></tr>
+<tr><td class='mono'>31963</td><td>[黃昏的勇士之村] 魔法提煉2</td><td>魔法术士 <span class='mono'>2140002</span></td><td>LV185</td><td>2.44億</td><td class='mono' style='color:#8fb8e6'>← 31962</td><td><span class="tag ok">在庫</span> <span class="tag info">純數據</span></td></tr>
+<tr><td class='mono'>31964</td><td>[黃昏的勇士之村] 前往夢幻的那邊</td><td>魔法术士 <span class='mono'>2140002</span></td><td>LV185</td><td>953.7萬</td><td class='mono' style='color:#8fb8e6'>← 31963</td><td><span class="tag ok">在庫</span> <span class="tag no">腳本被剝離</span></td></tr>
+<tr><td class='mono'>31965</td><td>[黃昏的勇士之村] 夢的結束</td><td>漢斯 <span class='mono'>1105004</span></td><td>LV185</td><td>6498.2萬</td><td class='mono' style='color:#8fb8e6'>← 31964</td><td><span class="tag ok">在庫</span> <span class="tag no">腳本被剝離</span></td></tr>
+</table>
+<div class="legend">入口：<code>31900</code> 無前置、<code>autoStart=1</code>。TMS 原版由赫麗娜(1105001) 觸發；仓库把前 4 条（31900/31901/31902/31903）的 <code>npc</code> 改成了 <b>武術教練(1022000)</b>。</div>
+<h3>2.2 收尾與日常（需先完成 31965）</h3><table><tr><th>ID</th><th>任務名</th><th>領取 NPC</th><th>等級</th><th>EXP</th><th>前置</th><th>狀態</th></tr>
+<tr><td class='mono'>31093</td><td>[黃昏的勇士之村]黃昏的戰士</td><td>修行者 <span class='mono'>2142105</span></td><td>LV185</td><td>2.68億</td><td class='mono' style='color:#8fb8e6'>← 31965</td><td><span class="tag ok">在庫</span> <span class="tag info">純數據</span></td></tr>
+<tr><td class='mono'>31916</td><td>[未來之門] 守護勇士之村的居民們1</td><td>修行者 <span class='mono'>2142105</span></td><td>LV185</td><td>3025.1萬</td><td class='mono' style='color:#8fb8e6'>← 31965</td><td><span class="tag ok">在庫</span> <span class="tag info">純數據</span></td></tr>
+<tr><td class='mono'>31917</td><td>[未來之門] 守護勇士之村的居民們2</td><td>修行者 <span class='mono'>2142105</span></td><td>LV185</td><td>3025.1萬</td><td class='mono' style='color:#8fb8e6'>← 31916</td><td><span class="tag ok">在庫</span> <span class="tag info">純數據</span></td></tr>
+<tr><td class='mono'>31918</td><td>[未來之門] 尋找祖先的智慧1</td><td>修行者 <span class='mono'>2142105</span></td><td>LV185</td><td>1512.6萬</td><td class='mono' style='color:#8fb8e6'>← 31917</td><td><span class="tag ok">在庫</span> <span class="tag info">純數據</span></td></tr>
+<tr><td class='mono'>31919</td><td>[未來之門] 尋找祖先的智慧2</td><td>村长阿勒斯 <span class='mono'>2142001</span></td><td>LV185</td><td>1512.6萬</td><td class='mono' style='color:#8fb8e6'>← 31918</td><td><span class="tag ok">在庫</span> <span class="tag info">純數據</span></td></tr>
+<tr><td class='mono'>31920</td><td>[未來之門] 尋找祖先的智慧3</td><td>幽灵斯坦 <span class='mono'>2142007</span></td><td>LV185</td><td>1512.6萬</td><td class='mono' style='color:#8fb8e6'>← 31919</td><td><span class="tag ok">在庫</span> <span class="tag info">純數據</span></td></tr>
+<tr><td class='mono'>31921</td><td>[未來之門] 尋找祖先的智慧4</td><td>修行者 <span class='mono'>2142105</span></td><td>LV185</td><td>3025.1萬</td><td class='mono' style='color:#8fb8e6'>← 31920</td><td><span class="tag ok">在庫</span> <span class="tag info">純數據</span></td></tr>
+<tr><td class='mono'>31922</td><td>[未來之門] 尋找祖先的智慧5</td><td>修行者 <span class='mono'>2142105</span></td><td>LV185</td><td>1512.6萬</td><td class='mono' style='color:#8fb8e6'>← 31921</td><td><span class="tag ok">在庫</span> <span class="tag info">純數據</span></td></tr>
+<tr><td class='mono'>31923</td><td>[未來之門] 用著乾渴的喉嚨訴說</td><td>吉米 <span class='mono'>2142100</span></td><td>LV185</td><td>3025.1萬</td><td class='mono' style='color:#8fb8e6'>← 31965</td><td><span class="tag ok">在庫</span> <span class="tag info">純數據</span></td></tr>
+<tr><td class='mono'>31924</td><td>[未來之門] 勇士之村的寒冷夜晚</td><td>理博 <span class='mono'>2142101</span></td><td>LV185</td><td>3025.1萬</td><td class='mono' style='color:#8fb8e6'>← 31965</td><td><span class="tag ok">在庫</span> <span class="tag info">純數據</span></td></tr>
+<tr><td class='mono'>31925</td><td>[黃昏的勇士之村] 勇士之村寒冷的夜2</td><td>理博 <span class='mono'>2142101</span></td><td>LV185</td><td>1300.9萬</td><td class='mono' style='color:#8fb8e6'>← 31924</td><td><span class="tag ok">在庫</span> <span class="tag info">純數據</span></td></tr>
+<tr><td class='mono'>31926</td><td>[未來之門] 優質的蛋白質來源</td><td>蘇非亞 <span class='mono'>2142104</span></td><td>LV185</td><td>3025.1萬</td><td class='mono' style='color:#8fb8e6'>← 31965</td><td><span class="tag ok">在庫</span> <span class="tag info">純數據</span></td></tr>
+<tr><td class='mono'>31927</td><td>[黃昏的勇士之村] 供應優質蛋白質源2</td><td>蘇非亞 <span class='mono'>2142104</span></td><td>LV185</td><td>1300.9萬</td><td class='mono' style='color:#8fb8e6'>← 31926</td><td><span class="tag ok">在庫</span> <span class="tag info">純數據</span></td></tr>
+<tr><td class='mono'>31928</td><td>[未來之門] 優質木材的來源</td><td>義安 <span class='mono'>2142109</span></td><td>LV185</td><td>3025.1萬</td><td class='mono' style='color:#8fb8e6'>← 31965</td><td><span class="tag ok">在庫</span> <span class="tag info">純數據</span></td></tr>
+<tr><td class='mono'>31929</td><td>[未來之門] 麥吉在哪呢？</td><td>義安 <span class='mono'>2142109</span></td><td>LV185</td><td>1512.6萬</td><td class='mono' style='color:#8fb8e6'>← 31922</td><td><span class="tag ok">在庫</span> <span class="tag info">純數據</span></td></tr>
+<tr><td class='mono'>31930</td><td>[未來之門] 麥吉的試驗</td><td>麥吉 <span class='mono'>2142111</span></td><td>LV185</td><td>3025.1萬</td><td class='mono' style='color:#8fb8e6'>← 31929</td><td><span class="tag no">缺定義</span></td></tr>
+<tr><td class='mono'>31931</td><td>[未來之門] 麥吉的石巨人狩獵</td><td>麥吉 <span class='mono'>2142111</span></td><td>LV185</td><td>3025.1萬</td><td class='mono' style='color:#8fb8e6'>← 31930</td><td><span class="tag no">缺定義</span></td></tr>
+<tr><td class='mono'>31932</td><td>[未來之門] 勇士之村戰士們的靈魂</td><td>麥吉 <span class='mono'>2142111</span></td><td>LV185</td><td>3025.1萬</td><td class='mono' style='color:#8fb8e6'>← 31931</td><td><span class="tag no">缺定義</span></td></tr>
+<tr><td class='mono'>31933</td><td>[未來之門] 緊缺的工料</td><td>阿勒斯 <span class='mono'>2142106</span></td><td>LV185</td><td>3025.1萬</td><td class='mono' style='color:#8fb8e6'>← 31965</td><td><span class="tag no">缺定義</span></td></tr>
+<tr><td class='mono'>31934</td><td>[未來之門] 依然緊缺的工料</td><td>阿勒斯 <span class='mono'>2142106</span></td><td>LV185</td><td>3025.1萬</td><td class='mono' style='color:#8fb8e6'>← 31933</td><td><span class="tag no">缺定義</span></td></tr>
+<tr><td class='mono'>31935</td><td>[未來之門] 勇士之村的名物1</td><td>吉可穆德 <span class='mono'>2142107</span></td><td>LV185</td><td>3025.1萬</td><td class='mono' style='color:#8fb8e6'>← 31965</td><td><span class="tag no">缺定義</span></td></tr>
+<tr><td class='mono'>31936</td><td>[未來之門] 勇士之村的名物2</td><td>吉可穆德 <span class='mono'>2142107</span></td><td>LV185</td><td>3025.1萬</td><td class='mono' style='color:#8fb8e6'>← 31935</td><td><span class="tag no">缺定義</span></td></tr>
+<tr><td class='mono'>31937</td><td>[未來之門] 勇士之村的名物3</td><td>吉可穆德 <span class='mono'>2142107</span></td><td>LV185</td><td>3025.1萬</td><td class='mono' style='color:#8fb8e6'>← 31936</td><td><span class="tag no">缺定義</span></td></tr>
+<tr><td class='mono'>31938</td><td>[未來之門] 思念的孫女生日1</td><td>酋長 <span class='mono'>2142103</span></td><td>LV185</td><td>1512.6萬</td><td class='mono' style='color:#8fb8e6'>← 31965</td><td><span class="tag no">缺定義</span></td></tr>
+<tr><td class='mono'>31939</td><td>[未來之門] 思念的孫女生日2</td><td>比石頭還堅硬的大頭 <span class='mono'>2142110</span></td><td>LV185</td><td>1512.6萬</td><td class='mono' style='color:#8fb8e6'>← 31938</td><td><span class="tag no">缺定義</span></td></tr>
+<tr><td class='mono'>31940</td><td>[未來之門] 思念的孫女生日3</td><td>酋長 <span class='mono'>2142103</span></td><td>LV185</td><td>3025.1萬</td><td class='mono' style='color:#8fb8e6'>← 31939</td><td><span class="tag no">缺定義</span></td></tr>
+<tr><td class='mono'>31941</td><td>[未來之門] 思念的孫女生日4</td><td>比石頭還堅硬的大頭 <span class='mono'>2142110</span></td><td>LV185</td><td>1512.6萬</td><td class='mono' style='color:#8fb8e6'>← 31940</td><td><span class="tag no">缺定義</span></td></tr>
+<tr><td class='mono'>31942</td><td>[未來之門] 當年我也戰鬥過</td><td>酋長 <span class='mono'>2142108</span></td><td>LV185</td><td>3025.1萬</td><td class='mono' style='color:#8fb8e6'>← 31965</td><td><span class="tag no">缺定義</span></td></tr>
+<tr><td class='mono'>31943</td><td>[未來之門] 往年我也很奮勇2</td><td>酋長 <span class='mono'>2142108</span></td><td>LV185</td><td>1239.0萬</td><td class='mono' style='color:#8fb8e6'>← 31942</td><td><span class="tag no">缺定義</span></td></tr>
+<tr><td class='mono'>31944</td><td>[未來之門] 往年我也很奮勇3</td><td>酋長 <span class='mono'>2142108</span></td><td>LV185</td><td>1239.0萬</td><td class='mono' style='color:#8fb8e6'>← 31943</td><td><span class="tag no">缺定義</span></td></tr>
+</table>
+<h3>2.3 前置章節：被破壞的弓箭手村 + 騎士團要塞（area=266 / 47）</h3><table><tr><th>ID</th><th>任務名</th><th>領取 NPC</th><th>等級</th><th>EXP</th><th>前置</th><th>狀態</th></tr>
+<tr><td class='mono'>31091</td><td>[未來之門] 從[被破壞的弓箭手村]廢墟中站起</td><td>村长阿勒斯 <span class='mono'>2142001</span></td><td>LV160</td><td>—</td><td class='mono' style='color:#8fb8e6'>← 31153</td><td><span class="tag no">缺定義</span></td></tr>
+<tr><td class='mono'>31103</td><td>[被破壞的弓箭手村] 來自過去之人</td><td>爱德华 <span class='mono'>2142003</span></td><td>LV160</td><td>649.6萬</td><td class='mono' style='color:#8fb8e6'>← 31102</td><td><span class="tag no">缺定義</span></td></tr>
+<tr><td class='mono'>31106</td><td>[被破壞的弓箭手村] 墮落的西格諾斯</td><td>赫丽娜 <span class='mono'>2142002</span></td><td>LV160</td><td>—</td><td class='mono' style='color:#8fb8e6'>← 31105</td><td><span class="tag no">缺定義</span></td></tr>
+<tr><td class='mono'>31108</td><td>[未來之門] 村莊的守護者</td><td>爱德华 <span class='mono'>2142003</span></td><td>LV160</td><td>902.5萬</td><td class='mono' style='color:#8fb8e6'>← 31160</td><td><span class="tag no">缺定義</span></td></tr>
+<tr><td class='mono'>31110</td><td>[被破壞的弓箭手村] 食糧收集</td><td>卡米拉 <span class='mono'>2142004</span></td><td>LV160</td><td>3711.8萬</td><td class='mono' style='color:#8fb8e6'>← 31118</td><td><span class="tag no">缺定義</span></td></tr>
+<tr><td class='mono'>31111</td><td>[未來之門] 收集糧食2</td><td>卡米拉 <span class='mono'>2142004</span></td><td>LV160</td><td>644.6萬</td><td class='mono' style='color:#8fb8e6'>← 31110</td><td><span class="tag no">缺定義</span></td></tr>
+<tr><td class='mono'>31114</td><td>[未來之門] 猶他的請求</td><td>尤塔 <span class='mono'>2142009</span></td><td>LV160</td><td>902.5萬</td><td class='mono' style='color:#8fb8e6'>← 31160</td><td><span class="tag no">缺定義</span></td></tr>
+<tr><td class='mono'>31115</td><td>[未來之門] 為了猶他的營養餐點</td><td>卡米拉 <span class='mono'>2142004</span></td><td>LV160</td><td>902.5萬</td><td class='mono' style='color:#8fb8e6'>← 31114</td><td><span class="tag no">缺定義</span></td></tr>
+<tr><td class='mono'>31116</td><td>[未來之門] 不放棄的夢想</td><td>爱德华 <span class='mono'>2142003</span></td><td>LV160</td><td>902.5萬</td><td class='mono' style='color:#8fb8e6'>← 31108</td><td><span class="tag no">缺定義</span></td></tr>
+<tr><td class='mono'>31117</td><td>[未來之門] 猶他的肥肥農場</td><td>尤塔 <span class='mono'>2142005</span></td><td>LV160</td><td>902.5萬</td><td class='mono' style='color:#8fb8e6'>← 31115</td><td><span class="tag no">缺定義</span></td></tr>
+<tr><td class='mono'>31120</td><td>[被破壞的弓箭手村] 小安的委託</td><td>桉 <span class='mono'>2142008</span></td><td>LV160</td><td>4454.1萬</td><td class='mono' style='color:#8fb8e6'>← 31119</td><td><span class="tag no">缺定義</span></td></tr>
+<tr><td class='mono'>31121</td><td>[未來之門] 小安的委託Ⅱ</td><td>桉 <span class='mono'>2142008</span></td><td>LV160</td><td>705.2萬</td><td class='mono' style='color:#8fb8e6'>← 31120</td><td><span class="tag no">缺定義</span></td></tr>
+<tr><td class='mono'>31128</td><td>[騎士團要塞] 要塞襲擊</td><td>村长阿勒斯 <span class='mono'>2142001</span></td><td>LV165</td><td>3935.7萬</td><td class='mono' style='color:#8fb8e6'>← 31125</td><td><span class="tag no">缺定義</span></td></tr>
+<tr><td class='mono'>31129</td><td>[未來之門] 要塞襲擊Ⅱ</td><td>村长阿勒斯 <span class='mono'>2142001</span></td><td>LV170</td><td>979.0萬</td><td class='mono' style='color:#8fb8e6'>← 31128</td><td><span class="tag no">缺定義</span></td></tr>
+<tr><td class='mono'>31130</td><td>[未來之門] 要塞襲擊Ⅲ</td><td>村长阿勒斯 <span class='mono'>2142001</span></td><td>LV170</td><td>1099.9萬</td><td class='mono' style='color:#8fb8e6'>← 31129</td><td><span class="tag no">缺定義</span></td></tr>
+<tr><td class='mono'>31131</td><td>[未來之門] 要塞襲擊Ⅳ</td><td>村长阿勒斯 <span class='mono'>2142001</span></td><td>LV170</td><td>1235.9萬</td><td class='mono' style='color:#8fb8e6'>← 31130</td><td><span class="tag no">缺定義</span></td></tr>
+<tr><td class='mono'>31132</td><td>[未來之門] 給兒子的信</td><td>幽灵斯坦 <span class='mono'>2142007</span></td><td>LV165</td><td>902.5萬</td><td class='mono' style='color:#8fb8e6'>← 31153</td><td><span class="tag no">缺定義</span></td></tr>
+<tr><td class='mono'>31133</td><td>[未來之門] 重新找回的笑容</td><td>村长阿勒斯 <span class='mono'>2142001</span></td><td>LV165</td><td>902.5萬</td><td class='mono' style='color:#8fb8e6'>← 31153</td><td><span class="tag no">缺定義</span></td></tr>
+<tr><td class='mono'>31134</td><td>[未來之門] 為了卡蜜拉的禮物</td><td>尤塔 <span class='mono'>2142005</span></td><td>LV165</td><td>902.5萬</td><td class='mono' style='color:#8fb8e6'>← 31153,31114</td><td><span class="tag no">缺定義</span></td></tr>
+<tr><td class='mono'>31135</td><td>[未來之門] 猶他的護具</td><td>卡米拉 <span class='mono'>2142004</span></td><td>LV165</td><td>902.5萬</td><td class='mono' style='color:#8fb8e6'>← 31153</td><td><span class="tag no">缺定義</span></td></tr>
+<tr><td class='mono'>31136</td><td>[騎士團要塞] 騎士團處置</td><td>村长阿勒斯 <span class='mono'>2142001</span></td><td>LV165</td><td>4541.2萬</td><td class='mono' style='color:#8fb8e6'>← 31127</td><td><span class="tag no">缺定義</span></td></tr>
+<tr><td class='mono'>31137</td><td>[未來之門] 騎士團處置Ⅱ</td><td>村长阿勒斯 <span class='mono'>2142001</span></td><td>LV170</td><td>1471.9萬</td><td class='mono' style='color:#8fb8e6'>← 31136</td><td><span class="tag no">缺定義</span></td></tr>
+<tr><td class='mono'>31138</td><td>[未來之門] 騎士團處置Ⅲ</td><td>村长阿勒斯 <span class='mono'>2142001</span></td><td>LV170</td><td>1560.2萬</td><td class='mono' style='color:#8fb8e6'>← 31137</td><td><span class="tag no">缺定義</span></td></tr>
+<tr><td class='mono'>31139</td><td>[未來之門] 騎士團處置Ⅳ</td><td>村长阿勒斯 <span class='mono'>2142001</span></td><td>LV170</td><td>1753.0萬</td><td class='mono' style='color:#8fb8e6'>← 31138</td><td><span class="tag no">缺定義</span></td></tr>
+<tr><td class='mono'>31140</td><td>[未來之門] 騎士團處置Ⅴ</td><td>村长阿勒斯 <span class='mono'>2142001</span></td><td>LV170</td><td>1968.0萬</td><td class='mono' style='color:#8fb8e6'>← 31139</td><td><span class="tag no">缺定義</span></td></tr>
+<tr><td class='mono'>31141</td><td>[未來之門] 強力的武器</td><td>亚华 <span class='mono'>2142006</span></td><td>LV165</td><td>1079.8萬</td><td class='mono' style='color:#8fb8e6'>← 31153</td><td><span class="tag no">缺定義</span></td></tr>
+<tr><td class='mono'>31142</td><td>[未來之門] 小安的誤會？</td><td>爱德华 <span class='mono'>2142003</span></td><td>LV165</td><td>902.5萬</td><td class='mono' style='color:#8fb8e6'>← 31153</td><td><span class="tag no">缺定義</span></td></tr>
+<tr><td class='mono'>31143</td><td>[未來之門] 適合的武器</td><td>桉 <span class='mono'>2142008</span></td><td>LV165</td><td>902.5萬</td><td class='mono' style='color:#8fb8e6'>← 31142</td><td><span class="tag no">缺定義</span></td></tr>
+<tr><td class='mono'>31144</td><td>[未來之門] 被孤立的村莊</td><td>村长阿勒斯 <span class='mono'>2142001</span></td><td>LV170</td><td>—</td><td class='mono' style='color:#8fb8e6'>← 31106</td><td><span class="tag no">缺定義</span></td></tr>
+<tr><td class='mono'>31153</td><td>[騎士團要塞] 抵禦西格諾斯！</td><td>村长阿勒斯 <span class='mono'>2142001</span></td><td>LV165</td><td>1.04億</td><td class='mono' style='color:#8fb8e6'>← 31152</td><td><span class="tag no">缺定義</span></td></tr>
+<tr><td class='mono'>31160</td><td>[被破壞的弓箭手村] 夢的操控者</td><td>南哈特 <span class='mono'>1101002</span></td><td>LV160</td><td>8073.1萬</td><td class='mono' style='color:#8fb8e6'>← 31159</td><td><span class="tag no">缺定義</span></td></tr>
+</table>
+<div class="legend">這 31 條是副本的<b>前置劇情</b>，從 <code>31102 → 31103 → … → 31160</code> 一路推下來。<b>全部缺定義</b>，仓库里連任務都不存在。</div>
+<h3>2.4 主題副本入口條目</h3><table><tr><th>ID</th><th>任務名</th><th>領取 NPC</th><th>等級</th><th>EXP</th><th>前置</th><th>狀態</th></tr>
+<tr><td class='mono'>1345</td><td>[主題副本]黃昏的勇士之村</td><td>赫麗娜 <span class='mono'>1105001</span></td><td>LV190</td><td>—</td><td class='mono' style='color:#8fb8e6'></td><td><span class="tag no">缺定義</span></td></tr>
+</table>
+<h2>三、六層完整性核對</h2>
+<table><tr><th style="width:130px">層</th><th style="width:110px">結果</th><th>說明</th></tr>
+<tr><td><b>1. 地圖資源</b></td><td><span class="tag ok">24 / 24 齊</span></td><td>2730 段 24 張圖全部在 <code>clien/Data/Map/Map/Map2/</code>，含 portal / life / foothold / miniMap / back。TMS 側同樣 24 張（另有 24 張 <code>_Canvas</code> 貼圖旁掛）。</td></tr>
+<tr><td><b>2. 任務定義</b></td><td><span class="tag ok">23 / 23 齊</span>（副本本體）</td><td>31900–31915、31960–31965、31093 共 23 條，QuestInfo / Check / Act / Say 四件套完整。連帶任務另缺 47 條。</td></tr>
+<tr><td><b>3. 任務腳本鉤子</b></td><td><span class="tag no">0 / 13</span></td><td>TMS 側這 23 條裏有 13 條帶 <code>startscript/endscript</code>（共 15 個腳本名），仓库版<b>全部剝離</b>——Check 裏一格 <code>startscript</code> 都不剩。這是刻意的「純數據導入」。</td></tr>
+<tr><td><b>4. 任務腳本檔案</b></td><td><span class="tag no">0 / 13</span></td><td>服务端按 <b>任務 ID</b> 取名，找 <code>scripts-zh-CN/quest/&lt;id&gt;.js</code>（<code>QuestScriptManager.getQuestScriptEngine</code>）。在庫的 37 條任務<b>一個 .js 都沒有</b>（英文樹 <code>scripts/</code> 同樣為 0）；其中真正需要腳本的是帶鉤子的那 13 條，另 24 條本來就是純數據任務。</td></tr>
+<tr><td><b>5. NPC 對話腳本</b></td><td><span class="tag no">0 / 20</span></td><td>2730 段共刷出 20 個 NPC，<code>scripts-zh-CN/npc/</code> 下缺 <b>全部 20</b> 個。</td></tr>
+<tr><td><b>6. 場地腳本 + 等級門檻</b></td><td><span class="tag warn">1 / 24 + 0 / 24</span></td><td><code>273000000</code> 的 <code>onUserEnter=enter_273000000</code> 沒對應腳本；24 張圖全部缺 <code>lvLimit=180</code>。</td></tr>
+</table>
+<h2>四、缺口明細</h2>
+<details open><summary>缺口 A · 任務腳本鉤子被剝離（13 條 / 15 個腳本）</summary><div class="body">
+<div class="note">仓库 <code>Check.img.xml</code> 全域還有 <b>412 個 startscript + 465 個 endscript</b>，說明腳本鉤子本來是常規形態；只有黃昏的勇士之村這批被清空。<br>服務端行為（<code>QuestActionHandler</code>）：<code>hasScriptRequirement &amp;&amp; checkFunctionExists</code> 兩者都真才走腳本，否則回退到 <code>quest.start(player, npc)</code> 純數據路徑 —— <b>所以任務照樣能接、能交，但腳本化的過場會被跳過</b>。</div>
+<div class="g">
+<div><b>31900</b> q31900s +1 · [黃昏的勇士之村] 第二次設計的</div>
+<div><b>31901</b> q31901s +0 · [黃昏的勇士之村] 勇士之村民意</div>
+<div><b>31903</b> q31903s +0 · [黃昏的勇士之村] 前往黃昏的勇</div>
+<div><b>31907</b> q31907e +0 · [黃昏的勇士之村] 調查黃昏的勇</div>
+<div><b>31909</b> q31909s +0 · [黃昏的勇士之村] 調查黃昏的勇</div>
+<div><b>31910</b> q31910s +1 · [黃昏的勇士之村] 操控夢者的目</div>
+<div><b>31911</b> q31911s +0 · [黃昏的勇士之村] 收集夢的材料</div>
+<div><b>31912</b> q31912e +0 · [黃昏的勇士之村] 收集無意識的</div>
+<div><b>31914</b> q31914s +0 · [黃昏的勇士之村] 有關敵人的線</div>
+<div><b>31915</b> q31915e +0 · [任務] 消滅操控夢者的手下</div>
+<div><b>31962</b> q31962s +0 · [黃昏的勇士之村] 魔法提煉1</div>
+<div><b>31964</b> q31964e +0 · [黃昏的勇士之村] 前往夢幻的那</div>
+<div><b>31965</b> q31965s +0 · [黃昏的勇士之村] 夢的結束</div>
+</div></div></details>
+<details open><summary>缺口 B · NPC 對話腳本全缺（20 個）</summary><div class="body">
+<table><tr><th>NPC ID</th><th>名稱</th><th>刷在哪張圖</th><th>腳本</th></tr>
+<tr><td class='mono'>1105001</td><td>赫麗娜</td><td class='mono' style='font-size:11.5px'>273000000</td><td><span class="tag no">缺</span></td></tr>
+<tr><td class='mono'>1105003</td><td>那因哈特</td><td class='mono' style='font-size:11.5px'>273000000</td><td><span class="tag no">缺</span></td></tr>
+<tr><td class='mono'>1105004</td><td>漢斯</td><td class='mono' style='font-size:11.5px'>273000000</td><td><span class="tag no">缺</span></td></tr>
+<tr><td class='mono'>2140000</td><td>神殿管理人</td><td class='mono' style='font-size:11.5px'>273000000</td><td><span class="tag no">缺</span></td></tr>
+<tr><td class='mono'>2140002</td><td>魔法术士</td><td class='mono' style='font-size:11.5px'>273000000</td><td><span class="tag no">缺</span></td></tr>
+<tr><td class='mono'>2142011</td><td>記憶者</td><td class='mono' style='font-size:11.5px'>273000000</td><td><span class="tag no">缺</span></td></tr>
+<tr><td class='mono'>2142100</td><td>吉米</td><td class='mono' style='font-size:11.5px'>273000000</td><td><span class="tag no">缺</span></td></tr>
+<tr><td class='mono'>2142101</td><td>理博</td><td class='mono' style='font-size:11.5px'>273000000</td><td><span class="tag no">缺</span></td></tr>
+<tr><td class='mono'>2142102</td><td>海麗</td><td class='mono' style='font-size:11.5px'>273000000</td><td><span class="tag no">缺</span></td></tr>
+<tr><td class='mono'>2142103</td><td>酋長</td><td class='mono' style='font-size:11.5px'>273000000</td><td><span class="tag no">缺</span></td></tr>
+<tr><td class='mono'>2142104</td><td>蘇非亞</td><td class='mono' style='font-size:11.5px'>273000000</td><td><span class="tag no">缺</span></td></tr>
+<tr><td class='mono'>2142105</td><td>修行者</td><td class='mono' style='font-size:11.5px'>273000000</td><td><span class="tag no">缺</span></td></tr>
+<tr><td class='mono'>2142106</td><td>阿勒斯</td><td class='mono' style='font-size:11.5px'>273000000</td><td><span class="tag no">缺</span></td></tr>
+<tr><td class='mono'>2142107</td><td>吉可穆德</td><td class='mono' style='font-size:11.5px'>273000000</td><td><span class="tag no">缺</span></td></tr>
+<tr><td class='mono'>2142108</td><td>酋長</td><td class='mono' style='font-size:11.5px'>273050000</td><td><span class="tag no">缺</span></td></tr>
+<tr><td class='mono'>2142109</td><td>義安</td><td class='mono' style='font-size:11.5px'>273050000</td><td><span class="tag no">缺</span></td></tr>
+<tr><td class='mono'>2142110</td><td>比石頭還堅硬的大頭</td><td class='mono' style='font-size:11.5px'>273050000</td><td><span class="tag no">缺</span></td></tr>
+<tr><td class='mono'>2142111</td><td>麥吉</td><td class='mono' style='font-size:11.5px'>273060000</td><td><span class="tag no">缺</span></td></tr>
+<tr><td class='mono'>2142112</td><td>寇比</td><td class='mono' style='font-size:11.5px'>273000000,273050000</td><td><span class="tag no">缺</span></td></tr>
+<tr><td class='mono'>2142113</td><td>危險地帶超高速計程車</td><td class='mono' style='font-size:11.5px'>273000000</td><td><span class="tag no">缺</span></td></tr>
+</table><div class="legend">NPC 本身已在地圖 <code>life</code> 裏生成，位置沒問題；缺的是點擊後的對話腳本。</div>
+</div></details>
+<details open><summary>缺口 C · 地圖層：進入腳本 + 等級門檻（24 張全中）</summary><div class="body">
+<table><tr><th>地圖 ID</th><th>名稱</th><th>NPC</th><th>怪物</th><th>lvLimit</th><th>onUserEnter</th></tr>
+<tr><td class='mono'>273000000</td><td>黃昏的勇士之村/黃昏的勇士之村</td><td>16</td><td>0</td><td><span class="tag no">缺</span></td><td><span class="tag no">缺</span></td></tr>
+<tr><td class='mono'>273010000</td><td>黃昏的勇士之村/人煙稀少的南嶺</td><td>0</td><td>25</td><td><span class="tag no">缺</span></td><td><span class="tag info">—</span></td></tr>
+<tr><td class='mono'>273020000</td><td>黃昏的勇士之村/荒涼的山丘</td><td>0</td><td>23</td><td><span class="tag no">缺</span></td><td><span class="tag info">—</span></td></tr>
+<tr><td class='mono'>273020100</td><td>黃昏的勇士之村/寂靜的石子路</td><td>0</td><td>24</td><td><span class="tag no">缺</span></td><td><span class="tag info">—</span></td></tr>
+<tr><td class='mono'>273020200</td><td>黃昏的勇士之村/苦澀的石子路</td><td>0</td><td>26</td><td><span class="tag no">缺</span></td><td><span class="tag info">—</span></td></tr>
+<tr><td class='mono'>273020300</td><td>黃昏的勇士之村/風化的岩石地帶</td><td>0</td><td>40</td><td><span class="tag no">缺</span></td><td><span class="tag info">—</span></td></tr>
+<tr><td class='mono'>273020400</td><td>黃昏的勇士之村/寒風蕭瑟的墓地</td><td>0</td><td>38</td><td><span class="tag no">缺</span></td><td><span class="tag info">—</span></td></tr>
+<tr><td class='mono'>273020500</td><td>黃昏的勇士之村/蕭瑟的北側岩石路</td><td>0</td><td>30</td><td><span class="tag no">缺</span></td><td><span class="tag info">—</span></td></tr>
+<tr><td class='mono'>273020600</td><td>黃昏的勇士之村/暴風峽谷</td><td>0</td><td>26</td><td><span class="tag no">缺</span></td><td><span class="tag info">—</span></td></tr>
+<tr><td class='mono'>273030000</td><td>黃昏的勇士之村/炎熱峽谷</td><td>0</td><td>27</td><td><span class="tag no">缺</span></td><td><span class="tag info">—</span></td></tr>
+<tr><td class='mono'>273030100</td><td>黃昏的勇士之村/熾天石山</td><td>0</td><td>25</td><td><span class="tag no">缺</span></td><td><span class="tag info">—</span></td></tr>
+<tr><td class='mono'>273030200</td><td>黃昏的勇士之村/滾燙之地</td><td>0</td><td>31</td><td><span class="tag no">缺</span></td><td><span class="tag info">—</span></td></tr>
+<tr><td class='mono'>273030300</td><td>黃昏的勇士之村/風之高原</td><td>0</td><td>27</td><td><span class="tag no">缺</span></td><td><span class="tag info">—</span></td></tr>
+<tr><td class='mono'>273040000</td><td>黃昏的勇士之村/被遺棄的挖掘地區1</td><td>0</td><td>28</td><td><span class="tag no">缺</span></td><td><span class="tag info">—</span></td></tr>
+<tr><td class='mono'>273040100</td><td>黃昏的勇士之村/被遺棄的挖掘地區 2</td><td>0</td><td>27</td><td><span class="tag no">缺</span></td><td><span class="tag info">—</span></td></tr>
+<tr><td class='mono'>273040200</td><td>黃昏的勇士之村/被遺棄的挖掘地區3</td><td>0</td><td>31</td><td><span class="tag no">缺</span></td><td><span class="tag info">—</span></td></tr>
+<tr><td class='mono'>273040300</td><td>黃昏的勇士之村/被遺棄的挖掘地區4</td><td>0</td><td>30</td><td><span class="tag no">缺</span></td><td><span class="tag info">—</span></td></tr>
+<tr><td class='mono'>273050000</td><td>黃昏的勇士之村/原住民們的避難處</td><td>4</td><td>0</td><td><span class="tag no">缺</span></td><td><span class="tag info">—</span></td></tr>
+<tr><td class='mono'>273060000</td><td>黃昏的勇士之村/幽靈之地入口</td><td>1</td><td>21</td><td><span class="tag no">缺</span></td><td><span class="tag info">—</span></td></tr>
+<tr><td class='mono'>273060100</td><td>黃昏的勇士之村/荒郊野外</td><td>0</td><td>21</td><td><span class="tag no">缺</span></td><td><span class="tag info">—</span></td></tr>
+<tr><td class='mono'>273060200</td><td>黃昏的勇士之村/崎嶇峽谷</td><td>0</td><td>21</td><td><span class="tag no">缺</span></td><td><span class="tag info">—</span></td></tr>
+<tr><td class='mono'>273060300</td><td>黃昏的勇士之村/戰士們的決戰之地</td><td>0</td><td>26</td><td><span class="tag no">缺</span></td><td><span class="tag info">—</span></td></tr>
+<tr><td class='mono'>273060400</td><td>黃昏的勇士之村/挖掘中斷地區</td><td>0</td><td>32</td><td><span class="tag no">缺</span></td><td><span class="tag info">—</span></td></tr>
+<tr><td class='mono'>273060500</td><td>黃昏的勇士之村/封閉地區</td><td>0</td><td>35</td><td><span class="tag no">缺</span></td><td><span class="tag info">—</span></td></tr>
+</table><div class="legend">TMS 側 <code>273000000</code> 的 <code>onUserEnter=enter_273000000</code>；仓库同名字段不存在。倉庫已有 <code>enter_211060300.js</code> 等同名形式腳本，說明這是真的漏了，不是命名不同。</div>
+</div></details>
+<details open><summary>缺口 D · 連帶任務缺定義（47 條）</summary><div class="body">
+<table><tr><th>任務 ID</th><th>任務名</th><th>區域</th><th>等級</th><th>所屬</th></tr>
+<tr><td class='mono'>1345</td><td>[主題副本]黃昏的勇士之村</td><td>49</td><td>LV190</td><td>主題副本入口</td></tr>
+<tr><td class='mono'>31091</td><td>[未來之門] 從[被破壞的弓箭手村]廢墟中站起</td><td>47</td><td>LV160</td><td>前置章節</td></tr>
+<tr><td class='mono'>31103</td><td>[被破壞的弓箭手村] 來自過去之人</td><td>266</td><td>LV160</td><td>前置章節</td></tr>
+<tr><td class='mono'>31106</td><td>[被破壞的弓箭手村] 墮落的西格諾斯</td><td>266</td><td>LV160</td><td>前置章節</td></tr>
+<tr><td class='mono'>31108</td><td>[未來之門] 村莊的守護者</td><td>47</td><td>LV160</td><td>前置章節</td></tr>
+<tr><td class='mono'>31110</td><td>[被破壞的弓箭手村] 食糧收集</td><td>266</td><td>LV160</td><td>前置章節</td></tr>
+<tr><td class='mono'>31111</td><td>[未來之門] 收集糧食2</td><td>47</td><td>LV160</td><td>前置章節</td></tr>
+<tr><td class='mono'>31114</td><td>[未來之門] 猶他的請求</td><td>47</td><td>LV160</td><td>前置章節</td></tr>
+<tr><td class='mono'>31115</td><td>[未來之門] 為了猶他的營養餐點</td><td>47</td><td>LV160</td><td>前置章節</td></tr>
+<tr><td class='mono'>31116</td><td>[未來之門] 不放棄的夢想</td><td>47</td><td>LV160</td><td>前置章節</td></tr>
+<tr><td class='mono'>31117</td><td>[未來之門] 猶他的肥肥農場</td><td>47</td><td>LV160</td><td>前置章節</td></tr>
+<tr><td class='mono'>31120</td><td>[被破壞的弓箭手村] 小安的委託</td><td>266</td><td>LV160</td><td>前置章節</td></tr>
+<tr><td class='mono'>31121</td><td>[未來之門] 小安的委託Ⅱ</td><td>47</td><td>LV160</td><td>前置章節</td></tr>
+<tr><td class='mono'>31128</td><td>[騎士團要塞] 要塞襲擊</td><td>266</td><td>LV165</td><td>前置章節</td></tr>
+<tr><td class='mono'>31129</td><td>[未來之門] 要塞襲擊Ⅱ</td><td>47</td><td>LV170</td><td>前置章節</td></tr>
+<tr><td class='mono'>31130</td><td>[未來之門] 要塞襲擊Ⅲ</td><td>47</td><td>LV170</td><td>前置章節</td></tr>
+<tr><td class='mono'>31131</td><td>[未來之門] 要塞襲擊Ⅳ</td><td>47</td><td>LV170</td><td>前置章節</td></tr>
+<tr><td class='mono'>31132</td><td>[未來之門] 給兒子的信</td><td>47</td><td>LV165</td><td>前置章節</td></tr>
+<tr><td class='mono'>31133</td><td>[未來之門] 重新找回的笑容</td><td>47</td><td>LV165</td><td>前置章節</td></tr>
+<tr><td class='mono'>31134</td><td>[未來之門] 為了卡蜜拉的禮物</td><td>47</td><td>LV165</td><td>前置章節</td></tr>
+<tr><td class='mono'>31135</td><td>[未來之門] 猶他的護具</td><td>47</td><td>LV165</td><td>前置章節</td></tr>
+<tr><td class='mono'>31136</td><td>[騎士團要塞] 騎士團處置</td><td>266</td><td>LV165</td><td>前置章節</td></tr>
+<tr><td class='mono'>31137</td><td>[未來之門] 騎士團處置Ⅱ</td><td>47</td><td>LV170</td><td>前置章節</td></tr>
+<tr><td class='mono'>31138</td><td>[未來之門] 騎士團處置Ⅲ</td><td>47</td><td>LV170</td><td>前置章節</td></tr>
+<tr><td class='mono'>31139</td><td>[未來之門] 騎士團處置Ⅳ</td><td>47</td><td>LV170</td><td>前置章節</td></tr>
+<tr><td class='mono'>31140</td><td>[未來之門] 騎士團處置Ⅴ</td><td>47</td><td>LV170</td><td>前置章節</td></tr>
+<tr><td class='mono'>31141</td><td>[未來之門] 強力的武器</td><td>47</td><td>LV165</td><td>前置章節</td></tr>
+<tr><td class='mono'>31142</td><td>[未來之門] 小安的誤會？</td><td>47</td><td>LV165</td><td>前置章節</td></tr>
+<tr><td class='mono'>31143</td><td>[未來之門] 適合的武器</td><td>47</td><td>LV165</td><td>前置章節</td></tr>
+<tr><td class='mono'>31144</td><td>[未來之門] 被孤立的村莊</td><td>47</td><td>LV170</td><td>前置章節</td></tr>
+<tr><td class='mono'>31153</td><td>[騎士團要塞] 抵禦西格諾斯！</td><td>266</td><td>LV165</td><td>前置章節</td></tr>
+<tr><td class='mono'>31160</td><td>[被破壞的弓箭手村] 夢的操控者</td><td>266</td><td>LV160</td><td>前置章節</td></tr>
+<tr><td class='mono'>31930</td><td>[未來之門] 麥吉的試驗</td><td>47</td><td>LV185</td><td>未來之門日常</td></tr>
+<tr><td class='mono'>31931</td><td>[未來之門] 麥吉的石巨人狩獵</td><td>47</td><td>LV185</td><td>未來之門日常</td></tr>
+<tr><td class='mono'>31932</td><td>[未來之門] 勇士之村戰士們的靈魂</td><td>47</td><td>LV185</td><td>未來之門日常</td></tr>
+<tr><td class='mono'>31933</td><td>[未來之門] 緊缺的工料</td><td>47</td><td>LV185</td><td>未來之門日常</td></tr>
+<tr><td class='mono'>31934</td><td>[未來之門] 依然緊缺的工料</td><td>47</td><td>LV185</td><td>未來之門日常</td></tr>
+<tr><td class='mono'>31935</td><td>[未來之門] 勇士之村的名物1</td><td>47</td><td>LV185</td><td>未來之門日常</td></tr>
+<tr><td class='mono'>31936</td><td>[未來之門] 勇士之村的名物2</td><td>47</td><td>LV185</td><td>未來之門日常</td></tr>
+<tr><td class='mono'>31937</td><td>[未來之門] 勇士之村的名物3</td><td>47</td><td>LV185</td><td>未來之門日常</td></tr>
+<tr><td class='mono'>31938</td><td>[未來之門] 思念的孫女生日1</td><td>47</td><td>LV185</td><td>未來之門日常</td></tr>
+<tr><td class='mono'>31939</td><td>[未來之門] 思念的孫女生日2</td><td>47</td><td>LV185</td><td>未來之門日常</td></tr>
+<tr><td class='mono'>31940</td><td>[未來之門] 思念的孫女生日3</td><td>47</td><td>LV185</td><td>未來之門日常</td></tr>
+<tr><td class='mono'>31941</td><td>[未來之門] 思念的孫女生日4</td><td>47</td><td>LV185</td><td>未來之門日常</td></tr>
+<tr><td class='mono'>31942</td><td>[未來之門] 當年我也戰鬥過</td><td>47</td><td>LV185</td><td>未來之門日常</td></tr>
+<tr><td class='mono'>31943</td><td>[未來之門] 往年我也很奮勇2</td><td>47</td><td>LV185</td><td>未來之門日常</td></tr>
+<tr><td class='mono'>31944</td><td>[未來之門] 往年我也很奮勇3</td><td>47</td><td>LV185</td><td>未來之門日常</td></tr>
+</table><div class="legend">英文樹 <code>wz/Quest.wz</code> 與中文樹 <code>wz-zh-CN/Quest.wz</code> 的缺失集合完全一致；客戶端 <code>Data/Quest/QuestInfo.img</code>（3407 條）同樣是 37/84。三處口徑一致 ⇒ 不是解析問題。</div>
+</div></details>
+<h2>五、跨章節連帶缺口（不屬副本本體，但會擋路）</h2>
+<table><tr><th>段</th><th>TMS</th><th>仓库</th><th>缺什麼</th></tr>
+<tr><td class="mono">2710<br><span style="color:#98a1b3;font-size:11.5px">被破壞的弓箭手村<br>/ 騎士團要塞</span></td><td>238</td><td>52</td><td>缺 <code>271040111–271040199</code>（89 張）+ <code>271040310–271040399</code>（90 張）+ <code>271041000–271041500</code>（7 張）。前者是 <code>onFirstUserEnter=cygnus_Summon / onUserEnter=cygnus_ExpeditionEnter</code> 的<b>西格諾斯遠征隊實例房</b>；後者是難度分級版。</td></tr>
+<tr><td class="mono">2720<br><span style="color:#98a1b3;font-size:11.5px">時間神殿</span></td><td>121</td><td>60</td><td>缺 <code>272020500–272020659</code>（60 張）</td></tr>
+<tr><td class="mono">2730<br><span style="color:#98a1b3;font-size:11.5px">黃昏的勇士之村</span></td><td>24</td><td>24</td><td><span class="tag ok">完全齊</span></td></tr>
+</table>
+<div class="note"><b>好消息</b>：第一章的場地腳本 <code>cygnus_Summon.js</code> / <code>cygnus_ExpeditionEnter.js</code> / <code>knights_Summon.js</code> <b>在 <code>scripts-zh-CN/map/</code> 下都存在</b>。缺的只是那一批實例地圖資源，補圖之後第一章的 Boss 戰就能跑起來。</div>
+<h2>六、結論</h2>
+<div class="key"><h3>「玩得完整嗎」</h3>
+<ul>
+<li><b>副本本體（31900→31965）可以從頭走到尾。</b> 24 張圖、23 條主線任務的數據層都齊，'
+服務端在腳本缺失時會自動回退到純數據路徑，接任務、打怪、交任務都通。</li>
+<li><b>但它是「無過場版」。</b> 13 處原版腳本鉤子被剝離、20 個 NPC 沒有對話腳本、'
+<code>enter_273000000</code> 沒觸發 —— 玩家看到的是系統默認任務面板，而不是原版的劇情演出。</li>
+<li><b>正門進不去。</b> 觸發 NPC 被從赫麗娜(1105001) 改成武術教練(1022000)，'
+而 1022000 刷在勇士之村·勇士聖殿(102000003)。要入場得先確認這條路徑是預期設計。</li>
+<li><b>前置章節整章缺失。</b> 31 條第一章任務 + 186 張 2710 實例圖不在仓库，'
+所以「先通第一章再進第二章」的完整體驗跑不通；第二章只能靠等級(185)獨立進入。</li>
+</ul></div>
+<h2>七、復現命令</h2>
+<div class="note"><ul><li>確認 TMS 沒有腳本：<code>find ~/Documents/mxd/TMS -iname "*.js" | wc -l</code> → 0</li><li>掃 TMS 全部地圖 info：<code>MapScan .../Data/Map/Map /tmp/tmsdump/mapinfo.tsv</code>（見 <code>tool/tms-wz/README.md</code>）</li><li>讀 BeiDou 客戶端 IMG：<code>tool/wz-python</code> 的 <code>WzImage.from_bytes(data, key=WzKey.for_region(detect_region_from_img(data)))</code></li><li>倉庫自檢同類項：<code>gms-server/src/main/java/org/gms/service/MapDetectService.java</code>（<code>checkFieldScript</code> 報 <code>WARN 脚本缺失</code>），REST 端點 <code>POST /map/latest/detect</code></li></ul></div>
+</div></body></html>

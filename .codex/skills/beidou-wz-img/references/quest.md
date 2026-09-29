@@ -53,7 +53,10 @@ Create/edit/delete tests must prove:
 
 ## Building quest records
 
-Read the actual TMS `Quest/QuestData/<positive-id>.img`. Do not copy the entire
+Read the actual TMS `Quest/QuestData/<positive-id>.img`. For how to open those
+files (they use a different WZ key/IV than BeiDou's client IMG) and for the TMS
+content index files, read
+[tms-source-read.md](tms-source-read.md) first. Do not copy the entire
 modern record. Build a compatibility projection using working legacy quests:
 
 - `QuestInfo`: only fields supported and required by the old client.

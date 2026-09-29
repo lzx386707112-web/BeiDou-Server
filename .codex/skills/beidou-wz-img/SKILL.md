@@ -19,6 +19,10 @@ Then read only the references matching the requested surface:
 
 - Quest IMG, quest XML, quest scripts, or Workbench task-platform changes:
   [references/quest.md](references/quest.md).
+- Reading the TMS 273 unpacked source resources (`~/Documents/mxd/TMS`) that a
+  migration reads from, or inventorying TMS content by category:
+  [references/tms-source-read.md](references/tms-source-read.md). TMS IMG uses a
+  different WZ key/IV than BeiDou's client IMG; do not reuse one for the other.
 - Maps, life nodes, NPCs, mobs, bosses, or their String records:
   [references/map-npc-mob.md](references/map-npc-mob.md). When migrating
   maps or mobs, that file’s gap / `connect` rope / ballistic sections are

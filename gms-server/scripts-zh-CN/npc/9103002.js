@@ -47,7 +47,7 @@ function action(mode, type, selection) {
             status--;
         }
         if (status == 0) {
-            cm.sendYesNo("你的队伍付出了非常出色的努力，至少收集了30张优惠券。为此，我为你们每个人准备了一份礼物。领取礼物后，你们将被送回到鲁塔比斯。现在，你们想要立刻领取礼物吗？");
+            cm.sendYesNo("你的队伍付出了非常出色的努力，至少收集了30张优惠券。为此，我为你们每个人准备了一份礼物。领取礼物后，你们将被送回到玩具城。现在，你们想要立刻领取礼物吗？");
         } else if (status == 1) {
             var eim = cm.getEventInstance();
 

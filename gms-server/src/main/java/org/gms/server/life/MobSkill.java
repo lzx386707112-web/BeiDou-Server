@@ -190,11 +190,7 @@ public class MobSkill {
         }
     }
 
-    /**
-     * 等动画冲击点再 applyEffect。戴米安用
-     * {@code DamienBossCompat.skillEffectDelayMs} 对齐画面，不要 0ms 抢先、
-     * 也不要用整段 pose 拖到特效已经结束。
-     */
+    /** Delay application until the skill animation reaches its impact point. */
     public void applyDelayedEffect(final Character player, final Monster monster, final boolean skill, int animationTime) {
         Runnable toRun = () -> {
             if (monster.isAlive()) {
@@ -271,80 +267,26 @@ public class MobSkill {
             case SPEED -> stats.put(MonsterStatus.SPEED, x);
             case SEAL_SKILL -> stats.put(MonsterStatus.SEAL_SKILL, x);
             case AKAYRUM_SCREEN_CRACK_VISUAL -> {
-                // 戴米安不再占用 176；残留绑定也不要播阿卡伊勒碎屏。
-                if (DamienBossCompat.isDamien(monster.getId())) {
-                    return;
-                } else if (MobId.isMoriRanmaruHard(monster.getId())) {
-                    // TMS 176/10 只有 hit，没有 screen/lua。百分比伤害，不播阿卡伊勒 overlay。
+                if (MobId.isMoriRanmaruHard(monster.getId())) {
+                    // TMS 176/10 only contains hit frames, not Akayrum's screen overlay.
                     applyRanmaruScreenCrack(monster);
                     return;
-                } else {
-                    monster.getMap().broadcastMessage(PacketCreator.showEffect("customBoss/akayrum/screenCrack"));
-                    scheduleAkayrumScreenCrackDamage(monster);
                 }
+                monster.getMap().broadcastMessage(PacketCreator.showEffect("customBoss/akayrum/screenCrack"));
+                scheduleAkayrumScreenCrackDamage(monster);
             }
             case AKAYRUM_BLACK_HOLE_VISUAL, AKAYRUM_GREEN_ORB_VISUAL -> {
                 // Visual-only Akayrum compatibility skills; damage/rules are handled separately.
             }
-            case WILL_WEB_BURST -> {
-                if (monster.getId() == 8920002) {
-                    // Bloody Queen's skill1 owns the old-client visual. TMS
-                    // 183/1 is a timed field hazard, not Will's web overlay.
-                    return;
-                } else if (monster.getId() == 8920102) {
-                    summonMonsters(monster);
-                } else {
-                    castBossCompatEffect(monster, "customBossWill/webBurst");
-                }
+            case WILL_WEB_BURST -> castBossCompatEffect(monster, "customBossWill/webBurst");
+            case MAGNUS_METEOR_STORM -> castBossCompatEffect(monster, "customBossMagnus/meteorStorm",
+                    MAGNUS_METEOR_STORM_DAMAGE_PERCENT);
+            case LUCID_DREAM_BURST -> castBossCompatEffect(monster, "customBossLucid/dreamBurst");
+            case SEREN_SACRED_BURST -> castBossCompatEffect(monster, "customBossSeren/sacredBurst");
+            case DAMAGE_CANCEL, MOB_CHANGE -> {
+                // These modern state-machine skills remain visual-only on the legacy client.
             }
-            case MAGNUS_METEOR_STORM -> {
-                if (monster.getId() == 8910000 || monster.getId() == 8910100) {
-                    // Von Bon clocks are mob-attached skill2 frames. A fullscreen MCV
-                    // was composited at canvas (0,0) because TMS _Canvas has no origin.
-                    summonMonsters(monster);
-                } else {
-                    castBossCompatEffect(monster, "customBossMagnus/meteorStorm",
-                            MAGNUS_METEOR_STORM_DAMAGE_PERCENT);
-                }
-            }
-            case LUCID_DREAM_BURST -> {
-                // 戴米安不再占用 185；残留绑定也不要播路西德碎梦。
-                if (DamienBossCompat.isDamien(monster.getId())) {
-                    return;
-                } else {
-                    castBossCompatEffect(monster, "customBossLucid/dreamBurst");
-                }
-            }
-            case SEREN_SACRED_BURST -> {
-                if (monster.getId() == 8900101 || monster.getId() == 8900102) {
-                    summonMonsters(monster);
-                } else {
-                    castBossCompatEffect(monster, "customBossSeren/sacredBurst");
-                }
-            }
-            case DAMAGE_CANCEL -> {
-                // TMS 214/14 is Damien's timed damage-cancel challenge. The
-                // legacy client can play the matching skill8 action, while
-                // its succeed/failed state machine remains visual-only here.
-            }
-            case MOB_CHANGE -> {
-                // TMS 215/2 and 215/4 reference Damien's alternate visual mob.
-                // The imported skill action owns playback; spawning another
-                // boss would duplicate HP, drops, and combat state.
-            }
-            case SUMMON_188 -> {
-                if (monster.getId() == 8920005) {
-                    healBloodyQueen(monster);
-                } else {
-                    summonMonsters(monster);
-                }
-            }
-            case SUMMON_201 -> {
-                if (replaceRootAbyssPhase(monster)) {
-                    return;
-                }
-                summonMonsters(monster);
-            }
+            case SUMMON_188, SUMMON_201 -> summonMonsters(monster);
             case SUMMON, SUMMON_170, SUMMON_186, SUMMON_189,
                  SUMMON_190, SUMMON_191, SUMMON_202, SUMMON_203 -> {
                 summonMonsters(monster);
@@ -563,43 +505,6 @@ public class MobSkill {
                     }
                 }
             }
-        }
-    }
-
-    private boolean replaceRootAbyssPhase(Monster monster) {
-        int level = id.level();
-        boolean pierreSplit = monster.getId() == 8900000 && level == 40;
-        boolean queenChange = RootAbyssBossCompat.isQueenBoss(monster.getId())
-                && (level == 51 || level == 52 || level == 53);
-        if (!pierreSplit && !queenChange) {
-            return false;
-        }
-
-        MapleMap map = monster.getMap();
-        Point position = monster.getPosition();
-        long inheritedHp = Math.max(1, monster.getHp());
-        for (Integer mobId : toSummon) {
-            Monster phase = LifeFactory.getMonster(mobId);
-            if (phase == null) {
-                continue;
-            }
-            long targetHp = Math.min(inheritedHp, phase.getMaxHp());
-            phase.addHp(targetHp - phase.getHp());
-            map.spawnMonsterOnGroundBelow(phase, position);
-        }
-        // New phase(s) must exist before the old form is removed so event
-        // scripts never observe a false all-monsters-dead transition.
-        map.killMonster(monster, null, false);
-        return true;
-    }
-
-    private void healBloodyQueen(Monster source) {
-        for (Monster monster : source.getMap().getAllMonsters()) {
-            if (!RootAbyssBossCompat.isQueenBoss(monster.getId()) || !monster.isAlive()) {
-                continue;
-            }
-            int amount = (int) Math.min(Integer.MAX_VALUE, Math.max(1, monster.getMaxHp() / 5));
-            monster.heal(amount, 0);
         }
     }
 

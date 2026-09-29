@@ -1542,21 +1542,8 @@ public class Monster extends AbstractLoadedLife {
         return stats.hasSkill(skillId, level);
     }
 
-    /**
-     * 把客户端 MOVE_LIFE 里的 skillId/level 对上 XML 技能表。
-     * 戴米安包里的 id/level 经常对不上（活动字节播的是 skillN，包体可能是 0），
-     * 因此：精确匹配 → 同 ID 任意等级 → 按 {@link LifeFactory} 写入顺序的槽位下标。
-     * 槽位顺序依赖 LinkedHashSet，HashSet 会让 skill3/4 落到错误 ID。
-     */
+    /** Match the MOVE_LIFE skill ID/level to the monster's configured skills. */
     public MobSkillId resolveCastSkill(int skillId, int skillLevel, int skillActionIndex) {
-        if (getId() == 8930000 && skillActionIndex >= 0) {
-            int index = 0;
-            for (MobSkillId skill : stats.getSkills()) {
-                if (index++ == skillActionIndex) {
-                    return skill;
-                }
-            }
-        }
         if (hasSkill(skillId, skillLevel)) {
             return new MobSkillId(MobSkillType.from(skillId).orElseThrow(), skillLevel);
         }

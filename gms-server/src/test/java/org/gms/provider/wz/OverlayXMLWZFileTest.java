@@ -23,6 +23,6 @@ class OverlayXMLWZFileTest {
     void emptyMapOverlayFallsBackToBaseTownMaps(@TempDir Path emptyOverlay) {
         DataProvider maps = new OverlayXMLWZFile(Path.of("wz/Map.wz"), emptyOverlay);
         assertNotNull(maps.getData("Map/Map2/200000132.img"));
-        assertNotNull(maps.getData("Map/Map3/350160240.img"));
+        assertNotNull(maps.getData("Map/Map3/390000500.img"));
     }
 }

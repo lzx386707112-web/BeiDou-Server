@@ -8,6 +8,7 @@
 - `client-debug/`：客户端调试注入和日志工具。
 - `client-video/`：客户端 MCV 导出、解码和播放工具。
 - `client-runtime/`：客户端运行库和有文档记录的回滚基线。
+- `tms-wz/`：只读读取 TMS 273 解包资源（`.img`）的工具，用于给迁移任务取源数据证据。
 
 脚本使用说明见 [docs/tools/tool-scripts.md](../docs/tools/tool-scripts.md)。
 

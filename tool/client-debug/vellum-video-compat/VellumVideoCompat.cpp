@@ -24,11 +24,6 @@
 
 namespace {
 
-using beidou::marker::Hit;
-using beidou::marker::kFieldEffect;
-using beidou::marker::kNoMarker;
-using beidou::marker::kVellumScene;
-
 constexpr uintptr_t kExpectedImageBase = 0x00400000;
 constexpr size_t kCreateDeviceVtableIndex = 15;
 constexpr size_t kPresentVtableIndex = 15;
@@ -55,11 +50,6 @@ constexpr UINT kMarkerWidth = 7;
 constexpr UINT kMarkerHeight = 5;
 constexpr char kD3D8DllName[] = "d3d8.dll";
 constexpr char kDirect3DCreate8Name[] = "Direct3DCreate8";
-constexpr char kAttack10Path[] = "Data\\Video\\root-abyss-vellum-attack10.mcv";
-constexpr char kAttack11Path[] = "Data\\Video\\root-abyss-vellum-attack11.mcv";
-
-using PlayFileExFn = int(__stdcall*)(uint32_t, const char*);
-using GetLastErrorExFn = void(__stdcall*)(uint32_t, char*, uint32_t);
 using AttachDeviceFn = int(__stdcall*)(void*);
 using RenderFn = void(__stdcall*)();
 using GetStatusExFn = int(__stdcall*)(uint32_t, BdvStatus*);
@@ -96,8 +86,6 @@ char* AppendText(char* cursor, const char* end, const char* text);
 char* AppendUnsigned(char* cursor, const char* end, unsigned int value);
 
 HMODULE gVideoModule = nullptr;
-PlayFileExFn gPlayFileEx = nullptr;
-GetLastErrorExFn gGetLastErrorEx = nullptr;
 AttachDeviceFn gAttachDevice = nullptr;
 RenderFn gRender = nullptr;
 GetStatusExFn gGetStatusEx = nullptr;
@@ -114,10 +102,6 @@ bool gCreate8CodeHooked = false;
 bool gCreateDeviceSlotHooked = false;
 bool gCreateDeviceFired = false;
 bool gMarkerBound = false;
-int gMarkerKind = kNoMarker;
-int gMarkerCode = 0;
-bool gVideoPlaying = false;
-int gActiveMarkerCode = 0;
 bool gRenderedThisFrame = false;
 bool gRenderingVideo = false;
 bool gFieldLayerLogged = false;
@@ -224,7 +208,7 @@ bool InstallDirect3DCreate8CodeHook(HMODULE d3d8) {
     auto* target = reinterpret_cast<unsigned char*>(
         reinterpret_cast<uintptr_t>(GetProcAddress(d3d8, kDirect3DCreate8Name)));
     if (target == nullptr) {
-        LogLine("VELLUM VIDEO ERROR: d3d8.dll has no Direct3DCreate8 export");
+        LogLine("VIDEO LAYER ERROR: d3d8.dll has no Direct3DCreate8 export");
         return false;
     }
     // Follow export thunks so the patch lands on the real body.
@@ -252,14 +236,14 @@ bool InstallDirect3DCreate8CodeHook(HMODULE d3d8) {
     const size_t relocation = beidou::prologue::RelocationLength(
         target, kMaximumPrologueBytes, kMinimumPrologueBytes, kMaximumPrologueBytes);
     if (relocation == 0) {
-        LogLine("VELLUM VIDEO WARN: d3d8 Direct3DCreate8 prologue is not relocatable; using the probe interface");
+        LogLine("VIDEO LAYER WARN: d3d8 Direct3DCreate8 prologue is not relocatable; using the probe interface");
         return false;
     }
 
     auto* trampoline = static_cast<unsigned char*>(
         VirtualAlloc(nullptr, kTrampolineBytes, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE));
     if (trampoline == nullptr) {
-        LogLine("VELLUM VIDEO ERROR: failed to allocate the Direct3DCreate8 trampoline");
+        LogLine("VIDEO LAYER ERROR: failed to allocate the Direct3DCreate8 trampoline");
         return false;
     }
     memcpy(trampoline, target, relocation);
@@ -272,7 +256,7 @@ bool InstallDirect3DCreate8CodeHook(HMODULE d3d8) {
 
     DWORD oldProtect = 0;
     if (!VirtualProtect(target, relocation, PAGE_EXECUTE_READWRITE, &oldProtect)) {
-        LogLine("VELLUM VIDEO ERROR: failed to make d3d8 Direct3DCreate8 writable");
+        LogLine("VIDEO LAYER ERROR: failed to make d3d8 Direct3DCreate8 writable");
         return false;
     }
     int32_t jump = 0;
@@ -301,7 +285,7 @@ bool InstallDirect3DCreate8CodeHook(HMODULE d3d8) {
     const char* end = buffer + sizeof(buffer) - 1;
     cursor = AppendText(
         cursor, end,
-        "VELLUM VIDEO OK: d3d8 Direct3DCreate8 code hook installed ahead of the client (relocated ");
+        "VIDEO LAYER OK: d3d8 Direct3DCreate8 code hook installed ahead of the client (relocated ");
     cursor = AppendUnsigned(cursor, end, static_cast<unsigned int>(relocation));
     cursor = AppendText(cursor, end, " whole prologue bytes)");
     *cursor = '\0';
@@ -318,81 +302,69 @@ bool InstallProbeInterfaceHook(HMODULE d3d8) {
     if (create == nullptr) return false;
     IDirect3D8* probe = create(D3D_SDK_VERSION);
     if (probe == nullptr) {
-        LogLine("VELLUM VIDEO ERROR: Direct3DCreate8 probe returned null");
+        LogLine("VIDEO LAYER ERROR: Direct3DCreate8 probe returned null");
         return false;
     }
     void** vtable = *reinterpret_cast<void***>(probe);
     if (!InstallCreateDeviceSlot(vtable)) {
-        LogLine("VELLUM VIDEO ERROR: IDirect3D8::CreateDevice slot is not patchable");
+        LogLine("VIDEO LAYER ERROR: IDirect3D8::CreateDevice slot is not patchable");
         return false;
     }
     // Deliberately never released: if d3d8.dll ever handed out a per-object vtable, releasing
     // the probe would free the bytes that were just patched.
-    LogLine("VELLUM VIDEO OK: IDirect3D8::CreateDevice captured through the probe interface");
+    LogLine("VIDEO LAYER OK: IDirect3D8::CreateDevice captured through the probe interface");
     return true;
 }
 
 bool LoadVideoModule() {
     if (gVideoModule == nullptr) gVideoModule = LoadLibraryA("BeiDouVideo.dll");
     if (gVideoModule == nullptr) return false;
-    if (gPlayFileEx == nullptr) {
-        gPlayFileEx = LoadFunction<PlayFileExFn>(gVideoModule, "BDV_PlayFileEx");
-        gGetLastErrorEx = LoadFunction<GetLastErrorExFn>(gVideoModule, "BDV_GetLastErrorEx");
+    if (gAttachDevice == nullptr) {
         gAttachDevice = LoadFunction<AttachDeviceFn>(gVideoModule, "BDV_AttachDevice");
         gRender = LoadFunction<RenderFn>(gVideoModule, "BDV_Render");
         gGetStatusEx = LoadFunction<GetStatusExFn>(gVideoModule, "BDV_GetStatusEx");
     }
-    return gPlayFileEx != nullptr && gGetLastErrorEx != nullptr &&
-        gAttachDevice != nullptr && gRender != nullptr && gGetStatusEx != nullptr;
+    return gAttachDevice != nullptr && gRender != nullptr && gGetStatusEx != nullptr;
 }
 
 // The signatures themselves live in MarkerSignature.h (no Windows dependency, host tested). This
-// function only adds the D3D8 side: the marker is a texture whose canvas is 7x5 up to 8x8, and the
-// two families are told apart by their full four pixel signature - a single pixel is not enough,
-// because 0x00AABBCC appears in both.
-Hit DetectMarker(IDirect3DBaseTexture8* baseTexture) {
-    Hit hit = {kNoMarker, 0};
-    if (baseTexture == nullptr || baseTexture->GetType() != D3DRTYPE_TEXTURE) return hit;
+// function only adds the D3D8 side: the marker is a texture whose canvas is 7x5 up to 8x8.
+bool DetectMarker(IDirect3DBaseTexture8* baseTexture) {
+    if (baseTexture == nullptr || baseTexture->GetType() != D3DRTYPE_TEXTURE) return false;
     auto* texture = static_cast<IDirect3DTexture8*>(baseTexture);
     D3DSURFACE_DESC description = {};
     if (FAILED(texture->GetLevelDesc(0, &description)) ||
         description.Width < kMarkerWidth || description.Width > 8 ||
         description.Height < kMarkerHeight || description.Height > 8) {
-        return hit;
+        return false;
     }
     D3DLOCKED_RECT locked = {};
-    if (FAILED(texture->LockRect(0, &locked, nullptr, D3DLOCK_READONLY))) return hit;
+    if (FAILED(texture->LockRect(0, &locked, nullptr, D3DLOCK_READONLY))) return false;
+    bool matches = false;
     if (description.Format == D3DFMT_A4R4G4B4 && locked.Pitch >= 8) {
         const auto* pixels = static_cast<const uint16_t*>(locked.pBits);
         if (beidou::marker::MatchesFieldEffectA4R4G4B4(pixels)) {
-            hit.kind = kFieldEffect;
-        } else {
-            hit.code = beidou::marker::VellumCodeFromA4R4G4B4(pixels);
+            matches = true;
         }
     } else if (description.Format == D3DFMT_A8R8G8B8 && locked.Pitch >= 16) {
         const auto* pixels = static_cast<const uint32_t*>(locked.pBits);
         if (beidou::marker::MatchesFieldEffectA8R8G8B8(pixels, false)) {
-            hit.kind = kFieldEffect;
-        } else {
-            hit.code = beidou::marker::VellumCodeFromA8R8G8B8(pixels, false);
+            matches = true;
         }
     } else if (description.Format == D3DFMT_X8R8G8B8 && locked.Pitch >= 16) {
         const auto* pixels = static_cast<const uint32_t*>(locked.pBits);
         if (beidou::marker::MatchesFieldEffectA8R8G8B8(pixels, true)) {
-            hit.kind = kFieldEffect;
-        } else {
-            hit.code = beidou::marker::VellumCodeFromA8R8G8B8(pixels, true);
+            matches = true;
         }
     }
     texture->UnlockRect(0);
-    if (hit.kind == kNoMarker && hit.code != 0) hit.kind = kVellumScene;
-    return hit;
+    return matches;
 }
 
 // BDV_Render() is BDV_RenderAll(): it draws every channel. Whoever owns the outermost Present
 // hook has to issue that call, otherwise a decoding video is never presented.
 bool AnyChannelHasVideo() {
-    if (gGetStatusEx == nullptr) return gVideoPlaying;
+    if (gGetStatusEx == nullptr) return false;
     const uint32_t channels[] = {BDV_CHANNEL_BOSS_SCENE, BDV_CHANNEL_PLAYER_SKILL};
     for (const uint32_t channel : channels) {
         BdvStatus status = {};
@@ -446,7 +418,7 @@ void LogChannelStatus(uint32_t channel, const BdvStatus& status) {
     char buffer[kStatusTextCapacity] = {};
     char* cursor = buffer;
     const char* end = buffer + sizeof(buffer) - 1;
-    cursor = AppendText(cursor, end, "VELLUM VIDEO STATUS: channel=");
+    cursor = AppendText(cursor, end, "VIDEO LAYER STATUS: channel=");
     cursor = AppendUnsigned(cursor, end, channel);
     cursor = AppendText(cursor, end, " state=");
     cursor = AppendUnsigned(cursor, end, status.state);
@@ -459,13 +431,6 @@ void LogChannelStatus(uint32_t channel, const BdvStatus& status) {
     cursor = AppendText(cursor, end, " position=");
     cursor = AppendUnsigned(cursor, end, status.positionMilliseconds);
     cursor = AppendText(cursor, end, "ms");
-    if (status.state == BDV_STATE_ERROR && gGetLastErrorEx != nullptr) {
-        char error[kStatusTextCapacity] = {};
-        gGetLastErrorEx(channel, error, sizeof(error));
-        cursor = AppendText(cursor, end, " error=\"");
-        cursor = AppendText(cursor, end, error);
-        cursor = AppendText(cursor, end, "\"");
-    }
     *cursor = '\0';
     LogLine(buffer);
 }
@@ -482,30 +447,6 @@ void LogChannelStatusesIfDue() {
         if (!gGetStatusEx(channel, &status) || status.state == BDV_STATE_IDLE) continue;
         LogChannelStatus(channel, status);
     }
-}
-
-bool StartVideo(int markerCode) {
-    const char* path = markerCode == beidou::marker::kVellumAttack10Code
-        ? kAttack10Path
-        : markerCode == beidou::marker::kVellumAttack11Code ? kAttack11Path : nullptr;
-    if (path == nullptr) return false;
-    if (!LoadVideoModule()) {
-        LogLine("VELLUM VIDEO ERROR: BeiDouVideo.dll was not found or incompatible");
-        return false;
-    }
-    if (!gPlayFileEx(BDV_CHANNEL_BOSS_SCENE, path)) {
-        char error[256] = "unknown Vellum video playback error";
-        gGetLastErrorEx(BDV_CHANNEL_BOSS_SCENE, error, sizeof(error));
-        LogLine(error);
-        return false;
-    }
-    gVideoPlaying = true;
-    gActiveMarkerCode = markerCode;
-    gRenderedThisFrame = false;
-    LogLine(markerCode == beidou::marker::kVellumAttack10Code
-        ? "VELLUM VIDEO OK: attack10 screen started"
-        : "VELLUM VIDEO OK: attack11 screen started");
-    return true;
 }
 
 // One evidence line per playback: how many frames were drawn at the verified field-effect layer and
@@ -526,7 +467,7 @@ void TrackPlaybackLayer(bool channelActive) {
     char buffer[kStatusTextCapacity] = {};
     char* cursor = buffer;
     const char* end = buffer + sizeof(buffer) - 1;
-    cursor = AppendText(cursor, end, "VELLUM VIDEO SUMMARY: marker_frames=");
+    cursor = AppendText(cursor, end, "VIDEO LAYER SUMMARY: marker_frames=");
     cursor = AppendUnsigned(cursor, end, gMarkerRenderFrames);
     cursor = AppendText(cursor, end, " present_fallback_frames=");
     cursor = AppendUnsigned(cursor, end, gFallbackRenderFrames);
@@ -545,15 +486,8 @@ bool ConsumeMarkerDraw() {
     if (gRenderingVideo || !gMarkerBound) return false;
     // Consume exactly the marker's own draw. Leaving the bound flag set until Present would drop
     // every other draw of the frame, which is a silent way to lose damage numbers and effect layers.
-    const int kind = gMarkerKind;
-    const int code = gMarkerCode;
     gMarkerBound = false;
-    gMarkerKind = kNoMarker;
-    gMarkerCode = 0;
-    if (kind == kVellumScene && (!gVideoPlaying || gActiveMarkerCode != code)) {
-        StartVideo(code);
-    }
-    if (!gRenderedThisFrame && gRender != nullptr && (gVideoPlaying || AnyChannelHasVideo())) {
+    if (!gRenderedThisFrame && gRender != nullptr && AnyChannelHasVideo()) {
         gRenderedThisFrame = true;
         ++gMarkerRenderFrames;
         gRenderingVideo = true;
@@ -561,7 +495,7 @@ bool ConsumeMarkerDraw() {
         gRenderingVideo = false;
         if (!gFieldLayerLogged) {
             gFieldLayerLogged = true;
-            LogLine("VELLUM VIDEO OK: field-effect marker draw; the video is rendered at the skill effect layer");
+            LogLine("VIDEO LAYER OK: field-effect marker draw; the video is rendered at the skill effect layer");
         }
     }
     return true;
@@ -570,18 +504,13 @@ bool ConsumeMarkerDraw() {
 HRESULT WINAPI HookSetTexture(
     IDirect3DDevice8* device, DWORD stage, IDirect3DBaseTexture8* texture) {
     if (stage == 0 && !gRenderingVideo) {
-        const Hit hit = DetectMarker(texture);
-        gMarkerBound = hit.kind != kNoMarker;
-        gMarkerKind = hit.kind;
-        gMarkerCode = hit.code;
+        gMarkerBound = DetectMarker(texture);
         // One line per session, and only once the texture is actually recognised: it separates
         // "the server never sent the FIELD_EFFECT / Map.wz lost the node" (no such line at all)
         // from "the marker is there but no video was playing when it was drawn".
-        if (hit.kind != kNoMarker && !gMarkerSeenLogged) {
+        if (gMarkerBound && !gMarkerSeenLogged) {
             gMarkerSeenLogged = true;
-            LogLine(hit.kind == kFieldEffect
-                ? "VELLUM VIDEO OK: FIELD_EFFECT marker texture recognised"
-                : "VELLUM VIDEO OK: Vellum attack10/11 marker texture recognised");
+            LogLine("VIDEO LAYER OK: FIELD_EFFECT marker texture recognised");
         }
     }
     return gRealSetTexture(device, stage, texture);
@@ -619,15 +548,6 @@ HRESULT WINAPI HookDrawIndexedPrimitiveUp(
 HRESULT WINAPI HookPresent(
     IDirect3DDevice8* device, const RECT* source, const RECT* destination,
     HWND window, const RGNDATA* dirtyRegion) {
-    if (gVideoPlaying && gGetStatusEx != nullptr) {
-        BdvStatus status = {};
-        status.structureSize = sizeof(status);
-        if (gGetStatusEx(BDV_CHANNEL_BOSS_SCENE, &status) &&
-            (status.state == BDV_STATE_FINISHED || status.state == BDV_STATE_ERROR)) {
-            gVideoPlaying = false;
-            gActiveMarkerCode = 0;
-        }
-    }
     LogChannelStatusesIfDue();
     // Queried once per frame: the same answer drives both the fallback decision and the per
     // playback layer summary below.
@@ -645,15 +565,13 @@ HRESULT WINAPI HookPresent(
         gRenderingVideo = false;
         if (!gPresentFallbackLogged) {
             gPresentFallbackLogged = true;
-            LogLine("VELLUM VIDEO WARN: Present fallback active (no field-effect marker was drawn)");
+            LogLine("VIDEO LAYER WARN: Present fallback active (no field-effect marker was drawn)");
         }
     }
     TrackPlaybackLayer(channelActive);
     const HRESULT result = gRealPresent(device, source, destination, window, dirtyRegion);
     gRenderedThisFrame = false;
     gMarkerBound = false;
-    gMarkerKind = kNoMarker;
-    gMarkerCode = 0;
     return result;
 }
 
@@ -690,13 +608,13 @@ HRESULT WINAPI HookCreateDevice(
     gCreateDeviceFired = true;
     void** vtable = *reinterpret_cast<void***>(*output);
     if (!PatchDeviceHooks(vtable)) {
-        LogLine("VELLUM VIDEO ERROR: failed to chain D3D8 device hooks");
+        LogLine("VIDEO LAYER ERROR: failed to chain D3D8 device hooks");
         return result;
     }
     if (LoadVideoModule() && gAttachDevice(*output)) {
-        LogLine("VELLUM VIDEO OK: D3D8 device attached");
+        LogLine("VIDEO LAYER OK: D3D8 device attached");
     } else {
-        LogLine("VELLUM VIDEO ERROR: BeiDouVideo.dll could not attach to D3D8");
+        LogLine("VIDEO LAYER ERROR: BeiDouVideo.dll could not attach to D3D8");
     }
     return result;
 }
@@ -706,20 +624,20 @@ IDirect3D8* WINAPI HookDirect3DCreate8(UINT sdkVersion) {
     // evidence line and the shape probe only run once. Probing on every call would also leak one
     // IDirect3D8 per call, because the probe interface is deliberately never released.
     if (!gShapeProbed) {
-        LogLine("VELLUM VIDEO OK: the client's Direct3DCreate8 reached the capture hook");
+        LogLine("VIDEO LAYER OK: the client's Direct3DCreate8 reached the capture hook");
     }
     if (gRealDirect3DCreate8 == nullptr) {
-        LogLine("VELLUM VIDEO ERROR: Direct3DCreate8 trampoline is missing");
+        LogLine("VIDEO LAYER ERROR: Direct3DCreate8 trampoline is missing");
         return nullptr;
     }
     IDirect3D8* direct3D = gRealDirect3DCreate8(sdkVersion);
     if (direct3D == nullptr) {
-        LogLine("VELLUM VIDEO ERROR: Direct3DCreate8 returned null");
+        LogLine("VIDEO LAYER ERROR: Direct3DCreate8 returned null");
         return nullptr;
     }
     void** vtable = *reinterpret_cast<void***>(direct3D);
     if (!InstallCreateDeviceSlot(vtable)) {
-        LogLine("VELLUM VIDEO ERROR: the client interface CreateDevice slot is not patchable");
+        LogLine("VIDEO LAYER ERROR: the client interface CreateDevice slot is not patchable");
         return direct3D;
     }
     // Evidence line: does d3d8.dll share one static vtable across instances? The CreateDevice
@@ -731,10 +649,10 @@ IDirect3D8* WINAPI HookDirect3DCreate8(UINT sdkVersion) {
         if (probe != nullptr) {
             void** probeVtable = *reinterpret_cast<void***>(probe);
             if (probeVtable == vtable) {
-                LogLine("VELLUM VIDEO OK: IDirect3D8 vtable is shared process wide");
+                LogLine("VIDEO LAYER OK: IDirect3D8 vtable is shared process wide");
             } else {
                 InstallCreateDeviceSlot(probeVtable);
-                LogLine("VELLUM VIDEO WARN: IDirect3D8 hands out per-object vtables");
+                LogLine("VIDEO LAYER WARN: IDirect3D8 hands out per-object vtables");
             }
         }
     }
@@ -742,17 +660,18 @@ IDirect3D8* WINAPI HookDirect3DCreate8(UINT sdkVersion) {
 }
 
 DWORD WINAPI InstallHooks(LPVOID) {
-    LogLine("LOAD: Vellum attack10/11 video compatibility v7 (d3d8 preload + whole-instruction code hook + FIELD_EFFECT layer render + first-chance C++ call sites)");
+    LogLine("LOAD: shared MCV field-effect layer compatibility v8 (d3d8 preload + whole-instruction code hook + first-chance C++ call sites)");
     // Written on every start so the delivery can be told apart from earlier builds even when the
     // client is launched out of the size-cached shared directory: never reuse the previous file
     // size, the shared folder would keep serving the stale copy.
-    LogLine("BUILD: vellum-video-compat 2026-09-28 v7 capture=whole-instruction-prologue layer=field-effect-marker present=fallback-only deterministic firstchance=veh-summary-stack-plus-dump");
+    LogLine("BUILD: video-layer-compat 2026-09-29 v8 capture=whole-instruction-prologue layer=field-effect-marker present=fallback-only deterministic firstchance=veh-summary-stack-plus-dump");
+    LogLine("CAPABILITIES: shared-only; region-specific routes removed; marker=FIELD_EFFECT; formats=A4R4G4B4,A8R8G8B8,X8R8G8B8; channels=boss-scene,player-skill; render=BDV_RenderAll; primary-layer=native-field-effect; fallback-layer=Present; capture=d3d8-Direct3DCreate8-whole-instruction-trampoline; device-hooks=Present,SetTexture,DrawPrimitive,DrawIndexedPrimitive,DrawPrimitiveUP,DrawIndexedPrimitiveUP; diagnostics=channel-status,layer-summary,first-chance-cpp-summary,first-chance-minidump; runtime=32-bit-v69-client; build=v8");
     // The layer contract, logged once per session so one log says where the video is composited and
     // what to check when a skill's damage numbers are hidden.
     LogLine("LAYER: the video is drawn where the client draws the FIELD_EFFECT marker (7x5 canvas, signature F123/F456/F789/FABC in A4R4G4B4, FF112233/FF445566/FF778899/FFAABBCC in A8R8G8B8 or the same colours in X8R8G8B8), so the skill effect, the mobs, the floating damage numbers and the UI keep their native order");
-    LogLine("LAYER: Present only draws when no marker was seen in this frame; that layer sits above the damage numbers and the UI, so VELLUM VIDEO SUMMARY reports marker_frames against present_fallback_frames");
+    LogLine("LAYER: Present only draws when no marker was seen in this frame; that layer sits above the damage numbers and the UI, so VIDEO LAYER SUMMARY reports marker_frames against present_fallback_frames");
     if (reinterpret_cast<uintptr_t>(GetModuleHandleA(nullptr)) != kExpectedImageBase) {
-        LogLine("VELLUM VIDEO ERROR: unexpected BeiDou.exe image base");
+        LogLine("VIDEO LAYER ERROR: unexpected BeiDou.exe image base");
         return 1;
     }
     // 2026-09-28 (v5): the diagnostics engine (WzFileLogger.dll) only arms its first-chance dump
@@ -768,21 +687,21 @@ DWORD WINAPI InstallHooks(LPVOID) {
     HMODULE d3d8 = GetModuleHandleA(kD3D8DllName);
     if (d3d8 == nullptr) d3d8 = LoadLibraryA(kD3D8DllName);
     if (d3d8 == nullptr) {
-        LogLine("VELLUM VIDEO ERROR: d3d8.dll could not be loaded");
+        LogLine("VIDEO LAYER ERROR: d3d8.dll could not be loaded");
         return 2;
     }
     if (!InstallDirect3DCreate8CodeHook(d3d8)) InstallProbeInterfaceHook(d3d8);
-    LogLine("VELLUM VIDEO OK: runtime capture armed");
+    LogLine("VIDEO LAYER OK: runtime capture armed");
 
     for (DWORD waited = 0; waited < kDeviceCaptureTimeoutMs; waited += kWatcdogPollMs) {
         if (gCreateDeviceFired) {
-            LogLine("VELLUM VIDEO OK: capture confirmed by a live D3D8 device");
+            LogLine("VIDEO LAYER OK: capture confirmed by a live D3D8 device");
             return 0;
         }
         Sleep(kWatcdogPollMs);
     }
     if (!gCreateDeviceFired) {
-        LogLine("VELLUM VIDEO ERROR: no D3D8 device was observed within the capture window");
+        LogLine("VIDEO LAYER ERROR: no D3D8 device was observed within the capture window");
     }
     return 0;
 }

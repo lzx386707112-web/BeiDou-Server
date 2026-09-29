@@ -71,7 +71,6 @@ import org.gms.server.life.MonsterInformationProvider;
 import org.gms.server.life.MonsterListener;
 import org.gms.server.life.NPC;
 import org.gms.server.life.PlayerNPC;
-import org.gms.server.life.RootAbyssBossCompat;
 import org.gms.server.life.MonsterVacCompat;
 import org.gms.server.life.SpawnPoint;
 import org.gms.server.partyquest.CarnivalFactory;
@@ -1524,9 +1523,7 @@ public class MapleMap {
             int actualDamage = LinkSystemService.applyDamage(chr, monster,
                     SetItemManager.applyDamage(chr, monster,
                             BossDamageGrowth.apply(chr, monster, damage)));
-            long hpBefore = monster.getHp();
             boolean killed = monster.damage(chr, actualDamage, false);
-            RootAbyssBossCompat.mirrorPierreDamage(chr, monster, (int) (hpBefore - monster.getHp()));
 
             selfDestruction selfDestr = monster.getStats().selfDestruction();
             if (selfDestr != null && selfDestr.getHp() > -1) {// should work ;p
@@ -2081,9 +2078,6 @@ public class MapleMap {
     }
 
     public void spawnRevives(final Monster monster) {
-        if (refuseCrashSummon(monster)) {
-            return;
-        }
         monster.setMap(this);
         if (getEventInstance() != null) {
             getEventInstance().registerMonster(monster);
@@ -2351,19 +2345,7 @@ public class MapleMap {
         spawnMonster(monster, 1, false);
     }
 
-    /** 8880102 等旧端一刷就崩的 ID，拦截所有召唤入口。 */
-    private boolean refuseCrashSummon(Monster monster) {
-        if (monster == null || !MobId.crashesOldClientOnSummon(monster.getId())) {
-            return false;
-        }
-        log.warn("refusing crash-on-summon mob {} on map {}", monster.getId(), mapid);
-        return true;
-    }
-
     public void spawnMonster(final Monster monster, int difficulty, boolean isPq) {
-        if (refuseCrashSummon(monster)) {
-            return;
-        }
         if (mobCapacity != -1 && mobCapacity == spawnedMonstersOnMap.get()) {
             return;//PyPQ
         }
@@ -2421,9 +2403,6 @@ public class MapleMap {
     }
 
     public void spawnMonsterWithEffect(final Monster monster, final int effect, Point pos) {
-        if (refuseCrashSummon(monster)) {
-            return;
-        }
         monster.setMap(this);
         Point spos = new Point(pos.x, pos.y - 1);
         spos = calcPointBelow(spos);
@@ -2450,9 +2429,6 @@ public class MapleMap {
     }
 
     public void spawnFakeMonster(final Monster monster) {
-        if (refuseCrashSummon(monster)) {
-            return;
-        }
         monster.setMap(this);
         monster.setFake(true);
         spawnAndAddRangedMapObject(monster, c -> c.sendPacket(PacketCreator.spawnFakeMonster(monster, 0)));
