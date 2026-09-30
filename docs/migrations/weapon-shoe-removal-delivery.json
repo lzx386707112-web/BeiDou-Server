@@ -1,0 +1,51 @@
+{
+  "directory": "/Users/lizixian/Downloads/武器鞋子清理",
+  "files": [
+    {
+      "source": "clien/Data/String/Eqp.img",
+      "destination": "Data/String/Eqp.img",
+      "sha256": "6f9c8694650809dab195c54df955f04300bcfb1038deb683b221c8813c3784de"
+    },
+    {
+      "source": "gms-server/wz/String.wz/Eqp.img.xml",
+      "destination": "gms-server/wz/String.wz/Eqp.img.xml",
+      "sha256": "bbb83a8c770784be18b5ccbaf450586b543ffda21b843d380ce087fa84a0e4c6"
+    },
+    {
+      "source": "gms-server/wz-zh-CN/String.wz/Eqp.img.xml",
+      "destination": "gms-server/wz-zh-CN/String.wz/Eqp.img.xml",
+      "sha256": "afe37158f18c2057f00923eb06cb9ba9db094f26d9678c72bd0aa41e851b84df"
+    },
+    {
+      "source": "gms-server/src/main/resources/equipment-catalog/catalog.json",
+      "destination": "gms-server/src/main/resources/equipment-catalog/catalog.json",
+      "sha256": "72d100771f3585126e2752ec9d0d8fd67485ea741f982f64e87b2cb021bd0c74"
+    },
+    {
+      "source": "gms-server/handbook/Equip/Weapon.txt",
+      "destination": "gms-server/handbook/Equip/Weapon.txt",
+      "sha256": "9e4477f9a2170d06b129f90883ab042383dad0e932b85ba89b117b0bbea99e71"
+    },
+    {
+      "source": "gms-server/src/main/resources/db/migration/V2.1.105__remove_unreferenced_weapon_shoe_ids.sql",
+      "destination": "gms-server/src/main/resources/db/migration/V2.1.105__remove_unreferenced_weapon_shoe_ids.sql",
+      "sha256": "5de23bac2a88233d2a9a0cd4b549188b4e0e047e4e8914459f91df72c4ad1dcc"
+    },
+    {
+      "source": "tool/scripts/migration/removed-equipment-files.json",
+      "destination": "removed-equipment-files.json",
+      "sha256": "4df38be937a9ee04cf982763f5fc1fa7f11207aa239813ca3728975f855f7c27"
+    },
+    {
+      "source": "tool/scripts/migration/remove_equipment_files.ps1",
+      "destination": "remove_equipment_files.ps1",
+      "sha256": "adc55b66e88b3bfabde3a0c048aba494a8abe4b8e034120af063af4d400988f5"
+    },
+    {
+      "source": "docs/migrations/weapon-shoe-removal.md",
+      "destination": "使用说明.md",
+      "sha256": "5acede255f4cab6ada2a56e2e61b9f0d5506e55c15e3877c2b39071a4a2abf55"
+    }
+  ],
+  "all_hashes_match": true
+}

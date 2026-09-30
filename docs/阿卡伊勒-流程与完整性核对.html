@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>阿卡伊勒 — 流程与完整性核对（TMS 273 对照）</title>
+<style>
+  :root{--bg:#0f1116;--panel:#171a21;--panel2:#1d2129;--line:#2a2f3a;--tx:#e6e9ef;--tx2:#98a1b3;
+        --acc:#e05c5c;--acc2:#63b3ed;--ok:#5fbf85;--warn:#f0b95e;--pur:#b392f0;--miss:#e05c5c;}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--tx);
+       font:14px/1.7 -apple-system,"PingFang SC","Microsoft YaHei",Segoe UI,sans-serif;}
+  .wrap{max-width:1240px;margin:0 auto;padding:30px 20px 80px;}
+  h1{font-size:24px;margin:0 0 8px;}
+  h2{font-size:17px;margin:34px 0 12px;border-left:3px solid var(--acc);padding-left:10px;}
+  h3{font-size:14px;margin:18px 0 8px;color:var(--acc2);}
+  .sub{color:var(--tx2);font-size:13px;margin-bottom:18px;line-height:1.85;}
+  .cards{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0;}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:11px 15px;min-width:138px;flex:1;}
+  .card b{display:block;font-size:20px;color:var(--acc);}
+  .card.good b{color:var(--ok);}
+  .card.warn b{color:var(--warn);}
+  .card span{color:var(--tx2);font-size:12px;}
+  table{width:100%;border-collapse:collapse;margin:8px 0 4px;font-size:13px;}
+  th,td{text-align:left;padding:7px 9px;border-bottom:1px solid var(--line);vertical-align:top;}
+  th{color:var(--tx2);font-weight:600;font-size:12px;background:var(--panel);}
+  tr:hover td{background:#1a1e26;}
+  code,.mono{font-family:ui-monospace,Menlo,monospace;font-size:12px;color:#d5b06a;}
+  code{background:var(--panel2);padding:1px 5px;border-radius:5px;}
+  .tag{font-size:11px;padding:1px 8px;border-radius:20px;border:1px solid var(--line);color:var(--tx2);white-space:nowrap;display:inline-block;}
+  .tag.ok{border-color:#3d5140;color:#8fd6a2;background:#16211a;}
+  .tag.no{border-color:#5a3a3a;color:#e69191;background:#241a1c;}
+  .tag.warn{border-color:#5a4a3b;color:#e6b98f;}
+  .tag.info{border-color:#3b4a5e;color:#8fb8e6;}
+  .note{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 18px;color:var(--tx2);font-size:13px;margin:12px 0;}
+  .note b{color:var(--tx);}
+  .note ul{margin:6px 0 0;padding-left:18px;}
+  .note li{margin:3px 0;}
+  .key{background:linear-gradient(180deg,#1b1f28,#171a21);border:1px solid #39404e;border-radius:12px;padding:16px 20px;margin:14px 0;}
+  .key h3{margin:0 0 6px;color:var(--acc2);font-size:14px;}
+  .key ul{margin:6px 0 0;padding-left:18px;color:var(--tx2);}
+  .key li{margin:4px 0;}
+  .g{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px;}
+  .g div{background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:5px 9px;font-size:12px;
+         font-family:ui-monospace,Menlo,monospace;color:var(--tx2);}
+  .g div b{color:var(--acc2);font-weight:600;}
+  .g div.miss{border-color:#5a3a3a;color:#e69191;}
+  .legend{color:#6f7787;font-size:11.5px;margin-top:6px;}
+</style></head><body><div class="wrap">
+
+<h1>阿卡伊勒 — 流程与完整性核对（TMS 273 对照）</h1>
+<div class="sub">
+对照源：<code>~/Documents/mxd/TMS/MapleStory-IMG/Data</code>（TMS 273 解包 IMG，只读）<br>
+核对对象：<code>clien/Data</code>（BeiDou 客户端 IMG）+ <code>gms-server/wz</code> + <code>gms-server/wz-zh-CN</code> + <code>gms-server/scripts{,-zh-CN}</code><br>
+范围：地图段 <code>272xxxxxx</code>（时间神殿·阿卡伊勒 / Cross Hunter 十字猎人章节）+ 任务 <code>31165–31180</code> + 全部相关脚本与字符串<br>
+<span style="color:#e6b98f">快照时间 2026-09-29 19:2x。注意 <code>clien/Data/Quest/{Act,Check,QuestInfo,Say}.img</code> 当日晚间（18:58–19:10）仍有其它会话在写，数值以本次快照为准。</span>
+</div>
+
+<div class="cards">
+<div class="card warn"><b>60 / 121</b><span>272 段地图（TMS 侧 121 张）</span></div>
+<div class="card good"><b>16 / 16</b><span>主线任务四件套（客户端 IMG ⇄ 服务端 XML 双向一致）</span></div>
+<div class="card warn"><b>46 / 60</b><span>本区地图的 info 钩子被剥离（fieldScript / onUserEnter / fieldType / mode）</span></div>
+<div class="card warn"><b>8 / 16</b><span>任务脚本文件（scripts-zh-CN/quest/&lt;id&gt;.js）</span></div>
+<div class="card warn"><b>0 / 30</b><span>本区地图名条目（客户端 String/Map.img）</span></div>
+</div>
+
+<h2>一、结论速览</h2>
+<div class="key"><h3>一句话：数据面（地图/任务/life/怪物/道具）基本齐；缺的是「玩法逻辑」与「导航入口」两块。</h3>
+<ul>
+<li><b>齐的：</b>60 张地图的几何与 <code>life</code> 布点（怪物数量与 TMS <b>逐一相同</b>）、16 条主线任务的四件套定义（客户端 IMG 与服务端 XML 完全一致）、7 只相关怪 + 3 个任务道具的资源、8 个 portal 脚本、3 个 event 脚本。</li>
+<li><b>缺的（三块）：</b>
+  ① 61 张 TMS 地图（<code>272020500</code> + <code>272020600–272020659</code> 的「囚禁空间」分房）；
+  ② 46 张图的 <code>info</code> 钩子（<code>fieldScript</code> / <code>onUserEnter</code> / <code>onFirstUserEnter</code> / <code>fieldType</code> / <code>mode</code>）；
+  ③ 8 条任务没有脚本文件、且 <code>Check</code> 里的 <code>startscript</code>/<code>endscript</code> 一并被剥离（设计上「无过场」，但这两个动作是绑定的，将来补脚本必须同时补钩子）。</li>
+<li><b>机制差异是根因，不是遗漏：</b>BeiDou 服务端<b>完全不读 <code>fieldScript</code></b>（<code>grep fieldScript src/main/java</code> 零命中）。TMS 那套「场地脚本 = 副本逻辑本体」（<code>akayrum</code> / <code>akayrum1</code> / <code>akayrum_cygnus</code> / <code>AkayrumShadow</code> / <code>GerectorShadow</code>）在 BeiDou 没有对应实现，因此本区被改写成 <b>portal 脚本 + event 脚本</b>驱动 —— 这部分是<b>齐的</b>。</li>
+</ul></div>
+
+<h2>二、地图：集合对比</h2>
+<table>
+<tr><th>分段</th><th>TMS 273</th><th>BeiDou</th><th>差</th><th>用途</th></tr>
+<tr><td><code>27200xxxx</code></td><td>18</td><td>18</td><td class="mono">0</td><td>「过去的神木村」剧情线（<code>q31165e</code> / <code>q31176continue</code> 钩子所在）</td></tr>
+<tr><td><code>27201xxxx</code></td><td>3</td><td>3</td><td class="mono">0</td><td>黑暗时间神殿（含 <code>AkayrumShadow</code> 分身剧情图 272010200）</td></tr>
+<tr><td><code>27202xxxx</code></td><td>88</td><td>27</td><td class="mono" style="color:#e69191">−61</td><td>次元的缝隙 / 阿卡伊勒祭坛（远征入场 272020110、boss 房 272020200·210、囚禁室）</td></tr>
+<tr><td><code>27203xxxx</code></td><td>12</td><td>12</td><td class="mono">0</td><td>皇家骑士团线（BeiDou 用作<b>阿卡伊勒远征本体</b> 272030300/272030400）</td></tr>
+<tr><td><b>合计</b></td><td><b>121</b></td><td><b>60</b></td><td class="mono" style="color:#e69191"><b>−61</b></td><td>客户端 IMG 与服务端 XML 张数完全一致（60 = 60）</td></tr>
+</table>
+
+<h3>缺的 61 张（连续两段）</h3>
+<div class="g">
+<div class="miss"><b>272020500</b> ×1</div>
+<div class="miss"><b>272020600–272020659</b> ×60</div>
+</div>
+<div class="note">
+这两段在 TMS 里全部是 <code>onUserEnter=inAkayrumPrison</code> / <code>inAkayrumPrison2</code>、<code>forcedReturn=272020110</code> 的<b>囚禁空间分房</b>（同一张几何 <code>link</code> 自 272020300/272020600，无 life 无 NPC）。<br>
+BeiDou 保留的是 <code>272020300–272020319</code>（20 间）+ <code>272030410–272030415</code>（6 间）。<br>
+<b>判断：</b>这是 TMS 后期改版（把祭坛战拆成两段、囚禁房扩容）带来的增量，属于老客户端用不到的部分；<b>不影响 BeiDou 现有 272030400 那套远征</b>，但如果将来要复刻 TMS 的现代祭坛战，这 61 张必须补。
+</div>
+
+<h2>三、地图 info：被剥离的钩子（46 / 60 张）</h2>
+<div class="note">
+下表是「TMS 有、BeiDou 没有」的 <code>info</code> 字段。<b>没有一张 BeiDou 图比 TMS 多字段</b>（除下面单列的 3 处 life 替换与 1 处 forcedReturn）。
+</div>
+<table>
+<tr><th>地图</th><th>张数</th><th>TMS 独有字段</th></tr>
+<tr><td><code>272000000</code></td><td>1</td><td><code>lvLimit=140</code>、<code>onUserEnter=q31165e</code></td></tr>
+<tr><td><code>272000410</code>–<code>272000419</code></td><td>10</td><td><code>fieldScript=GerectorShadow</code>、<code>onUserEnter=q31176continue</code></td></tr>
+<tr><td><code>272000600</code></td><td>1</td><td><code>onUserEnter=undomorphblackdraco</code></td></tr>
+<tr><td><code>272010200</code></td><td>1</td><td><code>fieldScript=AkayrumShadow</code>、<code>onUserEnter=summonAkayrum_1</code></td></tr>
+<tr><td><code>272020000</code></td><td>1</td><td><code>onUserEnter=reundoblackdraco</code></td></tr>
+<tr><td><code>272020110</code></td><td>1</td><td><code>onUserEnter=ExitCheck</code>、<code>fieldType=0</code>；<b>且 forcedReturn 被改</b>（TMS <code>999999999</code> → BeiDou <code>272000000</code>）</td></tr>
+<tr><td><code>272020200</code> / <code>272020210</code></td><td>2</td><td><code>fieldScript=akayrum</code> / <code>akayrum1</code>、<code>onFirstUserEnter=Akayrum_Before</code> / <code>Akayrum_Before2</code>、<code>onUserEnter=Akayrum_ExpeditionEnter</code>、<code>fieldType=299</code>、<code>mode=normal</code> / <code>easy</code></td></tr>
+<tr><td><code>272020300</code>–<code>272020309</code></td><td>10</td><td><code>onUserEnter=inAkayrumPrison</code></td></tr>
+<tr><td><code>272020310</code>–<code>272020319</code></td><td>10</td><td><code>onUserEnter=inAkayrumPrison2</code></td></tr>
+<tr><td><code>272020400</code> / <code>272020410</code></td><td>2</td><td><code>onUserEnter=ExitCheck2</code>、<code>fieldType=0</code></td></tr>
+<tr><td><code>272030400</code></td><td>1</td><td><code>fieldScript=akayrum_cygnus</code>、<code>onFirstUserEnter=cygnus_AK_mapEnterEff</code>、<code>fieldType=299</code>、<code>mode=mikhail</code></td></tr>
+<tr><td><code>272030410</code>–<code>272030415</code></td><td>6</td><td><code>onUserEnter=inPrison</code></td></tr>
+<tr><td>全部 272 段</td><td>60</td><td><code>fieldLimit</code>：TMS 为非 0（如 boss 房 <code>615416</code>、囚禁室 <code>91128</code>），BeiDou 一律 <code>0</code></td></tr>
+</table>
+<div class="note">
+<b>要分开看两类：</b>
+<ul>
+<li><b>可忽略：</b><code>fieldLimit</code>（老客户端的场地权限位掩码，0 = 不限制，属兼容投影）、<code>fieldType</code>、<code>mode</code>、<code>abilityPresetBlock</code> 这类现代字段。</li>
+<li><b>要留意：</b><code>fieldScript</code> / <code>onUserEnter</code> / <code>onFirstUserEnter</code> —— 它们是 TMS 的<b>副本逻辑入口</b>。BeiDou 因为没有 fieldScript 通道，靠同名 portal 脚本补上了替代实现（见第七节），所以「字段缺」不等于「功能缺」；真正没补上的是下面这几处。</li>
+</ul>
+</div>
+
+<h2>四、life 布点：基本逐位一致（3 处有意替换）</h2>
+<div class="note">
+把 TMS 每张 272 图的 <code>life</code> 与 BeiDou 逐条比对：<b>所有现存地图的怪物数量、id、位置数量完全相同</b>（例：272000100 都是 12×8220016；272000500 都是 23 只；272000600 都是 18 只）。<br>
+只有 3 处 NPC 替换，且都是跟着任务改号走的：
+</div>
+<table>
+<tr><th>地图</th><th>TMS</th><th>BeiDou</th><th>说明</th></tr>
+<tr><td><code>272000000</code></td><td>2144000, 2144002</td><td>2144000, <b>2144018</b>, 2144002</td><td>多一只「異界的祭壇石像」</td></tr>
+<tr><td><code>272000100</code></td><td><b>1541303</b>（蘿拉）</td><td><b>2144003</b>（克勞烏）</td><td>1541303 在 BeiDou 客户端<b>不存在</b>，换成本地已有 NPC</td></tr>
+<tr><td><code>272020200</code> / <code>210</code></td><td>2144016, 2144020, <b>9091006</b>（傳送門）</td><td>2144016, <b>2144017</b>, 2144020</td><td>传送门 NPC 换成祭坛石像</td></tr>
+</table>
+
+<h2>五、主线任务 31165–31180 逐条对比</h2>
+<div class="sub" style="margin-bottom:6px">TMS 章节名是「[十字獵人] 阿卡伊農」，BeiDou 统一改成「[阿卡伊勒]」，<code>area</code> 由 <code>264</code> 改为 <code>1</code>（这是刻意的本地化，不算缺口）。</div>
+<table>
+<tr><th>ID</th><th>名称（BeiDou）</th><th>TMS 钩子</th><th>BeiDou 钩子</th><th>脚本文件</th><th>其它差异</th></tr>
+<tr><td>31165</td><td>探索時間的裂痕</td><td><code>q31165s</code></td><td><code>q31165s</code> <span class="tag ok">保留</span></td><td>31165.js</td><td>C0 NPC <code>1541302</code>→<code>2144001</code>；缺前置 <code>36656/2</code>，改用 <code>normalAutoStart=1</code></td></tr>
+<tr><td>31166</td><td>隱藏的陰謀</td><td><code>q31166s</code> → <code>q31166e</code></td><td>—</td><td><span class="tag no">缺</span></td><td>EXP TMS 7349364 → BD 301891</td></tr>
+<tr><td>31167</td><td>進入過去行</td><td><code>q31167s</code></td><td>—</td><td><span class="tag no">缺</span></td><td>C1 NPC <code>1541303</code>→<code>2144003</code>；EXP 7524348→301891</td></tr>
+<tr><td>31168</td><td>與蘿拉的遭遇</td><td><code>q31168s</code> → <code>q31168e</code></td><td>—</td><td><span class="tag no">缺</span></td><td>C0 NPC <code>1541303</code>→<code>2144003</code>；EXP 7699333→301891</td></tr>
+<tr><td>31169</td><td>救出雪莉</td><td><code>q31169s</code>，mob 8220016 ×30</td><td>—，mob ×<b>50</b></td><td><span class="tag no">缺</span></td><td>击杀数 30→50；EXP 15748636→301891</td></tr>
+<tr><td>31170</td><td>倒下的狂狼勇士</td><td><code>q31170s</code></td><td><code>q31170s</code> <span class="tag ok">保留</span></td><td>31170.js</td><td>—</td></tr>
+<tr><td>31171</td><td>瑪哈的拜託</td><td><code>q31171s</code> → <code>q31171e</code>，item 4033080 ×30</td><td>同左，×<b>50</b></td><td>31171.js</td><td>收集数 30→50</td></tr>
+<tr><td>31172</td><td>歐尼斯龍的王，阿普立恩</td><td><code>q31172s</code></td><td><code>q31172s</code> <span class="tag ok">保留</span></td><td>31172.js</td><td>—</td></tr>
+<tr><td>31173</td><td>最終歐尼斯龍</td><td><code>q31173s</code> → <code>q31173e</code>，item 4033081 ×1</td><td>同左</td><td>31173.js</td><td>—</td></tr>
+<tr><td>31174</td><td>精靈的王</td><td><code>q31174s</code></td><td><code>q31174s</code> <span class="tag ok">保留</span></td><td>31174.js</td><td>BD 多 <code>infoNumber=31186</code></td></tr>
+<tr><td>31175</td><td>奇怪的氣息</td><td><code>q31175s</code> → <code>q31175e</code></td><td>—</td><td><span class="tag no">缺</span></td><td>EXP 8924227→301891</td></tr>
+<tr><td>31176</td><td>阿卡伊勒的痕跡</td><td><code>q31176s</code> → <code>q31176e</code>，mob <code>9300487</code> ×1</td><td><code>q31176s</code> <span class="tag ok">保留</span>，mob 同</td><td>31176.js</td><td>BD 脚本自己 <code>qm.spawnMonster(9300487,345,2)</code>，替代 TMS 的 <code>GerectorShadow</code> 场地脚本；缺 <code>q31176e</code>（该脚本文件本来也没有）</td></tr>
+<tr><td>31177</td><td>前往時間的神殿</td><td><code>q31177s</code>，mob 8220018/8220017 各 ×30</td><td>—，各 ×<b>50</b></td><td><span class="tag no">缺</span></td><td>击杀数 30→50；EXP 18548393→301891</td></tr>
+<tr><td>31178</td><td>陰謀的真相</td><td><code>q31178s</code> → <code>q31178e</code>，mob <b>8860001</b> ×1</td><td>—，mob 8860001 ×1</td><td><span class="tag no">缺</span></td><td>分身战靠 event <code>AkayrumFSB.js</code>（地图 272010200）驱动</td></tr>
+<tr><td>31179</td><td>最後的報告</td><td><code>q31179s</code></td><td><code>q31179s</code> <span class="tag ok">保留</span></td><td>31179.js</td><td>—</td></tr>
+<tr><td>31180</td><td>結束和另一個開始</td><td>→ <code>q31180e</code>，mob <b>8860000</b> ×1</td><td>—，mob 8860000 ×1</td><td><span class="tag no">缺</span></td><td>C1 NPC 由空改为 <code>2144016</code>；EXP 7352000→301891</td></tr>
+</table>
+
+<div class="key"><h3>三条硬结论</h3>
+<ul>
+<li><b>钩子与脚本文件是严格配对的：</b>凡是 BeiDou 有 <code>quest/&lt;id&gt;.js</code> 的 8 条（31165/31170–31174/31176/31179），<code>startscript</code> 就保留；没有脚本文件的 8 条，钩子一律剥掉。这是<b>有意为之的「无过场、纯数据驱动」设计</b>，不是随机丢失。</li>
+<li><b>但两者是耦合的：</b>BeiDou 的任务脚本按<b>任务 ID</b>取（<code>QuestScriptManager:53 → "quest/" + questid + ".js"</code>），而是否调用由 <code>Check</code> 里的 <code>startscript</code>/<code>endscript</code> 决定（<code>Quest.hasScriptRequirement()</code>）。<b>所以将来补了脚本文件，还必须把 <code>startscript</code>/<code>endscript</code> 补回（客户端 IMG + wz + wz-zh-CN 三处），否则脚本永远不会被调用。</b><code>q31166s</code> 这类 TMS 脚本名在 BeiDou 里无意义，不必照抄。</li>
+<li><b>奖励被统一压平：</b>TMS 逐条不同（301891 ~ 18 548 393），BeiDou 一律 <code>301891</code>（31165/31170–31174/31179 无 EXP）。是平衡策略还是漏改，需要你确认。</li>
+</ul></div>
+
+<h2>六、TMS 有、BeiDou 没有的「关联任务」</h2>
+<table>
+<tr><th>分类</th><th>任务 ID</th><th>说明</th></tr>
+<tr><td>Boss 目录入口</td><td><code>1315</code></td><td>「[Boss目錄] 軍團長阿卡伊農」，交付 NPC <code>2144010</code>。<b>BeiDou 连这个 NPC 都不存在</b>（客户端无 <code>Npc/2144010.img</code>、String 无名字），所以游戏内没有「Boss 目录 → 阿卡伊勒」这条正统入口，只能走万能传送 / 剧情</td></tr>
+<tr><td>皇家骑士团线</td><td><code>20753</code>、<code>20757</code></td><td>「阿卡伊農的結界 / 最後」——对应 BeiDou 里那 12 张 <code>272030xxx</code> 地图的原生剧情。<b>地图在、任务不在</b></td></tr>
+<tr><td>十字猎人前置章节</td><td><code>1600</code>–<code>1674</code>、<code>1638</code>、<code>31198</code>、<code>36652</code>–<code>36656</code></td><td>TMS 的 31165 前置是 <code>36656/2</code>；BeiDou 无这套前置，改用 <code>normalAutoStart=1</code> 让 31165 直接开始</td></tr>
+<tr><td>降魔十字军 / 幻兽师 / 其它</td><td><code>1681</code>、<code>1689</code>、<code>32580</code>、<code>36112</code>、<code>57607</code>、<code>57611</code>、<code>57612</code>、<code>59190</code></td><td>与阿卡伊勒同主题但属其它职业 / 其它系统</td></tr>
+<tr><td>活动 / 里程</td><td><code>100083</code>、<code>16990</code>、<code>26437</code>、<code>504759</code>、<code>64376</code>、<code>64388</code></td><td>活动类，一般不需要</td></tr>
+</table>
+
+<h2>七、脚本层：四类入口的覆盖情况</h2>
+
+<h3>7.1 任务脚本 <code>scripts{,-zh-CN}/quest/&lt;任务ID&gt;.js</code></h3>
+<div class="g">
+<div><b>31165</b>.js</div><div><b>31170</b>.js</div><div><b>31171</b>.js</div><div><b>31172</b>.js</div>
+<div><b>31173</b>.js</div><div><b>31174</b>.js</div><div><b>31176</b>.js</div><div><b>31179</b>.js</div>
+<div class="miss">31166 缺</div><div class="miss">31167 缺</div><div class="miss">31168 缺</div><div class="miss">31169 缺</div>
+<div class="miss">31175 缺</div><div class="miss">31177 缺</div><div class="miss">31178 缺</div><div class="miss">31180 缺</div>
+</div>
+<div class="legend">base 与 zh-CN 两棵树完全一致（8/16 各一份）。TMS 侧的脚本名（<code>q31176s</code> 等）在 BeiDou 无意义，BeiDou 只认任务 ID。</div>
+
+<h3>7.2 NPC 脚本 <code>scripts{,-zh-CN}/npc/</code></h3>
+<table>
+<tr><th>NPC</th><th>TMS 名字</th><th>BeiDou 脚本</th><th>备注</th></tr>
+<tr><td>2144007</td><td>歐尼斯龍蛋</td><td>2144007.js</td><td></td></tr>
+<tr><td>2144014</td><td>精靈遊俠</td><td>2144014.js</td><td></td></tr>
+<tr><td>2144016</td><td>優伊娜</td><td>2144016.js</td><td></td></tr>
+<tr><td>2144017</td><td>異界的祭壇石像</td><td>2144017.js</td><td></td></tr>
+<tr><td>2144020</td><td>優伊娜</td><td>2144020.js</td><td></td></tr>
+<tr><td>—</td><td>—</td><td><code>AkayrumFS.js</code></td><td>「阿卡伊勒分身」副本入口 NPC 脚本（名字式，由 portal <code>check_Portal6</code> 调起）</td></tr>
+<tr><td>1104209</td><td>黑暗的祭壇石像</td><td><code>akayrumbattle.js</code></td><td>远征入口 NPC 脚本（由 portal <code>in_cygnusAK</code> 调起）</td></tr>
+<tr><td>2144000 / 2144002 / 2144004 / 2144005 / 2144006 / 2144008 / 2144009</td><td>優伊娜 / 凱雷特 / 雪莉 / 瑪哈 / 亞普力耶 / 凱雷特 / 達米</td><td><span class="tag info">无</span></td><td>走服务端默认对话 + 任务列表。7 条任务脚本会通过 <code>qm</code> 接管对话，所以剧情链能走通</td></tr>
+<tr><td>2144001</td><td>凱雷特（BD 作「格莱特」）</td><td><span class="tag info">无</span></td><td><b>该 NPC 未在任何地图布点</b>，而 31165 的 C0 就是它 —— 靠 <code>normalAutoStart=1</code> 自动接取才能起步</td></tr>
+<tr><td>2144010</td><td>阿卡伊農</td><td><span class="tag no">不存在</span></td><td>任务文本里的 <code>#p2144010#</code>（31176/31178）因此是<b>悬空引用</b></td></tr>
+<tr><td>1541302 / 1541303 / 9091006</td><td>凱雷特 / 蘿拉 / 傳送門</td><td><span class="tag no">不存在</span></td><td>客户端也没有对应 <code>Npc/*.img</code>，已被 214400x 系列替换</td></tr>
+</table>
+
+<h3>7.3 event 脚本 <code>scripts{,-zh-CN}/event/</code></h3>
+<table>
+<tr><th>脚本</th><th>用途</th><th>关键内容</th></tr>
+<tr><td><code>AKAYRUMBattle.js</code></td><td><b>阿卡伊勒远征本体</b></td><td>entryMap <code>272030400</code> / exit <code>272030300</code>；setup 里 <code>LifeFactory.getMonster(8860000)</code> + <code>spawnMonsterOnGroundBelow(..., (-65,-195))</code>；140 级 1~30 人 120 分钟</td></tr>
+<tr><td><code>AkayrumFSB.js</code></td><td>十字猎人「阿卡伊勒分身」剧情战</td><td>entryMap <code>272010200</code>；<code>8860001</code> 出生点兜底补刷；击杀后天气播报 + 引导 NPC 2144000 登场</td></tr>
+<tr><td><code>ArkariumBattle.js</code></td><td>另一份远征脚本（旧版/备用）</td><td>存在但未被 <code>akayrumbattle.js</code> 引用（它只认 <code>AKAYRUMBattle</code>）</td></tr>
+</table>
+
+<h3>7.4 portal 脚本 <code>scripts{,-zh-CN}/portal/</code> —— 这批是 BeiDou 自建、替代 TMS fieldScript 的</h3>
+<table>
+<tr><th>脚本</th><th>挂在哪张图</th><th>作用</th></tr>
+<tr><td><code>BPReturn_Akayrum</code></td><td>272000000 / west00</td><td>剧情传送门</td></tr>
+<tr><td><code>timeCrack</code></td><td>272000000 / crack00</td><td>时之裂缝</td></tr>
+<tr><td><code>check_Portal6</code></td><td>272010000</td><td>调起 NPC 2144000 + <code>AkayrumFS</code>（分身副本入口）</td></tr>
+<tr><td><code>portalNPC1</code></td><td>272020110 / 200 / 210</td><td>祭坛内的传送门 NPC</td></tr>
+<tr><td><code>outAkayrumPrison</code></td><td>272020300</td><td>囚禁室出口</td></tr>
+<tr><td><code>outAkayrumP2</code></td><td>272020310</td><td>囚禁室 2 出口</td></tr>
+<tr><td><code>in_cygnusAK</code></td><td>272030300 / AkayrumEnter</td><td>调起 NPC 1104209 + <code>akayrumbattle</code>（远征入口）</td></tr>
+<tr><td><code>out_cygnusAK</code></td><td>272030400 / out00</td><td>远征退出</td></tr>
+</table>
+<div class="legend">全部 8 个脚本 base 与 zh-CN 各一份，且客户端地图 IMG 里的 portal <code>script</code> 字段与服务端 XML 一致（抽样 272000000 已验证）。</div>
+
+<h2>八、字符串与资源</h2>
+<table>
+<tr><th>项目</th><th>TMS</th><th>BeiDou</th><th>结论</th></tr>
+<tr><td>怪物资源 <code>Mob/8220016–8220021、9300301/302/304、9300487、8860000、8860001</code></td><td>有</td><td>客户端 IMG + 服务端 XML 全有</td><td><span class="tag ok">齐</span></td></tr>
+<tr><td>任务道具 <code>4033080</code>（×50 收集）、<code>4033081</code>、<code>4033611</code>（入场券，未启用）</td><td>有</td><td>服务端 XML 有（<code>0403.img.xml</code>）</td><td><span class="tag ok">齐</span></td></tr>
+<tr><td>怪物名（客户端 <code>String/Mob.img</code>）</td><td>—</td><td>8860000=阿卡伊勒、8860001=阿卡伊勒（分身）、9300487=堕落的格莱特、8220016–21 全有</td><td><span class="tag ok">齐</span></td></tr>
+<tr><td>简化中文覆盖 <code>wz-zh-CN/String.wz/Mob.img.xml</code></td><td>—</td><td>缺 6 个：<code>8220016–8220021</code>；<b>8860000（阿卡伊勒本体）也没有</b></td><td><span class="tag warn">有洞</span></td></tr>
+<tr><td>简化中文覆盖 <code>wz-zh-CN/String.wz/Npc.img.xml</code></td><td>—</td><td><code>2144xxx</code> 只有 1/15（仅 2144001）</td><td><span class="tag warn">有洞</span></td></tr>
+<tr><td><b>地图名</b>（客户端 <code>String/Map.img</code>）</td><td>272 段 <b>30 条</b>（時間神殿 / 過去的神木村 / 黑暗時間神殿 / 次元的縫隙）</td><td>272 段 <b>0 条</b>（270 段有 41 条中文名）</td><td><span class="tag no">全缺</span></td></tr>
+</table>
+<div class="note">
+<b>地图名全缺是本轮最容易被玩家看到的缺口：</b>整段 272 地图在游戏内没有名字（<code>mapMark</code> 只是小地图图标，不是名字）。<br>
+若要补，按仓库规范只能往客户端 <code>String/Map.img</code> 增量插入 30 条 <code>&lt;imgdir name="272000000"&gt;</code>（每条两个 string：地图名 + 街道名），并同步 <code>wz/String.wz/Map.img.xml</code> + <code>wz-zh-CN/String.wz/Map.img.xml</code>。注意 <code>wz-zh-CN/String.wz/Map.img.xml</code> 已有 92 MB、结构是「区域文件夹 → 地图ID」，插入位置要落在 <code>ossyria</code> 组。
+</div>
+
+<h2>九、连通性：这套内容在游戏里怎么到达</h2>
+<div class="key"><h3>没有「外界 → 272 段」的传送门</h3>
+<ul>
+<li>扫描全部 <code>gms-server/wz/Map.wz</code> 的 portal 目标：<b>没有任何 272 段以外的地图指向 272xxxxxx</b>，272 段内部自成一闭环。</li>
+<li>TMS 侧靠 <code>270000000</code>（三个门）上的 <code>cygnus_in</code> 触发门 + 服务端场地脚本把人送进去；<b>BeiDou 的 270000000 没有 <code>cygnus_in</code> 这个门</b>（它有 in01/sp/out00/in00/tp×6）。而 BeiDou 的 272030000 里 <code>out00</code> 却是回指 <code>cygnus_in</code> → 回程会退化到落点 0 号门。</li>
+<li>现存的玩家入口全在 <b>万能传送</b>（<code>scripts-zh-CN/BeiDouSpecial/万能传送.js</code>）里：未来之门列表的 <code>272000000</code>（阿卡伊勒，1 万金币）、高级 BOSS 列表的 <code>272030300</code>（阿卡伊勒远征入口，50 万金币）；<code>272020110</code>（阿卡伊勒祭坛入口）那条<b>在源码里是注释掉的</b>。此外还有 GM <code>!warp</code>。</li>
+<li><b>2026-09-29 已修正</b>：过去的神木村（<code>272000100</code> 燃燒的神木村1）原先没有直通入口 —— 中心城 <code>272000000</code> 的 <code>timeCrack</code> 门按任务状态分流（31180 完成→272030000；31167 进行中→272000100；否则→272020000），没做该任务线的玩家进不去。现已在万能传送的「未来之门」列表新增「过去的神木村」一条。</li>
+</ul></div>
+<div class="note">
+<b>另外发现一处无效调用（不致命）：</b><code>AKAYRUMBattle.js:230</code> 的 <code>updateGateState()</code> 去 <code>272030300</code> 找 reactor <code>2118002</code>；该 reactor 实际只存在于 <code>211042300/211042301</code>，272030300 里没有 → 这个调用永远走 <code>null</code> 分支（有判空保护，不会崩）。看着像是从 Cygnus 战斗模板抄过来时一起带过来的。
+<br><br>
+<b>入口链路本身是通的：</b><code>272030300</code> 的 <code>AkayrumEnter</code> 门带脚本 <code>in_cygnusAK</code> → 打开 NPC 1104209 的 <code>akayrumbattle</code> → 拉起 <code>AKAYRUMBattle</code> → 把人送进 <code>272030400</code> 并刷 8860000，<code>out00/out_cygnusAK</code> 退出。这一条完全自成体系，与 TMS 的 <code>mode=mikhail</code> 场地脚本无关。
+</div>
+
+<h2>十、缺口清单（按优先级）</h2>
+<table>
+<tr><th>#</th><th>缺口</th><th>影响</th><th>补法要点</th></tr>
+<tr><td>1</td><td>272 段 30 条地图名条目缺失</td><td>玩家可见：整区地图无名字</td><td>客户端 <code>String/Map.img</code> 增量插入 + 两份 XML 同步；不要整文件重写</td></tr>
+<tr><td>2</td><td><code>#p2144010#</code> 悬空（31176 / 31178 文本）</td><td>任务文本出现无名 NPC</td><td>要么把文本里的 <code>#p2144010#</code> 换成已存在的 id（如 2144000），要么补 NPC 2144010（img + String + 布点，工作量大）</td></tr>
+<tr><td>3</td><td>31165 的 C0 NPC <code>2144001</code> 未布点</td><td>该任务只能靠 <code>normalAutoStart</code> 起步，玩家主动对话找不到人</td><td>在 272000000（或某个城镇）raw-insert 一条 life 记录，锚点照抄同图 NPC</td></tr>
+<tr><td>4</td><td>8 条任务无脚本、钩子同步被剥</td><td>剧情无过场（当前设计如此）</td><td>若要补：<b>脚本文件 + Check 钩子必须成对补</b>（客户端 IMG / wz / wz-zh-CN 三处），否则 <code>hasScriptRequirement=false</code> 永不调用</td></tr>
+<tr><td>5</td><td>46 张图缺 <code>fieldScript</code>/<code>onUserEnter</code></td><td>因 BeiDou 不实现 fieldScript，功能已由 portal/event 脚本替代；<b>仅剩 272000410–419 的 <code>q31176continue</code> + <code>GerectorShadow</code> 由 31176.js 内的 <code>spawnMonster</code> 顶替</b></td><td>无必须动作；若照搬 TMS 需先实现 fieldScript 通道（不建议）</td></tr>
+<tr><td>6</td><td>61 张囚禁房地图</td><td>BeiDou 现有远征不需要；影响仅在复刻 TMS 现代两段式祭坛战</td><td>需要时整段迁移，注意 <code>link</code> 链与 <code>forcedReturn</code></td></tr>
+<tr><td>7</td><td>简化中文 String 缺 8220016–21 / 8860000 / 2144xxx</td><td>简中环境下怪物、NPC 名显示异常</td><td>往 <code>wz-zh-CN/String.wz/*.img.xml</code> 增量补条目（同长度的改值不受影响）</td></tr>
+<tr><td>8</td><td>270000000 缺 <code>cygnus_in</code> 门；272030000 的 <code>out00</code> 回指它</td><td>回程退化；无原生入口</td><td>按 TMS 补一个 <code>cygnus_in</code> 门；入口脚本照 <code>in_cygnusAK</code> 同风格写</td></tr>
+<tr><td>9</td><td>任务奖励一律 301891</td><td>与 TMS 差异极大</td><td>需你确认是平衡策略还是漏改</td></tr>
+</table>
+
+<div class="note">
+<b>核对方法（可复现）：</b>
+<ul>
+<li>地图集合 / info：编译 <code>tool/tms-wz/MapScan.java</code> 扫 TMS 全量 18 888 张地图 → <code>mapinfo.tsv</code>（本次直接复用了既有的 <code>/tmp/test_one.tsv</code>），再与 <code>gms-server/wz/Map.wz/Map/Map2/272*.img.xml</code> 的 <code>info</code> 逐键比。</li>
+<li>life 布点：另写 walker 扫 TMS <code>Map/Map</code> 的 <code>life</code>（npc / mob 计数），与 BeiDou XML 的 <code>life</code> 块逐条比。</li>
+<li>任务：<code>QuestScan</code> 扫 TMS 全量 24 879 条任务定名；逐条用 <code>QuestDump</code> 展开 <code>QuestInfo/Check/Act/Say</code> 四件套，与 BeiDou XML 块比。</li>
+<li>客户端侧：<code>tool/scripts/wz/wzpy.sh convert clien/Data/... --region GMS</code> 转 JSON 后核对 <code>String/Map.img</code>、<code>String/{Npc,Mob}.img</code>、<code>Quest/Check.img</code>、<code>Map/Map2/272000000.img</code>。</li>
+<li>坑：<code>tool/orange-wz</code> 的 <code>target/dependency</code> 必须先存在（<code>mvn -o -q dependency:copy-dependencies</code>），否则 <code>QuestScan</code> 会<b>静默</b>报 <code>ok=0 fail=24879</code>（异常被 <code>catch(Throwable)</code> 吞掉）；<code>ImgJson.java</code> 当前对不上 orange-wz 的 API（<code>exportToJson</code> 已不存在），编译不过。</li>
+</ul>
+</div>
+
+</div></body></html>

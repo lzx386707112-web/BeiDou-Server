@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TMS 副本迁移可行性分级</title>
+<style>
+  :root{--bg:#0f1116;--panel:#171a21;--panel2:#1d2129;--line:#2a2f3a;--tx:#e6e9ef;--tx2:#98a1b3;
+        --acc:#e05c5c;--acc2:#63b3ed;--ok:#5fbf85;--warn:#f0b95e;--pur:#b392f0;}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--tx);
+       font:14px/1.7 -apple-system,"PingFang SC","Microsoft YaHei",Segoe UI,sans-serif;}
+  .wrap{max-width:1200px;margin:0 auto;padding:30px 20px 80px;}
+  h1{font-size:24px;margin:0 0 8px;}
+  h2{font-size:17px;margin:34px 0 12px;border-left:3px solid var(--acc);padding-left:10px;}
+  h3{font-size:14px;margin:18px 0 8px;color:var(--acc2);}
+  .sub{color:var(--tx2);font-size:13px;margin-bottom:18px;line-height:1.85;}
+  code{font-family:ui-monospace,Menlo,monospace;font-size:12px;color:#d5b06a;
+       background:var(--panel2);padding:1px 5px;border-radius:5px;}
+  .mono{font-family:ui-monospace,Menlo,monospace;font-size:12px;}
+  table{width:100%;border-collapse:collapse;margin:8px 0 4px;font-size:13px;}
+  th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top;}
+  th{color:var(--tx2);font-weight:600;font-size:12px;background:var(--panel);}
+  tr:hover td{background:#1a1e26;}
+  .tag{font-size:11px;padding:1px 8px;border-radius:20px;border:1px solid var(--line);
+       color:var(--tx2);white-space:nowrap;display:inline-block;}
+  .tag.ok{border-color:#3d5140;color:#8fd6a2;background:#16211a;}
+  .tag.no{border-color:#5a3a3a;color:#e69191;background:#241a1c;}
+  .tag.warn{border-color:#5a4a3b;color:#e6b98f;}
+  .note{background:var(--panel);border:1px solid var(--line);border-radius:10px;
+        padding:14px 18px;color:var(--tx2);font-size:13px;margin:12px 0;}
+  .note b{color:var(--tx);}
+  .key{background:linear-gradient(180deg,#1b1f28,#171a21);border:1px solid #39404e;
+       border-radius:12px;padding:16px 20px;margin:14px 0;}
+  .key h3{margin:0 0 6px;color:var(--acc2);font-size:14px;}
+  .bar{display:inline-block;width:90px;height:7px;background:#2a2f3a;border-radius:4px;
+       overflow:hidden;vertical-align:middle;margin-right:6px;}
+  .barf{display:block;height:100%;}
+  .cards{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0;}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;
+        padding:11px 15px;min-width:140px;flex:1;}
+  .card b{display:block;font-size:20px;}
+  .card.a b{color:var(--ok);} .card.b b{color:var(--warn);} .card.c b{color:var(--acc);}
+  .card span{color:var(--tx2);font-size:12px;}
+  .stars{color:#f0b95e;letter-spacing:1px;}
+  .grp{border-left:3px solid var(--ok);padding-left:10px;margin:24px 0 10px;}
+  .grp.b{border-color:var(--warn);} .grp.c{border-color:var(--acc);}
+</style></head><body><div class="wrap">
+<h1>TMS 副本迁移可行性分级</h1>
+<div class="sub">評測對象：<code>~/Documents/mxd/TMS/MapleStory-IMG/Data</code>（TMS 273）　|　對照：<code>clien/Data</code> + <code>gms-server/wz*</code> + <code>scripts-zh-CN/</code><br>方法：把 TMS 全部 18,888 張地圖按 <code>fieldScript</code> 聚成 218 個玩法簇，逐簇比對倉庫地圖覆蓋率，再疊加「機制依賴」與「服務端既有支撐」判斷。<br>數據來源：<code>MapScan</code> 全量地圖 info 掃描 + <code>Quest/PQuest.img</code>（74 組隊任務）+ <code>Etc/*.img</code> 機制配置。</div>
+<div class="key"><h3>評判模型：四個維度，機制可還原度是決定性的</h3>
+<table><tr><th style="width:120px">維度</th><th>為什麼重要</th></tr>
+<tr><td><b>① 機制可還原度</b></td>
+<td><b>決定性因素。</b>客戶端是 GMS 083 系老端，TMS 273 的專屬 UI／新系統（鏡像介面、道場樓層、配對、航海）
+在老端<b>根本渲染不出來</b>——這類玩法天然還原不了。反之「打怪／收集／對話／Boss 戰」這類傳統機制，
+083 端完全能表達。</td></tr>
+<tr><td><b>② 地圖資源成本</b></td>
+<td>本次 2730 段能閉環，<b>決定性原因就是 24/24 圖已在倉庫</b>。反之 2710 段缺 186 張，
+光遷圖就是獨立工程。<b>覆蓋率是最硬的指標。</b></td></tr>
+<tr><td><b>③ 玩法數據量</b></td>
+<td>任務定義（QuestInfo/Check/Act/Say）、NPC 對話、PQ 腳本要補多少。
+照 2730 的經驗，純數據驅動（無過場）一條鏈約 15–30 個任務，可控。</td></tr>
+<tr><td><b>④ 服務端既有支撐</b></td>
+<td><code>EventInstanceManager</code> 能力完整（計時器／玩家註冊／隊伍／遠征隊／發獎），
+且已有 <b>121 個 event 腳本</b>（LudiPQ、OrbisPQ、CygnusBattle、MonsterPark…）。
+<b>經典 PQ 的框架是現成的</b>，不需要造輪子。</td></tr>
+</table></div>
+<div class="cards">
+<div class="card a"><b>5</b><span>A 級：圖已備、機制傳統，強烈推薦</span></div>
+<div class="card b"><b>4</b><span>B 級：價值高，需先遷圖</span></div>
+<div class="card c"><b>9</b><span>C 級：機制或成本不可行，建議放棄</span></div>
+<div class="card"><b>218</b><span>TMS 玩法簇總數（本次全量掃描）</span></div>
+</div>
+<h2 class="grp">A 級 · 强烈推荐（還原度高、成本低）</h2>
+<div class="sub">共同點：<b>倉庫已有過半地圖</b> + <b>玩法是傳統機制</b>（打怪／收集／劇情／Boss）+ 不依賴 273 新 UI。這類「補一下就能玩」，還原度可達 80–95%。</div>
+<table><tr><th style="width:130px">副本</th><th style="width:60px">地圖段</th><th style="width:110px">倉庫圖覆蓋</th><th>玩法</th><th>為什麼可行</th><th>還缺什麼</th><th style="width:60px">還原度</th></tr>
+<tr><td><b>羅密歐與茱麗葉</b></td><td class='mono'>9261</td><td class='mono'>57/60<br><span class="bar"><span class="barf" style="width:85px;background:#5fbf85"></span></span> 95%</td><td>經典組隊 PQ：兩人分線（羅密歐線／茱麗葉線）推進，研究室解謎 + boss 戰</td><td>圖 95% 齊；<code>RomioPQ</code>/<code>RnJLabor</code>/<code>JnRLabor</code> 三組地圖全在倉庫；服務端 <code>EventInstanceManager</code> 現成</td><td>缺 PQ 腳本（兩線推進邏輯）+ 任務定義</td><td class='stars'>★★★★★</td></tr>
+<tr><td><b>獅子王之城</b></td><td class='mono'>2110</td><td class='mono'>77/103<br><span class="bar"><span class="barf" style="width:67px;background:#5fbf85"></span></span> 75%</td><td>劇情副本 + 班·雷恩 Boss 線，附屬玫瑰花園小遊戲副本</td><td>圖 75% 齊；<code>roseGarden</code> 7/7 全有；倉庫任務已引用此段 23 次</td><td><code>lionBoss</code> 10 圖只 1、<code>BossVanleon</code> 6 圖只 1，需補圖 + boss 腳本</td><td class='stars'>★★★★★</td></tr>
+<tr><td><b>時間神殿</b></td><td class='mono'>2720</td><td class='mono'>60/121<br><span class="bar"><span class="barf" style="width:45px;background:#f0b95e"></span></span> 50%</td><td>過去神木村 → 燃燒的神木村 → 時間裂縫，劇情推進 + 打怪</td><td>圖 50% 齊；<code>GerectorShadow</code> 10/10 全有；與剛完成的 2730 段<b>同構</b>（純數據可驅動），經驗可完全複用</td><td>缺任務定義（此段被任務引用 0 次）+ 補其餘 61 張圖</td><td class='stars'>★★★★★</td></tr>
+<tr><td><b>雅典娜禁地 (OrbisPQ)</b></td><td class='mono'>9200</td><td class='mono'>30/43<br><span class="bar"><span class="barf" style="width:63px;background:#5fbf85"></span></span> 70%</td><td>天空之城組隊任務，多階段收集 + 守護</td><td>圖 70% 齊；服務端已有 <code>OrbisPQ.js</code></td><td>補 13 張圖 + 校對既有腳本與 TMS 流程差異</td><td class='stars'>★★★★☆</td></tr>
+<tr><td><b>玩具城黑暗塔</b></td><td class='mono'>9220</td><td class='mono'>33/66<br><span class="bar"><span class="barf" style="width:45px;background:#f0b95e"></span></span> 50%</td><td>組隊任務：黑暗塔多層推進</td><td>圖 50% 齊；<code>party2_ludi</code> 5/5 全有</td><td>補 33 張圖 + PQ 腳本</td><td class='stars'>★★★★☆</td></tr>
+</table>
+<h2 class="grp b">B 級 · 值得做，但需先遷圖</h2>
+<div class="sub">價值高，但地圖不在倉庫，第一步是遷圖。按「<b>圖越少越優先</b>」排序——9330 只要 52 張，是所有未遷副本中性價比最高的。</div>
+<table><tr><th style="width:130px">副本</th><th style="width:60px">地圖段</th><th style="width:110px">倉庫圖覆蓋</th><th>玩法</th><th>為什麼值得</th><th>成本／阻斷</th><th style="width:60px">還原度</th></tr>
+<tr><td><b>月妙的年糕／第一次同行</b></td><td class='mono'>9330</td><td class='mono'>0/52<br><span class="bar"><span class="barf" style="width:2px;background:#e05c5c"></span></span> 0%</td><td>經典組隊：打怪收集年糕、第一次同行多關卡</td><td><b>只要 52 張圖</b>——是所有「圖未遷」副本裡體量最小的；玩法是打怪收集，無新 UI</td><td>圖全缺（0%），需從 TMS 全量遷 52 張；任務 + 腳本從零建</td><td class='stars'>★★★★☆</td></tr>
+<tr><td><b>苦痛迷宮／泰涅布利斯</b></td><td class='mono'>4500</td><td class='mono'>330/499<br><span class="bar"><span class="barf" style="width:59px;background:#f0b95e"></span></span> 66%</td><td>五轉主線區域，多階段迷宮推進 + 區域 boss</td><td>圖 66% 齊（330/499）；<b>倉庫任務引用此段 83 次，是全庫最多的區域</b>——任務基礎最厚</td><td>缺 169 張圖；<code>BM2</code>／<code>JinHillah</code> 子副本圖與腳本都缺</td><td class='stars'>★★★★☆</td></tr>
+<tr><td><b>黃昏的勇士之村 · 第一章</b></td><td class='mono'>2710</td><td class='mono'>52/238<br><span class="bar"><span class="barf" style="width:19px;background:#e05c5c"></span></span> 22%</td><td>未來之門／黑暗耶雷弗，騎士團遠征隊實例房 + 難度分級</td><td>圖 22% 齊（52/238）；場地腳本 <code>cygnus_Summon</code>／<code>cygnus_ExpeditionEnter</code>／<code>knights_Summon</code> <b>倉庫都有</b></td><td>缺 186 張實例圖；31 條第一章任務未導入（NPC 全在 271010000）</td><td class='stars'>★★★★☆</td></tr>
+<tr><td><b>阿斯旺</b></td><td class='mono'>9262</td><td class='mono'>0/11<br><span class="bar"><span class="barf" style="width:2px;background:#e05c5c"></span></span> 0%</td><td>納希宮殿／阿斯旺下層，中小型副本</td><td><b>只要 11 張圖</b>，體量最小</td><td>圖全缺；玩法資料需從零建，優先度低於 9330</td><td class='stars'>★★★☆☆</td></tr>
+</table>
+<h2 class="grp c">C 級 · 不建议（機制或成本不可行）</h2>
+<div class="sub">分兩種：<b>機制還原不了</b>（依賴 273 客戶端 UI／系統）與<b>成本過高</b>（圖太多）。這類即使遷了圖也只能得到殘缺體驗。</div>
+<table><tr><th style="width:180px">副本</th><th style="width:130px">地圖段</th><th style="width:80px">TMS/倉庫</th><th>為什麼不行</th></tr>
+<tr><td><b>鏡像副本 mirrorDungeon</b></td><td class='mono'>3240/3211/3220/3230</td><td class='mono'>235 / 0</td><td>42 層隨機生成 + 鏡像專屬 UI；083 端無鏡像介面，機制無法表達</td></tr>
+<tr><td><b>公會水道 guildD_Culvert</b></td><td class='mono'>9406/9407</td><td class='mono'>156 / 0</td><td>依賴公會系統與水道機制；圖全缺且系統不在服務端</td></tr>
+<tr><td><b>大亂鬥 WarZone</b></td><td class='mono'>4000/4010</td><td class='mono'>266 / 0</td><td>依賴配對系統 + PvP 結算 UI（fieldType=24），服務端無配對機制</td></tr>
+<tr><td><b>武陵道場 MDojang</b></td><td class='mono'>9250</td><td class='mono'>100 / 0</td><td>樓層進度 + 排行 UI；fieldType=14 的道場系統服務端沒有</td></tr>
+<tr><td><b>怪物金字塔 MonsterPyramid</b></td><td class='mono'>—</td><td class='mono'>0 / 0</td><td>Etc 配置明確含 <code>UI</code>/<code>UIRanking</code> 節點，客戶端不支援</td></tr>
+<tr><td><b>公會城堡 GuildCastle</b></td><td class='mono'>—</td><td class='mono'>0 / 0</td><td>Etc 配置含 <code>UI</code>/<code>UIGuildMessage</code> 節點</td></tr>
+<tr><td><b>航海 SailField</b></td><td class='mono'>8650</td><td class='mono'>25 / 5</td><td>依賴航海／貿易系統（交易所、商團），服務端無此系統</td></tr>
+<tr><td><b>危險的躲迷藏</b></td><td class='mono'>9310</td><td class='mono'>360 / 0</td><td>360 張圖全缺，遷圖成本過高；玩法價值不足以支撐</td></tr>
+<tr><td><b>隱月劇情區</b></td><td class='mono'>4100</td><td class='mono'>632 / 47</td><td>是職業劇情大區域而非副本；628 張圖，體量過大</td></tr>
+</table>
+<h2>四、看起來像候選、其實要排除</h2>
+<table><tr><th style="width:200px">項目</th><th style="width:130px">地圖段</th><th style="width:80px">覆蓋</th><th>排除理由</th></tr>
+<tr><td><b>怪物公園 MonsterPark</b></td><td class='mono'>9540/9541/9530</td><td class='mono'>91%</td><td><b>已完成</b>：<code>MonsterPark.js</code> 已存在（154 行），圖 91% 齊</td></tr>
+<tr><td><b>starforce 星力戰場</b></td><td class='mono'>2200/2400/2110/2700</td><td class='mono'>76%</td><td>不是副本——是散落在普通地圖上的標記；且星力系統在 083 端不存在</td></tr>
+<tr><td><b>halloweenMob</b></td><td class='mono'>9932/1000/…</td><td class='mono'>75%</td><td>活動地圖標記，非副本</td></tr>
+<tr><td><b>BossZakum / BossHontale / BossPinkbeen</b></td><td class='mono'>2800/2400/2700</td><td class='mono'>—</td><td>單張 boss 圖，屬於 boss 戰而非副本；服務端已有對應 Battle 腳本</td></tr>
+</table>
+<h2>五、推荐迁移顺序</h2>
+<div class="key"><h3>按「投入產出比」排的執行序列</h3>
+<ol>
+<li><b>羅密歐與茱麗葉（9261）</b> — 圖 95% 齊，只差 PQ 腳本與任務。
+<b>最快能出成果</b>，而且是經典組隊玩法，玩家感知強。</li>
+<li><b>獅子王之城（2110）</b> — 圖 75%、任務已引用 23 次，基礎僅次於前者；
+先補 <code>lionBoss</code>／<code>BossVanleon</code> 的圖，再接劇情任務。</li>
+<li><b>時間神殿（2720）</b> — 與剛完成的 2730 <b>完全同構</b>，
+導入規範、體驗可直接複用（<code>import_twilight_perion_quest_chain.py</code> 改改就能用）。</li>
+<li><b>月妙的年糕／第一次同行（9330）</b> — 只要遷 52 張圖，
+是所有「圖未遷」副本裡最便宜的，適合驗證批量遷圖管線。</li>
+<li><b>苦痛迷宮（4500）</b> — 任務基礎最厚（83 次引用）但缺 169 張圖，放在遷圖管線跑順之後。</li>
+<li><b>黃昏第一章（2710）</b> — 186 張實例圖，體量大，放最後。</li>
+</ol></div>
+<h2>六、判断边界（这份结论的适用条件）</h2>
+<div class="note">
+<ul>
+<li><b>「還原度」指玩法可玩性，不含過場演出。</b>按你「保持無過場」的路線，
+TMS 的 <code>Say</code> 台詞與 <code>startscript/endscript</code> 一律不導入——
+所以最高還原度是「流程完整、劇情演出缺失」。</li>
+<li><b>覆蓋率只看地圖 ID 是否存在</b>，不檢查圖內 life／portal／foothold 是否完整。
+實際動手前要像 2730 那樣逐圖核對（本次就發現 24 張圖全缺 <code>lvLimit</code>）。</li>
+<li><b>怪物／NPC／道具不在本表統計內。</b>它們要單獨核對（2730 的經驗：
+兩個 boss 是 <code>summonType=1</code> 腳本召喚物，圖上根本沒有）。</li>
+<li><b>客戶端版本是推斷的</b>（GMS 083 系 + 魔改相容 DLL）。
+若能確認實際版本支援的 UI 集合，C 級裡「客戶端不支援」的結論可以再精確化。</li>
+</ul></div>
+<h2>七、复现命令</h2>
+<div class="note"><ul>
+<li>掃 TMS 全量地圖 info：<code>MapScan &lt;Data/Map/Map&gt; mapinfo.tsv</code>（見 <code>tool/tms-wz/README.md</code>，約 25 秒）</li>
+<li>按 fieldScript 聚類 + 算倉庫覆蓋：<code>/tmp/tmsdump/feasibility.py</code></li>
+<li>地圖段覆蓋對比：<code>/tmp/tmsdump/segmap.py</code>；玩法↔既有腳本交叉：<code>/tmp/tmsdump/gapmatch.py</code></li>
+<li>副本機制配置（判斷 UI 依賴）：<code>~/Documents/mxd/TMS/MapleStory-IMG/Data/Etc/*.img</code></li>
+</ul></div>
+</div></body></html>

@@ -660,18 +660,11 @@ function action(mode, type, selection) {
     if (status === 0) {
         let text = OldTitle;
         text += " \r\n";
-        text += "#b#L1#耳环#l\t\r\n\r\n";
-        text += "#L2#眼睛#l\t\r\n\r\n";
-        text += "#L3#鞋子#l\t\r\n\r\n";
-        text += "#L4#帽子#l\t\r\n\r\n";
-        text += "#L5#武器#l\t\r\n\r\n";
-        text += "#L6#灵魂戒指#l\t\r\n\r\n";
-        text += "#L11#苍穹霸主戒#l\t\r\n\r\n";
-        text += "#L9#腰带#l\t\r\n\r\n";
-        text += "#L7#披风#l\t\r\n\r\n";
-        text += "#L10#项链制作#l\t\r\n\r\n";
-        text += "\r\n\r\n\t#r以下还未实现#k\t\r\n\r\n";
-        text += "#L8#手套#l\t\r\n\r\n";
+        text += "#L1#眼睛#l\t\r\n\r\n";
+        text += "#L2#帽子#l\t\r\n\r\n";
+        text += "#L3#灵魂戒指#l\t\r\n\r\n";
+        text += "#L4#苍穹霸主戒#l\t\r\n\r\n";
+        text += "#L5#项链强化#l\t\r\n\r\n";
         cm.sendSimple(text);
     } else if (status === 1) {
         doSelect(selection);
@@ -715,46 +708,24 @@ function action(mode, type, selection) {
 function doSelect(selection) {
     switch (selection) {
         case 1:
-            选择的制作列表 = 耳环;
-            展示物品制作列表();
-            break;
-        case 2:
             选择的制作列表 = 眼睛;
             展示物品制作列表();
             break;
-        case 3:
-            选择的制作列表 = 鞋子;
-            展示物品制作列表();
-            break;
-        case 4:
+        case 2:
             选择的制作列表 = 帽子;
             展示物品制作列表();
             break;
-        case 5:
-            openNpc("装备制作/武器制作");
-            break;
-        case 6:
+        case 3:
             openNpc("灵魂戒指升级");
             break;
-        case 11:
+        case 4:
             openNpc("苍穹霸主戒");
             break;
-        case 7:
-            披风选系列中 = true;
-            展示披风系列菜单();
-            break;
-        case 9:
-            选择的制作列表 = 腰带;
-            展示物品制作列表();
-            break;
-        case 10:
+        case 5:
             openNpc("装备制作/项链制作");
             break;
-        case 11:
-            openNpc("装备制作/装备制作补偿");
-            break;
         default:
-            cm.sendOk("#b瞎么？没看到上面上写的还未实现，你就等吧！");
+            cm.sendOk("该功能暂不支持，敬请期待！");
             cm.dispose();
     }
 }

@@ -1,0 +1,316 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TMS 缺失内容迁移评估（BeiDou 目前没有的）</title>
+<style>
+:root{--bg:#0f1116;--panel:#171a21;--panel2:#1d2129;--line:#2a2f3a;--tx:#e6e9ef;--tx2:#98a1b3;
+--acc:#e05c5c;--acc2:#63b3ed;--ok:#5fbf85;--warn:#f0b95e;--pur:#b392f0;}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.75 -apple-system,"PingFang SC","Microsoft YaHei",Segoe UI,sans-serif;}
+.wrap{max-width:1240px;margin:0 auto;padding:30px 20px 90px;}
+h1{font-size:24px;margin:0 0 6px;}
+h2{font-size:17px;margin:36px 0 12px;border-left:3px solid var(--acc);padding-left:10px;}
+h3{font-size:14px;margin:18px 0 8px;color:var(--acc2);}
+.sub{color:var(--tx2);font-size:13px;margin-bottom:16px;line-height:1.9;}
+code{font-family:ui-monospace,Menlo,monospace;font-size:12px;color:#d5b06a;background:var(--panel2);padding:1px 5px;border-radius:5px;}
+table{width:100%;border-collapse:collapse;margin:8px 0 6px;font-size:13px;}
+th,td{text-align:left;padding:7px 9px;border-bottom:1px solid var(--line);vertical-align:top;}
+th{color:var(--tx2);font-weight:600;font-size:12px;background:var(--panel);}
+tr:hover td{background:#1a1e26;}
+.tag{font-size:11px;padding:1px 8px;border-radius:20px;border:1px solid var(--line);color:var(--tx2);white-space:nowrap;display:inline-block;}
+.tag.ok{border-color:#3d5140;color:#8fd6a2;background:#16211a;}
+.tag.no{border-color:#5a3a3a;color:#e69191;background:#241a1c;}
+.tag.warn{border-color:#5a4a3b;color:#e6b98f;}
+.note{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 18px;color:var(--tx2);font-size:13px;margin:12px 0;}
+.note b{color:var(--tx);}
+.key{background:linear-gradient(180deg,#1b1f28,#171a21);border:1px solid #39404e;border-radius:12px;padding:16px 20px;margin:14px 0;}
+.key h3{margin:0 0 6px;color:var(--acc2);font-size:14px;}
+.cards{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0;}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:11px 15px;min-width:130px;flex:1;}
+.card b{display:block;font-size:20px;} .card span{color:var(--tx2);font-size:12px;}
+.card.a b{color:var(--ok);} .card.b b{color:var(--warn);} .card.c b{color:var(--acc);} .card.n b{color:var(--acc2);}
+.item{border:1px solid var(--line);border-radius:12px;padding:14px 18px;margin:12px 0;background:var(--panel);}
+.item .hd{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;}
+.item .hd b{font-size:15px;color:var(--tx);}
+.item .kv{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--tx2);margin:6px 0 8px;}
+.item .kv span b{color:var(--tx);font-weight:600;}
+.item p{margin:6px 0;font-size:13px;color:var(--tx2);}
+.item p b{color:var(--tx);}
+.bar{display:inline-block;width:88px;height:7px;background:#2a2f3a;border-radius:4px;overflow:hidden;vertical-align:middle;margin-right:6px;}
+.barf{display:block;height:100%;}
+ul{margin:8px 0 8px 18px;padding:0;} li{margin:4px 0;}
+.mono{font-family:ui-monospace,Menlo,monospace;font-size:12px;}
+</style></head><body><div class="wrap">
+<h1>TMS 缺失内容迁移评估</h1>
+<div class="sub">对象：<code>~/Documents/mxd/TMS/MapleStory-IMG/Data</code>（TMS 273）中 <b>BeiDou 目前没有</b>的玩法内容。<br>方法：18,888 张 TMS 地图按 <code>fieldScript / onFirstUserEnter</code> 聚成玩法簇 → 与 BeiDou 客户端 6,336 张地图比对覆盖率 → 取覆盖率为 0 的簇 → 逐簇扫 <code>life</code> 统计还要新迁多少怪／NPC → 叠加机制判定。<br>判定所用的两个硬事实：BeiDou 职业上限 = 龙神（<code>job.name</code> 最大 id 2218）；服务端全库 <code>arcaneForce / authenticForce</code> 零命中。</div>
+<div class="cards">
+<div class="card n"><b>219</b><span>TMS 玩法簇（≥3 图）</span></div>
+<div class="card c"><b>182</b><span>完全缺失簇</span></div>
+<div class="card c"><b>2816</b><span>完全缺失地图数</span></div>
+<div class="card b"><b>23</b><span>部分缺失簇</span></div>
+<div class="card a"><b>14</b><span>已完整覆盖簇</span></div>
+<div class="card b"><b>53</b><span>74 组队任务中缺失</span></div>
+</div>
+<div class="key"><h3>先说结论</h3><ul><li><b>绝大多数「没有」是真没有，但大多数也不该迁。</b>182 个完全缺失簇里，约 <b>三分之二</b>属于 273 专属系统、083 后新增职业剧情、或需要神秘力量/进化系统——这三类在 GMS 083 客户端上<b>根本表达不出来</b>，不是工作量问题。</li><li><b>真正值得做的是「传统机制」那一池。</b>打怪 / 收集 / 护送 / 阶段通关 / Boss 战 / 小游戏，083 端全都能表达，服务端也有 <code>EventInstanceManager</code> + 121 个 event 脚本的既有框架。</li><li><b>性价比最高的一组是「地图有缺口、但资源零新增」</b>：龍騎士（50 图 / 0 新怪 / 0 新 NPC）、夏摩斯护送（51 图 / 0 / 0）、CWKPQ boss 段（18 图 / 0 / 0）、維京飛行船（5 图 / 0 / 0）。迁地图即可，不用碰 Mob.wz。</li><li><b>最大的一块「金矿」是苦痛迷宮</b>：全 TMS 被 83 条任务引用（引用数第一），BeiDou 已迁约 26%，实缺约 116 张，只需 8 个新怪——贵在图多，不贵在机制。</li></ul></div>
+<div class="note"><b>口径校准（避免误判）：</b>覆盖率按<b>地图 ID</b> 比对，但 BeiDou 历史上从 TMS 迁过的图会换新 ID。因此额外做了<b>中文地图名</b>交叉校验：绝大多数簇名称命中为 0（确认真缺失），只有三组有存量——苦痛迷宮 26%、黑色天堂 11%、神秘河后段 8%。这三组在下文按「实缺张数」计算，不是按 ID 全缺。</div>
+<h2>一、182 个完全缺失簇按「机制族」归类</h2>
+<table><tr><th style="width:60px">族</th><th style="width:190px">机制族</th><th style="width:60px">簇数</th><th style="width:70px">地图数</th><th style="width:130px">可迁移性</th><th>判定依据</th></tr>
+<tr><td class="mono" style="color:#e05c5c">S1</td><td><b>273 專屬系統 / 新 UI</b></td><td>18</td><td>1214</td><td><span class="tag no">不可行</span></td><td>依賴 083 端根本沒有的介面與系統（鏡像副本、道場樓層、公會水道、榮耀週任、Roguelike、空中監獄、戰爭區、小屋、深淵遠征、小豬酒吧）。客戶端渲染不出來，遷了也玩不了。</td></tr>
+<tr><td class="mono" style="color:#e05c5c">S2</td><td><b>083 後新增職業劇情</b></td><td>24</td><td>387</td><td><span class="tag no">不可行</span></td><td>BeiDou 職業上限只到龍神（job.id ≤ 2218），沒有凱撒／天使／神之子／伊利恩／虎影／阿黛爾／凱恩／幻影／尖兵／隱月／琳恩／狂龍（含 2022-2024 重製）等職業，劇情圖沒有承載主體。</td></tr>
+<tr><td class="mono" style="color:#e05c5c">S3</td><td><b>需新數值系統（神秘力量 / 進化）</b></td><td>22</td><td>128</td><td><span class="tag no">不可行（除非自研）</span></td><td>服務端全庫搜不到 arcaneForce／authenticForce；神秘河後段（賽爾尼溫／奧迪溫／卡爾西溫／賽拉斯／威爾／瑟琳）與進化系統、次元入侵都綁這套數值，083 端與服務端都沒有。</td></tr>
+<tr><td class="mono" style="color:#f0b95e">S4</td><td><b>Blockbuster 大型劇情戰役</b></td><td>30</td><td>247</td><td><span class="tag warn">有條件可行（去過場）</span></td><td>黑色天堂、楓葉英雄、耶雷弗奪還、赫力席母、次元圖書館等。戰鬥與地圖可遷，但正戲靠 CG／對話推動，按現有「無過場」策略只能做成純戰鬥版。</td></tr>
+<tr><td class="mono" style="color:#f0b95e">S5</td><td><b>聯動 / 限時活動</b></td><td>4</td><td>20</td><td><span class="tag warn">不建議</span></td><td>咖波地下城、萬聖小屋、巧克力、日蝕慶典等一次性活動，內容與授權綁定，壽命短。</td></tr>
+<tr><td class="mono" style="color:#5fbf85">S6</td><td><b>傳統機制副本 / 任務</b></td><td>77</td><td>783</td><td><span class="tag ok">★ 主要可遷池</span></td><td>打怪、收集、護送、階段通關、Boss 戰、小遊戲——083 端全部能表達，服務端也有 EventInstanceManager 框架支撐。</td></tr>
+<tr><td class="mono" style="color:#63b3ed">S7</td><td><b>單體 Boss 圖</b></td><td>7</td><td>37</td><td><span class="tag warn">可做（需配服務端）</span></td><td>單張 Boss 房＋Boss 怪，地圖工作量小，但要補服務端 Boss 技能／血量／掉落，成本在邏輯不在地圖。</td></tr>
+</table>
+<div class="note"><b>补充口径：只由 <code>onUserEnter</code> 驱动的系统型玩法</b>（这类没有 fieldScript，不在上面的 219 簇里，但同样是「目前没有的」）：</div>
+<table><tr><th>脚本键</th><th style="width:70px">地图数</th><th>判定</th></tr>
+<tr><td class="mono">piggy_rewardEnter</td><td>490</td><td>小豬酒吧獎勵圖（273 小遊戲系統）— 不可行</td></tr>
+<tr><td class="mono">summon_ARCflyingmob</td><td>408</td><td>待核</td></tr>
+<tr><td class="mono">enterPiggyBarMinigameRound</td><td>147</td><td>小豬酒吧小遊戲回合 — 不可行</td></tr>
+<tr><td class="mono">explorationPoint</td><td>107</td><td>待核</td></tr>
+<tr><td class="mono">roguelike_game_enter</td><td>104</td><td>Roguelike 模式（273 專屬）— 不可行</td></tr>
+<tr><td class="mono">knights_Summon</td><td>91</td><td>待核</td></tr>
+<tr><td class="mono">inAkayrumPrison2</td><td>70</td><td>待核</td></tr>
+<tr><td class="mono">g_reset</td><td>59</td><td>（通用重置入口）— 無獨立玩法</td></tr>
+<tr><td class="mono">myHomeOnUserEnter</td><td>50</td><td>我的小屋（273 系統）— 不可行</td></tr>
+<tr><td class="mono">MistyIsland_onUserEnter</td><td>47</td><td>迷霧島 — A/B 檔（傳統機制）</td></tr>
+<tr><td class="mono">library_SaveFieldID</td><td>41</td><td>次元圖書館存檔 — B 檔（隨 dim_library 一起）</td></tr>
+<tr><td class="mono">MExplorer_onUserEnter</td><td>36</td><td>怪物探險（273 系統）— 不可行</td></tr>
+<tr><td class="mono">eosTower</td><td>34</td><td>待核</td></tr>
+<tr><td class="mono">enter_NihalTrade</td><td>34</td><td>尼哈爾交易（273 系統）— 不可行</td></tr>
+<tr><td class="mono">enter_pfCommonStage</td><td>28</td><td>273 階段舞台 — 不可行</td></tr>
+<tr><td class="mono">Abyss3_OnUserEnter_Common</td><td>26</td><td>深淵遠征（Etc/AbyssExpeditionConfig）— 不可行</td></tr>
+<tr><td class="mono">Abyss5_OnUserEnter_Common</td><td>26</td><td>深淵遠征 — 不可行</td></tr>
+<tr><td class="mono">enter_WUPQgateway</td><td>25</td><td>組隊任務入口（273 入場 UI）— 不可行</td></tr>
+<tr><td class="mono">enterAswanField</td><td>24</td><td>阿斯旺解放戰（24 圖）— <b>可遷，B 檔</b></td></tr>
+<tr><td class="mono">enter_dlep2dir</td><td>24</td><td>威廉系列 — 待核</td></tr>
+<tr><td class="mono">Abyss4_OnUserEnter_Common</td><td>23</td><td>深淵遠征 — 不可行</td></tr>
+<tr><td class="mono">enter_dlep1dir</td><td>22</td><td>威廉系列（需核對是否屬公會地下城）— 待核</td></tr>
+<tr><td class="mono">enter_abysscommon</td><td>22</td><td>深淵遠征 — 不可行</td></tr>
+<tr><td class="mono">pledgeEnter</td><td>20</td><td>待核</td></tr>
+<tr><td class="mono">enter_q25617</td><td>20</td><td>待核</td></tr>
+<tr><td class="mono">map_913070020</td><td>20</td><td>待核</td></tr>
+<tr><td class="mono">map_913070050</td><td>20</td><td>待核</td></tr>
+<tr><td class="mono">event_25748</td><td>20</td><td>待核</td></tr>
+<tr><td class="mono">event_25856</td><td>20</td><td>待核</td></tr>
+<tr><td class="mono">nMC_Win</td><td>20</td><td>待核</td></tr>
+<tr><td class="mono">nMC_Lose</td><td>20</td><td>待核</td></tr>
+<tr><td class="mono">summon_WTflyingmob</td><td>19</td><td>待核</td></tr>
+<tr><td class="mono">field_grave_fall_summon</td><td>17</td><td>待核</td></tr>
+<tr><td class="mono">aranDirection</td><td>15</td><td>待核</td></tr>
+</table>
+<h2>二、A 档：建议优先迁移（12 个，机制传统 + 依赖少）</h2>
+<div class="sub">排序按「性价比」＝ 可还原度 ÷ 工作量。数据列里的 <b>新怪 / 新 NPC</b> = TMS 该簇用到的、BeiDou 两端都没有的种类数（已按 8 位补零归一比对）。</div>
+<div class="item"><div class="hd"><b>瑪斯特利亞祭壇 CWKPQ 擴展</b><span class="tag ok">A 档</span></div>
+<div class="kv"><span>地图 <b>18</b></span><span>新怪 <b>0</b> / 共 0</span><span>新 NPC <b>0</b> / 共 0</span><span>Reactor <b>151</b></span><span>簇键 <b class="mono">cwpqBoss, FUE:CWPQ_bonus</b></span></div>
+<p><b>机制：</b>瑪斯特利亞祭壇的 Boss 段（魔王雷德納格／瑪爾加納房間）。BeiDou 已有 CWKPQ.js 主流程，缺的是這幾張 boss 房與過渡圖。</p>
+<p><b>依赖：</b>無新怪、無新 NPC；需確認 CWKPQ.js 的關卡號與新圖對得上。</p>
+<p><b>风险：</b>低。要核對 BeiDou 現有 CWKPQ 地圖 ID 與 TMS 是否同號，不同則要改腳本裡的 mapid。</p>
+</div>
+<div class="item"><div class="hd"><b>龍騎士組隊任務（天空地區）</b><span class="tag ok">A 档</span></div>
+<div class="kv"><span>地图 <b>50</b></span><span>新怪 <b>0</b> / 共 6</span><span>新 NPC <b>0</b> / 共 2</span><span>Reactor <b>1</b></span><span>簇键 <b class="mono">dragonRiderPQ, dragonRiderPQMBoss, dragonRiderBoss, FUE:drag</b></span></div>
+<p><b>机制：</b>神木村天空地區的經典組隊任務：分階段清怪 → 收集 → 中 Boss → 龍騎士 Boss。</p>
+<p><b>依赖：</b>0 個新怪、0 個新 NPC（怪物與 NPC 兩端都有）。</p>
+<p><b>风险：</b>低。需要一份 event 腳本（照 LudiPQ.js 骨架）；life 用 mobTime=0 的圖要自己 instanceMapRespawn()。</p>
+</div>
+<div class="item"><div class="hd"><b>夏摩斯護送（萬年冰河）</b><span class="tag ok">A 档</span></div>
+<div class="kv"><span>地图 <b>51</b></span><span>新怪 <b>0</b> / 共 4</span><span>新 NPC <b>0</b> / 共 2</span><span>Reactor <b>3</b></span><span>簇键 <b class="mono">shammosPQ, shammosStart, escortShammos, escortShammos2</b></span></div>
+<p><b>机制：</b>萬年冰河冰雪峽谷的護送型 PQ：保護夏摩斯穿越峽谷 → 冰騎士 Boss。</p>
+<p><b>依赖：</b>0 個新怪、0 個新 NPC。護送邏輯可參考 RescueGaga.js。</p>
+<p><b>风险：</b>中低。護送 NPC 的移動／失敗判定要自寫，TMS 只有腳本名沒有腳本。</p>
+</div>
+<div class="item"><div class="hd"><b>健太護送（危險之海）</b><span class="tag ok">A 档</span></div>
+<div class="kv"><span>地图 <b>40</b></span><span>新怪 <b>8</b> / 共 8</span><span>新 NPC <b>1</b> / 共 1</span><span>Reactor <b>14</b></span><span>簇键 <b class="mono">Kenta_Escort, FUE:kenta_mapEnter, kentaInDangerBoss</b></span></div>
+<p><b>机制：</b>危險之海的健太護送：護送健太穿越洞窟 → 洞窟 Boss。與夏摩斯同型。</p>
+<p><b>依赖：</b>8 個新怪、1 個新 NPC 要從 ms-extract/Mob_0000X 遷。</p>
+<p><b>风险：</b>中。怪物遷移走 arc.clone_image + sanitize_mob，畫布統一下 ARGB4444。</p>
+</div>
+<div class="item"><div class="hd"><b>岩壁巨人</b><span class="tag ok">A 档</span></div>
+<div class="kv"><span>地图 <b>13</b></span><span>新怪 <b>1</b> / 共 1</span><span>新 NPC <b>1</b> / 共 1</span><span>Reactor <b>0</b></span><span>簇键 <b class="mono">colossus, colossus2</b></span></div>
+<p><b>机制：</b>岩壁巨人：爬上巨人身體、打掉部位單元的「部位戰」，與扎昆／龍王同型的老機制。</p>
+<p><b>依赖：</b>1 個新怪、1 個新 NPC。</p>
+<p><b>风险：</b>中。部位 Boss 的服務端邏輯要自寫（血量分部位、階段推進）。</p>
+</div>
+<div class="item"><div class="hd"><b>妖精學院</b><span class="tag ok">A 档</span></div>
+<div class="kv"><span>地图 <b>20</b></span><span>新怪 <b>3</b> / 共 3</span><span>新 NPC <b>5</b> / 共 5</span><span>Reactor <b>0</b></span><span>簇键 <b class="mono">fairyAcademy</b></span></div>
+<p><b>机制：</b>妖精學院艾利涅：教學／新手向的階段副本，打怪 + 對話 + 小 Boss，機制與 EllinPQ 同族。</p>
+<p><b>依赖：</b>3 個新怪、5 個新 NPC。</p>
+<p><b>风险：</b>中低。NPC 對話可用現有 npc 腳本模式補，不需過場。</p>
+</div>
+<div class="item"><div class="hd"><b>苦痛迷宮（Black Mage 前哨）</b><span class="tag ok">A 档</span></div>
+<div class="kv"><span>地图 <b>157</b></span><span>新怪 <b>8</b> / 共 8</span><span>新 NPC <b>1</b> / 共 1</span><span>Reactor <b>3056</b></span><span>簇键 <b class="mono">FUE:enter_BM2_Maze1_F, FUE:enter_BM2_Maze2_F, FUE:enter_BM2_</b></span></div>
+<p><b>机制：</b>苦痛迷宮：固定迷宮地圖組 + 大量任務引用（被 83 條任務引用，是全 TMS 引用最高的內容）。BeiDou 已遷過約 26%，實缺約 116 張。</p>
+<p><b>依赖：</b>8 個新怪、1 個新 NPC。</p>
+<p><b>风险：</b>中。工作量大但每張圖都是靜態迷宮，無機制依賴；建議分批 30 張一組交付。</p>
+</div>
+<div class="item"><div class="hd"><b>嚼嚼艾爾蘭 / 啾啾島</b><span class="tag ok">A 档</span></div>
+<div class="kv"><span>地图 <b>11</b></span><span>新怪 <b>7</b> / 共 7</span><span>新 NPC <b>0</b> / 共 0</span><span>Reactor <b>0</b></span><span>簇键 <b class="mono">yumyum, hungryMuto</b></span></div>
+<p><b>机制：</b>嚼嚼／啾啾艾爾蘭：低等級島嶼內容，打怪收集為主，適合作為新手路線補充。</p>
+<p><b>依赖：</b>7 個新怪。</p>
+<p><b>风险：</b>中低。等級帶低，與現有新手線要重新串。</p>
+</div>
+<div class="item"><div class="hd"><b>湯寶寶（烹飪小遊戲）</b><span class="tag ok">A 档</span></div>
+<div class="kv"><span>地图 <b>10</b></span><span>新怪 <b>0</b> / 共 0</span><span>新 NPC <b>1</b> / 共 1</span><span>Reactor <b>0</b></span><span>簇键 <b class="mono">tangyoon</b></span></div>
+<p><b>机制：</b>湯寶寶的烹飪教室：小遊戲型 PQ（按順序做出料理）。</p>
+<p><b>依赖：</b>1 個新 NPC，無新怪。</p>
+<p><b>风险：</b>中。小遊戲判定邏輯要自寫（TMS 無腳本），可簡化為「收集材料 → 交貨」。</p>
+</div>
+<div class="item"><div class="hd"><b>露塔必思庭園</b><span class="tag ok">A 档</span></div>
+<div class="kv"><span>地图 <b>8</b></span><span>新怪 <b>4</b> / 共 4</span><span>新 NPC <b>4</b> / 共 4</span><span>Reactor <b>22</b></span><span>簇键 <b class="mono">rootabyssGarden, rootabyssEastGarden</b></span></div>
+<p><b>机制：</b>露塔必思庭園（東／西／南／北庭園）：RootAbyss 四王的外部圖。</p>
+<p><b>依赖：</b>4 個新怪、4 個新 NPC。</p>
+<p><b>风险：</b>中。要確認 BeiDou 現有 RootAbyss 用的是哪套地圖 ID，避免與本次補的 8 張撞號。</p>
+</div>
+<div class="item"><div class="hd"><b>維京飛行船</b><span class="tag ok">A 档</span></div>
+<div class="kv"><span>地图 <b>5</b></span><span>新怪 <b>0</b> / 共 0</span><span>新 NPC <b>0</b> / 共 0</span><span>Reactor <b>0</b></span><span>簇键 <b class="mono">flowervioleta</b></span></div>
+<p><b>机制：</b>維京飛行船：5 張圖的小型任務副本（船長室等）。</p>
+<p><b>依赖：</b>無新怪、無新 NPC。</p>
+<p><b>风险：</b>極低。最便宜的一檔，適合當試點。</p>
+</div>
+<div class="item"><div class="hd"><b>怪物競技戰場</b><span class="tag ok">A 档</span></div>
+<div class="kv"><span>地图 <b>10</b></span><span>新怪 <b>1</b> / 共 1</span><span>新 NPC <b>0</b> / 共 0</span><span>Reactor <b>0</b></span><span>簇键 <b class="mono">monsterArena</b></span></div>
+<p><b>机制：</b>怪物競技戰場：召喚怪物對戰的競技型內容。</p>
+<p><b>依赖：</b>1 個新怪。</p>
+<p><b>风险：</b>中。競技判定需服務端自寫。</p>
+</div>
+<h2>三、B 档：可以做，但要算清楚成本</h2>
+<table><tr><th style="width:150px">组</th><th style="width:60px">地图</th><th style="width:80px">新怪</th><th style="width:70px">新 NPC</th><th>说明</th></tr>
+<tr><td><b>新東京 / 日本區系列</b><br><span class="mono" style="color:#98a1b3">neotokyo</span></td><td>88</td><td>27</td><td>28</td><td>新東京／日本區：88 圖、27 新怪、28 新 NPC，是候選裡最貴的一檔。機制傳統（清怪→階段→Boss），前提是 BeiDou 日本區（ShowaBattle／RanmaruBattle）還在。建議拆成「東京都廳」與「2100 年台場」兩批。</td></tr>
+<tr><td><b>單體 Boss 圖（戴米安/麥格納斯/拉圖斯/貝倫/希拉/敦凱爾）</b><br><span class="mono" style="color:#98a1b3">bosses</span></td><td>22</td><td>1</td><td>7</td><td>單體 Boss 圖（戴米安／麥格納斯／拉圖斯／貝倫／希拉／敦凱爾）：22 圖、只 1 個新怪、7 個新 NPC。地圖便宜，貴在服務端 Boss 技能組與血量。</td></tr>
+<tr><td><b>黑色天堂（Blockbuster 劇情）</b><br><span class="mono" style="color:#98a1b3">blackheaven</span></td><td>76</td><td>34</td><td>2</td><td>黑色天堂 Blockbuster：76 圖、34 新怪。戰鬥圖可遷，但主線靠 CG 推進；按「無過場」策略只能給出戰鬥 + 任務文本版。</td></tr>
+<tr><td><b>次元圖書館</b><br><span class="mono" style="color:#98a1b3">dim_library</span></td><td>30</td><td>10</td><td>0</td><td>次元圖書館：30 圖、10 新怪。本質是「重玩舊副本」的劇情副本，機制傳統，強依賴對話文本。</td></tr>
+<tr><td><b>赫力席母奪回戰</b><br><span class="mono" style="color:#98a1b3">helisium</span></td><td>17</td><td>10</td><td>2</td><td>赫力席母奪回戰：17 圖、10 新怪。大型戰場（佔領／推進）型，需自寫推進邏輯。</td></tr>
+<tr><td><b>皇家神獸學院</b><br><span class="mono" style="color:#98a1b3">spinoff</span></td><td>19</td><td>9</td><td>0</td><td>皇家神獸學院：19 圖、9 新怪。劇情副本。</td></tr>
+<tr><td><b>玄山派（武陵桃園支線）</b><br><span class="mono" style="color:#98a1b3">mukhyun</span></td><td>23</td><td>0</td><td>8</td><td>玄山派（武陵桃園）：23 圖、0 新怪、8 新 NPC。任務向支線，成本低。</td></tr>
+<tr><td><b>耶雷弗奪還戰 / 全力突破</b><br><span class="mono" style="color:#98a1b3">ep3</span></td><td>36</td><td>6</td><td>0</td><td>耶雷弗奪還戰／全力突破：36 圖、6 新怪。劇情戰役。</td></tr>
+<tr><td><b>阿爾卡納 / 尖耳狐狸村支線</b><br><span class="mono" style="color:#98a1b3">arcana</span></td><td>11</td><td>9</td><td>0</td><td>阿爾卡納／尖耳狐狸村：11 圖、9 新怪。神秘河前段，可去掉 AF 數值做純地圖版。</td></tr>
+<tr><td><b>蝙蝠群 / 暴風雨森林</b><br><span class="mono" style="color:#98a1b3">bat_storm</span></td><td>30</td><td>3</td><td>6</td><td>蝙蝠群／暴風雨森林：30 圖、3 新怪、6 新 NPC。活動型刷怪圖，可做節慶活動。</td></tr>
+<tr><td><b>護衛哈沙勒（納希綠洲城）</b><br><span class="mono" style="color:#98a1b3">escort_past</span></td><td>5</td><td>2</td><td>0</td><td>護衛哈沙勒（納希綠洲城）：5 圖、2 新怪。小型護送。</td></tr>
+<tr><td><b>米尼姆勒護送</b><br><span class="mono" style="color:#98a1b3">murumuru</span></td><td>8</td><td>6</td><td>0</td><td>姆勒姆勒護送：8 圖、6 新怪。小型護送副本。</td></tr>
+<tr><td><b>露安的家</b><br><span class="mono" style="color:#98a1b3">elodin</span></td><td>6</td><td>4</td><td>0</td><td>露安的家：6 圖、4 新怪。劇情向。</td></tr>
+<tr><td><b>釣魚王（小遊戲）</b><br><span class="mono" style="color:#98a1b3">fishing</span></td><td>9</td><td>0</td><td>3</td><td>釣魚王：9 圖、3 新 NPC。小遊戲，需確認 083 端釣魚系統是否可用。</td></tr>
+<tr><td><b>魔物藏寶城（小遊戲）</b><br><span class="mono" style="color:#98a1b3">treasure</span></td><td>7</td><td>0</td><td>6</td><td>魔物藏寶城：7 圖、6 新 NPC。小遊戲（攀爬／計時）。</td></tr>
+<tr><td><b>旗幟爭奪戰（PvP 小遊戲）</b><br><span class="mono" style="color:#98a1b3">flag</span></td><td>6</td><td>0</td><td>1</td><td>旗幟爭奪戰：6 圖。PvP 小遊戲，需隊伍對抗框架。</td></tr>
+<tr><td><b>耶雷弗庭院（四轉任務）</b><br><span class="mono" style="color:#98a1b3">m4_job</span></td><td>10</td><td>1</td><td>0</td><td>耶雷弗庭院（四轉任務）：10 圖、1 新怪。</td></tr>
+<tr><td><b>卡羅泰（亞空間）</b><br><span class="mono" style="color:#98a1b3">karotte</span></td><td>3</td><td>3</td><td>0</td><td>卡羅泰（亞空間）：3 圖、3 新怪。</td></tr>
+<tr><td><b>穿越次元的戰場</b><br><span class="mono" style="color:#98a1b3">dim_invade</span></td><td>4</td><td>0</td><td>1</td><td></td></tr>
+<tr><td><b>神秘戰地（刷怪圖）</b><br><span class="mono" style="color:#98a1b3">mystic</span></td><td>3</td><td>0</td><td>1</td><td></td></tr>
+<tr><td><b>第一次同行（KerningPQ 重製段）</b><br><span class="mono" style="color:#98a1b3">kerning</span></td><td>13</td><td>1</td><td>2</td><td>第一次同行（KerningPQ 重製段）：13 圖、1 新怪、2 新 NPC。BeiDou 已有 KerningPQ.js，只需補重製段。</td></tr>
+<tr><td><b>培羅德（瑪斯特利亞巨型 Boss）</b><br><span class="mono" style="color:#98a1b3">giant_boss</span></td><td>12</td><td>17</td><td>0</td><td>培羅德（瑪斯特利亞巨型 Boss）：12 圖、17 新怪。多階段部位戰，新怪偏多。</td></tr>
+<tr><td><b>回歸勇士修練場</b><br><span class="mono" style="color:#98a1b3">comeback</span></td><td>4</td><td>0</td><td>7</td><td></td></tr>
+</table>
+<h2>四、C 档：不建议碰（老端天花板）</h2>
+<div class="note">这三类的共同点：<b>不是工作量问题，是 083 客户端根本没有对应的表达手段</b>。强行迁地图只会得到一堆进得去、但玩不了的图。</div>
+<table><tr><th style="width:150px">簇</th><th style="width:60px">地图</th><th style="width:110px">街道 / 区域</th><th>为什么不行</th></tr>
+<tr><td class="mono">mirrorDungeon</td><td>235</td><td>桃花仙境</td><td>镜像副本：42 个镜像 + 镜像专用 UI（String/mirrorDungeon.img + Etc/mirrorDungeonMap.img），083 端无镜像界面。</td></tr>
+<tr><td class="mono">guildD_Culvert</td><td>156</td><td>威廉的地下水道</td><td>公会水道：156 张 + 公会地下城系统（贡献、阶级、每周重置），273 才有。</td></tr>
+<tr><td class="mono">WarZone0_Next</td><td>140</td><td></td><td>战争区域（占领战 / 联盟战）：配对与占领推进 UI，273 专属。</td></tr>
+<tr><td class="mono">WarZone1_Next</td><td>126</td><td></td><td>273 专属系统 / UI，083 端无对应界面。</td></tr>
+<tr><td class="mono">MDojang_KillMob</td><td>100</td><td>武陵道場</td><td>武陵道场：楼层选择 / 计时 / 排行榜 UI，083 端无这套界面。</td></tr>
+<tr><td class="mono">FUE:prisonBreak_mapEnter</td><td>90</td><td></td><td>273 专属系统 / UI，083 端无对应界面。</td></tr>
+<tr><td class="mono">WarZone0_Final</td><td>88</td><td></td><td>273 专属系统 / UI，083 端无对应界面。</td></tr>
+<tr><td class="mono">gloryWmission</td><td>80</td><td>每週任務：調查異常現象</td><td>荣耀使命（每周任务：调查异常现象）：任务面板 + 进度 UI，273 专属。</td></tr>
+<tr><td class="mono">WarZone1_Final</td><td>72</td><td></td><td>273 专属系统 / UI，083 端无对应界面。</td></tr>
+<tr><td class="mono">Angelic</td><td>62</td><td></td><td>天使破坏者职业剧情：BeiDou 无该职业（job ≤ 2218）。</td></tr>
+<tr><td class="mono">Kaiser</td><td>60</td><td></td><td>凯撒职业剧情：BeiDou 无该职业。</td></tr>
+<tr><td class="mono">DemonSlayer</td><td>52</td><td></td><td>恶魔猎手剧情：BeiDou 职业表止于龙神，无恶魔猎手。</td></tr>
+<tr><td class="mono">FUE:PRaid_D_Fenter</td><td>50</td><td></td><td>273 专属系统 / UI，083 端无对应界面。</td></tr>
+<tr><td class="mono">illium_hunt_fin</td><td>21</td><td>野蠻之星</td><td>伊利恩职业剧情：无该职业。</td></tr>
+<tr><td class="mono">zero</td><td>21</td><td>瑞秋的花園</td><td>神之子职业剧情：无该职业。</td></tr>
+<tr><td class="mono">Kaiser_tuto0</td><td>20</td><td></td><td>083 后新增职业，BeiDou 无该职业（job.name ≤ 2218）。</td></tr>
+<tr><td class="mono">Kaiser_tuto1</td><td>20</td><td></td><td>083 后新增职业，BeiDou 无该职业（job.name ≤ 2218）。</td></tr>
+<tr><td class="mono">gloryWmissionFinal</td><td>20</td><td>每週任務：調查異常現象</td><td>273 专属系统 / UI，083 端无对应界面。</td></tr>
+<tr><td class="mono">prisonBreak</td><td>20</td><td></td><td>空中监狱逃脱：逃脱机制 + 追捕者 AI，273 专属。</td></tr>
+</table>
+<div class="note">上表只列 ≥20 图的大簇（共 19 个），其余小簇同族同理。</div>
+<h2>五、74 个组队任务逐条状态</h2>
+<div class="sub">判定依据：<code>gms-server/scripts-zh-CN/event/</code> 下 121 个脚本 + 地图覆盖。<b>已有</b> = 脚本或内容在；<b>缺失</b> = 两端都没有；<b>半成品</b> = 地图在、逻辑不在。</div>
+<table><tr><th style="width:60px">ID</th><th style="width:220px">名称</th><th style="width:90px">状态</th><th style="width:220px">BeiDou 既有证据</th><th>可行性</th></tr>
+<tr><td class="mono">1202</td><td>時空的裂縫</td><td><span class="tag ok">已有</span></td><td class="mono">LudiPQ.js</td><td>-</td></tr>
+<tr><td class="mono">1204</td><td>金勾海賊王</td><td><span class="tag ok">已有</span></td><td class="mono">PiratePQ.js</td><td>-</td></tr>
+<tr><td class="mono">1205</td><td>羅密歐和茱麗葉</td><td><span class="tag warn">半成品</span></td><td class="mono">地圖 9261 系列已遷（覆蓋 ~95%），缺 event 腳本</td><td>★ A：只差腳本</td></tr>
+<tr><td class="mono">1209</td><td>侏儒帝王的復活</td><td><span class="tag no">缺失</span></td><td class="mono">無</td><td>A/B：傳統階段 PQ</td></tr>
+<tr><td class="mono">1210</td><td>龍騎士</td><td><span class="tag no">缺失</span></td><td class="mono">無（神木村天空地區）</td><td>★ A：50 圖，0 新怪 0 新 NPC</td></tr>
+<tr><td class="mono">1211</td><td>奈特的金字塔</td><td><span class="tag no">缺失</span></td><td class="mono">無</td><td>A/B：傳統 PQ</td></tr>
+<tr><td class="mono">1212</td><td>林車長的地鐵站</td><td><span class="tag ok">已有</span></td><td class="mono">KerningPQ.js / Subway.js</td><td>-</td></tr>
+<tr><td class="mono">1213</td><td>武陵道場</td><td><span class="tag no">缺失</span></td><td class="mono">無</td><td>C：樓層 UI + 排行</td></tr>
+<tr><td class="mono">1214</td><td>陷入危險的健太</td><td><span class="tag no">缺失</span></td><td class="mono">無（危險之海）</td><td>★ A：40 圖，8 新怪</td></tr>
+<tr><td class="mono">1215</td><td>逃脫（空中監獄）</td><td><span class="tag no">缺失</span></td><td class="mono">無</td><td>C：273 專屬機制</td></tr>
+<tr><td class="mono">1218</td><td>冰騎士的詛咒（夏摩斯護送）</td><td><span class="tag no">缺失</span></td><td class="mono">無（冰雪峽谷）</td><td>★ A：51 圖，0 新怪 0 新 NPC</td></tr>
+<tr><td class="mono">1301</td><td>怪物擂台賽</td><td><span class="tag no">缺失</span></td><td class="mono">無</td><td>A/B：10 圖，1 新怪</td></tr>
+<tr><td class="mono">1302</td><td>第2回怪物擂台賽</td><td><span class="tag no">缺失</span></td><td class="mono">無</td><td>A/B</td></tr>
+<tr><td class="mono">1303</td><td>霧海幽靈船</td><td><span class="tag no">缺失</span></td><td class="mono">無</td><td>B</td></tr>
+<tr><td class="mono">1304</td><td>魔王巴洛古</td><td><span class="tag ok">已有</span></td><td class="mono">BalrogBattle.js</td><td>-</td></tr>
+<tr><td class="mono">1305</td><td>獅子王凡雷恩</td><td><span class="tag ok">已有</span></td><td class="mono">MK_PrimeMinister.js</td><td>-</td></tr>
+<tr><td class="mono">1306</td><td>殘暴炎魔</td><td><span class="tag ok">已有</span></td><td class="mono">ZakumBattle.js / ZakumPQ.js</td><td>-</td></tr>
+<tr><td class="mono">1307</td><td>海怒斯</td><td><span class="tag warn">已有/待核</span></td><td class="mono">HenesysPQ.js 疑似對應</td><td>-</td></tr>
+<tr><td class="mono">1308</td><td>拉圖斯</td><td><span class="tag ok">已有</span></td><td class="mono">PapulatusBattle.js</td><td>-</td></tr>
+<tr><td class="mono">1309</td><td>闇黑龍王</td><td><span class="tag ok">已有</span></td><td class="mono">HorntailBattle.js / HorntailPQ.js</td><td>-</td></tr>
+<tr><td class="mono">1310</td><td>粉豆</td><td><span class="tag ok">已有</span></td><td class="mono">PinkBeanBattle.js</td><td>-</td></tr>
+<tr><td class="mono">1311</td><td>菇菇王國</td><td><span class="tag no">缺失</span></td><td class="mono">無</td><td>A/B</td></tr>
+<tr><td class="mono">1312</td><td>墮落城市</td><td><span class="tag warn">已有/待核</span></td><td class="mono">KerningPQ.js（第一次同行）</td><td>A：補重製段 13 圖</td></tr>
+<tr><td class="mono">1313</td><td>奈歐市</td><td><span class="tag no">缺失</span></td><td class="mono">無</td><td>B</td></tr>
+<tr><td class="mono">1314</td><td>克里塞</td><td><span class="tag no">缺失</span></td><td class="mono">無</td><td>B</td></tr>
+<tr><td class="mono">1315</td><td>軍團長阿卡伊農</td><td><span class="tag ok">已有</span></td><td class="mono">AKAYRUMBattle.js</td><td>-</td></tr>
+<tr><td class="mono">1316</td><td>希拉</td><td><span class="tag no">缺失</span></td><td class="mono">無（Boss 圖 hillah 3 張）</td><td>B：單 Boss 圖，需補服務端</td></tr>
+<tr><td class="mono">1317</td><td>奇怪的畫廊</td><td><span class="tag no">缺失</span></td><td class="mono">無</td><td>A/B</td></tr>
+<tr><td class="mono">1318</td><td>奇幻主題樂園</td><td><span class="tag no">缺失</span></td><td class="mono">無</td><td>B</td></tr>
+<tr><td class="mono">1319</td><td>大亂鬥</td><td><span class="tag no">缺失</span></td><td class="mono">無</td><td>C：配對 UI</td></tr>
+<tr><td class="mono">1321</td><td>進化系統研究所</td><td><span class="tag no">缺失</span></td><td class="mono">無</td><td>C：進化系統</td></tr>
+<tr><td class="mono">1322</td><td>次元入侵</td><td><span class="tag no">缺失</span></td><td class="mono">無</td><td>C：需新系統</td></tr>
+<tr><td class="mono">1323</td><td>組隊任務入場（初級）</td><td><span class="tag no">缺失</span></td><td class="mono">無</td><td>C：273 入場 UI</td></tr>
+<tr><td class="mono">1324</td><td>組隊任務（中級）</td><td><span class="tag no">缺失</span></td><td class="mono">無</td><td>C</td></tr>
+<tr><td class="mono">1325</td><td>組隊任務</td><td><span class="tag no">缺失</span></td><td class="mono">無</td><td>C</td></tr>
+<tr><td class="mono">1221</td><td>瑪斯特利亞的祭壇</td><td><span class="tag ok">已有</span></td><td class="mono">CWKPQ.js</td><td>★ A：補 boss 段 18 圖，0 新怪</td></tr>
+<tr><td class="mono">1339</td><td>深紅森林城堡</td><td><span class="tag no">缺失</span></td><td class="mono">無</td><td>B</td></tr>
+<tr><td class="mono">1326</td><td>地上樂園 黃金海灘</td><td><span class="tag no">缺失</span></td><td class="mono">無</td><td>A/B</td></tr>
+<tr><td class="mono">1327</td><td>湯寶寶的烹飪教室</td><td><span class="tag no">缺失</span></td><td class="mono">無（10 圖，1 新 NPC）</td><td>A/B：小遊戲機制需自研</td></tr>
+<tr><td class="mono">1328</td><td>妖精學院 艾利涅</td><td><span class="tag no">缺失</span></td><td class="mono">無（20 圖，3 怪 5 NPC）</td><td>★ A</td></tr>
+<tr><td class="mono">1330</td><td>里恩海峽</td><td><span class="tag no">缺失</span></td><td class="mono">無</td><td>B</td></tr>
+<tr><td class="mono">1329</td><td>阿里安特競技大會</td><td><span class="tag no">缺失</span></td><td class="mono">無</td><td>A/B：10 圖</td></tr>
+<tr><td class="mono">1331</td><td>麥格納斯</td><td><span class="tag no">缺失</span></td><td class="mono">無（暴君之城 3 圖）</td><td>B：單 Boss 圖</td></tr>
+<tr><td class="mono">1332</td><td>西格諾斯</td><td><span class="tag ok">已有</span></td><td class="mono">CygnusBattle.js</td><td>-</td></tr>
+<tr><td class="mono">1333</td><td>貝倫</td><td><span class="tag no">缺失</span></td><td class="mono">無（深潭洞穴 3 圖）</td><td>B：單 Boss 圖</td></tr>
+<tr><td class="mono">1334</td><td>血腥女王</td><td><span class="tag no">缺失</span></td><td class="mono">無</td><td>B：RootAbyss 之一</td></tr>
+<tr><td class="mono">1335</td><td>皮埃爾</td><td><span class="tag no">缺失</span></td><td class="mono">無</td><td>B：RootAbyss 之一</td></tr>
+<tr><td class="mono">1336</td><td>班班</td><td><span class="tag no">缺失</span></td><td class="mono">無</td><td>B：RootAbyss 之一</td></tr>
+<tr><td class="mono">1337</td><td>櫻花城</td><td><span class="tag no">缺失</span></td><td class="mono">無</td><td>B</td></tr>
+<tr><td class="mono">1338</td><td>黃金寺院</td><td><span class="tag no">缺失</span></td><td class="mono">無</td><td>B</td></tr>
+<tr><td class="mono">1340</td><td>岩壁巨人 克洛蘇斯</td><td><span class="tag no">缺失</span></td><td class="mono">無（13 圖，1 新怪 1 新 NPC）</td><td>★ A</td></tr>
+<tr><td class="mono">1341</td><td>艾琳森林</td><td><span class="tag ok">已有</span></td><td class="mono">EllinPQ.js</td><td>-</td></tr>
+<tr><td class="mono">1342</td><td>阿斯旺解放戰</td><td><span class="tag no">缺失</span></td><td class="mono">無</td><td>B：24 圖（enterAswanField）</td></tr>
+<tr><td class="mono">1343</td><td>怪物公園</td><td><span class="tag ok">已有</span></td><td class="mono">MonsterPark.js</td><td>-</td></tr>
+<tr><td class="mono">1344</td><td>十字獵手</td><td><span class="tag no">缺失</span></td><td class="mono">無</td><td>C：273 機制</td></tr>
+<tr><td class="mono">1345</td><td>黃昏的勇士之村</td><td><span class="tag warn">已有（本次補齊）</span></td><td class="mono">地圖 2730 系列 + 任務鏈 + event 腳本</td><td>-</td></tr>
+<tr><td class="mono">1346</td><td>次元圖書館</td><td><span class="tag no">缺失</span></td><td class="mono">無（30 圖，10 新怪）</td><td>B：劇情副本，去過場可做</td></tr>
+<tr><td class="mono">1347</td><td>組隊任務綜合入場</td><td><span class="tag no">缺失</span></td><td class="mono">無</td><td>C</td></tr>
+<tr><td class="mono">1348</td><td>世界綜合組隊任務</td><td><span class="tag no">缺失</span></td><td class="mono">無</td><td>C</td></tr>
+<tr><td class="mono">1349</td><td>露塔必思</td><td><span class="tag warn">部分</span></td><td class="mono">RootAbyss 合約已遷，庭園圖（8 張）缺</td><td>★ A：補 8 圖</td></tr>
+<tr><td class="mono">1350</td><td>楓之谷聯盟會議廳</td><td><span class="tag no">缺失</span></td><td class="mono">無</td><td>C：273 系統</td></tr>
+<tr><td class="mono">1351</td><td>The Seed</td><td><span class="tag ok">已有</span></td><td class="mono">SeedTower20.js</td><td>-</td></tr>
+<tr><td class="mono">33041</td><td>Friends Story</td><td><span class="tag no">缺失</span></td><td class="mono">無</td><td>C：273 系統</td></tr>
+<tr><td class="mono">33959</td><td>楓之谷聯盟會議廳</td><td><span class="tag no">缺失</span></td><td class="mono">無</td><td>C</td></tr>
+<tr><td class="mono">34555</td><td>God of Control</td><td><span class="tag no">缺失</span></td><td class="mono">無</td><td>C</td></tr>
+<tr><td class="mono">7039</td><td>阿斯旺反抗戰</td><td><span class="tag no">缺失</span></td><td class="mono">無</td><td>B</td></tr>
+<tr><td class="mono">17206</td><td>外星侵略者</td><td><span class="tag no">缺失</span></td><td class="mono">無</td><td>B</td></tr>
+<tr><td class="mono">1222</td><td>世界綜合組隊任務</td><td><span class="tag no">缺失</span></td><td class="mono">無</td><td>C</td></tr>
+<tr><td class="mono">1353</td><td>中國_龍與虎</td><td><span class="tag no">缺失</span></td><td class="mono">神說島自有版本（非 TMS）</td><td>B：武陵系列</td></tr>
+<tr><td class="mono">1354</td><td>怪物公園 REBORN</td><td><span class="tag no">缺失</span></td><td class="mono">無</td><td>B：MonsterPark 擴展</td></tr>
+<tr><td class="mono">17600</td><td>柯梅爾茲</td><td><span class="tag ok">已有</span></td><td class="mono">CommerciVoyage.js</td><td>-</td></tr>
+<tr><td class="mono">31199</td><td>墮落的西格諾斯（簡單）</td><td><span class="tag no">缺失</span></td><td class="mono">無</td><td>B</td></tr>
+<tr><td class="mono">30201</td><td>幽靈公園</td><td><span class="tag no">缺失</span></td><td class="mono">無</td><td>B</td></tr>
+<tr><td class="mono">33553</td><td>霸王烏爾斯</td><td><span class="tag no">缺失</span></td><td class="mono">無</td><td>C：需 UI</td></tr>
+</table>
+<h2>六、建议落地顺序</h2>
+<table><tr><th style="width:50px">批次</th><th style="width:200px">内容</th><th style="width:90px">工作量</th><th>交付物 / 注意</th></tr>
+<tr><td><b>1</b></td><td>CWKPQ boss 段 + 維京飛行船 + 露塔必思庭園</td><td>约 31 图</td><td>地图 + 中文树名字；先核 BeiDou 现有 CWKPQ / RootAbyss 用的是哪套 ID，避免撞号。</td></tr>
+<tr><td><b>2</b></td><td>龍騎士組隊任務（1210）</td><td>50 图 + 1 脚本</td><td>0 新怪 0 新 NPC，最干净的一档；脚本照 LudiPQ.js 骨架，&lt;code&gt;mobTime=0&lt;/code&gt; 的图必须 &lt;code&gt;eim.schedule&lt;/code&gt; + &lt;code&gt;instanceMapRespawn()&lt;/code&gt;。</td></tr>
+<tr><td><b>3</b></td><td>夏摩斯護送（1218）+ 健太護送（1214）</td><td>91 图 + 8 新怪</td><td>护送逻辑自写（TMS 无脚本）；护送失败判定、NPC 路径要实测。</td></tr>
+<tr><td><b>4</b></td><td>岩壁巨人（1340）+ 妖精學院（1328）</td><td>33 图 + 4 怪 6 NPC</td><td>部位战与教学型副本，机制与扎昆 / EllinPQ 同族，可复用。</td></tr>
+<tr><td><b>5</b></td><td>苦痛迷宮补齐（分 4 批）</td><td>约 116 图 + 8 新怪</td><td>每批 30 张，逐批 &lt;code&gt;!debug map&lt;/code&gt; 验收；这是任务引用数最高的内容，补完收益最大。</td></tr>
+<tr><td><b>6</b></td><td>嚼嚼 / 啾啾島、湯寶寶、怪物競技</td><td>31 图 + 8 怪</td><td>小游戏机制需自研，建议先做简化版（收集 → 交货）。</td></tr>
+<tr><td><b>7</b></td><td>（可选）新東京 / 日本區</td><td>88 图 + 27 怪 28 NPC</td><td>最贵的一档，建议拆「東京都廳」与「2100 年台場」两批，先做前者。</td></tr>
+</table>
+<div class="key"><h3>迁移前的三条硬前提</h3><ul><li><b>中文树必须同步。</b><code>WZFiles</code> 优先读 <code>wz-zh-CN/</code>，而 <code>wz-zh-CN/</code> 只有 Etc / Quest / String 三棵——String（地图名、怪物名、NPC 名、道具名）漏改就会显示空白。</li><li><b>副本自刷怪。</b>事件实例的 <code>MapManager</code> 拿不到 <code>RespawnTask</code> 的 tick，凡是 <code>mobTime=0</code> 的点，脚本必须 <code>eim.schedule(fn, 5000)</code> + <code>map.instanceMapRespawn()</code>，否则清场后永不重生。</li><li><b>ID 一律 8 位补零。</b>查存在性用 7 位会假阴性（已踩两次）。怪物完整源在 <code>~/Documents/mxd/TMS/ms-extract/Mob_0000X/</code>，<code>MapleStory-IMG/Data/Mob/</code> 只有 <code>_Canvas</code> 没有 info。</li></ul></div>
+<div class="note">本报告数据来源：TMS 18,888 张地图 info 全量扫描 + 182 个缺失簇逐图 <code>life</code> 解析 + BeiDou 6,336 张地图 / Mob / Npc 集合比对。生成脚本：<code>tool/scripts/migration/eval_missing_content.py</code> + <code>render_missing_eval.py</code>（只读，未改动任何客户端或服务端文件）。</div>
+</div></body></html>

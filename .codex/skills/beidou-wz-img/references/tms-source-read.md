@@ -176,3 +176,45 @@ java -cp "<orange-wz>/target/classes:<orange-wz>/target/dependency/*:/tmp/tms-wz
   31965 的 `1105003/1105004` 本来就在 273000000，**不要动**
 
 参考脚本：`tool/scripts/migration/import_twilight_perion_quest_chain.py`。
+
+## ⚠️ 跑 `tool/tms-wz/` 前必须做的两件事（踩过）
+
+1. **classpath 里必须有 `orange-wz/target/dependency/`**。该目录不被 git 跟踪，新克隆/被清掉后
+   `MapScan`/`QuestScan` 会因为缺 `slf4j` 抛 `NoClassDefFoundError`；而 `QuestScan`
+   内部是 `catch (Throwable)` ⇒ 它**不报错**，只在最后打印 `done ok=0 fail=24879`。
+   看到 `ok=0` 一律先补依赖：
+   ```sh
+   cd tool/orange-wz && JAVA_HOME=/opt/homebrew/opt/openjdk@21 mvn -o -q dependency:copy-dependencies -DoutputDirectory=target/dependency
+   ```
+2. **`ImgJson.java` 当前编译不过**：它调用的 `WzImageFile.exportToJson(Path,int)` 在现版
+   orange-wz 里已不存在。要单文件导出就自己写 walker（见下），或改走 BeiDou 侧的
+   `tool/scripts/wz/wzpy.sh convert <img> --region GMS -o out.json`（只适用 BeiDou 客户端 IMG，TMS 密钥不同）。
+   `javac` 整目录会连坐失败 → 只编译需要的文件：`javac ... tool/tms-wz/QuestScan.java tool/tms-wz/MapScan.java`。
+
+**"扫一份表"最省事的写法**：单文件 Java + `WzImageFile` + 递归 `getChildren()`。
+- `f` 自己不是 `WzImageProperty`，遍历要 `for (var c : f.getChildren()) walk(c)`。
+- 字符串值取 `((WzStringProperty) p).getValue()`；`getChildren()` 为 null/空即叶子。
+- 结构：`String/Map.img` = `区域文件夹 → 地图ID → [地图名, 街道名]`；`String/Npc.img`、`String/Mob.img` 是映射 id→name。
+- `String/Map.img` 的地图名条目在仓库里**不等于** `wz/String.wz/Map.img.xml` 的范围，
+  TMS 21552 条 vs BeiDou 客户端 6013 条，**按段对比才有意义**（例：270 段两边都有 41/50 条，272 段 TMS 30 条、BeiDou 0 条）。
+
+**zsh 注意**：`IDS=$(seq 1 3 | tr '\n' ' '); java X $IDS` 默认**不做词分割**，
+会把整串当成一个参数传进去（表现为"第一个参数就 MISSING"）。用 `${=IDS}` 或直接罗列。
+
+## 阿卡伊勒（TMS 叫「阿卡伊農」）内容盘点结论
+
+中文名不同 → **搜 `阿卡伊勒` 在 TMS 侧零命中**，要用「阿卡伊農」/`Akayrum`/`akayrum`/`Akairum`。
+地图段 `272xxxxxx`（TMS 121 张）：
+- `27200xxxx` 过去的神木村剧情线（`q31165e`、`q31176continue` 钩子）
+- `27201xxxx` 黑暗时间神殿（`AkayrumShadow` + `summonAkayrum_1`）
+- `27202xxxx` 次元的缝隙 / 阿卡伊勒祭坛（`akayrum`/`akayrum1` 场地脚本、`inAkayrumPrison(2)` 囚禁房）
+- `27203xxxx` 皇家骑士团线（`akayrum_cygnus`、`mode=mikhail`）；BeiDou 拿它当**远征本体**
+
+任务：主线 `31165–31180`（16 条，area 264 → BeiDou 改名 `[阿卡伊勒]`、area 1）；
+Boss 目录入口 `1315`（NPC `2144010`）；皇家骑士团 `20753/20757`。
+关键钩子：31178 打 `8860001`（分身）、31180 打 `8860000`（本体）、31176 打 `9300487`
+（TMS 由 `GerectorShadow` 场地脚本刷；BeiDou 由 `31176.js` 里 `qm.spawnMonster` 顶替）。
+BeiDou 的入口是 **portal 脚本**而非 fieldScript：`check_Portal6`→`AkayrumFS.js`（分身副本 272010200）、
+`in_cygnusAK`→`akayrumbattle.js`→`AKAYRUMBattle.js`（远征 272030400）。
+
+盘点产物：`docs/阿卡伊勒-流程与完整性核对.html`。

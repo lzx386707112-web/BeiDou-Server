@@ -1,0 +1,514 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>可重复副本迁移可行性（TMS→BeiDou）</title><style>
+:root{--bg:#0f1116;--panel:#171a21;--panel2:#1d2129;--line:#2a2f3a;--tx:#e6e9ef;--tx2:#98a1b3;
+--acc:#e05c5c;--acc2:#63b3ed;--ok:#5fbf85;--warn:#f0b95e;--pur:#b392f0;}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.75 -apple-system,"PingFang SC","Microsoft YaHei",Segoe UI,sans-serif;}
+.wrap{max-width:1280px;margin:0 auto;padding:30px 20px 90px;}
+h1{font-size:24px;margin:0 0 6px;}
+h2{font-size:19px;margin:38px 0 14px;border-left:3px solid var(--acc);padding-left:10px;}
+h3{font-size:15px;margin:22px 0 8px;color:var(--acc2);}
+.sub{color:var(--tx2);font-size:13px;margin-bottom:16px;line-height:1.9;}
+code{font-family:ui-monospace,Menlo,monospace;font-size:12px;color:#d5b06a;background:var(--panel2);padding:1px 5px;border-radius:5px;}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(370px,1fr));gap:14px;margin:14px 0;}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;}
+.card h3{margin:0 0 4px;font-size:15px;color:var(--tx);}
+.card .mech{color:var(--tx2);font-size:12.5px;margin:4px 0 8px;min-height:34px;}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 8px;}
+.chip{font-size:11px;padding:2px 8px;border-radius:16px;background:var(--panel2);border:1px solid var(--line);color:var(--tx2);}
+.chip b{color:var(--tx);}
+.tag{font-size:11px;padding:2px 9px;border-radius:20px;border:1px solid var(--line);color:var(--tx2);white-space:nowrap;display:inline-block;margin-bottom:6px;}
+.tag.ok{border-color:#3d5140;color:#8fd6a2;background:#16211a;}
+.tag.part{border-color:#5a4a3b;color:#e6b98f;background:#241f17;}
+.tag.no{border-color:#5a3a3a;color:#e69191;background:#241a1c;}
+.tag.done{border-color:#3a4a5a;color:#9fc7e6;background:#16202a;}
+.tag.rep{border-color:#3a4a5a;color:#9fc7e6;background:#16202a;}
+.tag.mini{border-color:#4a4a3a;color:#d3d39f;background:#202016;}
+.bar{height:8px;border-radius:5px;background:var(--panel2);overflow:hidden;margin:6px 0 4px;}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,#3d7d52,#5fbf85);}
+.bar.warn i{background:linear-gradient(90deg,#7d6a3d,#f0b95e);}
+.bar.no i{background:linear-gradient(90deg,#7d3d3d,#e69191);}
+.cov{font-size:11.5px;color:var(--tx2);}
+.judge{font-size:12.5px;color:var(--tx2);margin-top:6px;line-height:1.7;}
+.judge b{color:var(--tx);}
+.rec{font-size:12px;color:var(--warn);margin-top:6px;}
+.note{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 18px;color:var(--tx2);font-size:13px;margin:12px 0;}
+.note b{color:var(--tx);}
+.key{border-radius:12px;padding:14px 18px;margin:14px 0;background:var(--panel2);border:1px solid var(--line);}
+.key b{color:var(--acc2);}
+table{width:100%;border-collapse:collapse;margin:10px 0 6px;font-size:12.5px;}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top;}
+th{color:var(--tx2);font-weight:600;font-size:11.5px;background:var(--panel);}
+tr:hover td{background:#1a1e26;}
+.mono{font-family:ui-monospace,Menlo,monospace;font-size:11.5px;}
+ul{margin:8px 0 8px 18px;padding:0;} li{margin:5px 0;}
+</style></head><body><div class="wrap">
+<h1>可重复副本迁移可行性 —— 只保留能反复刷的</h1>
+<div class="sub">对象：TMS 273 客户端　对照：BeiDou 客户端 + 服务端。<br>本次<b>只筛「可重复副本 / 团本 / Boss 战」</b>：能反复进入、靠机制（解谜/护送/攻城/Boss 阶段）提供可玩性；<b>一次性剧情 / CG 演出 / 转职 / 回归教学 / 纯 273 系统门槛</b>一律排除（可玩性不高）。<br>资源清单来自上次实测扫描，BeiDou 覆盖率按<b>地图 ID + 中文地图名双口径</b>现场计算。判定维度：① 机制 083 老端能否表达；② 是否依赖 273 专属 UI / 神秘河数值；③ 数据可得性。</div>
+<div class="note"><b>总览（39 候选 → 过滤后）：</b>可重复副本（聚焦）<b>23</b> 个（其中可完整迁移 A/B <b>21</b>、部分可迁 C <b>1</b>、已另报 <b>1</b>）；可重复小游戏 <b>4</b> 个（轻量，非副本）；排除：一次性 <b>7</b> 个 + 系统门槛 <b>5</b> 个。</div>
+<h2>一、可重复副本 / 团本 / Boss 战（聚焦对象）</h2>
+<h3>1.1 可完整迁移（A/B 档 · 传统机制，083 老端能表达）</h3>
+<div class="cards">
+<div class="card">
+<h3>赫力席母奪回戰</h3>
+<span class="tag rep">可重复副本</span><span class="tag ok">可完整迁移</span>
+<div class="mech">赫力席母奪回戰（Helisium），攻城战 PQ</div>
+<div class="chips">
+<span class="chip">地图 <b>17</b></span>
+<span class="chip">新怪 <b>10</b></span>
+<span class="chip">新NPC <b>2</b></span>
+<span class="chip">reactor <b>0</b></span>
+</div>
+<div class="bar "><i style="width:0%"></i></div>
+<div class="cov">BeiDou 覆盖率：0/17 图 ID 命中，0/17 名称命中 → <b>0%</b></div>
+<div class="judge"><b>判定：</b>需 10 怪 + 2 NPC；传统攻城机制</div>
+<div class="rec">▸ 建议：第三批</div>
+</div>
+<div class="card">
+<h3>皇家神獸學院</h3>
+<span class="tag rep">可重复副本</span><span class="tag ok">可完整迁移</span>
+<div class="mech">皇家神獸學院（spinOffPark），校园小游戏 + 刷怪</div>
+<div class="chips">
+<span class="chip">地图 <b>19</b></span>
+<span class="chip">新怪 <b>9</b></span>
+<span class="chip">新NPC <b>0</b></span>
+<span class="chip">reactor <b>0</b></span>
+</div>
+<div class="bar "><i style="width:0%"></i></div>
+<div class="cov">BeiDou 覆盖率：0/19 图 ID 命中，0/19 名称命中 → <b>0%</b></div>
+<div class="judge"><b>判定：</b>需 9 新怪；机制传统</div>
+<div class="rec">▸ 建议：第二批</div>
+</div>
+<div class="card">
+<h3>健太護送（危險之海）</h3>
+<span class="tag rep">可重复副本</span><span class="tag ok">可完整迁移</span>
+<div class="mech">危險之海健太護送（Kenta_Escort），护送 + boss</div>
+<div class="chips">
+<span class="chip">地图 <b>40</b></span>
+<span class="chip">新怪 <b>8</b></span>
+<span class="chip">新NPC <b>1</b></span>
+<span class="chip">reactor <b>14</b></span>
+</div>
+<div class="bar "><i style="width:0%"></i></div>
+<div class="cov">BeiDou 覆盖率：0/40 图 ID 命中，0/40 名称命中 → <b>0%</b></div>
+<div class="judge"><b>判定：</b>需迁 8 新怪 + 1 NPC；机制传统</div>
+<div class="rec">▸ 建议：第二批</div>
+</div>
+<div class="card">
+<h3>嚼嚼艾爾蘭 / 啾啾島</h3>
+<span class="tag rep">可重复副本</span><span class="tag ok">可完整迁移</span>
+<div class="mech">嚼嚼艾爾蘭 / 啾啾島（yumyum/hungryMuto），喂养小游戏 + 刷怪</div>
+<div class="chips">
+<span class="chip">地图 <b>11</b></span>
+<span class="chip">新怪 <b>7</b></span>
+<span class="chip">新NPC <b>0</b></span>
+<span class="chip">reactor <b>0</b></span>
+</div>
+<div class="bar "><i style="width:0%"></i></div>
+<div class="cov">BeiDou 覆盖率：0/11 图 ID 命中，0/11 名称命中 → <b>0%</b></div>
+<div class="judge"><b>判定：</b>需 7 新怪；机制传统</div>
+<div class="rec">▸ 建议：第二批</div>
+</div>
+<div class="card">
+<h3>耶雷弗奪還戰 / 全力突破</h3>
+<span class="tag rep">可重复副本</span><span class="tag ok">可完整迁移</span>
+<div class="mech">耶雷弗奪還戰 / 全力突破（Episode3），地区战争</div>
+<div class="chips">
+<span class="chip">地图 <b>36</b></span>
+<span class="chip">新怪 <b>6</b></span>
+<span class="chip">新NPC <b>0</b></span>
+<span class="chip">reactor <b>0</b></span>
+</div>
+<div class="bar "><i style="width:0%"></i></div>
+<div class="cov">BeiDou 覆盖率：0/36 图 ID 命中，0/36 名称命中 → <b>0%</b></div>
+<div class="judge"><b>判定：</b>需 6 新怪；传统战争机制</div>
+<div class="rec">▸ 建议：第三批</div>
+</div>
+<div class="card">
+<h3>米尼姆勒護送</h3>
+<span class="tag rep">可重复副本</span><span class="tag ok">可完整迁移</span>
+<div class="mech">米尼姆勒護送（Murumuru_Escort），护送</div>
+<div class="chips">
+<span class="chip">地图 <b>8</b></span>
+<span class="chip">新怪 <b>6</b></span>
+<span class="chip">新NPC <b>0</b></span>
+<span class="chip">reactor <b>4</b></span>
+</div>
+<div class="bar "><i style="width:0%"></i></div>
+<div class="cov">BeiDou 覆盖率：0/8 图 ID 命中，0/8 名称命中 → <b>0%</b></div>
+<div class="judge"><b>判定：</b>需 6 新怪；传统</div>
+<div class="rec">▸ 建议：第二批</div>
+</div>
+<div class="card">
+<h3>露塔必思庭園</h3>
+<span class="tag rep">可重复副本</span><span class="tag ok">可完整迁移</span>
+<div class="mech">露塔必思庭園（rootabyssGarden），花园探索 + reactor</div>
+<div class="chips">
+<span class="chip">地图 <b>8</b></span>
+<span class="chip">新怪 <b>4</b></span>
+<span class="chip">新NPC <b>4</b></span>
+<span class="chip">reactor <b>22</b></span>
+</div>
+<div class="bar "><i style="width:0%"></i></div>
+<div class="cov">BeiDou 覆盖率：0/8 图 ID 命中，0/8 名称命中 → <b>0%</b></div>
+<div class="judge"><b>判定：</b>需 4 怪 + 4 NPC + 22 reactor；传统</div>
+<div class="rec">▸ 建议：第二批</div>
+</div>
+<div class="card">
+<h3>妖精學院</h3>
+<span class="tag rep">可重复副本</span><span class="tag ok">可完整迁移</span>
+<div class="mech">妖精學院（fairyAcademy），学院小游戏 + 刷怪</div>
+<div class="chips">
+<span class="chip">地图 <b>20</b></span>
+<span class="chip">新怪 <b>3</b></span>
+<span class="chip">新NPC <b>5</b></span>
+<span class="chip">reactor <b>0</b></span>
+</div>
+<div class="bar "><i style="width:0%"></i></div>
+<div class="cov">BeiDou 覆盖率：0/20 图 ID 命中，0/20 名称命中 → <b>0%</b></div>
+<div class="judge"><b>判定：</b>需 3 怪 + 5 NPC；机制传统</div>
+<div class="rec">▸ 建议：第二批</div>
+</div>
+<div class="card">
+<h3>蝙蝠群 / 暴風雨森林</h3>
+<span class="tag rep">可重复副本</span><span class="tag ok">可完整迁移</span>
+<div class="mech">蝙蝠群 / 暴風雨森林（batField/stormField），区域刷怪事件</div>
+<div class="chips">
+<span class="chip">地图 <b>30</b></span>
+<span class="chip">新怪 <b>3</b></span>
+<span class="chip">新NPC <b>6</b></span>
+<span class="chip">reactor <b>0</b></span>
+</div>
+<div class="bar "><i style="width:0%"></i></div>
+<div class="cov">BeiDou 覆盖率：0/30 图 ID 命中，0/30 名称命中 → <b>0%</b></div>
+<div class="judge"><b>判定：</b>需 3 怪 + 6 NPC；传统</div>
+<div class="rec">▸ 建议：第二批</div>
+</div>
+<div class="card">
+<h3>護衛哈沙勒（納希綠洲城）</h3>
+<span class="tag rep">可重复副本</span><span class="tag ok">可完整迁移</span>
+<div class="mech">護衛哈沙勒 納希綠洲城（escortPast），护送</div>
+<div class="chips">
+<span class="chip">地图 <b>5</b></span>
+<span class="chip">新怪 <b>2</b></span>
+<span class="chip">新NPC <b>0</b></span>
+<span class="chip">reactor <b>0</b></span>
+</div>
+<div class="bar "><i style="width:0%"></i></div>
+<div class="cov">BeiDou 覆盖率：0/5 图 ID 命中，0/5 名称命中 → <b>0%</b></div>
+<div class="judge"><b>判定：</b>需 2 新怪；传统</div>
+<div class="rec">▸ 建议：第二批</div>
+</div>
+<div class="card">
+<h3>第一次同行（KerningPQ 重製段）</h3>
+<span class="tag rep">可重复副本</span><span class="tag ok">可完整迁移</span>
+<div class="mech">第一次同行 KerningPQ 重製段，阶段解谜</div>
+<div class="chips">
+<span class="chip">地图 <b>13</b></span>
+<span class="chip">新怪 <b>1</b></span>
+<span class="chip">新NPC <b>2</b></span>
+<span class="chip">reactor <b>0</b></span>
+</div>
+<div class="bar "><i style="width:0%"></i></div>
+<div class="cov">BeiDou 覆盖率：0/13 图 ID 命中，0/13 名称命中 → <b>0%</b></div>
+<div class="judge"><b>判定：</b>仅需 1 新怪 + 2 NPC</div>
+<div class="rec">▸ 建议：首批</div>
+</div>
+<div class="card">
+<h3>怪物競技戰場</h3>
+<span class="tag rep">可重复副本</span><span class="tag ok">可完整迁移</span>
+<div class="mech">怪物競技戰場（monsterArena），擂台刷怪</div>
+<div class="chips">
+<span class="chip">地图 <b>10</b></span>
+<span class="chip">新怪 <b>1</b></span>
+<span class="chip">新NPC <b>0</b></span>
+<span class="chip">reactor <b>0</b></span>
+</div>
+<div class="bar "><i style="width:0%"></i></div>
+<div class="cov">BeiDou 覆盖率：0/10 图 ID 命中，0/10 名称命中 → <b>0%</b></div>
+<div class="judge"><b>判定：</b>仅需 1 新怪；传统</div>
+<div class="rec">▸ 建议：第二批</div>
+</div>
+<div class="card">
+<h3>龍騎士組隊任務（天空地區）</h3>
+<span class="tag rep">可重复副本</span><span class="tag ok">可完整迁移</span>
+<div class="mech">天空地区龍騎士組隊任務（dragonRiderPQ），骑乘 + 阶段战斗</div>
+<div class="chips">
+<span class="chip">地图 <b>50</b></span>
+<span class="chip">新怪 <b>0</b></span>
+<span class="chip">新NPC <b>0</b></span>
+<span class="chip">reactor <b>1</b></span>
+</div>
+<div class="bar "><i style="width:0%"></i></div>
+<div class="cov">BeiDou 覆盖率：0/50 图 ID 命中，0/50 名称命中 → <b>0%</b></div>
+<div class="judge"><b>判定：</b>0 新怪 0 新 NPC——全部复用既有资源，性价比最高</div>
+<div class="rec">▸ 建议：首批，零资源新增</div>
+</div>
+<div class="card">
+<h3>夏摩斯護送（萬年冰河）</h3>
+<span class="tag rep">可重复副本</span><span class="tag ok">可完整迁移</span>
+<div class="mech">萬年冰河夏摩斯護送（shammosPQ），护送 + 打怪</div>
+<div class="chips">
+<span class="chip">地图 <b>51</b></span>
+<span class="chip">新怪 <b>0</b></span>
+<span class="chip">新NPC <b>0</b></span>
+<span class="chip">reactor <b>3</b></span>
+</div>
+<div class="bar "><i style="width:0%"></i></div>
+<div class="cov">BeiDou 覆盖率：0/51 图 ID 命中，0/51 名称命中 → <b>0%</b></div>
+<div class="judge"><b>判定：</b>0 新怪 0 新 NPC，复用既有；51 图纯地图迁移</div>
+<div class="rec">▸ 建议：首批，零资源新增</div>
+</div>
+<div class="card">
+<h3>瑪斯特利亞祭壇 CWKPQ 擴展</h3>
+<span class="tag rep">可重复副本</span><span class="tag ok">可完整迁移</span>
+<div class="mech">瑪斯特利亞祭壇 CWKPQ 扩展段（cwpqBoss），服务端已有 CWKPQ.js</div>
+<div class="chips">
+<span class="chip">地图 <b>18</b></span>
+<span class="chip">新怪 <b>0</b></span>
+<span class="chip">新NPC <b>0</b></span>
+<span class="chip">reactor <b>151</b></span>
+</div>
+<div class="bar "><i style="width:0%"></i></div>
+<div class="cov">BeiDou 覆盖率：0/18 图 ID 命中，0/18 名称命中 → <b>0%</b></div>
+<div class="judge"><b>判定：</b>0 新怪 0 新 NPC，只补 boss 段 18 图</div>
+<div class="rec">▸ 建议：首批，已有脚本</div>
+</div>
+<div class="card">
+<h3>維京飛行船</h3>
+<span class="tag rep">可重复副本</span><span class="tag ok">可完整迁移</span>
+<div class="mech">維京飛行船（flowervioleta），骑乘飞行图</div>
+<div class="chips">
+<span class="chip">地图 <b>5</b></span>
+<span class="chip">新怪 <b>0</b></span>
+<span class="chip">新NPC <b>0</b></span>
+<span class="chip">reactor <b>0</b></span>
+</div>
+<div class="bar "><i style="width:0%"></i></div>
+<div class="cov">BeiDou 覆盖率：0/5 图 ID 命中，0/5 名称命中 → <b>0%</b></div>
+<div class="judge"><b>判定：</b>0 新怪 0 新 NPC，纯地图</div>
+<div class="rec">▸ 建议：首批</div>
+</div>
+<div class="card">
+<h3>玄山派（武陵桃園支線）</h3>
+<span class="tag rep">可重复副本</span><span class="tag ok">可完整迁移</span>
+<div class="mech">玄山派 武陵桃園（Wz2_Mukhyun），门派/武神区域，可重复刷</div>
+<div class="chips">
+<span class="chip">地图 <b>23</b></span>
+<span class="chip">新怪 <b>0</b></span>
+<span class="chip">新NPC <b>8</b></span>
+<span class="chip">reactor <b>0</b></span>
+</div>
+<div class="bar "><i style="width:0%"></i></div>
+<div class="cov">BeiDou 覆盖率：0/23 图 ID 命中，0/23 名称命中 → <b>0%</b></div>
+<div class="judge"><b>判定：</b>需 8 NPC（无新怪）；传统，但 key 含 story 需核实 Boss 段是否纯重复</div>
+<div class="rec">▸ 建议：第三批（机制核实）</div>
+</div>
+<div class="card">
+<h3>狂躁的實驗室</h3>
+<span class="tag rep">可重复副本</span><span class="tag ok">可完整迁移</span>
+<div class="mech">狂躁的實驗室（treglo），实验场刷怪</div>
+<div class="chips">
+<span class="chip">地图 <b>10</b></span>
+<span class="chip">新怪 <b>0</b></span>
+<span class="chip">新NPC <b>1</b></span>
+<span class="chip">reactor <b>0</b></span>
+</div>
+<div class="bar "><i style="width:0%"></i></div>
+<div class="cov">BeiDou 覆盖率：0/10 图 ID 命中，0/10 名称命中 → <b>0%</b></div>
+<div class="judge"><b>判定：</b>仅需 1 NPC；传统</div>
+<div class="rec">▸ 建议：第二批</div>
+</div>
+<div class="card">
+<h3>新東京 / 日本區系列</h3>
+<span class="tag rep">可重复副本</span><span class="tag ok">可完整迁移</span>
+<div class="mech">新東京 / 日本區系列，地区 Boss + 刷怪（含日拳/战国/歌舞伎）</div>
+<div class="chips">
+<span class="chip">地图 <b>88</b></span>
+<span class="chip">新怪 <b>27</b></span>
+<span class="chip">新NPC <b>28</b></span>
+<span class="chip">reactor <b>75</b></span>
+</div>
+<div class="bar "><i style="width:0%"></i></div>
+<div class="cov">BeiDou 覆盖率：0/88 图 ID 命中，0/88 名称命中 → <b>0%</b></div>
+<div class="judge"><b>判定：</b>88 图 + 27 怪 + 28 NPC 体量大；多为传统机制，但 nohime 章节(故事)需排除，仅 Boss/刷怪段可迁</div>
+<div class="rec">▸ 建议：量大，后期批次</div>
+</div>
+<div class="card">
+<h3>培羅德（瑪斯特利亞巨型 Boss）</h3>
+<span class="tag rep">可重复副本</span><span class="tag ok">可完整迁移</span>
+<div class="mech">瑪斯特利亞巨型 Boss 培羅德（GiantBossField），多阶段 Boss 战</div>
+<div class="chips">
+<span class="chip">地图 <b>12</b></span>
+<span class="chip">新怪 <b>17</b></span>
+<span class="chip">新NPC <b>0</b></span>
+<span class="chip">reactor <b>0</b></span>
+</div>
+<div class="bar "><i style="width:0%"></i></div>
+<div class="cov">BeiDou 覆盖率：0/12 图 ID 命中，0/12 名称命中 → <b>0%</b></div>
+<div class="judge"><b>判定：</b>需迁 17 新怪（含 Boss）；传统 Boss 机制，招式/掉落自配</div>
+<div class="rec">▸ 建议：第三批</div>
+</div>
+<div class="card">
+<h3>苦痛迷宮（Black Mage 前哨）</h3>
+<span class="tag rep">可重复副本</span><span class="tag ok">可完整迁移</span>
+<div class="mech">传统迷宫 PQ（Black Mage 前哨），靠 reactor 解谜 + 刷怪推进</div>
+<div class="chips">
+<span class="chip">地图 <b>157</b></span>
+<span class="chip">新怪 <b>8</b></span>
+<span class="chip">新NPC <b>1</b></span>
+<span class="chip">reactor <b>3056</b></span>
+</div>
+<div class="bar "><i style="width:0%"></i></div>
+<div class="cov">BeiDou 覆盖率：0/157 图 ID 命中，0/157 名称命中 → <b>0%</b></div>
+<div class="judge"><b>判定：</b>机制纯数据驱动，083 完全能表达；但 157 图 + 3056 reactor 体量极大，建议分 4 批交付</div>
+<div class="rec">▸ 建议：量大金矿，最高优先</div>
+</div>
+</div>
+<h3>1.2 部分可迁（C 档 · 需新系统/273 UI 局部，玩法核心需自写）</h3>
+<div class="cards">
+<div class="card">
+<h3>單體 Boss 圖（戴米安/麥格納斯/拉圖斯/貝倫/希拉/敦凱爾）</h3>
+<span class="tag rep">可重复副本</span><span class="tag part">部分可迁</span>
+<div class="mech">單體 Boss 图（戴米安/麥格納斯/拉圖斯/貝倫/希拉/敦凱爾）</div>
+<div class="chips">
+<span class="chip">地图 <b>22</b></span>
+<span class="chip">新怪 <b>1</b></span>
+<span class="chip">新NPC <b>7</b></span>
+<span class="chip">reactor <b>27</b></span>
+</div>
+<div class="bar warn"><i style="width:0%"></i></div>
+<div class="cov">BeiDou 覆盖率：0/22 图 ID 命中，0/22 名称命中 → <b>0%</b></div>
+<div class="judge"><b>判定：</b>麥格納斯/戴米安/維倫是 273 阶段 Boss（专属 phase UI）；papulatus/hillah/dunkel 较传统可数据化；整体 273 阶段机制缺失</div>
+<div class="rec">▸ 建议：按传统 Boss 自配</div>
+</div>
+</div>
+<h3>1.3 已单独出报告的案例</h3>
+<div class="cards">
+<div class="card">
+<h3>岩壁巨人</h3>
+<span class="tag rep">可重复副本</span><span class="tag done">已分析</span>
+<div class="mech">岩壁巨人 克洛宿斯 — 已单独出报告（还原度≈85%）</div>
+<div class="chips">
+<span class="chip">地图 <b>13</b></span>
+<span class="chip">新怪 <b>1</b></span>
+<span class="chip">新NPC <b>1</b></span>
+<span class="chip">reactor <b>0</b></span>
+</div>
+<div class="bar no"><i style="width:0%"></i></div>
+<div class="cov">BeiDou 覆盖率：0/13 图 ID 命中，0/13 名称命中 → <b>0%</b></div>
+<div class="judge"><b>判定：</b>见 docs/岩壁巨人与紅月之森-迁移评估.html</div>
+<div class="rec">▸ 建议：详另报</div>
+</div>
+</div>
+<h2>二、可重复小游戏（轻量，非副本，按需）</h2>
+<div class="cards">
+<div class="card">
+<h3>釣魚王（小遊戲）</h3>
+<span class="tag mini">可重复小游戏</span><span class="tag part">部分可迁</span>
+<div class="mech">釣魚王小遊戲（fishingKing），钓鱼 minigame</div>
+<div class="chips">
+<span class="chip">地图 <b>9</b></span>
+<span class="chip">新怪 <b>0</b></span>
+<span class="chip">新NPC <b>3</b></span>
+<span class="chip">reactor <b>0</b></span>
+</div>
+<div class="bar warn"><i style="width:0%"></i></div>
+<div class="cov">BeiDou 覆盖率：0/9 图 ID 命中，0/9 名称命中 → <b>0%</b></div>
+<div class="judge"><b>判定：</b>minigame 需输入交互，083 无对应钓鱼 UI；地图/怪可迁，玩法核心需自写</div>
+<div class="rec">▸ 建议：可选，低优先</div>
+</div>
+<div class="card">
+<h3>湯寶寶（烹飪小遊戲）</h3>
+<span class="tag mini">可重复小游戏</span><span class="tag part">部分可迁</span>
+<div class="mech">湯寶寶烹飪小遊戲（tangyoon），料理 minigame</div>
+<div class="chips">
+<span class="chip">地图 <b>10</b></span>
+<span class="chip">新怪 <b>0</b></span>
+<span class="chip">新NPC <b>1</b></span>
+<span class="chip">reactor <b>0</b></span>
+</div>
+<div class="bar warn"><i style="width:0%"></i></div>
+<div class="cov">BeiDou 覆盖率：0/10 图 ID 命中，0/10 名称命中 → <b>0%</b></div>
+<div class="judge"><b>判定：</b>烹饪 minigame 需交互 UI；地图可迁，玩法需自写</div>
+<div class="rec">▸ 建议：可选，低优先</div>
+</div>
+<div class="card">
+<h3>魔物藏寶城（小遊戲）</h3>
+<span class="tag mini">可重复小游戏</span><span class="tag part">部分可迁</span>
+<div class="mech">魔物藏寶城小遊戲（multigame），藏宝 minigame</div>
+<div class="chips">
+<span class="chip">地图 <b>7</b></span>
+<span class="chip">新怪 <b>0</b></span>
+<span class="chip">新NPC <b>6</b></span>
+<span class="chip">reactor <b>0</b></span>
+</div>
+<div class="bar warn"><i style="width:0%"></i></div>
+<div class="cov">BeiDou 覆盖率：0/7 图 ID 命中，0/7 名称命中 → <b>0%</b></div>
+<div class="judge"><b>判定：</b>minigame 需交互 UI；地图/怪可迁，玩法需自写</div>
+<div class="rec">▸ 建议：可选，低优先</div>
+</div>
+<div class="card">
+<h3>旗幟爭奪戰（PvP 小遊戲）</h3>
+<span class="tag mini">可重复小游戏</span><span class="tag ok">可完整迁移</span>
+<div class="mech">旗幟爭奪戰（flag），夺旗 PvP 小游戏</div>
+<div class="chips">
+<span class="chip">地图 <b>6</b></span>
+<span class="chip">新怪 <b>0</b></span>
+<span class="chip">新NPC <b>1</b></span>
+<span class="chip">reactor <b>0</b></span>
+</div>
+<div class="bar "><i style="width:0%"></i></div>
+<div class="cov">BeiDou 覆盖率：0/6 图 ID 命中，0/6 名称命中 → <b>0%</b></div>
+<div class="judge"><b>判定：</b>仅需 1 NPC；传统 capture-flag</div>
+<div class="rec">▸ 建议：第二批</div>
+</div>
+</div>
+<h2>三、聚焦全量对比表</h2>
+<table><tr><th>名称</th><th>类别</th><th>档</th><th>结论</th><th>地图</th><th>新怪</th><th>新NPC</th><th>reactor</th><th>覆盖率</th><th>机制 / 缺口</th></tr>
+<tr><td>苦痛迷宮（Black Mage 前哨）</td><td>副本</td><td><span class="tag ok">B</span></td><td>可完整迁移</td><td class="mono">157</td><td class="mono">8</td><td class="mono">1</td><td class="mono">3056</td><td class="mono">0%</td><td>机制纯数据驱动，083 完全能表达；但 157 图 + 3056 reactor 体量极大，建议分 4 批交付</td></tr>
+<tr><td>龍騎士組隊任務（天空地區）</td><td>副本</td><td><span class="tag ok">A</span></td><td>可完整迁移</td><td class="mono">50</td><td class="mono">0</td><td class="mono">0</td><td class="mono">1</td><td class="mono">0%</td><td>0 新怪 0 新 NPC——全部复用既有资源，性价比最高</td></tr>
+<tr><td>夏摩斯護送（萬年冰河）</td><td>副本</td><td><span class="tag ok">A</span></td><td>可完整迁移</td><td class="mono">51</td><td class="mono">0</td><td class="mono">0</td><td class="mono">3</td><td class="mono">0%</td><td>0 新怪 0 新 NPC，复用既有；51 图纯地图迁移</td></tr>
+<tr><td>健太護送（危險之海）</td><td>副本</td><td><span class="tag ok">A</span></td><td>可完整迁移</td><td class="mono">40</td><td class="mono">8</td><td class="mono">1</td><td class="mono">14</td><td class="mono">0%</td><td>需迁 8 新怪 + 1 NPC；机制传统</td></tr>
+<tr><td>瑪斯特利亞祭壇 CWKPQ 擴展</td><td>副本</td><td><span class="tag ok">A</span></td><td>可完整迁移</td><td class="mono">18</td><td class="mono">0</td><td class="mono">0</td><td class="mono">151</td><td class="mono">0%</td><td>0 新怪 0 新 NPC，只补 boss 段 18 图</td></tr>
+<tr><td>第一次同行（KerningPQ 重製段）</td><td>副本</td><td><span class="tag ok">A</span></td><td>可完整迁移</td><td class="mono">13</td><td class="mono">1</td><td class="mono">2</td><td class="mono">0</td><td class="mono">0%</td><td>仅需 1 新怪 + 2 NPC</td></tr>
+<tr><td>培羅德（瑪斯特利亞巨型 Boss）</td><td>副本</td><td><span class="tag ok">B</span></td><td>可完整迁移</td><td class="mono">12</td><td class="mono">17</td><td class="mono">0</td><td class="mono">0</td><td class="mono">0%</td><td>需迁 17 新怪（含 Boss）；传统 Boss 机制，招式/掉落自配</td></tr>
+<tr><td>妖精學院</td><td>副本</td><td><span class="tag ok">A</span></td><td>可完整迁移</td><td class="mono">20</td><td class="mono">3</td><td class="mono">5</td><td class="mono">0</td><td class="mono">0%</td><td>需 3 怪 + 5 NPC；机制传统</td></tr>
+<tr><td>嚼嚼艾爾蘭 / 啾啾島</td><td>副本</td><td><span class="tag ok">A</span></td><td>可完整迁移</td><td class="mono">11</td><td class="mono">7</td><td class="mono">0</td><td class="mono">0</td><td class="mono">0%</td><td>需 7 新怪；机制传统</td></tr>
+<tr><td>怪物競技戰場</td><td>副本</td><td><span class="tag ok">A</span></td><td>可完整迁移</td><td class="mono">10</td><td class="mono">1</td><td class="mono">0</td><td class="mono">0</td><td class="mono">0%</td><td>仅需 1 新怪；传统</td></tr>
+<tr><td>露塔必思庭園</td><td>副本</td><td><span class="tag ok">A</span></td><td>可完整迁移</td><td class="mono">8</td><td class="mono">4</td><td class="mono">4</td><td class="mono">22</td><td class="mono">0%</td><td>需 4 怪 + 4 NPC + 22 reactor；传统</td></tr>
+<tr><td>維京飛行船</td><td>副本</td><td><span class="tag ok">A</span></td><td>可完整迁移</td><td class="mono">5</td><td class="mono">0</td><td class="mono">0</td><td class="mono">0</td><td class="mono">0%</td><td>0 新怪 0 新 NPC，纯地图</td></tr>
+<tr><td>護衛哈沙勒（納希綠洲城）</td><td>副本</td><td><span class="tag ok">A</span></td><td>可完整迁移</td><td class="mono">5</td><td class="mono">2</td><td class="mono">0</td><td class="mono">0</td><td class="mono">0%</td><td>需 2 新怪；传统</td></tr>
+<tr><td>新東京 / 日本區系列</td><td>副本</td><td><span class="tag ok">B</span></td><td>可完整迁移</td><td class="mono">88</td><td class="mono">27</td><td class="mono">28</td><td class="mono">75</td><td class="mono">0%</td><td>88 图 + 27 怪 + 28 NPC 体量大；多为传统机制，但 nohime 章节(故事)需排除，仅 Boss/刷怪段可迁</td></tr>
+<tr><td>皇家神獸學院</td><td>副本</td><td><span class="tag ok">A</span></td><td>可完整迁移</td><td class="mono">19</td><td class="mono">9</td><td class="mono">0</td><td class="mono">0</td><td class="mono">0%</td><td>需 9 新怪；机制传统</td></tr>
+<tr><td>赫力席母奪回戰</td><td>副本</td><td><span class="tag ok">A</span></td><td>可完整迁移</td><td class="mono">17</td><td class="mono">10</td><td class="mono">2</td><td class="mono">0</td><td class="mono">0%</td><td>需 10 怪 + 2 NPC；传统攻城机制</td></tr>
+<tr><td>蝙蝠群 / 暴風雨森林</td><td>副本</td><td><span class="tag ok">A</span></td><td>可完整迁移</td><td class="mono">30</td><td class="mono">3</td><td class="mono">6</td><td class="mono">0</td><td class="mono">0%</td><td>需 3 怪 + 6 NPC；传统</td></tr>
+<tr><td>耶雷弗奪還戰 / 全力突破</td><td>副本</td><td><span class="tag ok">A</span></td><td>可完整迁移</td><td class="mono">36</td><td class="mono">6</td><td class="mono">0</td><td class="mono">0</td><td class="mono">0%</td><td>需 6 新怪；传统战争机制</td></tr>
+<tr><td>米尼姆勒護送</td><td>副本</td><td><span class="tag ok">A</span></td><td>可完整迁移</td><td class="mono">8</td><td class="mono">6</td><td class="mono">0</td><td class="mono">4</td><td class="mono">0%</td><td>需 6 新怪；传统</td></tr>
+<tr><td>玄山派（武陵桃園支線）</td><td>副本</td><td><span class="tag ok">A</span></td><td>可完整迁移</td><td class="mono">23</td><td class="mono">0</td><td class="mono">8</td><td class="mono">0</td><td class="mono">0%</td><td>需 8 NPC（无新怪）；传统，但 key 含 story 需核实 Boss 段是否纯重复</td></tr>
+<tr><td>狂躁的實驗室</td><td>副本</td><td><span class="tag ok">A</span></td><td>可完整迁移</td><td class="mono">10</td><td class="mono">0</td><td class="mono">1</td><td class="mono">0</td><td class="mono">0%</td><td>仅需 1 NPC；传统</td></tr>
+<tr><td>單體 Boss 圖（戴米安/麥格納斯/拉圖斯/貝倫/希拉/敦凱爾）</td><td>副本</td><td><span class="tag part">C</span></td><td>部分可迁</td><td class="mono">22</td><td class="mono">1</td><td class="mono">7</td><td class="mono">27</td><td class="mono">0%</td><td>麥格納斯/戴米安/維倫是 273 阶段 Boss（专属 phase UI）；papulatus/hillah/dunkel 较传统可数据化；整体 273 阶段机制缺失</td></tr>
+<tr><td>岩壁巨人</td><td>副本</td><td><span class="tag done">已报</span></td><td>已分析</td><td class="mono">13</td><td class="mono">1</td><td class="mono">1</td><td class="mono">0</td><td class="mono">0%</td><td>见 docs/岩壁巨人与紅月之森-迁移评估.html</td></tr>
+<tr><td>釣魚王（小遊戲）</td><td>小游戏</td><td><span class="tag part">C</span></td><td>部分可迁</td><td class="mono">9</td><td class="mono">0</td><td class="mono">3</td><td class="mono">0</td><td class="mono">0%</td><td>minigame 需输入交互，083 无对应钓鱼 UI；地图/怪可迁，玩法核心需自写</td></tr>
+<tr><td>湯寶寶（烹飪小遊戲）</td><td>小游戏</td><td><span class="tag part">C</span></td><td>部分可迁</td><td class="mono">10</td><td class="mono">0</td><td class="mono">1</td><td class="mono">0</td><td class="mono">0%</td><td>烹饪 minigame 需交互 UI；地图可迁，玩法需自写</td></tr>
+<tr><td>魔物藏寶城（小遊戲）</td><td>小游戏</td><td><span class="tag part">C</span></td><td>部分可迁</td><td class="mono">7</td><td class="mono">0</td><td class="mono">6</td><td class="mono">0</td><td class="mono">0%</td><td>minigame 需交互 UI；地图/怪可迁，玩法需自写</td></tr>
+<tr><td>旗幟爭奪戰（PvP 小遊戲）</td><td>小游戏</td><td><span class="tag ok">A</span></td><td>可完整迁移</td><td class="mono">6</td><td class="mono">0</td><td class="mono">1</td><td class="mono">0</td><td class="mono">0%</td><td>仅需 1 NPC；传统 capture-flag</td></tr>
+</table>
+<div class="key"><h3>推荐迁移顺序（仅可重复副本）</h3><ul><li><b>首批（零资源新增，性价比最高）：</b>龍騎士組隊、夏摩斯護送、CWKPQ 扩展段、第一次同行、維京飛行船。</li><li><b>第二批（少量新怪/NPC）：</b>健太護送、妖精學院、嚼嚼/啾啾島、怪物競技、露塔必思庭園、護衛哈沙勒、皇家神獸學院、蝙蝠群/暴風雨、米尼姆勒、旗幟爭奪、狂躁實驗室、岩壁巨人(已报)。</li><li><b>第三批（体量大/多新怪）：</b>培羅德(17怪)、赫力席母奪回戰(10怪)、耶雷弗奪還戰、玄山派(机制核实)、苦痛迷宮(157图·分4批)、新東京(88图·后期,仅Boss/刷怪段)。</li><li><b>按传统 Boss 自配：</b>單體 Boss 图（戴米安/麥格納斯/拉圖斯/貝倫/希拉/敦凱爾，273 阶段 UI 缺失，数据化部分可迁）。</li><li><b>可选小游戏：</b>釣魚王、湯寶寶、魔物藏寶城（需自写交互 UI）。</li></ul></div>
+<h2>四、已排除项（一次性 / 系统门槛，可玩性不高）</h2>
+<table><tr><th>名称</th><th>类别</th><th>排除原因</th></tr>
+<tr><td>露安的家</td><td>一次性</td><td>一次性剧情：10108 段（埃羅汀/露安的家）属 Ereve 骑士团叙事，不可反复刷</td></tr>
+<tr><td>穿越次元的戰場</td><td>一次性</td><td>一次性 CG：94002 段含「希拉 VS 梅格耐斯」隐藏阶段，是黑色天堂电影化收尾</td></tr>
+<tr><td>黑色天堂（Blockbuster 劇情）</td><td>一次性</td><td>一次性 CG：Blockbuster 章节电影化，依赖 273 演出 UI + 章节脚本</td></tr>
+<tr><td>楓葉英雄系列</td><td>一次性</td><td>一次性 CG：楓葉英雄 Act 电影化副本，依赖 273 演出 UI</td></tr>
+<tr><td>次元圖書館</td><td>一次性</td><td>一次性叙事：次元圖書館章节副本，需专属叙事 UI + 章节系统</td></tr>
+<tr><td>耶雷弗庭院（四轉任務）</td><td>一次性</td><td>一次性：耶雷弗庭院四轉任務，转职流程只做一次</td></tr>
+<tr><td>回歸勇士修練場</td><td>一次性</td><td>一次性：回歸勇士修練場，回归玩家引导教学，不可反复刷</td></tr>
+<tr><td>進化系統</td><td>系统门槛</td><td>系统门槛：進化系統需整套进化状态机 + 专属 UI，083/服务端均无</td></tr>
+<tr><td>神秘河後段（賽爾尼溫/魔菈斯/艾斯佩拉/奧迪溫/卡爾西溫）</td><td>系统门槛</td><td>系统门槛：神秘河后段需 arcaneforce 数值体系，服务端零命中</td></tr>
+<tr><td>阿爾卡納 / 尖耳狐狸村支線</td><td>系统门槛</td><td>系统门槛：阿爾卡納属神秘河后段，需 arcaneforce 数值体系</td></tr>
+<tr><td>神秘戰地（刷怪圖）</td><td>系统门槛</td><td>系统门槛：神秘戰地需 273 mystic field 系统，服务端无</td></tr>
+<tr><td>卡羅泰（亞空間）</td><td>系统门槛</td><td>系统门槛：卡羅泰 993165 段（Limen 亞空間，fieldType 292/296）属神秘河后段，需 arcaneforce</td></tr>
+</table>
+<div class="note">剔除的 12 项里，5 项在上一份「逐案分析」里曾被误判为可迁（露安的家、穿越次元的戰場、卡羅泰、四轉任務、回歸修練場）——本次按「只保留可重复」口径纠正：前 2 项属黑色天堂/Ereve 一次性 CG 剧情，卡羅泰属神秘河后段需 arcaneforce，四轉与回歸是一次性流程。<br>数据来源：<code>/tmp/missing_eval.json</code> + <code>clien/Data/Map</code> + 中文树 <code>String/Map.img</code>。生成脚本：<code>tool/scripts/migration/render_repeatable_dungeons.py</code>（只读，未改动任何文件）。</div>
+</div></body></html>
