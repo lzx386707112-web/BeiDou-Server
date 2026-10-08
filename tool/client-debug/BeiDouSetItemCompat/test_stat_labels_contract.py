@@ -10,6 +10,8 @@ import struct
 import sys
 
 from capstone import Cs, CS_ARCH_X86, CS_MODE_32
+from set_panel_patch import (LAYOUT_WINDOWS, CAVE_RAW as LAYOUT_RAW, build_helpers,
+                             STYLE_STRINGS_RAW, STYLE_TEXT)
 
 HERE = "/Users/lizixian/Documents/mxd/BeiDou-Server/tool/client-debug/BeiDouSetItemCompat"
 PATH = sys.argv[1] if len(sys.argv) > 1 else "/Users/lizixian/Documents/mxd/BeiDou-Server/clien/BeiDouSetItemCompat.dll"
@@ -32,8 +34,10 @@ NEW_CHECKS = [("PDD", "物理防御力"), ("MDD", "魔法防御力"),
               ("PADPct", "攻击力"), ("MADPct", "魔法攻击力"),
               ("PDDPct", "物理防御力"), ("MDDPct", "魔法防御力"),
               ("ACCPct", "命中率"), ("EVAPct", "回避率"),
-              ("HPPct", "最大HP"), ("MPPct", "最大MP")]
-BLOCK_LEN, KEY_IMM, LABEL_IMM = 26, 4, 16
+              ("HPPct", "最大HP"), ("MPPct", "最大MP"),
+              ("SPD", "移动速度"), ("JMP", "跳跃力"), ("NormalDamage", "普通怪物伤害"),
+              ("Damage", "伤害")]
+BLOCK_LEN, KEY_IMM, LABEL_IMM = 28, 4, 18
 CODE_LEN = len(NEW_CHECKS) * BLOCK_LEN + 10
 COMMON_OFF = CODE_LEN - 5
 # labels the chain resolved to before this patch (they must not move)
@@ -110,7 +114,7 @@ allowed = [(ftext(WINDOW_RVA), ftext(WINDOW_RVA) + 8),      # the rewritten 8 by
            (reloc_h + 8, reloc_h + 12),                      # .reloc VirtualSize
            (reloc_dir + 4, reloc_dir + 8),                   # relocation dir size
            (RELOC_RAW, RELOC_RAW + RELOC_RAWSIZE),           # repacked by the tool
-           (checksum_off, checksum_off + 4)]
+           (checksum_off, checksum_off + 4)] + [(ftext(a), ftext(b)) for a, b in LAYOUT_WINDOWS]
 for i in range(len(baseline)):
     if baseline[i] != data[i]:
         assert any(a <= i < b for a, b in allowed), ("unexpected byte", hex(i))
@@ -121,7 +125,15 @@ assert t_va == TITLES_RVA and t_raw == TITLES_RAW
 assert t_vsize == TITLES_VSIZE_NEW and t_rawsize >= 0x600
 assert t_va + t_vsize <= struct.unpack_from("<I", data, pe + 24 + 56)[0]
 assert cave_end <= len(data), hex(cave_end)
-assert data[cave_end:] == b'\0' * (len(data) - cave_end)
+layout_code, layout_symbols = build_helpers()
+assert data[cave_end:LAYOUT_RAW] == b'\0' * (LAYOUT_RAW - cave_end)
+assert data[LAYOUT_RAW:LAYOUT_RAW + len(layout_code)] == layout_code
+assert data[LAYOUT_RAW + len(layout_code):STYLE_STRINGS_RAW] == b'\0' * (STYLE_STRINGS_RAW - LAYOUT_RAW - len(layout_code))
+style_tail = bytearray(len(data) - STYLE_STRINGS_RAW)
+for offset, text in STYLE_TEXT:
+    encoded = text.encode('utf-16-le') + b'\0\0'
+    style_tail[offset:offset + len(encoded)] = encoded
+assert data[STYLE_STRINGS_RAW:] == style_tail
 assert t_vsize >= (cave_end - TITLES_RAW), "cave outside the mapped VirtualSize"
 
 # ---- window: je +5 / jmp cave / nop, no branch may enter it -----------
@@ -196,21 +208,23 @@ cave = list(md.disasm(data[CAVE_RAW:CAVE_RAW + CODE_LEN], IMG + CAVE_RVA))
 assert [x.mnemonic for x in cave][-1] == "jmp"
 assert int(cave[-1].op_str, 16) == IMG + 0x367B, cave[-1].op_str
 for ins in cave:
-    assert ins.mnemonic not in ("push", "pop", "enter", "leave", "sub", "add"), ins.mnemonic
+    assert ins.mnemonic not in ("pop", "enter", "leave", "sub", "add"), ins.mnemonic
+assert sum(ins.mnemonic == "push" for ins in cave) == len(NEW_CHECKS) * 2
 
 new_chain = {}
 for i, (key, label) in enumerate(NEW_CHECKS):
     base = IMG + CAVE_RVA + i * BLOCK_LEN
     blk = list(md.disasm(data[CAVE_RAW + i * BLOCK_LEN:CAVE_RAW + (i + 1) * BLOCK_LEN], base))
-    assert [x.mnemonic for x in blk] == ["mov", "mov", "call", "test", "mov", "je"], \
+    assert [x.mnemonic for x in blk] == ["mov", "mov", "call", "push", "push", "test", "mov", "je"], \
         [x.mnemonic for x in blk]
     assert blk[1].op_str == "dword ptr [esp], ebx"          # lstrcmpA arg1 = packet key
     assert blk[2].op_str == "esi"                            # lstrcmpA
     assert ansi(blk[0].operands[1].imm) == key, ansi(blk[0].operands[1].imm)
-    assert wide(blk[4].operands[1].imm) == label, wide(blk[4].operands[1].imm)
+    assert [blk[3].op_str, blk[4].op_str] == ["edx", "edx"]
+    assert wide(blk[6].operands[1].imm) == label, wide(blk[6].operands[1].imm)
     # the je targets the shared fallback inside the cave
-    assert int(blk[5].op_str, 16) == IMG + CAVE_RVA + COMMON_OFF, blk[5].op_str
-    new_chain[key] = wide(blk[4].operands[1].imm)
+    assert int(blk[7].op_str, 16) == IMG + CAVE_RVA + COMMON_OFF, blk[7].op_str
+    new_chain[key] = wide(blk[6].operands[1].imm)
 
 fallback_mov = list(md.disasm(data[CAVE_RAW + COMMON_OFF - 5:CAVE_RAW + COMMON_OFF], IMG + CAVE_RVA + COMMON_OFF - 5))
 assert fallback_mov[0].mnemonic == "mov"
@@ -243,7 +257,7 @@ for key, label in NEW_CHECKS:
     assert label_for(key) == label, (key, label_for(key))
     # PDD/MDD/ACC/EVA are flat values: no "%" suffix must be appended
     assert render(key, 30) == label + " +30" + suffix_for(key), render(key, 30)
-    assert suffix_for(key) == ("%" if key.endswith("Pct") else "")
+    assert suffix_for(key) == ("%" if key.endswith(("Pct", "Damage")) else "")
 # unknown keys still fall through to 属性
 for key in ("", "PDDX", "pdd", "PD", "HPpct"):
     assert label_for(key) == "属性", (key, label_for(key))
@@ -259,8 +273,11 @@ expect.append(CAVE_RVA + COMMON_OFF - 4)          # fallback immediate
 for rva in expect:
     assert rva in entries, ("cave immediate not relocated", hex(rva))
 assert WINDOW_RVA + 1 not in entries, "the dead 0x3674 entry survived"
-assert len(entries) == 363, len(entries)
-assert len(entries) == len(reloc_entries(baseline, sections(baseline)[0])) - 1 + len(expect)
+removed_layout = {0x307c, 0x30dc, 0x30e6, 0x322d,
+                  0x2b92, 0x2d29, 0x312e, 0x31c1, 0x349f, 0x36c4}
+assert not removed_layout.intersection(entries)
+assert len(entries) == 323 - 1 + len(NEW_CHECKS) * 2 + 1 - len(removed_layout), len(entries)
+assert len(entries) == len(reloc_entries(baseline, sections(baseline)[0])) - 1 + len(expect) - len(removed_layout)
 rd = pe + 24 + 96 + 5 * 8
 assert struct.unpack_from("<II", data, rd) == (RELOC_RVA, sec[".reloc"][0]), \
     struct.unpack_from("<II", data, rd)

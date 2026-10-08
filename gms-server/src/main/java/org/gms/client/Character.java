@@ -4576,7 +4576,7 @@ public class Character extends AbstractCharacterObject {
             prtLock.unlock();
         }
 
-        updateLocalStats();
+        updateLocalStats(isSilent);
         if (!isSilent) syncSetItemNativeStats();
     }
 
@@ -7602,9 +7602,9 @@ public class Character extends AbstractCharacterObject {
         cancelAllBuffs(false);  // thanks Oblivium91 for finding out players still could revive in area and take damage before returning to town
 
         if (FULL_HP_RESPAWN_MAPS.contains(returnMap)) {
-            updateHp(getClientMaxHp());
+            updateHp(getCurrentMaxHp());
         } else if (usedSafetyCharm) {  // thanks kvmba for noticing safety charm not providing 30% HP/MP
-            addMPHP((int) Math.ceil(this.getClientMaxHp() * 0.3), (int) Math.ceil(this.getClientMaxMp() * 0.3));
+            addMPHP((int) Math.ceil(this.getCurrentMaxHp() * 0.3), (int) Math.ceil(this.getCurrentMaxMp() * 0.3));
         } else {
             updateHp(50);
         }
@@ -7700,8 +7700,8 @@ public class Character extends AbstractCharacterObject {
             localwatk = setItemBonus.apply("PAD", localwatk);
             localmagic = setItemBonus.apply("MAD", localmagic);
 
-            localMaxHp += linkBonus.hp();
-            localMaxMp += linkBonus.mp();
+            localMaxHp = (int) Math.min(Integer.MAX_VALUE, (long) localMaxHp + linkBonus.hp());
+            localMaxMp = (int) Math.min(Integer.MAX_VALUE, (long) localMaxMp + linkBonus.mp());
             int linkStatPercent = linkBonus.allStatPercent();
             int linkedInt = addPercent(localint_, linkStatPercent);
             localstr = addPercent(localstr, linkStatPercent);
@@ -7709,22 +7709,23 @@ public class Character extends AbstractCharacterObject {
             localluk = addPercent(localluk, linkStatPercent);
             localmagic += linkedInt - localint_;
             localint_ = linkedInt;
-            clientMaxHp = MAX_HP_MP;
-            clientMaxMp = MAX_HP_MP;
+            // The native client adds equipment pools and Hyper Body to this base itself.
+            clientMaxHp = (int) Math.max(50L, Math.min(MAX_HP_MP, (long) localMaxHp - equipmaxhp));
+            clientMaxMp = (int) Math.max(5L, Math.min(MAX_HP_MP, (long) localMaxMp - equipmaxmp));
 
             localmagic = Math.min(localmagic, 2000);
 
             Integer hbhp = getBuffedValue(BuffStat.HYPERBODYHP);
             if (hbhp != null) {
-                localMaxHp += (int) ((hbhp.doubleValue() / 100) * localMaxHp);
+                localMaxHp = addPercent(localMaxHp, hbhp);
             }
             Integer hbmp = getBuffedValue(BuffStat.HYPERBODYMP);
             if (hbmp != null) {
-                localMaxMp += (int) ((hbmp.doubleValue() / 100) * localMaxMp);
+                localMaxMp = addPercent(localMaxMp, hbmp);
             }
 
-            localMaxHp = MAX_HP_MP;
-            localMaxMp = MAX_HP_MP;
+            localMaxHp = Math.max(50, Math.min(MAX_HP_MP, localMaxHp));
+            localMaxMp = Math.max(5, Math.min(MAX_HP_MP, localMaxMp));
 
             StatEffect combo = getBuffEffect(BuffStat.ARAN_COMBO);
             if (combo != null) {
@@ -7836,8 +7837,13 @@ public class Character extends AbstractCharacterObject {
             List<Pair<Stat, Integer>> hpmpupdate = new ArrayList<>(2);
             int oldlocalmaxhp = localMaxHp;
             int oldlocalmaxmp = localMaxMp;
+            int oldclientmaxhp = clientMaxHp;
+            int oldclientmaxmp = clientMaxMp;
 
             reapplyLocalStats();
+
+            if (clientMaxHp != oldclientmaxhp) hpmpupdate.add(new Pair<>(Stat.MAXHP, clientMaxHp));
+            if (clientMaxMp != oldclientmaxmp) hpmpupdate.add(new Pair<>(Stat.MAXMP, clientMaxMp));
 
             if (GameConfig.getServerBoolean("use_fixed_ratio_hpmp_update")) {
                 if (localMaxHp != oldlocalmaxhp) {
@@ -7874,15 +7880,20 @@ public class Character extends AbstractCharacterObject {
     }
 
     private void updateLocalStats() {
+        updateLocalStats(false);
+    }
+
+    private void updateLocalStats(boolean silent) {
         prtLock.lock();
         effLock.lock();
         statWlock.lock();
         try {
             int oldmaxhp = localMaxHp;
             List<Pair<Stat, Integer>> hpmpupdate = recalcLocalStats();
-            enforceMaxHpMp();
+            // Login restores run before SET_FIELD creates the client's character data.
+            enforceMaxHpMp(silent);
 
-            if (!hpmpupdate.isEmpty()) {
+            if (!silent && !hpmpupdate.isEmpty()) {
                 sendPacket(PacketCreator.updatePlayerStats(hpmpupdate, true, this));
             }
 

@@ -27,11 +27,11 @@ public final class SetItemManager {
             "BossDamage", "ExpRate", "AllStatPct", "HPpct", "MPpct",
             "DropRate", "MesoRate", "StatusRes", "BuffDuration",
             "STRPct", "DEXPct", "INTPct", "LUKPct", "PADPct", "MADPct",
-            "PDDPct", "MDDPct", "ACCPct", "EVAPct", "HPPct", "MPPct"
+            "PDDPct", "MDDPct", "ACCPct", "EVAPct", "HPPct", "MPPct", "NormalDamage", "Damage"
     };
     public static final Set<String> SUPPORTED_STAT_KEYS = Set.of(
             "STR", "DEX", "INT", "LUK", "PAD", "MAD", "PDD", "MDD", "ACC", "EVA",
-            "HP", "MP", "FinalDamage", "BossDamage", "ExpRate", "DropRate", "MesoRate",
+            "SPD", "JMP", "HP", "MP", "FinalDamage", "BossDamage", "NormalDamage", "Damage", "ExpRate", "DropRate", "MesoRate",
             "STRPct", "DEXPct", "INTPct", "LUKPct", "PADPct", "MADPct",
             "PDDPct", "MDDPct", "ACCPct", "EVAPct", "HPPct", "MPPct");
 
@@ -82,7 +82,7 @@ public final class SetItemManager {
     public record Result(Bonus bonus, List<Panel> panels) {
     }
 
-    private static final List<Definition> DEFINITIONS = buildDefinitions();
+    private static final List<Definition> DEFINITIONS = SetItemCatalog.apply(buildDefinitions());
 
     private SetItemManager() {
     }
@@ -216,11 +216,14 @@ public final class SetItemManager {
         if (chr == null || damage <= 0 || damage == Integer.MAX_VALUE) {
             return damage;
         }
-        int percent = chr.getSetItemBonus("FinalDamage");
+        long percent = chr.getSetItemBonus("Damage");
         if (monster != null && monster.isBoss()) {
             percent += chr.getSetItemBonus("BossDamage");
+        } else if (monster != null) {
+            percent += chr.getSetItemBonus("NormalDamage");
         }
-        long result = Math.round(damage * (100.0 + percent) / 100.0);
+        long result = Math.round(damage * (100.0 + percent) / 100.0
+                * (100.0 + chr.getSetItemBonus("FinalDamage")) / 100.0);
         return (int) Math.min(Integer.MAX_VALUE, Math.max(1L, result));
     }
 

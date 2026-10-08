@@ -1,7 +1,7 @@
 <template>
   <div class="section-heading">
     <span>{{ $t('setItem.create.slots') }}</span>
-    <a-button size="small" :disabled="modelValue.length >= 8" @click="addSlot">
+    <a-button size="small" :disabled="modelValue.length >= 20" @click="addSlot">
       <template #icon><icon-plus /></template>
       {{ $t('setItem.action.addSlot') }}
     </a-button>
@@ -42,7 +42,7 @@
       <a-button
         type="outline"
         size="small"
-        :disabled="slot.length >= 10"
+        :disabled="slot.length >= 50"
         @click="openSearch(index)"
       >
         <template #icon><icon-search /></template
@@ -223,7 +223,7 @@
     if (
       selectedIds.value.has(item.id) ||
       !props.modelValue[targetSlot.value] ||
-      props.modelValue[targetSlot.value].length >= 10
+      props.modelValue[targetSlot.value].length >= 50
     )
       return;
     emit(

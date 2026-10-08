@@ -116,21 +116,90 @@ class SetItemConfigServiceTest {
     }
 
     @Test
+    void seriesUpdateChangesAllJobsTogetherAndPreservesSlotsAndDisabledState() {
+        GameConfigMapper mapper = mock(GameConfigMapper.class);
+        SetItemConfigService service = new SetItemConfigService(mapper, mock(EquipmentCatalogService.class));
+        var definition = SetItemManager.builtInDefinitions().getFirst();
+        var members = SetItemManager.builtInDefinitions().stream()
+                .filter(member -> member.name().equals(definition.name())).toList();
+        assertEquals(5, members.size());
+        int disabled = members.getLast().id();
+        Map<Integer, List<List<Integer>>> slots = Map.of(definition.id(), definition.slots());
+        SetItemBonusOverrides.replaceAll(Map.of(), List.of(), Set.of(disabled), slots);
+        var bonuses = GameConfigDO.builder().configCode(SetItemConfigService.CONFIG_CODE).configValue("{}").build();
+        var catalog = GameConfigDO.builder().configCode(SetItemConfigService.CATALOG_CONFIG_CODE).configValue("{}").build();
+        when(mapper.selectOneByQuery(any())).thenReturn(bonuses, catalog);
+        Server server = mock(Server.class);
+        when(server.getWorlds()).thenReturn(List.of());
+        try (var serverStatic = mockStatic(Server.class);
+             var configStatic = mockStatic(GameConfig.class)) {
+            serverStatic.when(Server::getInstance).thenReturn(server);
+            SetItemUpdateDTO request = request(definition);
+            request.getTiers().values().forEach(stats -> stats.put("PAD", 42));
+            assertEquals(0, service.updateSeries(definition.id(), request));
+            for (var member : members) {
+                assertEquals(42, SetItemBonusOverrides.snapshot().get(
+                        SetItemBonusOverrides.key(member.id(), member.tiers().getFirst().requiredCount())).get("PAD"));
+            }
+            assertEquals(slots, SetItemBonusOverrides.slotOverrides());
+            assertEquals(Set.of(disabled), SetItemBonusOverrides.disabledBuiltInIds());
+            assertEquals(members.size() * definition.tiers().size(), SetItemBonusOverrides.snapshot().size());
+            verify(mapper, times(2)).update(any(GameConfigDO.class));
+        }
+    }
+
+    @Test
+    void invalidSeriesUpdatesDoNotPartiallyWriteOrChangeRuntime() {
+        GameConfigMapper mapper = mock(GameConfigMapper.class);
+        SetItemConfigService service = new SetItemConfigService(mapper, mock(EquipmentCatalogService.class));
+        var definition = SetItemManager.builtInDefinitions().getFirst();
+        SetItemUpdateDTO request = request(definition);
+        request.setSlots(definition.slots());
+        assertThrows(BizException.class, () -> service.updateSeries(definition.id(), request));
+        request.setSlots(null);
+        request.getTiers().get(definition.tiers().getFirst().requiredCount()).put("Unsupported", 1);
+        assertThrows(BizException.class, () -> service.updateSeries(definition.id(), request));
+        assertTrue(SetItemBonusOverrides.snapshot().isEmpty());
+        verifyNoInteractions(mapper);
+    }
+
+    @Test
     void nativeCatalogCapacityIsCheckedBeforeCreatingOrEnabling() {
         GameConfigMapper mapper = mock(GameConfigMapper.class);
         SetItemConfigService service = new SetItemConfigService(mapper, mock(EquipmentCatalogService.class));
         int disabledId = SetItemManager.builtInDefinitions().getFirst().id();
+        long warriorSets = SetItemManager.builtInDefinitions().stream()
+                .filter(definition -> definition.jobIndex() < 0 || definition.jobIndex() == 0).count();
         List<SetItemManager.Definition> custom = java.util.stream.IntStream
-                .range(0, 97 - SetItemManager.builtInDefinitions().size())
+                .range(0, 97 - (int) warriorSets)
                 .mapToObj(index -> new SetItemManager.Definition(20000 + index, -1, "test",
                         List.of(List.of(1002000)), List.of(new SetItemManager.Tier(1, Map.of("PDD", 1))), "test"))
                 .toList();
         SetItemBonusOverrides.replaceAll(Map.of(), custom, Set.of(disabledId), Map.of());
-        assertEquals(96, SetItemManager.definitions().size());
+        assertEquals(96, SetItemManager.definitions().stream()
+                .filter(definition -> definition.jobIndex() < 0 || definition.jobIndex() == 0).count());
         assertTrue(assertThrows(BizException.class, () -> service.create(null)).getMessage().contains("96"));
         assertTrue(assertThrows(BizException.class,
                 () -> service.setBuiltInEnabled(disabledId, true)).getMessage().contains("96"));
         verifyNoInteractions(mapper);
+    }
+
+    @Test
+    void reloadPreservesRetiredTiersButRejectsInvalidLiveValues() {
+        GameConfigMapper mapper = mock(GameConfigMapper.class);
+        SetItemConfigService service = new SetItemConfigService(mapper, mock(EquipmentCatalogService.class));
+        var definition = SetItemManager.builtInDefinitions().getFirst();
+        String retired = SetItemBonusOverrides.key(definition.id(), 2);
+        String current = SetItemBonusOverrides.key(definition.id(), definition.tiers().getFirst().requiredCount());
+        var bonuses = GameConfigDO.builder().configValue(JSON.toJSONString(Map.of(
+                retired, Map.of("PAD", 42), current, Map.of("PAD", -9, "Unsupported", 1)))).build();
+        var catalog = GameConfigDO.builder().configValue("{}").build();
+        when(mapper.selectOneByQuery(any())).thenReturn(catalog, bonuses);
+        service.reload();
+        assertEquals(Map.of("PAD", 42), SetItemBonusOverrides.snapshot().get(retired));
+        assertFalse(SetItemBonusOverrides.snapshot().containsKey(current));
+        assertEquals(definition.tiers(), SetItemManager.catalogDefinitions().getFirst().tiers());
+        verify(mapper, never()).update(any(GameConfigDO.class));
     }
 
     @Test

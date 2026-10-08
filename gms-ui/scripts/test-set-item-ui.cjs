@@ -15,6 +15,14 @@ const slots = [[equipment(1002001)], [equipment(1040000)]];
 const definition = { id: 20000, jobIndex: -1, name: '测试套装', completeCount: 2, builtIn: false,
   enabled: true, slots, defaultSlots: slots, slotsCustomized: false,
   tiers: [{ requiredCount: 1, stats: { HP: 100, PDD: 30 }, defaultStats: { HP: 100, PDD: 30 }, customized: false }] };
+const builtIn = { ...definition, id: 10000, builtIn: true, jobIndex: 0 };
+const secondJob = { ...builtIn, id: 10001, jobIndex: 1,
+  tiers: [{ ...definition.tiers[0], stats: { HP: 100, PDD: 90 }, customized: true }] };
+const runtimeDefinitions = require('../../gms-server/src/main/resources/set-item/catalog.json')
+  .map((series) => ({ ...series, builtIn: true, enabled: true, completeCount: series.slots.length,
+    slotsCustomized: false, slots: series.slots.map((slot) => slot.map(equipment)),
+    defaultSlots: series.slots.map((slot) => slot.map(equipment)),
+    tiers: series.tiers.map((tier) => ({ ...tier, defaultStats: tier.stats, customized: false })) }));
 
 (async () => {
   const browser = await chromium.launch({ headless: true, channel: process.env.SET_ITEM_BROWSER || 'chrome' });
@@ -22,7 +30,9 @@ const definition = { id: 20000, jobIndex: -1, name: '测试套装', completeCoun
     for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844 }]) {
       const page = await browser.newPage({ viewport });
       let saved;
+      let savedSeries;
       let created;
+      let showRuntimeCatalog = false;
       const errors = [];
       page.on('pageerror', (error) => errors.push(error.message));
       await page.addInitScript(() => localStorage.setItem('token', 'set-item-test-only'));
@@ -40,7 +50,11 @@ const definition = { id: 20000, jobIndex: -1, name: '测试套装', completeCoun
         let data = {};
         if (url.pathname === '/account/v1/info') data = { name: '测试管理员', nick: '测试管理员', webadmin: true };
         else if (url.pathname.endsWith('/equipment/catalog')) data = { records: [item], pageNo: Number(url.searchParams.get('pageNo') || 1), pageSize: 30, total: 60, categories: [], weaponTypes: [] };
-        else if (url.pathname === '/setItem/v1/catalog') data = [definition];
+        else if (url.pathname === '/setItem/v1/catalog') data = showRuntimeCatalog
+          ? runtimeDefinitions : [definition, builtIn, secondJob];
+        else if (url.pathname.startsWith('/setItem/v1/series/') && route.request().method() === 'PUT') {
+          savedSeries = route.request().postDataJSON().data; data = 0;
+        }
         else if (route.request().method() === 'PUT') { saved = route.request().postDataJSON().data; data = 0; }
         else if (url.pathname === '/setItem/v1/custom' && route.request().method() === 'POST') {
           created = route.request().postDataJSON().data; data = 20001;
@@ -49,6 +63,22 @@ const definition = { id: 20000, jobIndex: -1, name: '测试套装', completeCoun
         await route.fulfill({ json: { code: 20000, data, message: 'OK' } });
       });
       await page.goto(`${baseUrl}/#/game/setItem`);
+      await page.getByRole('button', { name: '统一加成', exact: true }).first().waitFor();
+      assert.equal(await page.getByRole('button', { name: '统一加成', exact: true }).count(), 2,
+        'same-name built-in jobs must be grouped; custom sets must remain independent');
+      await page.getByText('加成不一致', { exact: true }).waitFor();
+      if (viewport.width < 576) await page.locator('.layout.mobile').waitFor();
+      await page.screenshot({ path: `/tmp/set-item-series-${viewport.width}.png`, fullPage: true, animations: 'disabled' });
+      await page.getByRole('button', { name: '统一加成', exact: true }).nth(1).click();
+      const seriesModal = page.locator('.arco-modal:visible').last();
+      await seriesModal.getByText('本次保存会统一覆盖本系列 2 套的全部档位加成。', { exact: true }).waitFor();
+      assert.equal(await seriesModal.locator('.slot-row').count(), 0);
+      await seriesModal.locator('.arco-form-item').filter({ hasText: '物理防御力' }).getByRole('spinbutton').fill('45');
+      await seriesModal.getByRole('button', { name: '保存', exact: true }).click();
+      await seriesModal.waitFor({ state: 'hidden' });
+      assert.equal(savedSeries.tiers['1'].PDD, 45);
+      assert.equal('slots' in savedSeries, false, 'series update must never copy representative slots');
+      await page.getByRole('button', { name: '详情', exact: true }).first().click();
       try {
         await page.getByRole('button', { name: '编辑套装', exact: true }).click({ timeout: 10000 });
       } catch (error) {
@@ -109,8 +139,55 @@ const definition = { id: 20000, jobIndex: -1, name: '测试套装', completeCoun
       await create.waitFor({ state: 'hidden' });
       assert.deepEqual(created.slots, [[1002000]]);
       assert.equal(created.tiers['1'].PADPct, 20);
+      showRuntimeCatalog = true;
+      await page.reload();
+      await page.getByRole('button', { name: '统一加成', exact: true }).first().waitFor();
+      const filter = page.getByPlaceholder('搜索套装名称或ID');
+      await filter.fill('黑门');
+      await page.getByRole('button', { name: '统一加成', exact: true }).click();
+      const blackGate = page.locator('.arco-modal:visible').last();
+      await blackGate.getByText('5 件效果', { exact: true }).click();
+      await blackGate.locator('.arco-tabs-tab-active').filter({ hasText: '5 件效果' }).waitFor();
+      assert.equal(await blackGate.locator('.arco-form-item:visible').filter({ hasText: '最大HP' })
+        .getByRole('spinbutton').inputValue(), '2');
+      assert.equal(await blackGate.locator('.arco-form-item:visible').filter({ hasText: '最大MP' })
+        .getByRole('spinbutton').inputValue(), '2');
+      assert.equal(await blackGate.getByText('待确认', { exact: true }).count(), 0);
+      assert.equal(await blackGate.evaluate((el) => el.scrollWidth > el.clientWidth + 1), false);
+      await blackGate.evaluate(async (el) => Promise.all(el.getAnimations({ subtree: true })
+        .filter((animation) => animation.effect.getTiming().iterations !== Infinity)
+        .map((animation) => animation.finished.catch(() => {}))));
+      await page.screenshot({ path: `/tmp/set-item-black-gate-${viewport.width}.png`, fullPage: true });
+      await blackGate.getByRole('button', { name: '取消', exact: true }).click();
+      await blackGate.waitFor({ state: 'hidden' });
+      await filter.fill('冒险岛寻宝');
+      await page.getByRole('button', { name: '详情', exact: true }).click();
+      await page.getByRole('button', { name: '编辑套装', exact: true }).click();
+      const treasure = page.locator('.arco-modal:visible').first();
+      await treasure.locator('.slot-row').first().waitFor();
+      assert.equal(await treasure.locator('.slot-row').count(), 12);
+      await treasure.getByRole('button', { name: '添加槽位', exact: true }).click();
+      assert.equal(await treasure.locator('.slot-row').count(), 13);
+      await treasure.locator('.slot-row').last().locator('.slot-header button').click();
+      await treasure.getByText('6 件效果', { exact: true }).click();
+      await treasure.locator('.arco-tabs-tab-active').filter({ hasText: '6 件效果' }).waitFor();
+      assert.equal(await treasure.locator('.arco-form-item:visible').filter({ has: page.getByText('伤害(%)', { exact: true }) })
+        .getByRole('spinbutton').inputValue(), '9');
+      assert.equal(await treasure.evaluate((el) => el.scrollWidth > el.clientWidth + 1), false);
+      await treasure.locator('.arco-form-item:visible').filter({ has: page.getByText('伤害(%)', { exact: true }) })
+        .scrollIntoViewIfNeeded();
+      await treasure.evaluate(async (el) => Promise.all(el.getAnimations({ subtree: true })
+        .filter((animation) => animation.effect.getTiming().iterations !== Infinity)
+        .map((animation) => animation.finished.catch(() => {}))));
+      await page.screenshot({ path: `/tmp/set-item-treasure-${viewport.width}.png`, fullPage: true });
+      await treasure.getByRole('button', { name: '保存', exact: true }).click();
+      await treasure.waitFor({ state: 'hidden' });
+      assert.equal(saved.slots.length, 12);
+      assert.equal(saved.slots.flat().includes(1012524), true);
+      assert.equal(saved.tiers['12'].BossDamage, 30);
+      assert.equal(saved.tiers['6'].Damage, 9);
       assert.deepEqual(errors, []);
-      console.log(`set-item UI ${viewport.width}: edit/create, fixed/percent, equipment preview/search/paging, slot validation/removal, save and overflow checks passed`);
+      console.log(`set-item UI ${viewport.width}: edit/create, runtime catalog, Black Gate HP/MP, Treasure damage/12 slots, save and overflow checks passed`);
       await page.close();
     }
   } finally {

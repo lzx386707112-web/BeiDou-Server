@@ -5,6 +5,7 @@ import struct
 import sys
 
 from capstone import Cs, CS_ARCH_X86, CS_MODE_32
+from set_panel_patch import LAYOUT_WINDOWS
 
 
 PATH = sys.argv[1] if len(sys.argv) > 1 else "/Users/lizixian/Documents/mxd/BeiDou-Server/clien/BeiDouSetItemCompat.dll"
@@ -65,7 +66,7 @@ for start, end in changed:
         # code padding. They are stripped so the image survives being loaded at a
         # relocated base (Wine/Box86), see fix_dll_reloc_hygiene.py.
         (0x4600, 0x4A00),
-    ))
+    ) + tuple((a - 0xc00, b - 0xc00) for a, b in LAYOUT_WINDOWS))
     assert allowed, (hex(start), hex(end))
 sec = sections(data)
 assert ".titles" in sec

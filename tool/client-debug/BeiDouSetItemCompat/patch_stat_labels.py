@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Add flat and percentage stat labels to BeiDouSetItemCompat.dll.
+"""Build stat labels and complete set-panel layout from one immutable DLL baseline.
 
 Input baseline: backup/BeiDouSetItemCompat.dll.before-stat-labels
   (sha256 d6f9143373f50601f3020acc7277ec25c334de73c61b51f6a14a4a2529f839f0,
@@ -13,7 +13,8 @@ DLL.  The lookup is a straight-line chain of nine lstrcmpA checks against
 hardcoded keys; anything that fails all nine falls back to the generic label
 "属性" (VA 0x65c8548c). The extension adds eight missing flat labels and twelve
 canonical percentage keys. Percentages reuse the existing case-sensitive Pct
-suffix check; unknown keys still use the original fallback.
+suffix check; speed/jump and ordinary/normal-monster damage have separate labels.
+Unknown keys still use the original fallback.
 
 Chain addresses (image base 0x65c80000; .text RVA 0x1000 maps to file 0x400)
 --------------------------------------------------------------------------
@@ -53,12 +54,12 @@ Mechanics of this patch (purely additive)
    flags.  So at RVA 0x367b esp, eax, ebx, esi and the argument slots are exactly
    what the original code produced on either path.
 2. A cave at file 0x4eac / VA 0x65f924ac (in the expanded .titles tail, RWX)
-   runs twenty new lstrcmpA checks and jumps back to RVA 0x367b with
-   eax = the label.  The cave never touches esp, so the stack discipline of the
-   chain and of the wsprintfW call in the shared tail is unchanged.
+   runs twenty-four new lstrcmpA checks and jumps back to RVA 0x367b with
+   eax = the label. Each stdcall pops eight argument bytes; two push edx
+   instructions restore the scratch slots before testing the return value.
 3. .titles VirtualSize and raw size grow to 0x1000 within the existing reserved
    image page. No RVA or SizeOfImage moves; the file grows 0x5000 -> 0x5a00.
-4. .reloc gains one block (page 0x312000, 41 entries) for the cave immediates.
+4. .reloc gains one block (page 0x312000, 49 entries) for the cave immediates.
    The stale entry the baseline carried at RVA 0x3674 is consumed by the
    rewrite and is dropped by fix_dll_reloc_hygiene.py.
 """
@@ -101,9 +102,11 @@ CHECKS = [('PDD', '物理防御力'), ('MDD', '魔法防御力'),
           ('PADPct', '攻击力'), ('MADPct', '魔法攻击力'),
           ('PDDPct', '物理防御力'), ('MDDPct', '魔法防御力'),
           ('ACCPct', '命中率'), ('EVAPct', '回避率'),
-          ('HPPct', '最大HP'), ('MPPct', '最大MP')]
-BLOCK_LEN = 8 + 3 + 2 + 2 + 5 + 6                    # near JE for the extended chain
-KEY_IMM, LABEL_IMM = 4, 16                           # offsets inside a block
+          ('HPPct', '最大HP'), ('MPPct', '最大MP'),
+          ('SPD', '移动速度'), ('JMP', '跳跃力'), ('NormalDamage', '普通怪物伤害'),
+          ('Damage', '伤害')]
+BLOCK_LEN = 8 + 3 + 2 + 2 + 2 + 5 + 6                # stdcall cleanup + near JE
+KEY_IMM, LABEL_IMM = 4, 18                           # offsets inside a block
 
 
 def ftext(rva):
@@ -208,6 +211,7 @@ for _key, _label in CHECKS:
     code += b'\xc7\x44\x24\x04' + struct.pack('<I', 0)   # mov dword [esp+4], key
     code += b'\x89\x1c\x24'                              # mov [esp], ebx
     code += b'\xff\xd6'                                  # call esi   (lstrcmpA)
+    code += b'\x52\x52'                                  # restore the two popped argument slots
     code += b'\x85\xc0'                                  # test eax, eax
     code += b'\xb8' + struct.pack('<I', 0)               # mov eax, label
     code += b'\x0f\x84' + b'\0' * 4                      # je common
@@ -288,6 +292,20 @@ reloc_vsize_new = len(relocations)
 struct.pack_into('<I', d, reloc_h + 8, reloc_vsize_new)
 struct.pack_into('<I', d, dd + 5 * 8 + 4, reloc_vsize_new)
 
+# Build the bounded-view rendering extension from the same immutable baseline.
+from set_panel_patch import apply_layout, CAVE_RAW as LAYOUT_RAW, STYLE_STRINGS_RAW, RETAINED_RELOCS
+layout_windows, layout_size, layout_symbols = apply_layout(d, ftext)
+info = read_pe(d)
+blocks, layout_entries = hygiene_relocs(d, info)
+layout_removed = [entry['rva'] for entry in layout_entries
+                  if entry['rva'] not in RETAINED_RELOCS
+                  and any(start <= entry['rva'] < end for start, end in layout_windows)]
+relocations = rebuild_relocs(blocks, info, layout_removed, d)
+d[RELOC_RAW:RELOC_RAW + RELOC_RAWSIZE] = relocations.ljust(RELOC_RAWSIZE, b'\0')
+reloc_vsize_new = len(relocations)
+struct.pack_into('<I', d, reloc_h + 8, reloc_vsize_new)
+struct.pack_into('<I', d, dd + 5 * 8 + 4, reloc_vsize_new)
+
 struct.pack_into('<I', d, checksum_off, 0)
 checksum = 0
 for i in range(0, len(d), 4):
@@ -321,21 +339,23 @@ assert blob[ftext(WINDOW_RVA) + 7] == 0x90
 for index, (key, label) in enumerate(CHECKS):
     base = index * BLOCK_LEN
     blk = list(md.disasm(bytes(code[base:base + BLOCK_LEN]), CAVE_VA + base))
-    assert [x.mnemonic for x in blk] == ['mov', 'mov', 'call', 'test', 'mov', 'je'], \
+    assert [x.mnemonic for x in blk] == ['mov', 'mov', 'call', 'push', 'push', 'test', 'mov', 'je'], \
         [x.mnemonic for x in blk]
     assert blk[0].op_str == 'dword ptr [esp + 4], %#x' % key_va[key], blk[0].op_str
     assert blk[1].op_str == 'dword ptr [esp], ebx', blk[1].op_str
     assert blk[2].op_str == 'esi', blk[2].op_str
-    assert blk[3].op_str == 'eax, eax', blk[3].op_str
-    assert blk[4].op_str == 'eax, %#x' % label_va[label], blk[4].op_str
-    assert int(blk[5].op_str, 16) == CAVE_VA + COMMON_OFF, blk[5].op_str
+    assert [blk[3].op_str, blk[4].op_str] == ['edx', 'edx']
+    assert blk[5].op_str == 'eax, eax', blk[5].op_str
+    assert blk[6].op_str == 'eax, %#x' % label_va[label], blk[6].op_str
+    assert int(blk[7].op_str, 16) == CAVE_VA + COMMON_OFF, blk[7].op_str
 tail = list(md.disasm(bytes(code[COMMON_OFF - 5:]), CAVE_VA + COMMON_OFF - 5))
 assert [x.mnemonic for x in tail] == ['mov', 'jmp'], [x.mnemonic for x in tail]
 assert tail[0].op_str == 'eax, %#x' % FALLBACK_LABEL, tail[0].op_str
 assert int(tail[1].op_str, 16) == SHARED_TAIL, tail[1].op_str
-# nothing in the cave may move the stack: esp is shared with the caller's chain
+# Every stdcall has the same balanced scratch-slot discipline as the legacy chain.
+assert sum(ins.mnemonic == 'push' for ins in md.disasm(bytes(code), CAVE_VA)) == len(CHECKS) * 2
 for ins in md.disasm(bytes(code), CAVE_VA):
-    assert ins.mnemonic not in ('push', 'pop', 'enter', 'leave'), ins.mnemonic
+    assert ins.mnemonic not in ('pop', 'enter', 'leave', 'add', 'sub'), ins.mnemonic
 
 # -- literals landed where the immediates point ---------------------------
 for index, (key, label) in enumerate(CHECKS):
@@ -360,7 +380,7 @@ for t in reloc_targets:
 assert WINDOW_RVA + 1 not in new_relocs, 'stale entry at RVA 0x3674 survived'
 assert struct.unpack_from('<I', blob, h2['.reloc'] + 8)[0] == reloc_vsize_new
 assert struct.unpack_from('<I', blob, pe2 + 24 + 96 + 5 * 8 + 4)[0] == reloc_vsize_new
-assert len(new_relocs) == len(old_relocs) - 1 + len(reloc_targets), (len(new_relocs), len(old_relocs))
+assert len(new_relocs) == len(old_relocs) - 1 + len(reloc_targets) - len(layout_removed)
 # every entry must still point at a dword that lives inside this image
 rva_to_raw = {}
 for name, hh in h2.items():
@@ -388,7 +408,8 @@ allowed = (
     # when it drops the stale 0x3674 entry, so byte-level comparison there is
     # meaningless.  The reloc checks above are the real gate.
     (RELOC_RAW, RELOC_RAW + RELOC_RAWSIZE),
-)
+) + tuple((ftext(a), ftext(b)) for a, b in layout_windows) + (
+    (LAYOUT_RAW, LAYOUT_RAW + layout_size), (STYLE_STRINGS_RAW, STYLE_STRINGS_RAW + 0x40))
 outside = [(hex(i), baseline[i], blob[i]) for i in range(len(baseline))
            if baseline[i] != blob[i] and not any(a <= i < b for a, b in allowed)]
 assert not outside, 'unexpected bytes changed: %s' % outside[:8]

@@ -403,7 +403,9 @@ public class SessionCoordinator {
                 userAccountMap.remove(ip); // 为空时移除键，节省内存
                 log.info("【多开清理】IP: {} 的账号列表已清空，移除该IP记录", ip);
             }
-        } else {
+        } else if (accountId > 0) {
+            // 仅对"真实账号却在多开列表里找不到"的情况告警；未登录会话(accId 默认 -4 / 登出后置 0)
+            // 关闭时本就不在多开列表中，属正常连接(多为扫描器/机器人探测端口)，无需打 WARN 刷屏。
             log.warn("【多开清理】IP: {}, 账号ID: {} 未在多开列表中找到", ip, accountId);
         }
         if (immediately != null && immediately) {

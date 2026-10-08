@@ -48,7 +48,7 @@ class SetItemManagerTest {
                 .findFirst()
                 .orElseThrow();
 
-        assertEquals(91, result.panels().size());
+        assertEquals(SetItemManager.definitions().size(), result.panels().size());
         assertFalse(warriorPanel.jobEligible());
         assertEquals(8, warriorPanel.equippedCount());
         assertEquals(-1, warriorPanel.activeTier());
@@ -74,8 +74,10 @@ class SetItemManagerTest {
 
         assertTrue(bishopPanel.jobEligible());
         assertEquals(8, bishopPanel.equippedCount());
-        assertEquals(2, bishopPanel.activeTier());
-        assertEquals(50, result.bonus().get("FinalDamage"));
+        assertEquals(6, bishopPanel.activeTier());
+        assertEquals(0, result.bonus().get("FinalDamage"));
+        assertEquals(280, result.bonus().get("PAD"));
+        assertEquals(75, result.bonus().get("BossDamage"));
     }
 
     @Test
@@ -97,8 +99,9 @@ class SetItemManagerTest {
 
         assertTrue(bishopPanel.jobEligible());
         assertEquals(8, bishopPanel.equippedCount());
-        assertEquals(2, bishopPanel.activeTier());
-        assertEquals(50, result.bonus().get("FinalDamage"));
+        assertEquals(6, bishopPanel.activeTier());
+        assertEquals(0, result.bonus().get("FinalDamage"));
+        assertEquals(280, result.bonus().get("MAD"));
     }
 
     @Test

@@ -14,14 +14,14 @@ class HpMpExpansionTest {
         character.updateMaxHpMaxMp(32768, 40000);
         assertEquals(32768, character.getMaxHp());
         assertEquals(40000, character.getMaxMp());
-        assertEquals(AbstractCharacterObject.MAX_HP_MP, character.getClientMaxHp());
-        assertEquals(AbstractCharacterObject.MAX_HP_MP, character.getClientMaxMp());
-        assertEquals(AbstractCharacterObject.MAX_HP_MP, character.getCurrentMaxHp());
-        assertEquals(AbstractCharacterObject.MAX_HP_MP, character.getCurrentMaxMp());
+        assertEquals(32768, character.getClientMaxHp());
+        assertEquals(40000, character.getClientMaxMp());
+        assertEquals(32768, character.getCurrentMaxHp());
+        assertEquals(40000, character.getCurrentMaxMp());
 
         character.changeHpMp(50001, 50001, true);
-        assertEquals(AbstractCharacterObject.MAX_HP_MP, character.getHp());
-        assertEquals(AbstractCharacterObject.MAX_HP_MP, character.getMp());
+        assertEquals(32768, character.getHp());
+        assertEquals(40000, character.getMp());
 
         character.updateMaxHpMaxMp(50001, 60000);
         assertEquals(AbstractCharacterObject.MAX_HP_MP, character.getMaxHp());
@@ -42,10 +42,21 @@ class HpMpExpansionTest {
         character.addHP(50000);
         character.addMP(50000);
 
-        assertEquals(50000, character.getCurrentMaxHp());
-        assertEquals(50000, character.getCurrentMaxMp());
-        assertEquals(50000, character.getHp());
-        assertEquals(50000, character.getMp());
+        assertEquals(32768, character.getCurrentMaxHp());
+        assertEquals(40000, character.getCurrentMaxMp());
+        assertEquals(32768, character.getHp());
+        assertEquals(40000, character.getMp());
+    }
+
+    @Test
+    void exactCapAndMinimumPoolsArePreserved() {
+        TestCharacterObject character = new TestCharacterObject();
+        character.updateMaxHpMaxMp(50000, 50000);
+        assertEquals(50000, character.getClientMaxHp());
+        assertEquals(50000, character.getClientMaxMp());
+        character.updateMaxHpMaxMp(0, 0);
+        assertEquals(50, character.getClientMaxHp());
+        assertEquals(5, character.getClientMaxMp());
     }
 
     private static final class TestCharacterObject extends AbstractCharacterObject {

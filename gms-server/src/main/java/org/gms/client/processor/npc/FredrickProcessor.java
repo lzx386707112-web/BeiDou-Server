@@ -163,6 +163,10 @@ public class FredrickProcessor {
         try (Connection con = DatabaseConnection.getConnection()) {
             List<Pair<Integer, Integer>> expiredCids = new LinkedList<>();
             List<Pair<Pair<Integer, String>, Integer>> notifCids = new LinkedList<>();
+            List<Integer> orphanCids = new LinkedList<>();
+            int badTimestampRows = 0;
+            int orphanRows = 0;
+            List<Integer> orphanSampleCids = new LinkedList<>();
             try (PreparedStatement ps = con.prepareStatement("SELECT * FROM fredstorage f LEFT JOIN (SELECT id, name, world, lastLogoutTime FROM characters) AS c ON c.id = f.cid");
                  ResultSet rs = ps.executeQuery()) {
                 long curTime = System.currentTimeMillis();
@@ -172,6 +176,30 @@ public class FredrickProcessor {
                     int world = rs.getInt("world");
                     Timestamp ts = rs.getTimestamp("timestamp");
                     int daynotes = Math.min(dailyReminders.length - 1, rs.getInt("daynotes"));
+
+                    if (ts == null) {
+                        // `fredstorage.timestamp` is NOT NULL by schema; a null here means the row was
+                        // hand-edited or imported from an inconsistent dump. Skip it instead of letting
+                        // a single dirty row abort the whole schedule.
+                        badTimestampRows++;
+                        continue;
+                    }
+
+                    // The LEFT JOIN above yields a null `name` whenever `f.cid` has no matching
+                    // character (deleted character, or fredstorage imported from another server's
+                    // dump). Such rows are unreachable by any player, so reap them outright instead
+                    // of waiting for the 100-days rule (which only runs for rows whose owner still
+                    // exists). Without this, fresh-timestamp orphans keep firing the hourly warning
+                    // forever because they fall into the `elapsedDays <= 100` branch.
+                    String name = rs.getString("name");
+                    if (name == null) {
+                        orphanRows++;
+                        orphanCids.add(cid);
+                        if (orphanSampleCids.size() < 10) {
+                            orphanSampleCids.add(cid);
+                        }
+                        continue;
+                    }
 
                     int elapsedDays = timestampElapsedDays(ts, curTime);
                     if (elapsedDays > 100) {
@@ -189,13 +217,41 @@ public class FredrickProcessor {
                             int inactivityDays = timestampElapsedDays(logoutTs, curTime);
 
                             if (inactivityDays < 7 || daynotes >= dailyReminders.length - 1) {  // don't spam inactive players
-                                String name = rs.getString("name");
                                 notifCids.add(new Pair<>(new Pair<>(cid, name), daynotes));
                             }
                         }
                     }
                 }
 
+            }
+
+            if (badTimestampRows > 0) {
+                log.warn("Fredrick storage: skipped {} row(s) whose timestamp is null.", badTimestampRows);
+            }
+
+            // Clean up orphan rows (no owner character) once, instead of warning about them hourly.
+            // These rows are unreachable by any player, so deleting them is safe and stops the noise.
+            if (!orphanCids.isEmpty()) {
+                try (PreparedStatement ps = con.prepareStatement("DELETE FROM `inventoryitems` WHERE `type` = ? AND `characterid` = ?")) {
+                    ps.setInt(1, ItemFactory.MERCHANT.getValue());
+                    for (Integer cid : orphanCids) {
+                        ps.setInt(2, cid);
+                        ps.addBatch();
+                    }
+                    ps.executeBatch();
+                }
+
+                try (PreparedStatement ps = con.prepareStatement("DELETE FROM `fredstorage` WHERE `cid` = ?")) {
+                    for (Integer cid : orphanCids) {
+                        ps.setInt(1, cid);
+                        ps.addBatch();
+                    }
+                    ps.executeBatch();
+                }
+
+                log.info("Fredrick storage: cleaned up {} orphan row(s) whose owner character is missing (sample cids: {}). "
+                        + "These items were unreachable and have been removed.",
+                        orphanRows, orphanSampleCids);
             }
 
             if (!expiredCids.isEmpty()) {

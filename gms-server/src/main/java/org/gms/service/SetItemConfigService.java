@@ -48,8 +48,8 @@ public class SetItemConfigService {
     private static final String CONFIG_SUB_TYPE = "Set Items";
     private static final int FIRST_CUSTOM_DEFINITION_ID = 20_000;
     private static final int MAX_ACTIVE_DEFINITIONS = 96;
-    private static final int MAX_SLOTS = 8;
-    private static final int MAX_ITEMS_PER_SLOT = 10;
+    private static final int MAX_SLOTS = 20;
+    private static final int MAX_ITEMS_PER_SLOT = 50;
     private static final int MAX_TIER_STATS = 24;
     private static final int MAX_NAME_LENGTH = 64;
     private static final int MAX_FLAT_VALUE = 1_000_000;
@@ -174,6 +174,40 @@ public class SetItemConfigService {
     @Transactional(rollbackFor = Exception.class)
     public synchronized int update(int definitionId, SetItemUpdateDTO request) {
         SetItemManager.Definition definition = requireDefinition(definitionId);
+        Map<Integer, List<List<Integer>>> slots = new LinkedHashMap<>(
+                SetItemBonusOverrides.slotOverrides());
+        Map<String, Map<String, Integer>> updated = mutableSnapshot();
+        prepareUpdate(definition, request, updated, slots);
+        persistConfiguration(updated, slots);
+        return refreshOnlineCharacters();
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public synchronized int updateSeries(int definitionId, SetItemUpdateDTO request) {
+        SetItemManager.Definition representative = requireDefinition(definitionId);
+        if (request == null || request.getSlots() != null) {
+            throw BizException.illegalArgument("系列统一修改仅支持加成，槽位请进入套装详情修改");
+        }
+        List<SetItemManager.Definition> members = SetItemManager.defaultDefinitions().stream()
+                .filter(definition -> definition.id() == definitionId
+                        || (SetItemManager.isBuiltIn(definitionId)
+                        && SetItemManager.isBuiltIn(definition.id())
+                        && definition.name().equals(representative.name())))
+                .toList();
+        Map<Integer, List<List<Integer>>> slots = new LinkedHashMap<>(
+                SetItemBonusOverrides.slotOverrides());
+        Map<String, Map<String, Integer>> updated = mutableSnapshot();
+        for (SetItemManager.Definition member : members) {
+            prepareUpdate(member, request, updated, slots);
+        }
+        persistConfiguration(updated, slots);
+        return refreshOnlineCharacters();
+    }
+
+    private void prepareUpdate(SetItemManager.Definition definition, SetItemUpdateDTO request,
+                               Map<String, Map<String, Integer>> updated,
+                               Map<Integer, List<List<Integer>>> slots) {
+        int definitionId = definition.id();
         if (request == null || request.getTiers() == null) {
             throw BizException.illegalArgument("套装档位配置不能为空");
         }
@@ -183,8 +217,6 @@ public class SetItemConfigService {
         if (!request.getTiers().keySet().equals(requiredCounts)) {
             throw BizException.illegalArgument("套装档位不完整或包含未知档位");
         }
-        Map<Integer, List<List<Integer>>> slots = new LinkedHashMap<>(
-                SetItemBonusOverrides.slotOverrides());
         if (request.getSlots() != null) {
             List<List<Integer>> validated = validateSlots(request.getSlots(), true);
             validateTierSlots(definition, validated);
@@ -194,7 +226,6 @@ public class SetItemConfigService {
                 slots.put(definitionId, validated);
             }
         }
-        Map<String, Map<String, Integer>> updated = mutableSnapshot();
         removeDefinitionOverrides(updated, definitionId);
         for (SetItemManager.Tier tier : definition.tiers()) {
             Map<String, Integer> values = request.getTiers().get(tier.requiredCount());
@@ -224,8 +255,6 @@ public class SetItemConfigService {
                 updated.put(SetItemBonusOverrides.key(definitionId, tier.requiredCount()), differences);
             }
         }
-        persistConfiguration(updated, slots);
-        return refreshOnlineCharacters();
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -248,8 +277,13 @@ public class SetItemConfigService {
     }
 
     private void validateCatalogCapacity() {
-        if (SetItemManager.definitions().size() >= MAX_ACTIVE_DEFINITIONS) {
-            throw BizException.illegalArgument("客户端最多支持 " + MAX_ACTIVE_DEFINITIONS + " 套启用套装");
+        for (int job = -1; job < 5; job++) {
+            final int jobIndex = job;
+            long count = SetItemManager.definitions().stream()
+                    .filter(definition -> definition.jobIndex() < 0 || definition.jobIndex() == jobIndex).count();
+            if (count >= MAX_ACTIVE_DEFINITIONS) {
+                throw BizException.illegalArgument("每个职业最多支持 " + MAX_ACTIVE_DEFINITIONS + " 套启用套装");
+            }
         }
     }
 
@@ -263,7 +297,7 @@ public class SetItemConfigService {
     private boolean isRate(String stat) {
         String normalized = stat.toLowerCase(Locale.ROOT);
         return normalized.endsWith("rate") || normalized.endsWith("pct")
-                || normalized.equals("finaldamage") || normalized.equals("bossdamage")
+                || normalized.endsWith("damage")
                 || normalized.equals("statusres") || normalized.equals("buffduration");
     }
 
@@ -301,11 +335,13 @@ public class SetItemConfigService {
         if (candidate == null || candidate.isEmpty()) {
             return Map.of();
         }
-        Map<String, Map<String, Integer>> result = new LinkedHashMap<>();
+        // Keep old tier-count entries dormant, so changing defaults does not erase admin data.
+        Map<String, Map<String, Integer>> result = new LinkedHashMap<>(candidate);
         for (SetItemManager.Definition definition : definitions) {
             for (SetItemManager.Tier tier : definition.tiers()) {
                 String key = SetItemBonusOverrides.key(definition.id(), tier.requiredCount());
                 Map<String, Integer> source = candidate.get(key);
+                result.remove(key);
                 if (source == null) {
                     continue;
                 }
@@ -371,7 +407,6 @@ public class SetItemConfigService {
                     List<List<Integer>> candidate = storage.getSlotOverrides().get(definition.id());
                     if (candidate == null) continue;
                     List<List<Integer>> validated = validateSlots(candidate, false);
-                    validateTierSlots(definition, validated);
                     if (!validated.equals(definition.slots())) slots.put(definition.id(), validated);
                 }
             }

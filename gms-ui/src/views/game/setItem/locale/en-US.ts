@@ -1,4 +1,12 @@
 export default {
+  'setItem.column.series': 'Set series',
+  'setItem.column.setCount': 'Sets',
+  'setItem.action.editSeries': 'Series bonuses',
+  'setItem.action.details': 'Details',
+  'setItem.status.partiallyEnabled': 'Partially enabled',
+  'setItem.status.mixedBonuses': 'Mixed bonuses',
+  'setItem.series.confirm':
+    'Saving replaces all bonus tiers in all {count} sets in this series.',
   'setItem.filter.placeholder': 'Search set name or ID',
   'setItem.filter.allJobs': 'All job groups',
   'setItem.job.shared': 'All jobs',
@@ -91,6 +99,8 @@ export default {
   'setItem.stat.MP': 'Max MP',
   'setItem.stat.FinalDamage': 'Final damage (%)',
   'setItem.stat.BossDamage': 'Boss damage (%)',
+  'setItem.stat.NormalDamage': 'Normal monster damage (%)',
+  'setItem.stat.Damage': 'Damage (%)',
   'setItem.stat.ExpRate': 'EXP rate (%)',
   'setItem.stat.AllStatPct': 'All stats (%)',
   'setItem.stat.HPpct': 'Max HP (%)',

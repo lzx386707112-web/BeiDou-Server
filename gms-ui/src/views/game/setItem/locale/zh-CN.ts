@@ -1,4 +1,12 @@
 export default {
+  'setItem.column.series': '套装系列',
+  'setItem.column.setCount': '套装数',
+  'setItem.action.editSeries': '统一加成',
+  'setItem.action.details': '详情',
+  'setItem.status.partiallyEnabled': '部分启用',
+  'setItem.status.mixedBonuses': '加成不一致',
+  'setItem.series.confirm':
+    '本次保存会统一覆盖本系列 {count} 套的全部档位加成。',
   'setItem.filter.placeholder': '搜索套装名称或ID',
   'setItem.filter.allJobs': '全部职业系',
   'setItem.job.shared': '全职业',
@@ -87,6 +95,8 @@ export default {
   'setItem.stat.MP': '最大MP',
   'setItem.stat.FinalDamage': '最终伤害(%)',
   'setItem.stat.BossDamage': 'Boss伤害(%)',
+  'setItem.stat.NormalDamage': '普通怪物伤害(%)',
+  'setItem.stat.Damage': '伤害(%)',
   'setItem.stat.ExpRate': '经验倍率加成(%)',
   'setItem.stat.AllStatPct': '全属性(%)',
   'setItem.stat.HPpct': '最大HP(%)',

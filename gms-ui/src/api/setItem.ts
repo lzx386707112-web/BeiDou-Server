@@ -18,6 +18,10 @@ export const SET_ITEM_STAT_KEYS = [
   'ExpRate',
   'DropRate',
   'MesoRate',
+  'SPD',
+  'JMP',
+  'NormalDamage',
+  'Damage',
 ] as const;
 
 export const SET_ITEM_PERCENT_BASES = SET_ITEM_STAT_KEYS.slice(0, 12);
@@ -73,6 +77,13 @@ export function updateSetItem(
 
 export function resetSetItem(definitionId: number) {
   return axios.delete<number>(`/setItem/v1/${definitionId}`);
+}
+
+export function updateSetItemSeries(
+  definitionId: number,
+  tiers: Record<number, Record<string, number>>
+) {
+  return axios.put<number>(`/setItem/v1/series/${definitionId}`, { tiers });
 }
 
 export function searchSetItemEquipment(keyword: string) {

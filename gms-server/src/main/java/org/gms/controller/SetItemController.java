@@ -121,6 +121,15 @@ public class SetItemController {
     }
 
     @Tag(name = "/setItem/" + ApiConstant.LATEST)
+    @Operation(summary = "统一更新同系列套装的全部档位属性")
+    @PutMapping("/" + ApiConstant.LATEST + "/series/{definitionId}")
+    public ResultBody<Integer> updateSeries(@PathVariable int definitionId,
+                                            @RequestBody SubmitBody<SetItemUpdateDTO> request) {
+        return ResultBody.success(request,
+                setItemConfigService.updateSeries(definitionId, request.getData()));
+    }
+
+    @Tag(name = "/setItem/" + ApiConstant.LATEST)
     @Operation(summary = "将套装属性重置为内置默认值")
     @DeleteMapping("/" + ApiConstant.LATEST + "/{definitionId}")
     public ResultBody<Integer> reset(@PathVariable int definitionId) {

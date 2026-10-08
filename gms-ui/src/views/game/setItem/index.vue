@@ -31,15 +31,20 @@
       <a-table
         row-key="id"
         :loading="loading"
-        :data="filteredCatalog"
+        :data="filteredSeries"
         :bordered="{ cell: true }"
-        :scroll="{ x: 1180 }"
+        :scroll="{ x: 1260 }"
         :pagination="{ pageSize: 20, showTotal: true, showJumper: true }"
       >
         <template #columns>
           <a-table-column
-            :title="$t('setItem.column.id')"
-            data-index="id"
+            :title="$t('setItem.column.series')"
+            data-index="name"
+            :width="210"
+          />
+          <a-table-column
+            :title="$t('setItem.column.setCount')"
+            data-index="memberCount"
             :width="95"
             align="center"
           />
@@ -66,22 +71,21 @@
             </template>
           </a-table-column>
           <a-table-column
-            :title="$t('setItem.column.name')"
-            data-index="name"
-            :width="210"
-          />
-          <a-table-column
             :title="$t('setItem.column.job')"
             :width="110"
             align="center"
           >
             <template #cell="{ record }">
-              <a-tag>{{ jobName(record.jobIndex) }}</a-tag>
+              <a-space wrap>
+                <a-tag v-for="job in record.jobs" :key="job">{{
+                  jobName(job)
+                }}</a-tag>
+              </a-space>
             </template>
           </a-table-column>
           <a-table-column
             :title="$t('setItem.column.completeCount')"
-            data-index="completeCount"
+            data-index="completeCounts"
             :width="105"
             align="center"
           />
@@ -100,13 +104,25 @@
             align="center"
           >
             <template #cell="{ record }">
-              <a-tag v-if="!record.enabled" color="gray">
+              <a-tag v-if="record.enabledCount === 0" color="gray">
                 {{ $t('setItem.status.disabled') }}
+              </a-tag>
+              <a-tag
+                v-else-if="record.enabledCount !== record.memberCount"
+                color="orange"
+              >
+                {{ $t('setItem.status.partiallyEnabled') }}
+              </a-tag>
+              <a-tag v-else-if="record.mixedBonuses" color="orange">
+                {{ $t('setItem.status.mixedBonuses') }}
               </a-tag>
               <a-tag v-else-if="!record.builtIn" color="arcoblue">
                 {{ $t('setItem.status.custom') }}
               </a-tag>
-              <a-tag v-else-if="isCustomized(record)" color="orangered">
+              <a-tag
+                v-else-if="record.members.some(isCustomized)"
+                color="orangered"
+              >
                 {{ $t('setItem.status.customized') }}
               </a-tag>
               <a-tag v-else color="green">
@@ -116,41 +132,119 @@
           </a-table-column>
           <a-table-column
             :title="$t('setItem.column.operation')"
-            :width="310"
+            :width="180"
             align="center"
-            fixed="right"
+            :fixed="appStore.hideMenu ? undefined : 'right'"
           >
             <template #cell="{ record }">
               <a-space>
                 <a-button
                   type="text"
                   size="mini"
-                  :disabled="!record.enabled"
-                  @click="openEditor(record)"
+                  :disabled="!record.editable"
+                  @click="openSeriesEditor(record)"
                 >
                   <template #icon><icon-edit /></template>
-                  {{ $t('setItem.action.edit') }}
+                  {{ $t('setItem.action.editSeries') }}
                 </a-button>
+                <a-button
+                  type="text"
+                  size="mini"
+                  @click="detailKey = record.seriesKey"
+                >
+                  <template #icon><icon-list /></template>
+                  {{ $t('setItem.action.details') }}
+                </a-button>
+              </a-space>
+            </template>
+          </a-table-column>
+        </template>
+      </a-table>
+    </a-card>
+
+    <a-modal
+      :visible="!!detailSeries"
+      :width="'min(1000px, calc(100vw - 32px))'"
+      :title="detailSeries?.name"
+      :footer="false"
+      @cancel="detailKey = undefined"
+    >
+      <a-table
+        :data="detailSeries?.members || []"
+        row-key="id"
+        :scroll="{ x: 780 }"
+        :pagination="false"
+      >
+        <template #columns>
+          <a-table-column
+            :title="$t('setItem.column.id')"
+            data-index="id"
+            :width="90"
+          />
+          <a-table-column :title="$t('setItem.column.job')" :width="100">
+            <template #cell="{ record }">{{
+              jobName(record.jobIndex)
+            }}</template>
+          </a-table-column>
+          <a-table-column :title="$t('setItem.column.equipment')" :width="240">
+            <template #cell="{ record }">
+              <div class="equipment-preview">
+                <a-tooltip
+                  v-for="item in previewEquipment(record)"
+                  :key="item.id"
+                  :content="`${item.name} (${item.id})`"
+                >
+                  <span class="equipment-icon"
+                    ><img
+                      :src="getEquipmentPreviewUrl(item.id)"
+                      :alt="item.name"
+                      @error="handleEquipmentPreviewError($event, item.id)"
+                  /></span>
+                </a-tooltip>
+              </div>
+              {{ $t('setItem.slotCount', { count: record.slots.length }) }}
+            </template>
+          </a-table-column>
+          <a-table-column :title="$t('setItem.column.status')" :width="100">
+            <template #cell="{ record }">{{
+              $t(
+                record.enabled
+                  ? 'setItem.status.default'
+                  : 'setItem.status.disabled'
+              )
+            }}</template>
+          </a-table-column>
+          <a-table-column :title="$t('setItem.column.operation')" :width="310">
+            <template #cell="{ record }">
+              <a-space wrap>
+                <a-button
+                  type="text"
+                  size="mini"
+                  :disabled="!record.enabled"
+                  @click="openEditor(record)"
+                  ><template #icon><icon-edit /></template
+                  >{{ $t('setItem.action.edit') }}</a-button
+                >
                 <a-popconfirm
                   :content="$t('setItem.reset.confirm')"
                   @ok="resetDefinition(record)"
                 >
                   <a-button
                     type="text"
-                    status="danger"
                     size="mini"
-                    :disabled="!record.enabled || !isCustomized(record)"
+                    :disabled="!isCustomized(record)"
+                    ><template #icon><icon-undo /></template
+                    >{{ $t('setItem.action.reset') }}</a-button
                   >
-                    <template #icon><icon-undo /></template>
-                    {{ $t('setItem.action.reset') }}
-                  </a-button>
                 </a-popconfirm>
                 <a-popconfirm
                   v-if="record.builtIn"
                   :content="
-                    record.enabled
-                      ? $t('setItem.disable.confirm')
-                      : $t('setItem.enable.confirm')
+                    $t(
+                      record.enabled
+                        ? 'setItem.disable.confirm'
+                        : 'setItem.enable.confirm'
+                    )
                   "
                   @ok="toggleBuiltIn(record)"
                 >
@@ -158,34 +252,34 @@
                     type="text"
                     size="mini"
                     :status="record.enabled ? 'danger' : 'success'"
+                    ><template #icon
+                      ><icon-pause v-if="record.enabled" /><icon-play-arrow
+                        v-else /></template
+                    >{{
+                      $t(
+                        record.enabled
+                          ? 'setItem.action.disable'
+                          : 'setItem.action.enable'
+                      )
+                    }}</a-button
                   >
-                    <template #icon>
-                      <icon-pause v-if="record.enabled" />
-                      <icon-play-arrow v-else />
-                    </template>
-                    {{
-                      record.enabled
-                        ? $t('setItem.action.disable')
-                        : $t('setItem.action.enable')
-                    }}
-                  </a-button>
                 </a-popconfirm>
                 <a-popconfirm
                   v-else
                   :content="$t('setItem.delete.confirm')"
                   @ok="deleteDefinition(record)"
                 >
-                  <a-button type="text" status="danger" size="mini">
-                    <template #icon><icon-delete /></template>
-                    {{ $t('setItem.action.delete') }}
-                  </a-button>
+                  <a-button type="text" status="danger" size="mini"
+                    ><template #icon><icon-delete /></template
+                    >{{ $t('setItem.action.delete') }}</a-button
+                  >
                 </a-popconfirm>
               </a-space>
             </template>
           </a-table-column>
         </template>
       </a-table>
-    </a-card>
+    </a-modal>
 
     <a-modal
       v-model:visible="editorVisible"
@@ -195,10 +289,13 @@
       unmount-on-close
     >
       <SetItemSlotEditor
-        v-if="editing"
+        v-if="editing && !seriesEditing"
         v-model="editSlots"
         :minimum-slots="minimumSlots"
       />
+      <a-alert v-if="seriesEditing" type="warning" class="series-warning">{{
+        $t('setItem.series.confirm', { count: seriesMemberCount })
+      }}</a-alert>
       <a-divider />
       <a-tabs v-if="editing" v-model:active-key="activeTier">
         <a-tab-pane
@@ -308,6 +405,7 @@
   import { Message } from '@arco-design/web-vue';
   import { useI18n } from 'vue-i18n';
   import useLoading from '@/hooks/loading';
+  import { useAppStore } from '@/store';
   import {
     getSetItemCatalog,
     deleteCustomSetItem,
@@ -320,6 +418,7 @@
     SetItemEquipment,
     setBuiltInSetItemEnabled,
     updateSetItem,
+    updateSetItemSeries,
   } from '@/api/setItem';
   import {
     getEquipmentPreviewUrl,
@@ -330,6 +429,7 @@
   import SetItemStatValue from './SetItemStatValue.vue';
 
   const { t } = useI18n();
+  const appStore = useAppStore();
   const { loading, setLoading } = useLoading(false);
   const catalog = ref<SetItemDefinition[]>([]);
   const keyword = ref('');
@@ -338,6 +438,9 @@
   const editorVisible = ref(false);
   const saving = ref(false);
   const editing = ref<SetItemDefinition>();
+  const seriesEditing = ref(false);
+  const seriesMemberCount = ref(0);
+  const detailKey = ref<string>();
   const activeTier = ref('');
   const editValues = reactive<Record<number, Record<string, number>>>({});
   const editSlots = ref<SetItemEquipment[][]>([]);
@@ -350,21 +453,66 @@
   const newStats = reactive<Record<number, string | undefined>>({});
   const createModal = ref<InstanceType<typeof SetItemCreateModal>>();
 
-  const filteredCatalog = computed(() => {
+  const seriesCatalog = computed(() => {
+    const groups = new Map<string, SetItemDefinition[]>();
+    catalog.value.forEach((definition) => {
+      const key = definition.builtIn
+        ? `builtIn:${definition.name}`
+        : `custom:${definition.id}`;
+      groups.set(key, [...(groups.get(key) || []), definition]);
+    });
+    return Array.from(groups, ([seriesKey, members]) => {
+      const first = members[0];
+      const counts = first.tiers.map((tier) => tier.requiredCount).join(',');
+      const bonuses = (member: SetItemDefinition) =>
+        JSON.stringify(
+          member.tiers.map((tier) => [
+            tier.requiredCount,
+            Object.entries(tier.stats).sort(([a], [b]) => a.localeCompare(b)),
+          ])
+        );
+      return {
+        ...first,
+        seriesKey,
+        members,
+        memberCount: members.length,
+        jobs: [...new Set(members.map((member) => member.jobIndex))],
+        completeCounts: [
+          ...new Set(members.map((member) => member.completeCount)),
+        ].join(' / '),
+        enabledCount: members.filter((member) => member.enabled).length,
+        mixedBonuses: members.some(
+          (member) => bonuses(member) !== bonuses(first)
+        ),
+        editable: members.every(
+          (member) =>
+            member.tiers.map((tier) => tier.requiredCount).join(',') === counts
+        ),
+      };
+    });
+  });
+  type SetItemSeries = (typeof seriesCatalog.value)[number];
+  const detailSeries = computed(() =>
+    seriesCatalog.value.find((series) => series.seriesKey === detailKey.value)
+  );
+
+  const filteredSeries = computed(() => {
     const search = keyword.value.trim().toLowerCase();
-    return catalog.value.filter((definition) => {
+    return seriesCatalog.value.filter((definition) => {
       const jobMatches =
-        jobFilter.value === 99 || definition.jobIndex === jobFilter.value;
+        jobFilter.value === 99 || definition.jobs.includes(jobFilter.value);
       const textMatches =
         !search ||
         definition.name.toLowerCase().includes(search) ||
-        String(definition.id).includes(search);
+        definition.members.some((member) => String(member.id).includes(search));
       return jobMatches && textMatches;
     });
   });
 
   const editorTitle = computed(() => {
     if (!editing.value) return '';
+    if (seriesEditing.value)
+      return `${editing.value.name} · ${t('setItem.action.editSeries')}`;
     return `${editing.value.name} · ${jobName(editing.value.jobIndex)} · ${
       editing.value.id
     }`;
@@ -400,7 +548,8 @@
   };
 
   const openEditor = (definition: SetItemDefinition) => {
-    if (!definition.enabled) return;
+    detailKey.value = undefined;
+    seriesEditing.value = false;
     editing.value = definition;
     editSlots.value = definition.slots.map((slot) =>
       slot.map((item) => ({ ...item }))
@@ -412,6 +561,13 @@
     });
     activeTier.value = String(definition.tiers[0]?.requiredCount ?? '');
     editorVisible.value = true;
+  };
+
+  const openSeriesEditor = (series: SetItemSeries) => {
+    if (!series.editable) return;
+    openEditor(series.members[0]);
+    seriesEditing.value = true;
+    seriesMemberCount.value = series.memberCount;
   };
 
   const fillDefaults = () => {
@@ -460,17 +616,22 @@
 
   const saveDefinition = async () => {
     if (!editing.value) return;
-    if (editSlots.value.some((slot) => slot.length === 0)) {
+    if (
+      !seriesEditing.value &&
+      editSlots.value.some((slot) => slot.length === 0)
+    ) {
       Message.warning(t('setItem.validation.emptySlot'));
       return;
     }
     saving.value = true;
     try {
-      const { data } = await updateSetItem(
-        editing.value.id,
-        editValues,
-        editSlots.value.map((slot) => slot.map((item) => item.id))
-      );
+      const { data } = await (seriesEditing.value
+        ? updateSetItemSeries(editing.value.id, editValues)
+        : updateSetItem(
+            editing.value.id,
+            editValues,
+            editSlots.value.map((slot) => slot.map((item) => item.id))
+          ));
       Message.success(t('setItem.save.success', { count: data }));
       editorVisible.value = false;
       await loadCatalog();
@@ -518,6 +679,10 @@
 
 <style scoped lang="less">
   .toolbar {
+    margin-bottom: 16px;
+  }
+
+  .series-warning {
     margin-bottom: 16px;
   }
 

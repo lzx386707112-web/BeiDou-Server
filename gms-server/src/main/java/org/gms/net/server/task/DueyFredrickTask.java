@@ -21,11 +21,15 @@ package org.gms.net.server.task;
 
 import org.gms.client.processor.npc.DueyProcessor;
 import org.gms.client.processor.npc.FredrickProcessor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @author Ronan
  */
 public class DueyFredrickTask implements Runnable {
+    private static final Logger log = LoggerFactory.getLogger(DueyFredrickTask.class);
+
     private final FredrickProcessor fredrickProcessor;
 
     public DueyFredrickTask(FredrickProcessor fredrickProcessor) {
@@ -34,7 +38,14 @@ public class DueyFredrickTask implements Runnable {
 
     @Override
     public void run() {
-        fredrickProcessor.runFredrickSchedule();
+        // Keep the two schedules independent: a failure in the Fredrick pass used to abort
+        // the Duey expiration pass as well, silently stalling duey parcel cleanup.
+        try {
+            fredrickProcessor.runFredrickSchedule();
+        } catch (Throwable t) {
+            log.error("Error running Fredrick schedule", t);
+        }
+
         DueyProcessor.runDueyExpireSchedule();
     }
 }

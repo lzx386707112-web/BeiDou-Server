@@ -264,18 +264,18 @@ public abstract class AbstractCharacterObject extends AbstractAnimatedMapObject 
         if (this.maxHp < hp_) {
             this.transientHp = Float.NEGATIVE_INFINITY;
         }
-        this.maxHp = Math.min(MAX_HP_MP, hp_);
-        this.localMaxHp = MAX_HP_MP;
-        this.clientMaxHp = MAX_HP_MP;
+        this.maxHp = Math.max(50, Math.min(MAX_HP_MP, hp_));
+        this.localMaxHp = this.maxHp;
+        this.clientMaxHp = this.maxHp;
     }
 
     protected void setMaxMp(int mp_) {
         if (this.maxMp < mp_) {
             this.transientMp = Float.NEGATIVE_INFINITY;
         }
-        this.maxMp = Math.min(MAX_HP_MP, mp_);
-        this.localMaxMp = MAX_HP_MP;
-        this.clientMaxMp = MAX_HP_MP;
+        this.maxMp = Math.max(5, Math.min(MAX_HP_MP, mp_));
+        this.localMaxMp = this.maxMp;
+        this.clientMaxMp = this.maxMp;
     }
 
     private static long clampStat(int v, int min, int max) {
@@ -463,11 +463,15 @@ public abstract class AbstractCharacterObject extends AbstractAnimatedMapObject 
     }
 
     protected void enforceMaxHpMp() {
+        enforceMaxHpMp(false);
+    }
+
+    protected void enforceMaxHpMp(boolean silent) {
         effLock.lock();
         statWlock.lock();
         try {
             if (mp > localMaxMp || hp > localMaxHp) {
-                changeHpMp(hp, mp, false);
+                changeHpMp(hp, mp, silent);
             }
         } finally {
             statWlock.unlock();

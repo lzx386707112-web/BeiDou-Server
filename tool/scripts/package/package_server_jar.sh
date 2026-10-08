@@ -212,7 +212,7 @@ remove_dir_retry() {
     fi
     sleep 0.4
   done
-  echo "未能完全删除 $dir（可能被 IDE/正在运行的服务端占用）。" >&2
+  echo "未能完全删除 ${dir}（可能被 IDE/正在运行的服务端占用）。" >&2
   return 1
 }
 

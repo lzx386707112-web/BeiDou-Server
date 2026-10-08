@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>岩壁巨人(克洛宿斯)可重复化 + 培羅德 Boss 副本 · 迁移评估</title>
+<style>
+  :root{
+    --bg:#0f1115; --card:#171a21; --card2:#1d2129; --line:#2a2f3a;
+    --txt:#e6e9ef; --sub:#9aa3b2; --accent:#5b9dff; --ok:#3fbf6f; --warn:#e0a93f; --bad:#e0574f;
+    --code:#11141a;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);font-family:-apple-system,"PingFang TC","Microsoft JhengHei",Segoe UI,Roboto,sans-serif;line-height:1.7}
+  .wrap{max-width:1080px;margin:0 auto;padding:32px 22px 64px}
+  h1{font-size:26px;margin:0 0 6px}
+  h2{font-size:20px;margin:34px 0 12px;border-left:4px solid var(--accent);padding-left:12px}
+  h3{font-size:16px;margin:22px 0 8px;color:#cdd6e4}
+  p{margin:8px 0;color:#d4dae4}
+  .sub{color:var(--sub);font-size:13px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin:14px 0}
+  .note{background:var(--card2);border:1px solid var(--line);border-left:4px solid var(--warn);border-radius:8px;padding:12px 16px;margin:14px 0}
+  .ok{border-left-color:var(--ok)} .bad{border-left-color:var(--bad)} .info{border-left-color:var(--accent)}
+  table{width:100%;border-collapse:collapse;margin:12px 0;font-size:14px}
+  th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+  th{background:var(--card2);color:#cdd6e4;font-weight:600}
+  tr:nth-child(even) td{background:#14171d}
+  code{background:var(--code);padding:1px 6px;border-radius:5px;font-size:12.5px;color:#9fe0b0}
+  .pill{display:inline-block;padding:2px 10px;border-radius:20px;font-size:12px;font-weight:600}
+  .p-ok{background:rgba(63,191,111,.15);color:var(--ok)}
+  .p-warn{background:rgba(224,169,63,.15);color:var(--warn)}
+  .p-bad{background:rgba(224,87,79,.15);color:var(--bad)}
+  ul{margin:8px 0 8px 4px;padding-left:20px} li{margin:5px 0}
+  .kv{display:grid;grid-template-columns:160px 1fr;gap:6px 14px;font-size:14px}
+  .kv b{color:#cdd6e4;font-weight:600}
+  .tag{font-size:12px;color:var(--sub);border:1px solid var(--line);border-radius:6px;padding:1px 7px;margin-right:6px}
+  footer{margin-top:40px;color:var(--sub);font-size:12px;border-top:1px solid var(--line);padding-top:16px}
+  a{color:var(--accent)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>岩壁巨人(克洛宿斯)可重复化 + 培羅德 Boss 副本 · 迁移评估</h1>
+<p class="sub">TMS v273（源） → BeiDou（GMS 083 老端，目标）｜ 全程只读核实，未改动任何客户端/服务端文件</p>
+
+<div class="note info">
+  <b>★ 名称澄清（用户纠正 + 实测核对）</b><br>
+  之前按「贝勒德」去查的 boss，TMS 实名叫 <b>培羅德</b>，且它和 <b>貝倫(Vellum 金龙)</b> 是<b>两个不同 boss</b>：
+  <ul>
+    <li><b>貝倫 = Vellum</b>（金龙）：8930100 / 9210015(普通) / 9210016(混沌) / 9303158 / 9390307 / 9410273(終極武器貝倫MK2)…</li>
+    <li><b>培羅德</b> = 另一个 <b>Boss遠征隊(自动组队挑战)</b> 多部位 boss，入口 NPC <b>渥雷納(Wurena)</b>。实据：TMS <code>Skill.img.json</code> 含「[BOSS對象 : 培羅德]」「渥雷納的信賴：培羅德」「完成培羅德殲滅任務」。</li>
+  </ul>
+  本报告的 Boss 副本部分按 <b>培羅德</b> 为准。若你其实想要 Vellum(貝倫)，那是另一个金龙 boss，可另行评估。
+</div>
+
+<!-- ============ A ============ -->
+<h2>A. 岩壁巨人 克洛宿斯 → 做成可重复</h2>
+
+<div class="card">
+<h3>现状：一次性 Theme Dungeon（主题副本）</h3>
+<p>经用户纠正与实测确认，岩壁巨人本质不是可重复副本，而是<b>主題副本(Theme Dungeon)=一次性剧情</b>：</p>
+<ul>
+  <li>TMS 任务 <code>1340 = [主題副本] 岩壁巨人 克洛宿斯</code></li>
+  <li>后续 <code>31330 – 31355</code> 是连续剧情链（救援作戰 1–7 等），与「黃昏的勇士之村」同类</li>
+  <li>地图/怪物/NPC 资源<b>齐备</b>（见下），卡住它“不可重复”的只是<b>入口与剧情锁</b>，不是资源</li>
+</ul>
+</div>
+
+<div class="card">
+<h3>资源清单（TMS 全段实测，已具备）</h3>
+<table>
+  <tr><th>项目</th><th>数量 / 值</th><th>说明</th></tr>
+  <tr><td>地图</td><td>30 张</td><td>24009 段 + 924030000 实例图</td></tr>
+  <tr><td>新怪物</td><td>14 种</td><td>含 Boss <code>8800400</code> 5700万HP / Lv165</td></tr>
+  <tr><td>新 NPC</td><td>17 个</td><td>剧情/功能 NPC</td></tr>
+  <tr><td>任务</td><td>27 个</td><td>1340 主线 + 31330–31355 链</td></tr>
+  <tr><td>骑乘图(fieldType=6)</td><td>BeiDou 现有 302 张</td><td>立体 Boss 机制所需的骑乘图老端已支撑</td></tr>
+  <tr><td>等级带</td><td>150–165</td><td>远低于职业/等级上限 255，无门槛冲突</td></tr>
+</table>
+<p class="sub">怪物数据已用 <code>dotnet MSProbe.dll Packs/Mob_00000.ms</code> 实测提取成功（勿用 <code>MapleStory-IMG/Data/Mob/</code>，那里只有 <code>_Canvas</code> 无 info）。</p>
+</div>
+
+<div class="card">
+<h3>改造为「可重复」的要点</h3>
+<ul>
+  <li><b>解剧情锁</b>：把主题副本的「一次性进入」改为可重复入口（仿 <code>CWKPQ.js</code>/<code>LudiPQ.js</code> 的 <code>EventInstanceManager</code> 进入条件，去掉「已完成则不再开放」的判定）。</li>
+  <li><b>三段推进自建</b>：爬臂 → 钻体 → 打心 的立体 Boss 流程，老端无现成脚本，需在 event 实例里自己编排（阶段切换、部件刷新、进入体内图）。</li>
+  <li><b>Boss 招式 / 掉落自写</b>：8800400 的技能组与掉落表 TMS 客户端不含（机制还原，非数值），需按手感补一套。</li>
+  <li><b>必带刷怪修复</b>：副本实例图没有周期刷怪，<code>mobTime=0</code> 的怪清一次不回 ⇒ event 脚本必须 <code>eim.schedule(fn,5000)</code> + <code>map.instanceMapRespawn()</code>（仓库 41 个 PQ 脚本已如此）。</li>
+</ul>
+</div>
+
+<div class="note ok">
+  <b>结论 A：可重复化可行，还原度 ≈ 85%（资源齐、机制老端可表达）</b><br>
+  瓶颈不在数据，而在「把一次性剧情副本改写成可重复 PQ 实例 + 补 Boss 招式/掉落」。属<b>中工作量自建</b>，建议排期在 CWKPQ 段 / 龍騎士 / 夏摩斯之后。
+</div>
+
+<!-- ============ B ============ -->
+<h2>B. 培羅德 Boss 副本（TMS 实名）</h2>
+
+<div class="card">
+<h3>1. 战斗机制：多部位破坏型 Boss</h3>
+<p>培羅德是 <b>Boss遠征隊（自动组队挑战）</b> 系统的 boss，核心玩法是<b>破坏多个身体部位</b>才算击破。其专属部件：</p>
+<table>
+  <tr><th>部位</th><th>怪物 ID</th><th>备注</th></tr>
+  <tr><td>培羅德的頭（头）</td><td>9390600 / 9390601 / 9390602</td><td>3 个变体</td></tr>
+  <tr><td>培羅德的右肩（右肩）</td><td>9390610</td><td></td></tr>
+  <tr><td>培羅德的左肩（左肩）</td><td>9390611</td><td></td></tr>
+  <tr><td>培羅德的腹部（腹）</td><td>9390612</td><td></td></tr>
+  <tr><td>培羅德的豆芽花（芽）</td><td>9390636 / 9390637 / 9390638</td><td>3 个变体</td></tr>
+</table>
+<p class="sub">注：<code>93906xx</code> 是<b>多个远征 boss 共用的部件块</b>——同块里还有 死亡伯爵替身(9390603)、肩膀/下半身魔王廣域攻擊用替身(9390613-619)、墮落貝伊派普/偉德雷/菲迪特(9390620-646) 等。培羅德只占用其中頭/肩/腹/芽 5 类部件。</p>
+</div>
+
+<div class="card">
+<h3>2. BeiDou 现状：完全缺失 + 无远征框架</h3>
+<table>
+  <tr><th>核实项</th><th>结果</th></tr>
+  <tr><td>客户端怪物名（<code>clien/Data/String/Mob.img</code>，2419 条）</td><td><span class="pill p-bad">无</span> 培羅德 / 貝倫 / 任何 93906xx 部件</td></tr>
+  <tr><td>客户端 NPC（<code>clien/Data/String/Npc.img</code>，2366 条）</td><td><span class="pill p-bad">无</span> 渥雷納(Wurena) 入口 NPC</td></tr>
+  <tr><td>服务端 Java <code>Expedition</code> 类</td><td><span class="pill p-bad">无</span> Boss遠征隊 / 远征框架</td></tr>
+  <tr><td>可承接的框架</td><td><span class="pill p-ok">有</span> <code>EventInstanceManager</code>(PQ) + AreaBoss 脚本（仿 CWKPQ/LudiPQ 单竞技场战）</td></tr>
+</table>
+<p>⇒ 培羅德在 BeiDou 是<b>从零开始</b>，连美术资源都要从 TMS 搬（<code>MSProbe</code> 提取）或复用现有 boss 精灵。</p>
+</div>
+
+<div class="card">
+<h3>3. 迁移方案（自建单竞技场 Boss 战）</h3>
+<ul>
+  <li><b>场地</b>：新建 1 张普通竞技场图（无需 fieldType=6 骑乘，普通 field 即可）。</li>
+  <li><b>怪物</b>：用 <code>MSProbe</code> 提取 9390600–9390638 等部件数值（HP/Lv/技能组），或复用现有 boss 立绘替代。</li>
+  <li><b>脚本（PQ / event 实例）</b>：进场 → 同时刷 5 个部位 → 破坏逻辑（全破坏=击破；或部位 HP 汇总为主 HP）→ 周期性召唤小怪（菲迪特/偉德雷/貝伊派普）+ 廣域攻擊用替身 → 掉落 / 殲滅任務判定。</li>
+  <li><b>入口 NPC</b>：新增 渥雷納（或复用现有 NPC 当远征入口）。</li>
+  <li><b>奖励</b>：掉落与 殲滅任務 奖励自定义（TMS 客户端不含数值，按手感配）。</li>
+</ul>
+</div>
+
+<div class="note warn">
+  <b>还原度天花板（必须接受）</b><br>
+  TMS 的 <b>Boss遠征隊 UI</b>（自动组队队列、里程、渥雷納信任系统）<b>是 273 专属系统，083 老端无法渲染</b>。
+  这些<b>不能 1:1 还原</b>，只能<b>简化替代</b>：自动组队 → 改为手动组队进 PQ；里程/信任 → 改为普通击杀计数或副本积分（已有 <code>extend_value</code> 货币机制可复用）。
+  战斗本身的「多部位破坏」机制老端可表达，是还原重点。
+</div>
+
+<div class="note ok">
+  <b>结论 B：可迁移，但需完全自建（与 Colossus 同级）</b><br>
+  可行，工作量<b>高于</b>岩壁巨人（连怪物资源都要搬 + 多部位破坏逻辑 + 没有远征 UI 兜底）。建议排在岩壁巨人之后。
+</div>
+
+<!-- ============ 综合 ============ -->
+<h2>综合判定</h2>
+<table>
+  <tr><th>项目</th><th>机制可表达？</th><th>资源现状</th><th>框架</th><th>工作量</th><th>建议</th></tr>
+  <tr>
+    <td>岩壁巨人 克洛宿斯（可重复）</td>
+    <td><span class="pill p-ok">可</span></td>
+    <td><span class="pill p-ok">齐备</span></td>
+    <td><span class="pill p-ok">PQ 实例</span></td>
+    <td>中</td>
+    <td><b>做</b>，排期靠后</td>
+  </tr>
+  <tr>
+    <td>培羅德 Boss 副本</td>
+    <td><span class="pill p-ok">可（多部位）</span></td>
+    <td><span class="pill p-bad">全缺</span></td>
+    <td><span class="pill p-warn">无远征，自建 PQ</span></td>
+    <td>高</td>
+    <td><b>做</b>，排期最后；UI 简化</td>
+  </tr>
+  <tr>
+    <td>（对照）貝倫 Vellum 金龙</td>
+    <td><span class="pill p-ok">可</span></td>
+    <td><span class="pill p-bad">全缺</span></td>
+    <td><span class="pill p-warn">自建 PQ</span></td>
+    <td>高</td>
+    <td>若需要可另评（非本次所指）</td>
+  </tr>
+</table>
+
+<div class="note">
+  <b>下一步（待你拍板）</b>
+  <ul>
+    <li>若确认做 <b>培羅德</b>：我先 <code>MSProbe</code> 提取 9390600–9390638 部件数值 + 美术，再写 PQ 实例脚本骨架。</li>
+    <li>若其实想要 <b>貝倫(Vellum)</b>：同上流程但换怪物 ID（8930100/9210015/9390307/9410273 等）。</li>
+    <li>岩壁巨人可重复化可独立推进，不依赖 Boss 副本。</li>
+  </ul>
+</div>
+
+<footer>
+  数据来源：TMS v273 <code>String/Mob.img</code> / <code>Skill.img.json</code>（wzpy <code>WzKey.for_region('BMS')</code> 解析）；
+  BeiDou <code>clien/Data/String/{Mob,Npc}.img</code>（GMS 解析）、<code>gms-server</code> Java 源码。
+  本报告为只读评估，所有结论基于上述实测，未修改任何工程文件。生成日期 2026-09-30。
+</footer>
+
+</div>
+</body>
+</html>

@@ -49,10 +49,11 @@ def verdicts(data, info, hosts=None):
 
 
 print("== 1) 修复后成品：不得再有任何 stale（可执行段）=")
-# 323 -> 363 (2026-09-29): the stat-label patch drops the now-dead HIGHLOW entry
-# at RVA 0x3674 and registers 41 for the .titles cave immediates.
+# 323 -> 371 (2026-09-30): the stat-label patch drops the now-dead HIGHLOW entry
+# at RVA 0x3674 and registers 49 for the .titles cave immediates.
+# Full-panel layout removes four superseded operands: current total is 367.
 # See patch_stat_labels.py / test_stat_labels_contract.py.
-for name, expect_total in [("BeiDouSetItemCompat.dll", 363), ("WzFileLogger.dll", 944)]:
+for name, expect_total in [("BeiDouSetItemCompat.dll", 361), ("WzFileLogger.dll", 944)]:
     _, data, info = load(name)
     vs = verdicts(data, info)
     stale = [r for r, v, d in vs if v == "stale" and d["exec"]]

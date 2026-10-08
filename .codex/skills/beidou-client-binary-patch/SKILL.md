@@ -533,7 +533,7 @@ BeiDou.exe 实例（`0x401D3E`）：
   **不打 `0x800` 标志**，中文 Windows 解压会乱码。用 Python：
   `zipfile.ZipFile(...).write(...)`（非 ASCII 名会自动置 `0x800`）。
   打包后断言每个 entry 的 `flag_bits & 0x800` 为真。
-- 交付包**只放二进制和文档**，不要把 `diagnostics/` 日志、dump、补丁脚本、
+- 交付包**只放二进制和文档**，不要把[SKILL.md](../beidou-damien-boss/SKILL.md) `diagnostics/` 日志、dump、补丁脚本、
   备份目录塞进去。补丁脚本留在仓库 `tool/client-debug/` 下。
 - 说明里必须写清：**换了文件后要重启虚拟机**（共享目录缓存），
   以及**回滚用哪一份**、**还崩时该回收哪些日志**（session-*.log / crash-*.dmp /

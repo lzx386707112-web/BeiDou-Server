@@ -7672,53 +7672,100 @@ public class PacketCreator {
         ItemInformationProvider ii = ItemInformationProvider.getInstance();
         return setItemUpdate(result, itemId -> {
             String name = ii.getName(itemId);
-            return name == null ? Integer.toString(itemId) : name;
+            return org.gms.server.SetItemCatalog.itemName(itemId, name);
         });
     }
 
     static Packet setItemUpdate(SetItemManager.Result result, IntFunction<String> itemNameResolver) {
         OutPacket p = OutPacket.create(SendOpcode.SET_ITEM_UPDATE);
-        p.writeShort(result.panels().size());
-        for (SetItemManager.Panel panel : result.panels()) {
-            SetItemManager.Definition definition = panel.definition();
-            p.writeInt(definition.id());
-            p.writeString(definition.name());
-            p.writeShort(definition.completeCount());
-            p.writeShort(definition.slots().size());
-            for (List<Integer> slot : definition.slots()) {
-                p.writeShort(slot.size());
-                for (Integer itemId : slot) {
-                    p.writeInt(itemId);
-                    p.writeBool(panel.equippedIds().contains(itemId));
-                    p.writeString(itemNameResolver.apply(itemId));
-                    p.writeString(setItemSlotName(itemId));
-                    p.writeInt(0);
+        List<byte[]> panels = new ArrayList<>();
+        int bytes = 6;
+        // Repeat the set metadata in bounded views so every item remains a hover lookup key.
+        for (SetItemManager.Panel panel : result.panels().stream()
+                .filter(SetItemManager.Panel::jobEligible)
+                .sorted(java.util.Comparator.comparingInt(SetItemManager.Panel::equippedCount).reversed())
+                .toList()) {
+            for (List<List<Integer>> slots : setItemViews(panel)) {
+                byte[] encoded = setItemPanel(panel, slots, itemNameResolver).getBytes();
+                if (panels.size() < 96 && bytes + encoded.length - 2 <= 60_000) {
+                    panels.add(java.util.Arrays.copyOfRange(encoded, 2, encoded.length));
+                    bytes += encoded.length - 2;
                 }
             }
-            p.writeShort(definition.tiers().size());
-            for (SetItemManager.Tier tier : definition.tiers()) {
-                p.writeShort(tier.requiredCount());
-                int statCount = 0;
-                for (String key : SetItemManager.STAT_KEYS) {
-                    if (tier.stats().getOrDefault(key, 0) != 0) {
-                        statCount++;
-                    }
-                }
-                p.writeShort(statCount);
-                for (String key : SetItemManager.STAT_KEYS) {
-                    int value = tier.stats().getOrDefault(key, 0);
-                    if (value != 0) {
-                        p.writeString(key);
-                        p.writeInt(value);
-                    }
-                }
-            }
-            p.writeShort(panel.activeTier());
-            p.writeString(definition.story());
-            p.writeInt(panel.equippedCount());
-            p.writeInt(panel.equippedCount());
         }
+        p.writeShort(panels.size());
+        panels.forEach(p::writeBytes);
         p.writeShort(0); // Lucky-item support is intentionally not enabled yet.
+        return p;
+    }
+
+    private static List<List<List<Integer>>> setItemViews(SetItemManager.Panel panel) {
+        List<List<Integer>> orderedSlots = panel.definition().slots().stream()
+                .sorted(java.util.Comparator.comparing((List<Integer> slot) ->
+                        slot.stream().anyMatch(panel.equippedIds()::contains)).reversed())
+                .map(slot -> slot.stream()
+                        .sorted(java.util.Comparator.comparing(panel.equippedIds()::contains).reversed())
+                        .toList()).toList();
+        List<List<List<Integer>>> views = new ArrayList<>();
+        int alternatives = orderedSlots.stream().mapToInt(List::size).max().orElse(0);
+        for (int start = 0; start < alternatives; start += 10) {
+            List<List<Integer>> fragments = new ArrayList<>();
+            for (List<Integer> slot : orderedSlots) {
+                if (start < slot.size()) {
+                    fragments.add(slot.subList(start, Math.min(start + 10, slot.size())));
+                }
+            }
+            for (int slot = 0; slot < fragments.size(); slot += 8) {
+                views.add(fragments.subList(slot, Math.min(slot + 8, fragments.size())));
+            }
+        }
+        return views;
+    }
+
+    private static Packet setItemPanel(SetItemManager.Panel panel, List<List<Integer>> visibleSlots,
+                                      IntFunction<String> itemNameResolver) {
+        OutPacket p = OutPacket.create(SendOpcode.SET_ITEM_UPDATE);
+        SetItemManager.Definition definition = panel.definition();
+        p.writeInt(definition.id());
+        p.writeString(definition.name());
+        p.writeShort(definition.completeCount());
+        p.writeShort(visibleSlots.size());
+        for (List<Integer> slot : visibleSlots) {
+            p.writeShort(slot.size());
+            for (Integer itemId : slot) {
+                p.writeInt(itemId);
+                p.writeBool(panel.equippedIds().contains(itemId));
+                String itemName = itemNameResolver.apply(itemId);
+                itemName = org.gms.server.SetItemCatalog.itemName(itemId, itemName);
+                p.writeString(itemName.substring(0, Math.min(40, itemName.length())));
+                p.writeString(setItemSlotName(itemId));
+                // Stable slot identity lets the client merge alternative/view fragments.
+                p.writeInt(definition.slots().stream().filter(original -> original.contains(itemId))
+                        .findFirst().map(definition.slots()::indexOf).orElse(-1) + 1);
+            }
+        }
+        p.writeShort(definition.tiers().size());
+        for (SetItemManager.Tier tier : definition.tiers()) {
+            p.writeShort(tier.requiredCount());
+            int statCount = 0;
+            for (String key : SetItemManager.STAT_KEYS) {
+                if (tier.stats().getOrDefault(key, 0) != 0) {
+                    statCount++;
+                }
+            }
+            p.writeShort(statCount);
+            for (String key : SetItemManager.STAT_KEYS) {
+                int value = tier.stats().getOrDefault(key, 0);
+                if (value != 0) {
+                    p.writeString(key);
+                    p.writeInt(value);
+                }
+            }
+        }
+        p.writeShort(panel.activeTier());
+        p.writeString(definition.story());
+        p.writeInt(panel.equippedCount());
+        p.writeInt(panel.equippedCount());
         return p;
     }
 
@@ -7726,6 +7773,9 @@ public class PacketCreator {
         return switch (itemId / 10000) {
             case 100 -> "帽子";
             case 101 -> "脸饰";
+            case 102 -> "眼饰";
+            case 103 -> "耳环";
+            case 109 -> "盾牌";
             case 104 -> "上衣";
             case 105 -> "套服";
             case 106 -> "裤子";

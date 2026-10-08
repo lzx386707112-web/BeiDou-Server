@@ -5,7 +5,8 @@ import org.gms.client.inventory.Equip;
 
 /** Native v83 temporary stats; percentages use equipment contributions, not guessed client formulas. */
 public final class SetItemNativeStats {
-    public static final BuffStat[] STATS = {BuffStat.WDEF, BuffStat.MDEF, BuffStat.ACC, BuffStat.AVOID};
+    public static final BuffStat[] STATS = {BuffStat.WDEF, BuffStat.MDEF, BuffStat.ACC, BuffStat.AVOID,
+            BuffStat.SPEED, BuffStat.JUMP};
 
     private SetItemNativeStats() {
     }
@@ -16,6 +17,8 @@ public final class SetItemNativeStats {
             case MDEF -> "MDD";
             case ACC -> "ACC";
             case AVOID -> "EVA";
+            case SPEED -> "SPD";
+            case JUMP -> "JMP";
             default -> null;
         };
     }
@@ -26,6 +29,8 @@ public final class SetItemNativeStats {
             case MDEF -> equip.getMdef();
             case ACC -> equip.getAcc();
             case AVOID -> equip.getAvoid();
+            case SPEED -> equip.getSpeed();
+            case JUMP -> equip.getJump();
             default -> 0;
         };
     }
